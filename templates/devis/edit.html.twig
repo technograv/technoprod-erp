@@ -1,0 +1,455 @@
+{% extends 'devis/new.html.twig' %}
+
+{% block title %}Modifier Devis {{ devis.numeroDevis }}{% endblock %}
+
+{% block body %}
+<!-- Messages Flash -->
+{% for type, messages in app.flashes %}
+    {% for message in messages %}
+        <div class="alert alert-{{ type == 'error' ? 'danger' : (type == 'warning' ? 'warning' : (type == 'info' ? 'info' : 'success')) }} alert-dismissible fade show" role="alert">
+            {{ message }}
+            <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+        </div>
+    {% endfor %}
+{% endfor %}
+
+<!-- En-tête -->
+<div class="page-header">
+    <div class="container-fluid">
+        <div class="row align-items-center">
+            <div class="col-md-8">
+                <h1 class="mb-1"><i class="fas fa-edit me-3"></i>Modifier Devis {{ devis.numeroDevis }}</h1>
+                <p class="mb-0">
+                    <span class="badge bg-{{ devis.statutCouleur }} status-badge">{{ devis.statutLibelle }}</span>
+                    {% if devis.client %}
+                        <span class="ms-2">{{ devis.client.nomComplet }}</span>
+                    {% endif %}
+                </p>
+            </div>
+            <div class="col-md-4 text-end">
+                <div class="btn-group">
+                    <a href="{{ path('app_devis_show', {'id': devis.id}) }}" class="btn btn-light">
+                        <i class="fas fa-eye"></i> Voir le devis
+                    </a>
+                    <a href="{{ path('app_devis_index') }}" class="btn btn-outline-light">
+                        <i class="fas fa-arrow-left"></i> Retour à la liste
+                    </a>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="container-fluid">
+    {{ form_start(form, {'attr': {'id': 'devis-form', 'class': 'devis-form'}}) }}
+    
+    <div class="row">
+        <div class="col-lg-8">
+            <!-- Informations générales -->
+            <div class="form-section">
+                <div class="form-section-header">
+                    <h5 class="mb-0"><i class="fas fa-info-circle me-2"></i>Informations générales</h5>
+                </div>
+                <div class="form-section-body">
+                    <div class="row">
+                        <div class="col-md-6">
+                            {{ form_row(form.client, {
+                                'label': 'Client / Prospect *',
+                                'attr': {
+                                    'class': 'form-select prospect-select',
+                                    'data-placeholder': 'Sélectionnez un client ou prospect'
+                                }
+                            }) }}
+                        </div>
+                        <div class="col-md-6">
+                            {{ form_row(form.commercial, {
+                                'label': 'Commercial',
+                                'attr': {'class': 'form-select'}
+                            }) }}
+                        </div>
+                    </div>
+                    <div class="row">
+                        <div class="col-md-3">
+                            {{ form_row(form.numeroDevis, {
+                                'label': 'Numéro de devis',
+                                'attr': {'class': 'form-control', 'readonly': true}
+                            }) }}
+                        </div>
+                        <div class="col-md-3">
+                            {{ form_row(form.dateCreation, {
+                                'label': 'Date de création',
+                                'attr': {'class': 'form-control'}
+                            }) }}
+                        </div>
+                        <div class="col-md-3">
+                            {{ form_row(form.dateValidite, {
+                                'label': 'Date de validité',
+                                'attr': {'class': 'form-control'}
+                            }) }}
+                        </div>
+                        <div class="col-md-3">
+                            {{ form_row(form.statut, {
+                                'label': 'Statut',
+                                'attr': {'class': 'form-select'}
+                            }) }}
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Adresses et contacts -->
+            <div class="form-section">
+                <div class="form-section-header">
+                    <h5 class="mb-0"><i class="fas fa-address-card me-2"></i>Adresses et contacts</h5>
+                </div>
+                <div class="form-section-body">
+                    <div class="row">
+                        <div class="col-md-6">
+                            {{ form_row(form.contactFacturation, {
+                                'label': 'Contact facturation',
+                                'attr': {'class': 'form-select'}
+                            }) }}
+                            {{ form_row(form.adresseFacturation, {
+                                'label': 'Adresse facturation',
+                                'attr': {'class': 'form-select'}
+                            }) }}
+                        </div>
+                        <div class="col-md-6">
+                            {{ form_row(form.contactLivraison, {
+                                'label': 'Contact livraison',
+                                'attr': {'class': 'form-select'}
+                            }) }}
+                            {{ form_row(form.adresseLivraison, {
+                                'label': 'Adresse livraison',
+                                'attr': {'class': 'form-select'}
+                            }) }}
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Lignes de devis -->
+            <div class="form-section">
+                <div class="form-section-header">
+                    <div class="d-flex justify-content-between align-items-center">
+                        <h5 class="mb-0"><i class="fas fa-list me-2"></i>Lignes de devis</h5>
+                        {% if devis.statut == 'brouillon' %}
+                            <button type="button" class="btn btn-sm btn-outline-primary add-item-btn">
+                                <i class="fas fa-plus"></i> Ajouter une ligne
+                            </button>
+                        {% endif %}
+                    </div>
+                </div>
+                <div class="form-section-body">
+                    <div class="devis-items-collection" id="devis_devisItems" data-prototype="{{ form_row(form.devisItems.vars.prototype)|e('html_attr') }}" data-index="{{ form.devisItems|length }}">
+                        {% for item in form.devisItems %}
+                            <div class="devis-item">
+                                <div class="row">
+                                    <div class="col-md-6">
+                                        {{ form_row(item.produit, {
+                                            'label': 'Produit/Service',
+                                            'attr': {'class': 'form-select produit-select'}
+                                        }) }}
+                                    </div>
+                                    <div class="col-md-6">
+                                        {{ form_row(item.designation, {
+                                            'label': 'Désignation',
+                                            'attr': {'class': 'form-control'}
+                                        }) }}
+                                    </div>
+                                </div>
+                                <div class="row">
+                                    <div class="col-md-12">
+                                        {{ form_row(item.description, {
+                                            'label': 'Description',
+                                            'attr': {'class': 'form-control', 'rows': 2}
+                                        }) }}
+                                    </div>
+                                </div>
+                                <div class="row">
+                                    <div class="col-md-2">
+                                        {{ form_row(item.quantite, {
+                                            'label': 'Qté',
+                                            'attr': {'class': 'form-control quantity-input', 'min': 0, 'step': 0.01}
+                                        }) }}
+                                    </div>
+                                    <div class="col-md-3">
+                                        {{ form_row(item.prixUnitaireHt, {
+                                            'label': 'Prix unit. HT',
+                                            'attr': {'class': 'form-control price-input', 'min': 0, 'step': 0.01}
+                                        }) }}
+                                    </div>
+                                    <div class="col-md-2">
+                                        {{ form_row(item.tvaPercent, {
+                                            'label': 'TVA %',
+                                            'attr': {'class': 'form-control tva-input', 'min': 0, 'max': 100, 'step': 0.01}
+                                        }) }}
+                                    </div>
+                                    <div class="col-md-3">
+                                        <label class="form-label">Total HT</label>
+                                        <div class="form-control-plaintext fw-bold total-line-display">{{ item.vars.data.totalLigneHt ?? '0.00' }}€</div>
+                                    </div>
+                                    {% if devis.statut == 'brouillon' %}
+                                        <div class="col-md-2">
+                                            <label class="form-label">&nbsp;</label>
+                                            <button type="button" class="btn btn-outline-danger w-100 remove-item-btn">
+                                                <i class="fas fa-trash"></i>
+                                            </button>
+                                        </div>
+                                    {% endif %}
+                                </div>
+                                {{ form_rest(item) }}
+                            </div>
+                        {% endfor %}
+                    </div>
+                </div>
+            </div>
+
+            <!-- Conditions commerciales -->
+            <div class="form-section">
+                <div class="form-section-header">
+                    <h5 class="mb-0"><i class="fas fa-handshake me-2"></i>Conditions commerciales</h5>
+                </div>
+                <div class="form-section-body">
+                    <div class="row">
+                        <div class="col-md-6">
+                            {{ form_row(form.acomptePercent, {
+                                'label': 'Acompte (%)',
+                                'attr': {'class': 'form-control', 'min': 0, 'max': 100, 'step': 0.01}
+                            }) }}
+                        </div>
+                        <div class="col-md-6">
+                            {{ form_row(form.acompteMontant, {
+                                'label': 'Acompte (montant fixe)',
+                                'attr': {'class': 'form-control', 'min': 0, 'step': 0.01}
+                            }) }}
+                        </div>
+                    </div>
+                    <div class="row">
+                        <div class="col-md-6">
+                            {{ form_row(form.remiseGlobalePercent, {
+                                'label': 'Remise globale (%)',
+                                'attr': {'class': 'form-control', 'min': 0, 'max': 100, 'step': 0.01}
+                            }) }}
+                        </div>
+                        <div class="col-md-6">
+                            {{ form_row(form.delaiLivraison, {
+                                'label': 'Délai de livraison',
+                                'attr': {'class': 'form-control', 'placeholder': 'Ex: 2-3 semaines'}
+                            }) }}
+                        </div>
+                    </div>
+                    <div class="row">
+                        <div class="col-md-12">
+                            {{ form_row(form.notesClient, {
+                                'label': 'Notes client',
+                                'attr': {'class': 'form-control', 'rows': 3, 'placeholder': 'Notes visibles par le client'}
+                            }) }}
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Historique -->
+            <div class="form-section">
+                <div class="form-section-header">
+                    <h5 class="mb-0"><i class="fas fa-history me-2"></i>Historique</h5>
+                </div>
+                <div class="form-section-body">
+                    <div class="row">
+                        <div class="col-md-6">
+                            <p><strong>Créé le :</strong> {{ devis.createdAt|date('d/m/Y à H:i') }}</p>
+                            {% if devis.dateEnvoi %}
+                                <p><strong>Envoyé le :</strong> {{ devis.dateEnvoi|date('d/m/Y à H:i') }}</p>
+                            {% endif %}
+                        </div>
+                        <div class="col-md-6">
+                            {% if devis.updatedAt %}
+                                <p><strong>Modifié le :</strong> {{ devis.updatedAt|date('d/m/Y à H:i') }}</p>
+                            {% endif %}
+                            {% if devis.dateSignature %}
+                                <p><strong>Signé le :</strong> {{ devis.dateSignature|date('d/m/Y à H:i') }}</p>
+                                <p><strong>Par :</strong> {{ devis.signatureNom }} ({{ devis.signatureEmail }})</p>
+                            {% endif %}
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="col-lg-4">
+            <!-- Récapitulatif -->
+            <div class="totals-section">
+                <h5 class="mb-3"><i class="fas fa-calculator me-2"></i>Récapitulatif</h5>
+                
+                <div class="total-line">
+                    <span>Sous-total HT :</span>
+                    <span class="subtotal-ht">{{ devis.totalHt }}€</span>
+                </div>
+                
+                {% if devis.remiseGlobalePercent %}
+                <div class="total-line">
+                    <span>Remise globale :</span>
+                    <span class="remise-globale">{{ devis.remiseGlobaleMontant }}€</span>
+                </div>
+                {% endif %}
+                
+                <div class="total-line">
+                    <span>Total HT :</span>
+                    <span class="total-ht">{{ devis.totalHt }}€</span>
+                </div>
+                
+                <div class="total-line">
+                    <span>TVA :</span>
+                    <span class="total-tva">{{ devis.totalTva }}€</span>
+                </div>
+                
+                <div class="total-line">
+                    <span>Total TTC :</span>
+                    <span class="total-ttc">{{ devis.totalTtc }}€</span>
+                </div>
+                
+                {% if devis.acomptePercent or devis.acompteMontant %}
+                <div class="total-line">
+                    <span>Acompte :</span>
+                    <span class="acompte-montant">{{ devis.calculateAcompte }}€</span>
+                </div>
+                
+                <div class="total-line">
+                    <span>Solde :</span>
+                    <span class="solde-montant">{{ (devis.totalTtc - devis.calculateAcompte) }}€</span>
+                </div>
+                {% endif %}
+            </div>
+
+            <!-- Actions -->
+            <div class="d-grid gap-2 mt-3">
+                <button type="submit" name="action" value="save" class="btn btn-primary btn-lg">
+                    <i class="fas fa-save"></i> Enregistrer les modifications
+                </button>
+                
+                {% if devis.statut == 'brouillon' %}
+                    <button type="submit" name="action" value="save_and_send" class="btn btn-success">
+                        <i class="fas fa-paper-plane"></i> Enregistrer et envoyer
+                    </button>
+                {% endif %}
+                
+                <a href="{{ path('app_devis_pdf', {'id': devis.id}) }}" target="_blank" class="btn btn-outline-primary">
+                    <i class="fas fa-file-pdf"></i> Aperçu PDF
+                </a>
+                
+                <a href="{{ path('app_devis_show', {'id': devis.id}) }}" class="btn btn-outline-secondary">
+                    <i class="fas fa-times"></i> Annuler
+                </a>
+            </div>
+        </div>
+    </div>
+
+    {{ form_rest(form) }}
+    {{ form_end(form) }}
+</div>
+
+{% block javascripts %}
+{{ parent() }}
+<script>
+$(document).ready(function() {
+    // Désactiver la modification des lignes si le devis n'est pas en brouillon
+    {% if devis.statut != 'brouillon' %}
+        $('.devis-item input, .devis-item select, .devis-item textarea').each(function() {
+            $(this).attr('readonly', true).attr('disabled', true);
+        });
+        
+        // Masquer les boutons d'ajout/suppression
+        $('.add-item-btn, .remove-item-btn').hide();
+        
+        // Message d'information
+        const info = $('<div class="alert alert-info"><i class="fas fa-info-circle me-2"></i>Ce devis ne peut plus être modifié car il a été envoyé.</div>');
+        $('.devis-items-collection').before(info);
+    {% else %}
+    
+    // Gestion de la collection de lignes de devis (seulement si brouillon)
+    const $collectionHolder = $('#devis_devisItems');
+    let index = $collectionHolder.find('.devis-item').length;
+
+    function addNewDevisItem() {
+        const prototype = $collectionHolder.data('prototype');
+        const newForm = prototype.replace(/__name__/g, index);
+        index++;
+
+        const $newItem = $('<div class="devis-item"></div>').html(newForm);
+        $collectionHolder.append($newItem);
+
+        // Initialiser les valeurs par défaut pour éviter les erreurs null
+        $newItem.find('[id$="_totalLigneHt"]').val('0.00');
+        $newItem.find('[id$="_tvaPercent"]').val('20.00');
+        $newItem.find('[id$="_quantite"]').val('1');
+        $newItem.find('[id$="_prixUnitaireHt"]').val('0.00');
+        $newItem.find('[id$="_ordreAffichage"]').val(index);
+
+        // Réinitialiser les événements pour le calcul
+        bindCalculationEvents($newItem);
+        calculateTotals();
+    }
+
+    // Créer et ajouter le bouton d'ajout
+    $('<button type="button" class="btn btn-add-item w-100 mt-3"><i class="fas fa-plus me-2"></i>Ajouter une ligne</button>')
+        .appendTo($collectionHolder.parent())
+        .on('click', addNewDevisItem);
+
+    // Fonction pour calculer les totaux
+    function calculateTotals() {
+        let totalHt = 0;
+        let totalTva = 0;
+
+        $('.devis-item').each(function() {
+            const qte = parseFloat($(this).find('[id$="_quantite"]').val()) || 0;
+            const prixUnitaire = parseFloat($(this).find('[id$="_prixUnitaireHt"]').val()) || 0;
+            const tvaPercent = parseFloat($(this).find('[id$="_tvaPercent"]').val()) || 20;
+
+            const totalLigneHt = qte * prixUnitaire;
+            const tvaLigne = totalLigneHt * tvaPercent / 100;
+
+            // Mettre à jour le champ caché totalLigneHt pour cette ligne
+            $(this).find('[id$="_totalLigneHt"]').val(totalLigneHt.toFixed(2));
+            
+            // Mettre à jour l'affichage du total de ligne
+            $(this).find('.total-line-display').text(totalLigneHt.toFixed(2) + '€');
+
+            totalHt += totalLigneHt;
+            totalTva += tvaLigne;
+        });
+
+        const totalTtc = totalHt + totalTva;
+
+        // Mettre à jour les totaux dans le récapitulatif
+        $('.subtotal-ht, .total-ht').text(totalHt.toFixed(2) + '€');
+        $('.total-tva').text(totalTva.toFixed(2) + '€');
+        $('.total-ttc').text(totalTtc.toFixed(2) + '€');
+
+        // Mettre à jour les champs cachés du formulaire principal
+        $('input[name*="[totalHt]"]').val(totalHt.toFixed(2));
+        $('input[name*="[totalTva]"]').val(totalTva.toFixed(2));
+        $('input[name*="[totalTtc]"]').val(totalTtc.toFixed(2));
+    }
+
+    // Fonction pour lier les événements de calcul
+    function bindCalculationEvents($container) {
+        $container = $container || $(document);
+        $container.find('[id$="_quantite"], [id$="_prixUnitaireHt"], [id$="_tvaPercent"]')
+            .off('input change keyup')
+            .on('input change keyup', function() {
+                calculateTotals();
+            });
+    }
+
+    // Lier les événements pour les lignes existantes
+    bindCalculationEvents();
+    
+    // Calculer les totaux au chargement
+    calculateTotals();
+
+    {% endif %}
+});
+</script>
+{% endblock %}
+{% endblock %}

@@ -1,0 +1,792 @@
+{% extends 'base.html.twig' %}
+
+{% block title %}Nouveau Client/Prospect{% endblock %}
+
+{% block stylesheets %}
+    {{ parent() }}
+    <style>
+        .form-section {
+            background: white;
+            border-radius: 12px;
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+            margin-bottom: 1.5rem;
+            border: 1px solid #e3e6f0;
+            overflow: hidden;
+        }
+        .form-section-header {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            padding: 1.2rem 1.5rem;
+            font-weight: 600;
+            font-size: 1.1rem;
+            display: flex;
+            align-items: center;
+        }
+        .form-section-body {
+            padding: 1.5rem;
+        }
+        .page-header {
+            background: linear-gradient(135deg, #28a745 0%, #20c997 100%);
+            color: white;
+            padding: 1.5rem 0;
+            margin-bottom: 1.5rem;
+        }
+        .sticky-sidebar {
+            position: sticky;
+            top: 2rem;
+        }
+        .required {
+            color: #dc3545;
+        }
+        .contact-form-block {
+            background: #f8f9fa;
+            border: 1px solid #dee2e6;
+            border-radius: 8px;
+            padding: 1.5rem;
+            margin-bottom: 1rem;
+        }
+        .contact-form-block h6 {
+            color: #495057;
+            border-bottom: 2px solid #dee2e6;
+            padding-bottom: 0.5rem;
+            margin-bottom: 1rem;
+        }
+        .address-form-block {
+            background: #fff3cd;
+            border: 1px solid #ffeaa7;
+            border-radius: 8px;
+            padding: 1.5rem;
+            margin-bottom: 1rem;
+        }
+        .address-form-block h6 {
+            color: #856404;
+            border-bottom: 2px solid #ffeaa7;
+            padding-bottom: 0.5rem;
+            margin-bottom: 1rem;
+        }
+        .commune-suggestions {
+            position: fixed;
+            background: white;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+            max-height: 200px;
+            overflow-y: auto;
+            z-index: 999999;
+            display: none;
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2);
+            min-width: 250px;
+        }
+        .commune-suggestion {
+            padding: 8px 12px;
+            cursor: pointer;
+            border-bottom: 1px solid #eee;
+        }
+        .commune-suggestion:hover {
+            background-color: #f8f9fa;
+        }
+        .commune-suggestion:last-child {
+            border-bottom: none;
+        }
+    </style>
+{% endblock %}
+
+{% block body %}
+<!-- En-tête -->
+<div class="page-header">
+    <div class="container-fluid">
+        <div class="row align-items-center">
+            <div class="col-md-8">
+                <h1 class="mb-1">
+                    <i class="fas fa-user-plus me-3"></i>Nouveau Client/Prospect
+                </h1>
+                <p class="mb-0 opacity-75">Créer un nouveau prospect ou client dans TechnoProd</p>
+            </div>
+            <div class="col-md-4 text-end">
+                <a href="{{ path('app_client_index') }}" class="btn btn-light">
+                    <i class="fas fa-arrow-left me-1"></i>Retour à la liste
+                </a>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="container-fluid">
+    {{ form_start(form) }}
+        <div class="row">
+            <div class="col-lg-8">
+                <!-- Sélection du type de personne (condensée) -->
+                <div class="bg-light border rounded p-3 mb-3">
+                    <div class="d-flex align-items-center">
+                        <label class="form-label fw-bold mb-0 me-3">Type de client :</label>
+                        <div class="d-flex">
+                            {{ form_widget(form.typePersonne, {'attr': {'class': 'd-flex gap-3'}}) }}
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Section 1: Informations générales -->
+                <div class="form-section">
+                    <div class="form-section-header">
+                        <i class="fas fa-info-circle me-2"></i>Informations générales
+                    </div>
+                    <div class="form-section-body">
+                        <div class="row">
+                            <div class="col-md-6">
+                                <div class="mb-3">
+                                    {{ form_row(form.famille) }}
+                                </div>
+                            </div>
+                            <div class="col-md-6" id="forme-juridique-field">
+                                <div class="mb-3">
+                                    {{ form_row(form.formeJuridique) }}
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <!-- Famille pour personne physique (cachée mais avec valeur par défaut) -->
+                        <input type="hidden" id="famille-physique" value="Particulier">
+
+                        <!-- Champs personne morale -->
+                        <div id="personne-morale-fields">
+                            <div class="row">
+                                <div class="col-md-12">
+                                    <div class="mb-3">
+                                        {{ form_row(form.nom) }}
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <!-- Champs spécifiques personne physique -->
+                        <div id="personne-physique-fields" style="display: none;">
+                            <div class="row">
+                                <div class="col-md-2">
+                                    <div class="mb-3">
+                                        <label class="form-label">Civilité <span class="required">*</span></label>
+                                        <select class="form-select" name="personne_civilite" required>
+                                            <option value="M.">M.</option>
+                                            <option value="Mme">Mme</option>
+                                            <option value="Mlle">Mlle</option>
+                                        </select>
+                                    </div>
+                                </div>
+                                <div class="col-md-5">
+                                    <div class="mb-3">
+                                        <label class="form-label">Prénom <span class="required">*</span></label>
+                                        <input type="text" class="form-control" name="personne_prenom" placeholder="Prénom" required>
+                                    </div>
+                                </div>
+                                <div class="col-md-5">
+                                    <div class="mb-3">
+                                        <label class="form-label">Nom de famille <span class="required">*</span></label>
+                                        <input type="text" class="form-control" name="personne_nom" placeholder="Nom de famille" required>
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="row">
+                                <div class="col-md-6">
+                                    <div class="mb-3">
+                                        <label class="form-label">Email <span class="required">*</span></label>
+                                        <input type="email" class="form-control" name="personne_email" placeholder="Email" required>
+                                    </div>
+                                </div>
+                                <div class="col-md-6">
+                                    <div class="mb-3">
+                                        <label class="form-label">Téléphone <span class="required">*</span></label>
+                                        <input type="tel" class="form-control" name="personne_telephone" placeholder="Téléphone" required>
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="row">
+                                <div class="col-md-6">
+                                    <div class="mb-3">
+                                        <label class="form-label">Téléphone mobile</label>
+                                        <input type="tel" class="form-control" name="personne_telephone_mobile" placeholder="Téléphone mobile">
+                                    </div>
+                                </div>
+                                <div class="col-md-6">
+                                    <div class="mb-3">
+                                        <label class="form-label">Profession/Activité</label>
+                                        <input type="text" class="form-control" name="personne_profession" placeholder="Profession">
+                                    </div>
+                                </div>
+                            </div>
+                            
+                            <!-- Adresse pour personne physique intégrée dans les informations générales -->
+                            <hr class="my-3">
+                            <div class="row">
+                                <div class="col-md-12">
+                                    <div class="mb-3">
+                                        <label class="form-label">Adresse ligne 1 <span class="required">*</span></label>
+                                        <input type="text" class="form-control" name="personne_adresse_ligne1" placeholder="Numéro et nom de rue" required>
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="row">
+                                <div class="col-md-6">
+                                    <div class="mb-3">
+                                        <label class="form-label">Adresse ligne 2</label>
+                                        <input type="text" class="form-control" name="personne_adresse_ligne2" placeholder="Complément">
+                                    </div>
+                                </div>
+                                <div class="col-md-6">
+                                    <div class="mb-3">
+                                        <label class="form-label">Adresse ligne 3</label>
+                                        <input type="text" class="form-control" name="personne_adresse_ligne3" placeholder="Complément">
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="row">
+                                <div class="col-md-3">
+                                    <div class="mb-3 position-relative">
+                                        <label class="form-label">Code postal <span class="required">*</span></label>
+                                        <input type="text" class="form-control" name="personne_adresse_code_postal" placeholder="31000" data-type="postal" required>
+                                        <div class="commune-suggestions"></div>
+                                    </div>
+                                </div>
+                                <div class="col-md-6">
+                                    <div class="mb-3 position-relative">
+                                        <label class="form-label">Ville <span class="required">*</span></label>
+                                        <input type="text" class="form-control" name="personne_adresse_ville" placeholder="Toulouse" data-type="city" required>
+                                        <div class="commune-suggestions"></div>
+                                    </div>
+                                </div>
+                                <div class="col-md-3">
+                                    <div class="mb-3">
+                                        <label class="form-label">Pays</label>
+                                        <input type="text" class="form-control" name="personne_adresse_pays" value="France">
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Section 2: Contact principal (uniquement pour les personnes morales) -->
+                <div class="form-section" id="contact-section">
+                    <div class="form-section-header">
+                        <i class="fas fa-user me-2"></i>Contact principal dans l'entreprise
+                    </div>
+                    <div class="form-section-body">
+                        <div class="contact-form-block">
+                            <div class="row">
+                                <div class="col-md-2">
+                                    <div class="mb-3">
+                                        <label class="form-label">Civilité</label>
+                                        <select class="form-select" name="contact_civilite">
+                                            <option value="M.">M.</option>
+                                            <option value="Mme">Mme</option>
+                                            <option value="Mlle">Mlle</option>
+                                        </select>
+                                    </div>
+                                </div>
+                                <div class="col-md-5">
+                                    <div class="mb-3">
+                                        <label class="form-label">Nom <span class="required">*</span></label>
+                                        <input type="text" class="form-control" name="contact_nom" required>
+                                    </div>
+                                </div>
+                                <div class="col-md-5">
+                                    <div class="mb-3">
+                                        <label class="form-label">Prénom <span class="required">*</span></label>
+                                        <input type="text" class="form-control" name="contact_prenom" required>
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="row">
+                                <div class="col-md-6">
+                                    <div class="mb-3">
+                                        <label class="form-label">Fonction</label>
+                                        <input type="text" class="form-control" name="contact_fonction" placeholder="Fonction">
+                                    </div>
+                                </div>
+                                <div class="col-md-6">
+                                    <div class="mb-3">
+                                        <label class="form-label">Email <span class="required">*</span></label>
+                                        <input type="email" class="form-control" name="contact_email" required>
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="row">
+                                <div class="col-md-6">
+                                    <div class="mb-3">
+                                        <label class="form-label">Téléphone <span class="required">*</span></label>
+                                        <input type="tel" class="form-control" name="contact_telephone" required>
+                                    </div>
+                                </div>
+                                <div class="col-md-6">
+                                    <div class="mb-3">
+                                        <label class="form-label">Téléphone mobile</label>
+                                        <input type="tel" class="form-control" name="contact_telephone_mobile">
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Section 3: Adresse principale (uniquement pour les personnes morales) -->
+                <div class="form-section" id="adresse-section">
+                    <div class="form-section-header">
+                        <i class="fas fa-map-marker-alt me-2"></i>Adresse principale
+                    </div>
+                    <div class="form-section-body">
+                        <div class="address-form-block">
+                            <div class="row">
+                                <div class="col-md-4">
+                                    <div class="mb-3">
+                                        <label class="form-label">Nom de l'adresse</label>
+                                        <input type="text" class="form-control" name="adresse_nom" value="Siège">
+                                    </div>
+                                </div>
+                                <div class="col-md-8">
+                                    <div class="mb-3">
+                                        <label class="form-label">Adresse ligne 1 <span class="required">*</span></label>
+                                        <input type="text" class="form-control" name="adresse_ligne1" placeholder="Numéro et nom de rue" required>
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="row">
+                                <div class="col-md-6">
+                                    <div class="mb-3">
+                                        <label class="form-label">Adresse ligne 2</label>
+                                        <input type="text" class="form-control" name="adresse_ligne2" placeholder="Complément">
+                                    </div>
+                                </div>
+                                <div class="col-md-6">
+                                    <div class="mb-3">
+                                        <label class="form-label">Adresse ligne 3</label>
+                                        <input type="text" class="form-control" name="adresse_ligne3" placeholder="Complément">
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="row">
+                                <div class="col-md-3">
+                                    <div class="mb-3 position-relative">
+                                        <label class="form-label">Code postal <span class="required">*</span></label>
+                                        <input type="text" class="form-control" name="adresse_code_postal" placeholder="31000" data-type="postal" required>
+                                        <div class="commune-suggestions"></div>
+                                    </div>
+                                </div>
+                                <div class="col-md-6">
+                                    <div class="mb-3 position-relative">
+                                        <label class="form-label">Ville <span class="required">*</span></label>
+                                        <input type="text" class="form-control" name="adresse_ville" placeholder="Toulouse" data-type="city" required>
+                                        <div class="commune-suggestions"></div>
+                                    </div>
+                                </div>
+                                <div class="col-md-3">
+                                    <div class="mb-3">
+                                        <label class="form-label">Pays</label>
+                                        <input type="text" class="form-control" name="adresse_pays" value="France">
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Section 4: Paramètres commerciaux -->
+                <div class="form-section">
+                    <div class="form-section-header">
+                        <i class="fas fa-handshake me-2"></i>Paramètres commerciaux
+                    </div>
+                    <div class="form-section-body">
+                        <div class="row">
+                            <div class="col-md-6">
+                                {{ form_row(form.modePaiement) }}
+                            </div>
+                            <div class="col-md-6">
+                                {{ form_row(form.delaiPaiement) }}
+                            </div>
+                        </div>
+
+                        <div class="row">
+                            <div class="col-md-4">
+                                {{ form_row(form.assujettiTva) }}
+                            </div>
+                            <div class="col-md-4">
+                                {{ form_row(form.tauxTva) }}
+                            </div>
+                            <div class="col-md-4">
+                                {{ form_row(form.conditionsTarifs) }}
+                            </div>
+                        </div>
+
+                        <div class="row">
+                            <div class="col-md-6">
+                                {{ form_row(form.regimeComptable) }}
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Section 5: Notes -->
+                <div class="form-section">
+                    <div class="form-section-header">
+                        <i class="fas fa-sticky-note me-2"></i>Notes et observations
+                    </div>
+                    <div class="form-section-body">
+                        {{ form_row(form.notes) }}
+                    </div>
+                </div>
+
+                <!-- Boutons d'action -->
+                <div class="d-flex justify-content-between mb-4">
+                    <a href="{{ path('app_client_index') }}" class="btn btn-secondary">
+                        <i class="fas fa-times me-1"></i>Annuler
+                    </a>
+                    <button type="submit" class="btn btn-success">
+                        <i class="fas fa-save me-1"></i>Créer le client/prospect
+                    </button>
+                </div>
+            </div>
+
+            <!-- Panneau latéral de résumé -->
+            <div class="col-lg-4">
+                <div class="sticky-sidebar">
+                    <div class="card shadow">
+                        <div class="card-header bg-success text-white">
+                            <h6 class="mb-0">
+                                <i class="fas fa-eye me-2"></i>Aperçu du client
+                            </h6>
+                        </div>
+                        <div class="card-body">
+                            <div id="client-summary">
+                                <div class="mb-3">
+                                    <small class="text-muted">Nom/Entreprise :</small>
+                                    <div id="summary-name" class="text-muted fst-italic">Non défini</div>
+                                </div>
+                                <div class="mb-3">
+                                    <small class="text-muted">Contact :</small>
+                                    <div id="summary-contact" class="text-muted fst-italic">Non défini</div>
+                                </div>
+                                <div class="mb-3">
+                                    <small class="text-muted">Email :</small>
+                                    <div id="summary-email" class="text-muted fst-italic">Non défini</div>
+                                </div>
+                                <div class="mb-3">
+                                    <small class="text-muted">Famille :</small>
+                                    <div id="summary-famille" class="text-muted fst-italic">Non définie</div>
+                                </div>
+                                <hr>
+                                <div class="mb-3">
+                                    <small class="text-muted">Ville :</small>
+                                    <div id="summary-ville" class="text-muted fst-italic">Non définie</div>
+                                </div>
+                                <hr>
+                                <div class="alert alert-info">
+                                    <i class="fas fa-info-circle me-1"></i>
+                                    <span id="summary-info-text">Le contact principal sera automatiquement assigné comme contact de facturation et livraison par défaut</span>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        <!-- Champs cachés pour éviter les erreurs Symfony -->
+        {{ form_widget(form.contacts, {'attr': {'style': 'display: none;'}}) }}
+        {{ form_widget(form.contactFacturationDefault, {'attr': {'style': 'display: none;'}}) }}
+        {{ form_widget(form.contactLivraisonDefault, {'attr': {'style': 'display: none;'}}) }}
+    {{ form_end(form) }}
+</div>
+{% endblock %}
+
+{% block javascripts %}
+    {{ parent() }}
+    <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+    <script>
+    document.addEventListener('DOMContentLoaded', function() {
+        // Gestion du type de personne (physique/morale)
+        function handleTypePersonneChange() {
+            const typePersonneInputs = document.querySelectorAll('input[name="client[typePersonne]"]');
+            const formeJuridiqueField = document.getElementById('forme-juridique-field');
+            const personnePhysiqueFields = document.getElementById('personne-physique-fields');
+            const personneMoraleFields = document.getElementById('personne-morale-fields');
+            const contactSection = document.getElementById('contact-section');
+            const adresseSection = document.getElementById('adresse-section');
+            
+            typePersonneInputs.forEach(function(input) {
+                input.addEventListener('change', function() {
+                    const infoText = document.getElementById('summary-info-text');
+                    const familleSelect = document.querySelector('select[name="client[famille]"]');
+                    const familleField = familleSelect ? familleSelect.closest('.mb-3') : null;
+                    
+                    if (this.value === 'physique') {
+                        // Personne physique: cacher forme juridique, famille, champs morale, contact et adresse, montrer champs personne physique
+                        formeJuridiqueField.style.display = 'none';
+                        if (familleField) familleField.style.display = 'none';
+                        personneMoraleFields.style.display = 'none';
+                        personnePhysiqueFields.style.display = 'block';
+                        contactSection.style.display = 'none';
+                        adresseSection.style.display = 'none';
+                        
+                        // Définir automatiquement la famille à "Particulier" pour personne physique
+                        if (familleSelect) {
+                            familleSelect.value = 'Particulier';
+                        }
+                        
+                        // Changer le texte d'info pour personne physique
+                        if (infoText) {
+                            infoText.textContent = 'Pour une personne physique, les informations de contact et d\'adresse sont intégrées dans les informations générales';
+                        }
+                    } else {
+                        // Personne morale: montrer forme juridique, famille, champs morale, contact et adresse, cacher champs personne physique
+                        formeJuridiqueField.style.display = 'block';
+                        if (familleField) familleField.style.display = 'block';
+                        personneMoraleFields.style.display = 'block';
+                        personnePhysiqueFields.style.display = 'none';
+                        contactSection.style.display = 'block';
+                        adresseSection.style.display = 'block';
+                        
+                        // Réinitialiser la famille pour personne morale
+                        if (familleSelect) {
+                            familleSelect.value = '';
+                        }
+                        
+                        // Texte d'info normal pour personne morale
+                        if (infoText) {
+                            infoText.textContent = 'Le contact principal sera automatiquement assigné comme contact de facturation et livraison par défaut';
+                        }
+                    }
+                    updateSummary();
+                    
+                    // Réinitialiser l'autocomplétion après changement de type
+                    setTimeout(() => {
+                        setupCommuneAutocomplete();
+                    }, 100);
+                });
+            });
+            
+            // Appliquer l'état initial
+            const checkedInput = document.querySelector('input[name="client[typePersonne]"]:checked');
+            if (checkedInput) {
+                checkedInput.dispatchEvent(new Event('change'));
+            }
+        }
+
+        // Mise à jour du résumé en temps réel
+        function updateSummary() {
+            const nomField = document.querySelector('input[name="client[nom]"]');
+            const personneNom = document.querySelector('input[name="personne_nom"]');
+            const personnePrenom = document.querySelector('input[name="personne_prenom"]');
+            const personneEmail = document.querySelector('input[name="personne_email"]');
+            const contactNom = document.querySelector('input[name="contact_nom"]');
+            const contactPrenom = document.querySelector('input[name="contact_prenom"]');
+            const contactEmail = document.querySelector('input[name="contact_email"]');
+            const familleField = document.querySelector('select[name="client[famille]"]');
+            const villeField = document.querySelector('input[name="adresse_ville"]');
+            const personneAdresseVille = document.querySelector('input[name="personne_adresse_ville"]');
+            const typePersonne = document.querySelector('input[name="client[typePersonne]"]:checked');
+            
+            // Construire le nom complet selon le type de personne
+            let displayName = 'Non défini';
+            let contactName = 'Non défini';
+            let emailAddress = 'Non défini';
+            
+            if (typePersonne && typePersonne.value === 'physique') {
+                // Personne physique: Prénom Nom (utiliser personneNom et personnePrenom)
+                if (personneNom && personneNom.value) {
+                    displayName = personnePrenom && personnePrenom.value ? 
+                        (personnePrenom.value + ' ' + personneNom.value).trim() : 
+                        personneNom.value;
+                }
+                // Pour personne physique, contact = client
+                contactName = displayName;
+                emailAddress = personneEmail ? personneEmail.value || 'Non défini' : 'Non défini';
+            } else {
+                // Personne morale: Nom de l'entreprise (utiliser nomField)
+                if (nomField && nomField.value) {
+                    displayName = nomField.value;
+                }
+                // Contact séparé pour personne morale
+                if (contactNom && contactPrenom) {
+                    contactName = (contactPrenom.value + ' ' + contactNom.value).trim() || 'Non défini';
+                }
+                emailAddress = contactEmail ? contactEmail.value || 'Non défini' : 'Non défini';
+            }
+            
+            document.getElementById('summary-name').textContent = displayName;
+            document.getElementById('summary-contact').textContent = contactName;
+            document.getElementById('summary-email').textContent = emailAddress;
+            
+            if (familleField) {
+                const selectedOption = familleField.options[familleField.selectedIndex];
+                document.getElementById('summary-famille').textContent = selectedOption.text || 'Non définie';
+            }
+            
+            // Ville selon le type de personne
+            if (typePersonne && typePersonne.value === 'physique') {
+                if (personneAdresseVille) {
+                    document.getElementById('summary-ville').textContent = personneAdresseVille.value || 'Non définie';
+                }
+            } else {
+                if (villeField) {
+                    document.getElementById('summary-ville').textContent = villeField.value || 'Non définie';
+                }
+            }
+        }
+
+        // Événements pour la mise à jour du résumé
+        document.querySelectorAll('input[name="client[nom]"], input[name="contact_nom"], input[name="contact_prenom"], input[name="contact_email"], input[name="adresse_ville"], select[name="client[famille]"], input[name="personne_prenom"], input[name="personne_nom"], input[name="personne_email"], input[name="personne_adresse_ville"]').forEach(function(field) {
+            field.addEventListener('input', updateSummary);
+            field.addEventListener('change', updateSummary);
+        });
+
+        // Initialiser la gestion du type de personne
+        handleTypePersonneChange();
+
+
+        // Créer un conteneur de suggestions global
+        let globalSuggestionsContainer = null;
+        
+        function createGlobalSuggestionsContainer() {
+            if (!globalSuggestionsContainer) {
+                globalSuggestionsContainer = document.createElement('div');
+                globalSuggestionsContainer.className = 'commune-suggestions';
+                globalSuggestionsContainer.id = 'global-commune-suggestions';
+                document.body.appendChild(globalSuggestionsContainer);
+            }
+            return globalSuggestionsContainer;
+        }
+        
+        function positionSuggestions(inputField) {
+            const rect = inputField.getBoundingClientRect();
+            const suggestions = createGlobalSuggestionsContainer();
+            
+            // Pour position fixed, on utilise directement rect.bottom sans scrollY
+            suggestions.style.top = rect.bottom + 'px';
+            suggestions.style.left = rect.left + 'px';
+            suggestions.style.width = rect.width + 'px';
+        }
+
+        // Autocomplétion des communes françaises
+        function setupCommuneAutocomplete() {
+            const fields = document.querySelectorAll('[data-type="postal"], [data-type="city"]');
+            
+            fields.forEach(function(field) {
+                // Éviter les doublons d'event listeners
+                if (field.hasAttribute('data-autocomplete-initialized')) {
+                    return;
+                }
+                field.setAttribute('data-autocomplete-initialized', 'true');
+                
+                let searchTimeout;
+
+                field.addEventListener('input', function() {
+                    const query = this.value.trim();
+                    const suggestionsContainer = createGlobalSuggestionsContainer();
+                    currentActiveField = this;
+                    
+                    clearTimeout(searchTimeout);
+                    
+                    if (query.length < 2) {
+                        suggestionsContainer.style.display = 'none';
+                        return;
+                    }
+                    
+                    
+                    searchTimeout = setTimeout(() => {
+                        fetch(`/client/api/communes/search?q=${encodeURIComponent(query)}`)
+                            .then(response => {
+                                return response.json();
+                            })
+                            .then(data => {
+                                suggestionsContainer.innerHTML = '';
+                                
+                                if (data.length > 0) {
+                                    data.forEach(commune => {
+                                        const div = document.createElement('div');
+                                        div.className = 'commune-suggestion';
+                                        div.textContent = `${commune.codePostal} - ${commune.nomCommune}`;
+                                        div.addEventListener('click', () => selectCommune(field, commune));
+                                        suggestionsContainer.appendChild(div);
+                                    });
+                                    positionSuggestions(field);
+                                    suggestionsContainer.style.display = 'block';
+                                } else {
+                                    suggestionsContainer.style.display = 'none';
+                                }
+                            })
+                            .catch(error => {
+                                suggestionsContainer.style.display = 'none';
+                            });
+                    }, 300);
+                });
+
+                field.addEventListener('blur', function() {
+                    setTimeout(() => {
+                        const suggestionsContainer = createGlobalSuggestionsContainer();
+                        suggestionsContainer.style.display = 'none';
+                        currentActiveField = null;
+                    }, 200);
+                });
+
+            });
+        }
+
+        function selectCommune(inputField, commune) {
+            const inputType = inputField.dataset.type;
+            const fieldName = inputField.name;
+            
+            if (inputType === 'postal') {
+                inputField.value = commune.codePostal;
+                
+                // Déterminer le champ ville correspondant selon le type (personne physique ou morale)
+                let villeField = null;
+                if (fieldName === 'personne_adresse_code_postal') {
+                    villeField = document.querySelector('input[name="personne_adresse_ville"]');
+                } else {
+                    villeField = document.querySelector('input[name="adresse_ville"]');
+                }
+                
+                if (villeField) {
+                    villeField.value = commune.nomCommune;
+                }
+            } else if (inputType === 'city') {
+                inputField.value = commune.nomCommune;
+                
+                // Déterminer le champ code postal correspondant selon le type (personne physique ou morale)
+                let codePostalField = null;
+                if (fieldName === 'personne_adresse_ville') {
+                    codePostalField = document.querySelector('input[name="personne_adresse_code_postal"]');
+                } else {
+                    codePostalField = document.querySelector('input[name="adresse_code_postal"]');
+                }
+                
+                if (codePostalField) {
+                    codePostalField.value = commune.codePostal;
+                }
+            }
+            
+            updateSummary();
+            const suggestionsContainer = createGlobalSuggestionsContainer();
+            suggestionsContainer.style.display = 'none';
+        }
+
+        // Variables pour tracker le champ actif
+        let currentActiveField = null;
+        
+        // Gestionnaires globaux pour repositionner les suggestions
+        window.addEventListener('scroll', function() {
+            if (currentActiveField && globalSuggestionsContainer && globalSuggestionsContainer.style.display === 'block') {
+                positionSuggestions(currentActiveField);
+            }
+        });
+        
+        window.addEventListener('resize', function() {
+            if (currentActiveField && globalSuggestionsContainer && globalSuggestionsContainer.style.display === 'block') {
+                positionSuggestions(currentActiveField);
+            }
+        });
+
+        // Initialiser l'autocomplétion des communes
+        setupCommuneAutocomplete();
+
+        // Mise à jour initiale du résumé
+        updateSummary();
+    });
+    </script>
+{% endblock %}
