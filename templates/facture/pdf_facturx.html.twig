@@ -1,0 +1,271 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="UTF-8">
+    <title>{{ metadata.title }}</title>
+    <meta name="author" content="{{ metadata.author }}">
+    <meta name="subject" content="{{ metadata.subject }}">
+    <meta name="keywords" content="{{ metadata.keywords }}">
+    <style>
+        @page {
+            margin: 2cm;
+            font-family: 'DejaVu Sans', Arial, sans-serif;
+        }
+        body {
+            font-family: 'DejaVu Sans', Arial, sans-serif;
+            font-size: 10pt;
+            line-height: 1.4;
+            color: #333;
+        }
+        .header {
+            margin-bottom: 30px;
+            border-bottom: 2px solid #0066cc;
+            padding-bottom: 15px;
+        }
+        .company-info {
+            float: left;
+            width: 50%;
+        }
+        .invoice-info {
+            float: right;
+            width: 45%;
+            text-align: right;
+        }
+        .company-name {
+            font-size: 18pt;
+            font-weight: bold;
+            color: #0066cc;
+            margin-bottom: 5px;
+        }
+        .invoice-title {
+            font-size: 24pt;
+            font-weight: bold;
+            color: #0066cc;
+            margin-bottom: 10px;
+        }
+        .invoice-number {
+            font-size: 14pt;
+            font-weight: bold;
+            margin-bottom: 5px;
+        }
+        .parties {
+            clear: both;
+            margin: 30px 0;
+            display: table;
+            width: 100%;
+        }
+        .seller, .buyer {
+            display: table-cell;
+            width: 50%;
+            vertical-align: top;
+            padding: 15px;
+            border: 1px solid #ddd;
+            background-color: #f9f9f9;
+        }
+        .buyer {
+            margin-left: 10px;
+        }
+        .party-title {
+            font-weight: bold;
+            font-size: 12pt;
+            color: #0066cc;
+            margin-bottom: 10px;
+            border-bottom: 1px solid #0066cc;
+            padding-bottom: 5px;
+        }
+        .items-table {
+            width: 100%;
+            border-collapse: collapse;
+            margin: 20px 0;
+            font-size: 9pt;
+        }
+        .items-table th {
+            background-color: #0066cc;
+            color: white;
+            padding: 8px;
+            text-align: left;
+            font-weight: bold;
+        }
+        .items-table td {
+            padding: 6px 8px;
+            border-bottom: 1px solid #ddd;
+        }
+        .items-table .number {
+            text-align: right;
+        }
+        .totals {
+            float: right;
+            width: 40%;
+            margin-top: 20px;
+        }
+        .totals table {
+            width: 100%;
+            border-collapse: collapse;
+        }
+        .totals td {
+            padding: 5px 10px;
+            border-bottom: 1px solid #ddd;
+        }
+        .totals .total-label {
+            font-weight: bold;
+            text-align: right;
+        }
+        .totals .total-amount {
+            text-align: right;
+            font-weight: bold;
+        }
+        .totals .grand-total {
+            background-color: #0066cc;
+            color: white;
+            font-size: 12pt;
+        }
+        .payment-info {
+            clear: both;
+            margin-top: 40px;
+            padding: 15px;
+            background-color: #f0f8ff;
+            border: 1px solid #0066cc;
+            border-radius: 5px;
+        }
+        .facturx-notice {
+            margin-top: 30px;
+            padding: 10px;
+            background-color: #e6f3ff;
+            border-left: 4px solid #0066cc;
+            font-size: 8pt;
+            color: #666;
+        }
+        .clearfix::after {
+            content: "";
+            display: table;
+            clear: both;
+        }
+    </style>
+</head>
+<body>
+    <div class="header clearfix">
+        <div class="company-info">
+            <div class="company-name">{{ company.name }}</div>
+            <div>{{ company.address }}</div>
+            <div>SIRET: {{ company.siret }}</div>
+            <div>TVA: {{ company.vat_number }}</div>
+            {% if company.phone %}
+            <div>Tél: {{ company.phone }}</div>
+            {% endif %}
+            {% if company.email %}
+            <div>Email: {{ company.email }}</div>
+            {% endif %}
+        </div>
+        <div class="invoice-info">
+            <div class="invoice-title">FACTURE</div>
+            <div class="invoice-number">{{ facture.numeroFacture }}</div>
+            <div>Date: {{ facture.dateFacture|date('d/m/Y') }}</div>
+            {% if facture.dateEcheance %}
+            <div>Échéance: {{ facture.dateEcheance|date('d/m/Y') }}</div>
+            {% endif %}
+        </div>
+    </div>
+
+    <div class="parties clearfix">
+        <div class="seller">
+            <div class="party-title">VENDEUR</div>
+            <strong>{{ company.name }}</strong><br>
+            {{ company.address }}<br>
+            SIRET: {{ company.siret }}<br>
+            TVA: {{ company.vat_number }}
+        </div>
+        <div class="buyer">
+            <div class="party-title">CLIENT</div>
+            <strong>{{ facture.client.nomEntreprise }}</strong><br>
+            {% if facture.client.siret %}
+            SIRET: {{ facture.client.siret }}<br>
+            {% endif %}
+            {% set adresse = facture.client.adresseDefaut %}
+            {% if adresse %}
+            {{ adresse.adresseLigne1 }}<br>
+            {% if adresse.adresseLigne2 %}{{ adresse.adresseLigne2 }}<br>{% endif %}
+            {{ adresse.codePostal }} {{ adresse.ville }}<br>
+            {{ adresse.pays }}
+            {% endif %}
+        </div>
+    </div>
+
+    <table class="items-table">
+        <thead>
+            <tr>
+                <th style="width: 40%;">Désignation</th>
+                <th style="width: 15%;">Quantité</th>
+                <th style="width: 15%;">Prix unitaire HT</th>
+                <th style="width: 10%;">TVA</th>
+                <th style="width: 20%;">Total HT</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for item in facture.factureItems %}
+            <tr>
+                <td>
+                    <strong>{{ item.designation }}</strong>
+                    {% if item.description %}
+                    <br><small>{{ item.description }}</small>
+                    {% endif %}
+                </td>
+                <td class="number">{{ item.quantite|number_format(2, ',', ' ') }}</td>
+                <td class="number">{{ item.prixUnitaireHt|number_format(2, ',', ' ') }} €</td>
+                <td class="number">{{ item.tvaPercent|number_format(2, ',', ' ') }}%</td>
+                <td class="number">{{ item.totalLigneHt|number_format(2, ',', ' ') }} €</td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+
+    <div class="totals">
+        <table>
+            <tr>
+                <td class="total-label">Total HT:</td>
+                <td class="total-amount">{{ facture.totalHt|number_format(2, ',', ' ') }} €</td>
+            </tr>
+            <tr>
+                <td class="total-label">Total TVA:</td>
+                <td class="total-amount">{{ facture.totalTva|number_format(2, ',', ' ') }} €</td>
+            </tr>
+            <tr class="grand-total">
+                <td class="total-label">Total TTC:</td>
+                <td class="total-amount">{{ facture.totalTtc|number_format(2, ',', ' ') }} €</td>
+            </tr>
+            {% if facture.montantPaye and facture.montantPaye != '0.00' %}
+            <tr>
+                <td class="total-label">Montant payé:</td>
+                <td class="total-amount">{{ facture.montantPaye|number_format(2, ',', ' ') }} €</td>
+            </tr>
+            <tr>
+                <td class="total-label">Reste à payer:</td>
+                <td class="total-amount">{{ facture.montantRestant|number_format(2, ',', ' ') }} €</td>
+            </tr>
+            {% endif %}
+        </table>
+    </div>
+
+    <div class="payment-info clearfix">
+        <strong>Conditions de paiement:</strong>
+        {% if facture.dateEcheance %}
+        Échéance: {{ facture.dateEcheance|date('d/m/Y') }}
+        {% else %}
+        À réception de facture
+        {% endif %}
+        {% if facture.modePaiement %}
+        - Mode: {{ facture.modePaiement }}
+        {% endif %}
+        
+        {% if facture.notesFacturation %}
+        <br><br><strong>Notes:</strong><br>
+        {{ facture.notesFacturation|nl2br }}
+        {% endif %}
+    </div>
+
+    <div class="facturx-notice">
+        <strong>Notice Factur-X:</strong> Cette facture électronique est conforme au standard Factur-X {{ profile }}.
+        Elle contient les données structurées au format XML CII intégrées selon la norme EN 16931.
+        Conformité: {{ metadata.facturx_conformance_level ?? 'EN 16931' }} - Version: {{ metadata.facturx_version ?? '1.0.07' }}
+    </div>
+</body>
+</html>

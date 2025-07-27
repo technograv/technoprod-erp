@@ -1,0 +1,65 @@
+
+# Symfony Framework
+###> symfony/framework-bundle ###
+/.env.local
+/.env.local.php
+/.env.*.local
+/config/secrets/prod/prod.decrypt.private.php
+/public/bundles/
+/var/
+/vendor/
+###< symfony/framework-bundle ###
+
+# Environment files with secrets
+.env.local
+.env.local.example
+.env.dev
+
+# Database
+/migrations/*.sql
+
+# Logs and cache
+/var/log/
+/var/cache/
+*.log
+
+# IDE files
+/.vscode/
+/.idea/
+*.swp
+*.swo
+*~
+
+# OS files
+.DS_Store
+Thumbs.db
+desktop.ini
+
+# Temporary files
+*.tmp
+*.temp
+/tmp/
+
+# Ngrok and external tools
+ngrok*
+*.tgz
+*.zip
+
+# Documentation files de travail (optionnel - à vous de voir)
+# DEBUG_*.md
+# DIAGNOSTIC_*.md
+# test_*.php
+
+# Crypto keys (IMPORTANT pour sécurité)
+/var/crypto/
+*.pem
+*.key
+
+# Upload files
+/public/uploads/
+/public/signatures/
+
+# Node modules si ajoutés plus tard
+/node_modules/
+package-lock.json
+yarn.lock

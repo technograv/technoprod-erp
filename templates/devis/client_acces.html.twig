@@ -1,0 +1,471 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Devis {{ devis.numeroDevis }} - TechnoProd</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
+    <style>
+        body {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+        }
+        .client-container {
+            background: white;
+            border-radius: 15px;
+            box-shadow: 0 20px 40px rgba(0, 0, 0, 0.1);
+            margin: 2rem auto;
+            max-width: 1000px;
+            overflow: hidden;
+        }
+        .header-section {
+            background: linear-gradient(135deg, #6f42c1 0%, #e83e8c 100%);
+            color: white;
+            padding: 2rem;
+            text-align: center;
+        }
+        .content-section {
+            padding: 2rem;
+        }
+        .devis-info {
+            background: #f8f9fa;
+            border-radius: 10px;
+            padding: 1.5rem;
+            margin-bottom: 2rem;
+        }
+        .signature-pad {
+            border: 2px dashed #6f42c1;
+            border-radius: 10px;
+            margin: 1rem 0;
+            cursor: crosshair;
+            background: #fafafa;
+        }
+        .signature-controls {
+            text-align: center;
+            margin: 1rem 0;
+        }
+        .btn-signature {
+            background: #6f42c1;
+            border: none;
+            color: white;
+            padding: 0.75rem 2rem;
+            border-radius: 25px;
+            font-weight: 600;
+            transition: all 0.3s ease;
+        }
+        .btn-signature:hover {
+            background: #5a359c;
+            transform: translateY(-2px);
+            box-shadow: 0 5px 15px rgba(0, 0, 0, 0.2);
+        }
+        .btn-refuse {
+            background: #dc3545;
+            border: none;
+            color: white;
+            padding: 0.75rem 2rem;
+            border-radius: 25px;
+            font-weight: 600;
+            transition: all 0.3s ease;
+        }
+        .btn-refuse:hover {
+            background: #c82333;
+            transform: translateY(-2px);
+            box-shadow: 0 5px 15px rgba(0, 0, 0, 0.2);
+        }
+        .status-badge {
+            font-size: 1rem;
+            padding: 0.5rem 1rem;
+            border-radius: 20px;
+        }
+        .devis-table {
+            margin: 2rem 0;
+        }
+        .devis-table th {
+            background: #6f42c1;
+            color: white;
+            border: none;
+            font-weight: 600;
+        }
+        .totals-section {
+            background: #f8f9fa;
+            border-radius: 10px;
+            padding: 1.5rem;
+            margin-top: 2rem;
+        }
+        .total-row {
+            display: flex;
+            justify-content: space-between;
+            padding: 0.5rem 0;
+            border-bottom: 1px solid #dee2e6;
+        }
+        .total-row:last-child {
+            border-bottom: none;
+            font-weight: bold;
+            font-size: 1.2rem;
+            color: #6f42c1;
+        }
+        .signature-display {
+            border: 2px solid #28a745;
+            border-radius: 10px;
+            padding: 1rem;
+            background: #f8fff8;
+            text-align: center;
+        }
+        .footer-info {
+            background: #f8f9fa;
+            border-top: 1px solid #dee2e6;
+            padding: 1.5rem;
+            text-align: center;
+            color: #6c757d;
+            font-size: 0.9rem;
+        }
+    </style>
+</head>
+<body>
+    <div class="container-fluid">
+        <!-- Messages Flash -->
+        {% for type, messages in app.flashes %}
+            {% for message in messages %}
+                <div class="alert alert-{{ type == 'error' ? 'danger' : (type == 'warning' ? 'warning' : (type == 'info' ? 'info' : 'success')) }} alert-dismissible fade show m-3" role="alert">
+                    {{ message }}
+                    <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+                </div>
+            {% endfor %}
+        {% endfor %}
+
+        <div class="client-container">
+            <!-- En-tête -->
+            <div class="header-section">
+                <div class="row align-items-center">
+                    <div class="col-md-3">
+                        <img src="data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iMTAwIiBoZWlnaHQ9IjQwIiB2aWV3Qm94PSIwIDAgMTAwIDQwIiBmaWxsPSJub25lIiB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciPgo8cmVjdCB3aWR0aD0iMTAwIiBoZWlnaHQ9IjQwIiBmaWxsPSIjNmY0MmMxIi8+Cjx0ZXh0IHg9IjUwIiB5PSIyNSIgZm9udC1mYW1pbHk9IkFyaWFsLCBzYW5zLXNlcmlmIiBmb250LXNpemU9IjE2IiBmb250LXdlaWdodD0iYm9sZCIgZmlsbD0id2hpdGUiIHRleHQtYW5jaG9yPSJtaWRkbGUiPlRlY2hub1Byb2Q8L3RleHQ+Cjwvc3ZnPgo=" alt="TechnoProd" class="img-fluid">
+                    </div>
+                    <div class="col-md-6">
+                        <h1 class="mb-1">Devis {{ devis.numeroDevis }}</h1>
+                        <p class="mb-0">Consultation et signature électronique</p>
+                    </div>
+                    <div class="col-md-3">
+                        <span class="badge bg-{{ devis.statutCouleur }} status-badge">{{ devis.statutLibelle }}</span>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Contenu principal -->
+            <div class="content-section">
+                <!-- Informations devis -->
+                <div class="devis-info">
+                    <div class="row">
+                        <div class="col-md-6">
+                            <h5><i class="fas fa-info-circle me-2"></i>Informations du devis</h5>
+                            <p><strong>Date de création :</strong> {{ devis.dateCreation|date('d/m/Y') }}</p>
+                            <p><strong>Date de validité :</strong> {{ devis.dateValidite|date('d/m/Y') }}</p>
+                            {% if devis.delaiLivraison %}
+                                <p><strong>Délai de livraison :</strong> {{ devis.delaiLivraison }}</p>
+                            {% endif %}
+                        </div>
+                        <div class="col-md-6">
+                            {% if devis.client %}
+                                <h5><i class="fas fa-building me-2"></i>TechnoProd</h5>
+                                <p>123 Avenue de l'Innovation<br>
+                                75001 Paris, France<br>
+                                Tél: +33 1 23 45 67 89<br>
+                                Email: contact@technoprod.com</p>
+                            {% endif %}
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Détail des lignes -->
+                <div class="devis-table">
+                    <h5><i class="fas fa-list me-2"></i>Détail de votre devis</h5>
+                    <div class="table-responsive">
+                        <table class="table table-hover">
+                            <thead>
+                                <tr>
+                                    <th>Désignation</th>
+                                    <th>Description</th>
+                                    <th class="text-center">Qté</th>
+                                    <th class="text-end">Prix unit. HT</th>
+                                    <th class="text-center">TVA</th>
+                                    <th class="text-end">Total HT</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% for item in devis.devisItems %}
+                                    <tr>
+                                        <td><strong>{{ item.designation }}</strong></td>
+                                        <td>{{ item.description|nl2br }}</td>
+                                        <td class="text-center">{{ item.quantite }}</td>
+                                        <td class="text-end">{{ item.prixUnitaireHt }}€</td>
+                                        <td class="text-center">{{ item.tvaPercent }}%</td>
+                                        <td class="text-end"><strong>{{ item.totalLigneHt }}€</strong></td>
+                                    </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+
+                <!-- Totaux -->
+                <div class="totals-section">
+                    <h5><i class="fas fa-calculator me-2"></i>Récapitulatif</h5>
+                    
+                    {% if devis.remiseGlobalePercent %}
+                    <div class="total-row">
+                        <span>Sous-total HT :</span>
+                        <span>{{ devis.totalHt + devis.remiseGlobaleMontant }}€</span>
+                    </div>
+                    <div class="total-row">
+                        <span>Remise globale ({{ devis.remiseGlobalePercent }}%) :</span>
+                        <span>-{{ devis.remiseGlobaleMontant }}€</span>
+                    </div>
+                    {% endif %}
+                    
+                    <div class="total-row">
+                        <span>Total HT :</span>
+                        <span>{{ devis.totalHt }}€</span>
+                    </div>
+                    
+                    <div class="total-row">
+                        <span>TVA :</span>
+                        <span>{{ devis.totalTva }}€</span>
+                    </div>
+                    
+                    <div class="total-row">
+                        <span>TOTAL TTC :</span>
+                        <span>{{ devis.totalTtc }}€</span>
+                    </div>
+                    
+                    {% if devis.acomptePercent or devis.acompteMontant %}
+                    <div class="total-row" style="border-top: 2px solid #6f42c1; padding-top: 1rem; margin-top: 1rem;">
+                        <span>Acompte à la commande :</span>
+                        <span>{{ devis.calculateAcompte }}€</span>
+                    </div>
+                    <div class="total-row">
+                        <span>Solde à la livraison :</span>
+                        <span>{{ (devis.totalTtc - devis.calculateAcompte) }}€</span>
+                    </div>
+                    {% endif %}
+                </div>
+
+                {% if devis.notesClient %}
+                <!-- Notes client -->
+                <div class="devis-info mt-4">
+                    <h5><i class="fas fa-sticky-note me-2"></i>Notes</h5>
+                    <p>{{ devis.notesClient|nl2br }}</p>
+                </div>
+                {% endif %}
+
+                <!-- Section signature -->
+                {% if devis.statut in ['envoye', 'relance'] %}
+                <div class="mt-4">
+                    <h5><i class="fas fa-signature me-2"></i>Signature électronique</h5>
+                    <p class="text-muted">Pour accepter ce devis, veuillez remplir vos informations et signer ci-dessous :</p>
+                    
+                    <form method="POST" action="{{ path('app_devis_client_acces', {'id': devis.id, 'token': token}) }}" id="signature-form">
+                        <input type="hidden" name="action" value="signer">
+                        <input type="hidden" name="signature_data" id="signature-data">
+                        
+                        <div class="row mb-3">
+                            <div class="col-md-6">
+                                <label for="signature_nom" class="form-label">Nom complet *</label>
+                                <input type="text" class="form-control" id="signature_nom" name="signature_nom" required>
+                            </div>
+                            <div class="col-md-6">
+                                <label for="signature_email" class="form-label">Adresse email *</label>
+                                <input type="email" class="form-control" id="signature_email" name="signature_email" required>
+                            </div>
+                        </div>
+                        
+                        <div class="mb-3">
+                            <label class="form-label">Signature *</label>
+                            <canvas id="signature-pad" class="signature-pad" width="800" height="200"></canvas>
+                            <div class="signature-controls">
+                                <button type="button" class="btn btn-outline-secondary me-2" id="clear-signature">
+                                    <i class="fas fa-eraser me-1"></i>Effacer
+                                </button>
+                                <span class="text-muted">Signez dans le cadre ci-dessus</span>
+                            </div>
+                        </div>
+                        
+                        <div class="text-center">
+                            <button type="submit" class="btn btn-signature me-3" id="sign-btn" disabled>
+                                <i class="fas fa-signature me-2"></i>Signer et accepter le devis
+                            </button>
+                            <button type="button" class="btn btn-refuse" data-bs-toggle="modal" data-bs-target="#refuseModal">
+                                <i class="fas fa-times me-2"></i>Refuser le devis
+                            </button>
+                        </div>
+                    </form>
+                </div>
+                {% endif %}
+
+                {% if devis.dateSignature %}
+                <!-- Signature confirmée -->
+                <div class="signature-display mt-4">
+                    <h5><i class="fas fa-check-circle text-success me-2"></i>Devis signé</h5>
+                    <p><strong>Signé par :</strong> {{ devis.signatureNom }} ({{ devis.signatureEmail }})</p>
+                    <p><strong>Date de signature :</strong> {{ devis.dateSignature|date('d/m/Y à H:i:s') }}</p>
+                    {% if devis.signatureData %}
+                        <div class="mt-3">
+                            <img src="{{ devis.signatureData }}" alt="Signature" style="max-height: 100px; border: 1px solid #ddd;">
+                        </div>
+                    {% endif %}
+                    
+                    {% if devis.acomptePercent or devis.acompteMontant %}
+                        <div class="alert alert-info mt-3">
+                            <h6><i class="fas fa-euro-sign me-2"></i>Prochaine étape : Règlement de l'acompte</h6>
+                            <p class="mb-0">Montant de l'acompte : <strong>{{ devis.calculateAcompte }}€</strong></p>
+                            <p class="mb-0">Nos services vont vous contacter pour organiser le paiement.</p>
+                        </div>
+                    {% endif %}
+                </div>
+                {% endif %}
+
+                {% if devis.statut == 'refuse' %}
+                <!-- Devis refusé -->
+                <div class="alert alert-danger mt-4">
+                    <h5><i class="fas fa-times-circle me-2"></i>Devis refusé</h5>
+                    <p class="mb-0">Ce devis a été refusé. Merci de nous contacter si vous souhaitez discuter d'une nouvelle proposition.</p>
+                </div>
+                {% endif %}
+            </div>
+
+            <!-- Pied de page -->
+            <div class="footer-info">
+                <p><strong>TechnoProd</strong> - Solutions technologiques innovantes</p>
+                <p>SARL au capital de 50 000€ - SIRET: 123 456 789 00012 - TVA: FR12345678901</p>
+                <p>123 Avenue de l'Innovation, 75001 Paris - Tél: +33 1 23 45 67 89 - Email: contact@technoprod.com</p>
+            </div>
+        </div>
+    </div>
+
+    <!-- Modal de refus -->
+    <div class="modal fade" id="refuseModal" tabindex="-1">
+        <div class="modal-dialog">
+            <div class="modal-content">
+                <form method="POST" action="{{ path('app_devis_client_acces', {'id': devis.id, 'token': token}) }}">
+                    <input type="hidden" name="action" value="refuser">
+                    <div class="modal-header">
+                        <h5 class="modal-title">Refuser le devis</h5>
+                        <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                    </div>
+                    <div class="modal-body">
+                        <p>Êtes-vous sûr de vouloir refuser ce devis ?</p>
+                        <p class="text-muted">Cette action est définitive et ne peut pas être annulée.</p>
+                    </div>
+                    <div class="modal-footer">
+                        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Annuler</button>
+                        <button type="submit" class="btn btn-danger">Confirmer le refus</button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/js/bootstrap.bundle.min.js"></script>
+    <script>
+    document.addEventListener('DOMContentLoaded', function() {
+        const canvas = document.getElementById('signature-pad');
+        const signBtn = document.getElementById('sign-btn');
+        const clearBtn = document.getElementById('clear-signature');
+        const signatureData = document.getElementById('signature-data');
+        
+        if (canvas) {
+            const ctx = canvas.getContext('2d');
+            let drawing = false;
+            let hasSignature = false;
+            
+            // Ajuster la taille du canvas
+            const rect = canvas.getBoundingClientRect();
+            canvas.width = rect.width * 2;
+            canvas.height = rect.height * 2;
+            ctx.scale(2, 2);
+            canvas.style.width = rect.width + 'px';
+            canvas.style.height = rect.height + 'px';
+            
+            function startDrawing(e) {
+                drawing = true;
+                draw(e);
+            }
+            
+            function draw(e) {
+                if (!drawing) return;
+                
+                ctx.lineWidth = 2;
+                ctx.lineCap = 'round';
+                ctx.strokeStyle = '#000';
+                
+                const rect = canvas.getBoundingClientRect();
+                const x = (e.clientX || e.touches[0].clientX) - rect.left;
+                const y = (e.clientY || e.touches[0].clientY) - rect.top;
+                
+                ctx.lineTo(x, y);
+                ctx.stroke();
+                ctx.beginPath();
+                ctx.moveTo(x, y);
+                
+                hasSignature = true;
+                updateSignButton();
+            }
+            
+            function stopDrawing() {
+                if (drawing) {
+                    drawing = false;
+                    ctx.beginPath();
+                    
+                    // Sauvegarder la signature
+                    signatureData.value = canvas.toDataURL();
+                }
+            }
+            
+            function clearSignature() {
+                ctx.clearRect(0, 0, canvas.width, canvas.height);
+                hasSignature = false;
+                signatureData.value = '';
+                updateSignButton();
+            }
+            
+            function updateSignButton() {
+                const nomFilled = document.getElementById('signature_nom').value.trim() !== '';
+                const emailFilled = document.getElementById('signature_email').value.trim() !== '';
+                
+                if (hasSignature && nomFilled && emailFilled) {
+                    signBtn.disabled = false;
+                } else {
+                    signBtn.disabled = true;
+                }
+            }
+            
+            // Événements souris
+            canvas.addEventListener('mousedown', startDrawing);
+            canvas.addEventListener('mousemove', draw);
+            canvas.addEventListener('mouseup', stopDrawing);
+            canvas.addEventListener('mouseout', stopDrawing);
+            
+            // Événements tactiles
+            canvas.addEventListener('touchstart', startDrawing);
+            canvas.addEventListener('touchmove', draw);
+            canvas.addEventListener('touchend', stopDrawing);
+            
+            // Bouton effacer
+            clearBtn.addEventListener('click', clearSignature);
+            
+            // Validation des champs
+            document.getElementById('signature_nom').addEventListener('input', updateSignButton);
+            document.getElementById('signature_email').addEventListener('input', updateSignButton);
+            
+            // Empêcher le scroll sur mobile
+            canvas.addEventListener('touchstart', function(e) {
+                e.preventDefault();
+            });
+            canvas.addEventListener('touchmove', function(e) {
+                e.preventDefault();
+            });
+        }
+    });
+    </script>
+</body>
+</html>

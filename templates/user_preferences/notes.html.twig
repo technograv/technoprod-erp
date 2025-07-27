@@ -1,0 +1,215 @@
+{% extends 'user_preferences/index.html.twig' %}
+
+{% block title %}Notes Personnelles - Paramétrage Utilisateur{% endblock %}
+
+{% block body %}
+<div class="container-fluid mt-4">
+    <div class="row">
+        <div class="col-12">
+            <div class="d-sm-flex align-items-center justify-content-between mb-4">
+                <h1 class="h3 mb-0 text-gray-800">
+                    <i class="fas fa-sticky-note me-2"></i>Notes Personnelles
+                </h1>
+                <a href="{{ path('app_user_preferences_index') }}" class="btn btn-secondary">
+                    <i class="fas fa-arrow-left me-1"></i>Retour
+                </a>
+            </div>
+
+            <!-- Messages flash -->
+            {% for label, messages in app.flashes %}
+                {% for message in messages %}
+                    <div class="alert alert-{{ label == 'error' ? 'danger' : label }} alert-dismissible fade show" role="alert">
+                        {{ message }}
+                        <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+                    </div>
+                {% endfor %}
+            {% endfor %}
+
+            <div class="row">
+                <div class="col-lg-8">
+                    <!-- Notes personnelles -->
+                    <div class="card shadow mb-4">
+                        <div class="card-header py-3 d-flex justify-content-between align-items-center">
+                            <h6 class="m-0 font-weight-bold text-primary">Vos notes personnelles</h6>
+                            <small class="text-muted">
+                                <i class="fas fa-save me-1"></i>Sauvegarde automatique
+                            </small>
+                        </div>
+                        <div class="card-body">
+                            <form method="post">
+                                <div class="mb-3">
+                                    <label for="notes" class="form-label">
+                                        <i class="fas fa-edit me-1"></i>Vos notes et idées
+                                    </label>
+                                    <textarea class="form-control" id="notes" name="notes" 
+                                              rows="15" 
+                                              placeholder="Utilisez cet espace pour noter vos idées, tâches à faire, remarques importantes...
+
+Quelques suggestions d'utilisation :
+• Fonctionnalités à demander
+• Bugs ou problèmes rencontrés
+• Idées d'amélioration
+• Notes de réunion
+• Contacts importants
+• Rappels personnels
+
+Cet espace est privé et n'est visible que par vous.">{{ preferences.notes }}</textarea>
+                                </div>
+
+                                <div class="d-flex justify-content-between align-items-center">
+                                    <button type="submit" class="btn btn-success">
+                                        <i class="fas fa-save me-1"></i>Sauvegarder les notes
+                                    </button>
+                                    
+                                    <div class="text-muted small">
+                                        {% if preferences.updatedAt %}
+                                            <i class="fas fa-clock me-1"></i>
+                                            Dernière modification : {{ preferences.updatedAt|date('d/m/Y à H:i') }}
+                                        {% endif %}
+                                    </div>
+                                </div>
+                            </form>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="col-lg-4">
+                    <!-- Conseils d'utilisation -->
+                    <div class="card shadow mb-4">
+                        <div class="card-header py-3">
+                            <h6 class="m-0 font-weight-bold text-info">
+                                <i class="fas fa-lightbulb me-1"></i>Conseils d'utilisation
+                            </h6>
+                        </div>
+                        <div class="card-body">
+                            <h6 class="text-secondary">Idées pour vos notes :</h6>
+                            <ul class="list-unstyled">
+                                <li class="mb-2">
+                                    <i class="fas fa-plus-circle text-success me-2"></i>
+                                    <strong>Fonctionnalités souhaitées</strong>
+                                    <small class="text-muted d-block">Notez les améliorations que vous aimeriez voir</small>
+                                </li>
+                                <li class="mb-2">
+                                    <i class="fas fa-bug text-warning me-2"></i>
+                                    <strong>Problèmes rencontrés</strong>
+                                    <small class="text-muted d-block">Documentez les bugs pour les signaler</small>
+                                </li>
+                                <li class="mb-2">
+                                    <i class="fas fa-users text-primary me-2"></i>
+                                    <strong>Notes de réunion</strong>
+                                    <small class="text-muted d-block">Gardez une trace des décisions importantes</small>
+                                </li>
+                                <li class="mb-2">
+                                    <i class="fas fa-phone text-info me-2"></i>
+                                    <strong>Contacts utiles</strong>
+                                    <small class="text-muted d-block">Numéros et emails importants</small>
+                                </li>
+                            </ul>
+                        </div>
+                    </div>
+
+                    <!-- Raccourcis markdown -->
+                    <div class="card shadow mb-4">
+                        <div class="card-header py-3">
+                            <h6 class="m-0 font-weight-bold text-secondary">
+                                <i class="fas fa-keyboard me-1"></i>Raccourcis utiles
+                            </h6>
+                        </div>
+                        <div class="card-body">
+                            <small class="text-muted">
+                                <strong>Organisation :</strong><br>
+                                • Utilisez des tirets pour les listes<br>
+                                • ### pour les titres<br>
+                                • --- pour séparer les sections<br><br>
+                                
+                                <strong>Mise en forme :</strong><br>
+                                • **texte important**<br>
+                                • *texte en italique*<br>
+                                • TODO: pour les tâches<br>
+                                • DONE: pour les tâches terminées
+                            </small>
+                        </div>
+                    </div>
+
+                    <!-- Statistiques -->
+                    <div class="card shadow">
+                        <div class="card-header py-3">
+                            <h6 class="m-0 font-weight-bold text-success">
+                                <i class="fas fa-chart-bar me-1"></i>Statistiques
+                            </h6>
+                        </div>
+                        <div class="card-body">
+                            <div class="d-flex justify-content-between align-items-center mb-2">
+                                <span class="text-secondary">Caractères :</span>
+                                <span class="badge bg-primary" id="char_count">0</span>
+                            </div>
+                            <div class="d-flex justify-content-between align-items-center mb-2">
+                                <span class="text-secondary">Mots :</span>
+                                <span class="badge bg-info" id="word_count">0</span>
+                            </div>
+                            <div class="d-flex justify-content-between align-items-center">
+                                <span class="text-secondary">Lignes :</span>
+                                <span class="badge bg-success" id="line_count">0</span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    const notesTextarea = document.getElementById('notes');
+    const charCountElement = document.getElementById('char_count');
+    const wordCountElement = document.getElementById('word_count');
+    const lineCountElement = document.getElementById('line_count');
+
+    function updateStats() {
+        const text = notesTextarea.value;
+        const charCount = text.length;
+        const wordCount = text.trim() === '' ? 0 : text.trim().split(/\s+/).length;
+        const lineCount = text.split('\n').length;
+
+        charCountElement.textContent = charCount.toLocaleString();
+        wordCountElement.textContent = wordCount.toLocaleString();
+        lineCountElement.textContent = lineCount.toLocaleString();
+    }
+
+    notesTextarea.addEventListener('input', updateStats);
+    
+    // Auto-save functionality (could be implemented later)
+    let saveTimeout;
+    notesTextarea.addEventListener('input', function() {
+        clearTimeout(saveTimeout);
+        saveTimeout = setTimeout(function() {
+            // Here we could implement auto-save via AJAX
+            console.log('Auto-save triggered');
+        }, 3000); // Save after 3 seconds of inactivity
+    });
+
+    // Initial stats calculation
+    updateStats();
+
+    // Add some keyboard shortcuts
+    notesTextarea.addEventListener('keydown', function(e) {
+        // Ctrl+S to save
+        if (e.ctrlKey && e.key === 's') {
+            e.preventDefault();
+            document.querySelector('form').submit();
+        }
+        
+        // Tab to insert spaces instead of moving focus
+        if (e.key === 'Tab') {
+            e.preventDefault();
+            const start = this.selectionStart;
+            const end = this.selectionEnd;
+            
+            this.value = this.value.substring(0, start) + '  ' + this.value.substring(end);
+            this.selectionStart = this.selectionEnd = start + 2;
+        }
+    });
+});
+</script>
+{% endblock %}

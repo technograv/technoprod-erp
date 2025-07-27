@@ -1,0 +1,691 @@
+{% extends 'base.html.twig' %}
+
+{% block title %}Devis {{ devis.numeroDevis }}{% endblock %}
+
+{% block stylesheets %}
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
+    <style>
+        .devis-header {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            padding: 2rem 0;
+            margin-bottom: 2rem;
+        }
+        .status-badge {
+            font-size: 0.875rem;
+            padding: 0.5rem 1rem;
+        }
+        .total-section {
+            background-color: #f8f9fa;
+            border-radius: 8px;
+            padding: 1.5rem;
+        }
+        .line-item {
+            border-bottom: 1px solid #dee2e6;
+            padding: 1rem 0;
+        }
+        .line-item:last-child {
+            border-bottom: none;
+        }
+        .line-item.editing {
+            background-color: #fff3cd;
+            border-radius: 8px;
+            padding: 1rem;
+            margin: 0.5rem 0;
+        }
+        .add-item-form {
+            background-color: #e7f3ff;
+            border-radius: 8px;
+            padding: 1.5rem;
+            margin-top: 1rem;
+        }
+        .table-responsive {
+            box-shadow: 0 0 10px rgba(0,0,0,0.1);
+            border-radius: 8px;
+        }
+        .btn-edit-inline {
+            opacity: 0;
+            transition: opacity 0.3s;
+        }
+        .line-item:hover .btn-edit-inline {
+            opacity: 1;
+        }
+    </style>
+{% endblock %}
+
+{% block body %}
+<div class="devis-header">
+    <div class="container">
+        <div class="row align-items-center">
+            <div class="col-md-8">
+                <h1><i class="fas fa-file-invoice"></i> Devis {{ devis.numeroDevis }}</h1>
+                <p class="mb-0">Client : <strong>{{ devis.client ? devis.client.nomEntreprise : 'Non défini' }}</strong></p>
+            </div>
+            <div class="col-md-4 text-end">
+                {% set statusClass = {
+                    'brouillon': 'bg-secondary',
+                    'envoye': 'bg-info',
+                    'accepte': 'bg-success',
+                    'refuse': 'bg-danger',
+                    'annule': 'bg-dark',
+                    'converti': 'bg-warning'
+                } %}
+                <span class="badge {{ statusClass[devis.statut] ?? 'bg-secondary' }} status-badge" id="statut-badge">
+                    {{ devis.statut|title }}
+                </span>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="container">
+    <div class="row">
+        <!-- Informations du devis -->
+        <div class="col-md-4">
+            <div class="card mb-4">
+                <div class="card-header">
+                    <h5><i class="fas fa-info-circle"></i> Informations</h5>
+                </div>
+                <div class="card-body">
+                    <p><strong>Date de création :</strong><br>{{ devis.dateCreation ? devis.dateCreation|date('d/m/Y') : 'Non défini' }}</p>
+                    <p><strong>Date de validité :</strong><br>{{ devis.dateValidite ? devis.dateValidite|date('d/m/Y') : 'Non défini' }}</p>
+                    <p><strong>Commercial :</strong><br>{{ devis.commercial ? devis.commercial.fullName : 'Non assigné' }}</p>
+                    {% if devis.contact %}
+                        <p><strong>Contact :</strong><br>{{ devis.contact.fullName }}</p>
+                    {% endif %}
+                </div>
+            </div>
+
+            <!-- Totaux -->
+            <div class="card">
+                <div class="card-header">
+                    <h5><i class="fas fa-calculator"></i> Totaux</h5>
+                </div>
+                <div class="card-body total-section">
+                    <div class="d-flex justify-content-between mb-2">
+                        <span>Total HT :</span>
+                        <strong id="total-ht">{{ devis.totalHt }} €</strong>
+                    </div>
+                    <div class="d-flex justify-content-between mb-2">
+                        <span>Total TVA :</span>
+                        <strong id="total-tva">{{ devis.totalTva }} €</strong>
+                    </div>
+                    <hr>
+                    <div class="d-flex justify-content-between">
+                        <span><strong>Total TTC :</strong></span>
+                        <strong class="text-primary fs-5" id="total-ttc">{{ devis.totalTtc }} €</strong>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Lignes du devis -->
+        <div class="col-md-8">
+            <div class="card">
+                <div class="card-header d-flex justify-content-between align-items-center">
+                    <h5><i class="fas fa-list"></i> Lignes du devis</h5>
+                    <button class="btn btn-success btn-sm" onclick="showAddItemForm()">
+                        <i class="fas fa-plus"></i> Ajouter une ligne
+                    </button>
+                </div>
+                <div class="card-body">
+                    <div id="devis-items">
+                        {% if devis.devisItems|length > 0 %}
+                            {% for item in devis.devisItems %}
+                                <div class="line-item" data-item-id="{{ item.id }}">
+                                    <div class="row align-items-center">
+                                        <div class="col-md-4">
+                                            <strong class="item-designation">{{ item.designation }}</strong>
+                                            {% if item.description %}
+                                                <br><small class="text-muted item-description">{{ item.description }}</small>
+                                            {% endif %}
+                                        </div>
+                                        <div class="col-md-2 text-center">
+                                            <span class="item-quantity">{{ item.quantite }}</span>
+                                        </div>
+                                        <div class="col-md-2 text-center">
+                                            <span class="item-price">{{ item.prixUnitaireHt }} €</span>
+                                        </div>
+                                        <div class="col-md-2 text-center">
+                                            <span class="item-total">{{ item.totalLigneHt }} €</span>
+                                        </div>
+                                        <div class="col-md-2 text-end">
+                                            <button class="btn btn-sm btn-outline-primary btn-edit-inline" onclick="editItem({{ item.id }})">
+                                                <i class="fas fa-edit"></i>
+                                            </button>
+                                            <button class="btn btn-sm btn-outline-danger btn-edit-inline" onclick="deleteItem({{ item.id }})">
+                                                <i class="fas fa-trash"></i>
+                                            </button>
+                                        </div>
+                                    </div>
+                                </div>
+                            {% endfor %}
+                        {% else %}
+                            <div id="no-items-message" class="text-center text-muted py-4">
+                                <i class="fas fa-inbox fa-3x mb-3"></i>
+                                <p>Aucune ligne dans ce devis</p>
+                                <button class="btn btn-primary" onclick="showAddItemForm()">
+                                    Ajouter la première ligne
+                                </button>
+                            </div>
+                        {% endif %}
+                    </div>
+
+                    <!-- Formulaire d'ajout de ligne (caché par défaut) -->
+                    <div id="add-item-form" class="add-item-form" style="display: none;">
+                        <h6><i class="fas fa-plus"></i> Nouvelle ligne</h6>
+                        
+                        <!-- Sélection produit prédéfini -->
+                        <div class="mb-3">
+                            <label class="form-label">Produit prédéfini (optionnel)</label>
+                            <select class="form-select" id="produit-selector">
+                                <option value="">Choisir un produit existant...</option>
+                            </select>
+                            <small class="form-text text-muted">Sélectionnez un produit pour préremplir les champs</small>
+                        </div>
+                        
+                        <form id="item-form">
+                            <div class="row">
+                                <div class="col-md-6">
+                                    <div class="mb-3">
+                                        <label class="form-label">Désignation *</label>
+                                        <input type="text" class="form-control" name="designation" required>
+                                    </div>
+                                </div>
+                                <div class="col-md-6">
+                                    <div class="mb-3">
+                                        <label class="form-label">Quantité</label>
+                                        <input type="number" class="form-control" name="quantite" value="1" step="0.01" min="0">
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="row">
+                                <div class="col-md-4">
+                                    <div class="mb-3">
+                                        <label class="form-label">Prix unitaire HT (€)</label>
+                                        <input type="number" class="form-control" name="prixUnitaireHt" value="0" step="0.01" min="0">
+                                    </div>
+                                </div>
+                                <div class="col-md-4">
+                                    <div class="mb-3">
+                                        <label class="form-label">Remise (%)</label>
+                                        <input type="number" class="form-control" name="remisePercent" step="0.01" min="0" max="100">
+                                    </div>
+                                </div>
+                                <div class="col-md-4">
+                                    <div class="mb-3">
+                                        <label class="form-label">TVA (%)</label>
+                                        <input type="number" class="form-control" name="tvaPercent" value="20" step="0.01" min="0">
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="mb-3">
+                                <label class="form-label">Description</label>
+                                <textarea class="form-control" name="description" rows="2"></textarea>
+                            </div>
+                            <div class="d-flex gap-2">
+                                <button type="submit" class="btn btn-success">
+                                    <i class="fas fa-check"></i> Ajouter
+                                </button>
+                                <button type="button" class="btn btn-secondary" onclick="hideAddItemForm()">
+                                    Annuler
+                                </button>
+                            </div>
+                        </form>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Actions Workflow -->
+    <div class="row mt-4">
+        <div class="col-12">
+            <div class="card">
+                <div class="card-header">
+                    <h5><i class="fas fa-cogs"></i> Actions disponibles</h5>
+                </div>
+                <div class="card-body">
+                    <div id="workflow-actions" class="mb-3">
+                        <!-- Les actions seront chargées ici via JavaScript -->
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Actions Standards -->
+    <div class="row mt-4">
+        <div class="col-12">
+            <a href="{{ path('app_devis_index') }}" class="btn btn-secondary">
+                <i class="fas fa-arrow-left"></i> Retour à la liste
+            </a>
+            <a href="{{ path('app_devis_edit', {'id': devis.id}) }}" class="btn btn-primary">
+                <i class="fas fa-edit"></i> Modifier le devis
+            </a>
+            <button class="btn btn-info" onclick="window.print()">
+                <i class="fas fa-print"></i> Imprimer
+            </button>
+            <a href="{{ path('app_devis_pdf', {'id': devis.id}) }}" class="btn btn-success" target="_blank">
+                <i class="fas fa-file-pdf"></i> Générer PDF
+            </a>
+        </div>
+    </div>
+</div>
+
+{% block javascripts %}
+<script>
+// Éviter les redéclarations
+if (typeof currentEditingItem === 'undefined') {
+    var currentEditingItem = null;
+    var produits = [];
+    var devisId = {{ devis.id }};
+}
+
+// Vérifier l'état de l'authentification
+console.log('Utilisateur connecté:', {{ app.user ? 'true' : 'false' }});
+{% if app.user %}
+console.log('Utilisateur:', '{{ app.user.email }}');
+{% endif %}
+
+// Test de l'authentification via API
+async function testApiAuth() {
+    try {
+        const response = await fetch('/api/test-auth', {
+            credentials: 'same-origin'
+        });
+        const result = await response.json();
+        console.log('Test API Auth:', result);
+    } catch (error) {
+        console.error('Erreur test auth:', error);
+    }
+}
+
+// Lancer le test au chargement
+document.addEventListener('DOMContentLoaded', function() {
+    testApiAuth();
+    loadWorkflowActions();
+});
+
+// Charger les actions workflow disponibles
+async function loadWorkflowActions() {
+    try {
+        const workflowActionsContainer = document.getElementById('workflow-actions');
+        const currentStatut = '{{ devis.statut }}';
+        
+        // Définir les actions possibles selon le statut
+        let actions = [];
+        
+        switch(currentStatut) {
+            case 'brouillon':
+                actions = [
+                    {action: 'envoye', label: 'Envoyer le devis', class: 'btn-primary'},
+                    {action: 'annule', label: 'Annuler', class: 'btn-danger'}
+                ];
+                break;
+            case 'envoye':
+                actions = [
+                    {action: 'accepte', label: 'Accepter', class: 'btn-success'},
+                    {action: 'refuse', label: 'Refuser', class: 'btn-danger'},
+                    {action: 'annule', label: 'Annuler', class: 'btn-danger'}
+                ];
+                break;
+            case 'accepte':
+                actions = [
+                    {action: 'convert_to_commande', label: 'Convertir en commande', class: 'btn-success'},
+                    {action: 'annule', label: 'Annuler', class: 'btn-danger'}
+                ];
+                break;
+            case 'refuse':
+                actions = [
+                    {action: 'envoye', label: 'Renvoyer', class: 'btn-primary'}
+                ];
+                break;
+        }
+        
+        if (actions.length === 0) {
+            workflowActionsContainer.innerHTML = '<p class="text-muted">Aucune action disponible pour ce statut.</p>';
+            return;
+        }
+        
+        let buttonsHtml = '';
+        actions.forEach(action => {
+            buttonsHtml += `
+                <button class="btn ${action.class} me-2 mb-2" onclick="executeWorkflowAction('${action.action}')">
+                    <i class="fas fa-play"></i> ${action.label}
+                </button>
+            `;
+        });
+        
+        workflowActionsContainer.innerHTML = buttonsHtml;
+        
+    } catch (error) {
+        console.error('Erreur lors du chargement des actions workflow:', error);
+    }
+}
+
+// Exécuter une action workflow
+async function executeWorkflowAction(action) {
+    if (!confirm(`Êtes-vous sûr de vouloir exécuter cette action : ${action} ?`)) {
+        return;
+    }
+    
+    try {
+        const response = await fetch(`/workflow/devis/${devisId}/action/${action}`, {
+            method: 'POST',
+            credentials: 'same-origin',
+            headers: {
+                'X-Requested-With': 'XMLHttpRequest'
+            }
+        });
+        
+        const result = await response.json();
+        
+        if (result.success) {
+            showMessage(result.message, 'success');
+            
+            if (result.redirect) {
+                // Redirection vers la commande créée
+                setTimeout(() => {
+                    window.location.href = result.redirect;
+                }, 1500);
+            } else {
+                // Mettre à jour le statut et recharger les actions
+                if (result.new_statut) {
+                    updateStatutBadge(result.new_statut);
+                    loadWorkflowActions();
+                }
+            }
+        } else {
+            showMessage(result.message, 'error');
+        }
+    } catch (error) {
+        console.error('Erreur workflow:', error);
+        showMessage('Erreur de communication', 'error');
+    }
+}
+
+// Mettre à jour le badge de statut
+function updateStatutBadge(newStatut) {
+    const badge = document.getElementById('statut-badge');
+    if (badge) {
+        // Mettre à jour le texte
+        badge.textContent = newStatut.charAt(0).toUpperCase() + newStatut.slice(1);
+        
+        // Mettre à jour la classe CSS
+        badge.className = 'badge status-badge';
+        const statusClasses = {
+            'brouillon': 'bg-secondary',
+            'envoye': 'bg-info',
+            'accepte': 'bg-success',
+            'refuse': 'bg-danger',
+            'annule': 'bg-dark',
+            'converti': 'bg-warning'
+        };
+        
+        const newClass = statusClasses[newStatut] || 'bg-secondary';
+        badge.classList.add(newClass);
+    }
+}
+
+async function loadProduits() {
+    try {
+        const response = await fetch('/api/produits', {
+            credentials: 'same-origin'
+        });
+        produits = await response.json();
+        
+        const selector = document.getElementById('produit-selector');
+        selector.innerHTML = '<option value="">Choisir un produit existant...</option>';
+        
+        produits.forEach(produit => {
+            const option = document.createElement('option');
+            option.value = produit.id;
+            option.textContent = `${produit.designation} - ${produit.prixUnitaireHt}€`;
+            if (produit.reference) {
+                option.textContent += ` (${produit.reference})`;
+            }
+            selector.appendChild(option);
+        });
+    } catch (error) {
+        console.error('Erreur lors du chargement des produits:', error);
+    }
+}
+
+function fillFormFromProduit(produitId) {
+    const produit = produits.find(p => p.id == produitId);
+    if (!produit) return;
+    
+    document.querySelector('[name="designation"]').value = produit.designation;
+    document.querySelector('[name="description"]').value = produit.description || '';
+    document.querySelector('[name="prixUnitaireHt"]').value = produit.prixUnitaireHt;
+    document.querySelector('[name="tvaPercent"]').value = produit.tvaPercent;
+}
+
+function showAddItemForm() {
+    document.getElementById('add-item-form').style.display = 'block';
+    document.querySelector('[name="designation"]').focus();
+    loadProduits();
+}
+
+function hideAddItemForm() {
+    document.getElementById('add-item-form').style.display = 'none';
+    document.getElementById('item-form').reset();
+}
+
+function updateTotals(totals) {
+    document.getElementById('total-ht').textContent = totals.totalHt + ' €';
+    document.getElementById('total-tva').textContent = totals.totalTva + ' €';
+    document.getElementById('total-ttc').textContent = totals.totalTtc + ' €';
+}
+
+let isSubmitting = false;
+
+async function addItem(formData) {
+    // Éviter les soumissions multiples
+    if (isSubmitting) {
+        console.log('Soumission en cours, ignorée');
+        return;
+    }
+    
+    isSubmitting = true;
+    
+    try {
+        console.log('Envoi des données:', formData);
+        
+        // Désactiver le bouton de soumission
+        const submitBtn = document.querySelector('#item-form button[type="submit"]');
+        if (submitBtn) {
+            submitBtn.disabled = true;
+            submitBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Ajout...';
+        }
+        
+        const response = await fetch(`/devis/${devisId}/items/add`, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'X-Requested-With': 'XMLHttpRequest'
+            },
+            credentials: 'same-origin',
+            body: JSON.stringify(formData)
+        });
+
+        const result = await response.json();
+        console.log('Réponse API:', result);
+        
+        if (response.ok && result.success) {
+            // Ajouter la ligne à l'interface
+            addItemToDisplay(result);
+            updateTotals(result.devisTotals);
+            hideAddItemForm();
+            
+            // Afficher message de succès
+            showMessage('Ligne ajoutée avec succès !', 'success');
+        } else {
+            showMessage('Erreur: ' + result.error, 'error');
+        }
+    } catch (error) {
+        console.error('Erreur:', error);
+        showMessage('Erreur de communication: ' + error.message, 'error');
+    } finally {
+        // Réactiver le bouton
+        const submitBtn = document.querySelector('#item-form button[type="submit"]');
+        if (submitBtn) {
+            submitBtn.disabled = false;
+            submitBtn.innerHTML = '<i class="fas fa-check"></i> Ajouter';
+        }
+        isSubmitting = false;
+    }
+}
+
+function addItemToDisplay(item) {
+    const container = document.getElementById('devis-items');
+    const noItemsMessage = document.getElementById('no-items-message');
+    
+    // Vérifier si l'item existe déjà
+    const existingItem = document.querySelector(`[data-item-id="${item.id}"]`);
+    if (existingItem) {
+        console.log('Item déjà présent, ignoré:', item.id);
+        return;
+    }
+    
+    // Masquer le message "aucune ligne"
+    if (noItemsMessage) {
+        noItemsMessage.style.display = 'none';
+    }
+    
+    // Créer l'élément ligne
+    const lineDiv = document.createElement('div');
+    lineDiv.className = 'line-item';
+    lineDiv.setAttribute('data-item-id', item.id);
+    
+    console.log('Ajout de la ligne à l\'interface:', item.id);
+    
+    lineDiv.innerHTML = `
+        <div class="row align-items-center">
+            <div class="col-md-4">
+                <strong class="item-designation">${item.designation}</strong>
+                ${item.description ? `<br><small class="text-muted item-description">${item.description}</small>` : ''}
+            </div>
+            <div class="col-md-2 text-center">
+                <span class="item-quantity">${item.quantite}</span>
+            </div>
+            <div class="col-md-2 text-center">
+                <span class="item-price">${item.prixUnitaireHt} €</span>
+            </div>
+            <div class="col-md-2 text-center">
+                <span class="item-total">${item.totalLigneHt} €</span>
+            </div>
+            <div class="col-md-2 text-end">
+                <button class="btn btn-sm btn-outline-primary btn-edit-inline" onclick="editItem(${item.id})">
+                    <i class="fas fa-edit"></i>
+                </button>
+                <button class="btn btn-sm btn-outline-danger btn-edit-inline" onclick="deleteItem(${item.id})">
+                    <i class="fas fa-trash"></i>
+                </button>
+            </div>
+        </div>
+    `;
+    
+    container.appendChild(lineDiv);
+}
+
+function showMessage(message, type) {
+    // Créer et afficher un message temporaire
+    const alertDiv = document.createElement('div');
+    alertDiv.className = `alert alert-${type === 'success' ? 'success' : 'danger'} alert-dismissible fade show`;
+    alertDiv.innerHTML = `
+        ${message}
+        <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+    `;
+    
+    // Insérer au début du container
+    const container = document.querySelector('.container');
+    container.insertBefore(alertDiv, container.firstChild);
+    
+    // Supprimer automatiquement après 5 secondes
+    setTimeout(() => {
+        if (alertDiv.parentNode) {
+            alertDiv.remove();
+        }
+    }, 5000);
+}
+
+async function deleteItem(itemId) {
+    if (!confirm('Êtes-vous sûr de vouloir supprimer cette ligne ?')) {
+        return;
+    }
+
+    try {
+        const response = await fetch(`/devis/${devisId}/items/${itemId}/delete`, {
+            method: 'DELETE',
+            credentials: 'same-origin',
+            headers: {
+                'X-Requested-With': 'XMLHttpRequest'
+            }
+        });
+
+        const result = await response.json();
+        
+        if (response.ok) {
+            document.querySelector(`[data-item-id="${itemId}"]`).remove();
+            updateTotals(result.devisTotals);
+        } else {
+            alert('Erreur: ' + result.error);
+        }
+    } catch (error) {
+        alert('Erreur de communication: ' + error.message);
+    }
+}
+
+function editItem(itemId) {
+    // TODO: Implémenter l'édition inline
+    alert('Fonctionnalité d\'édition en cours de développement');
+}
+
+
+// Éviter les attachements multiples
+let formInitialized = false;
+
+// Gestion du formulaire d'ajout
+document.addEventListener('DOMContentLoaded', function() {
+    if (formInitialized) {
+        console.log('Formulaire déjà initialisé, ignoré');
+        return;
+    }
+    formInitialized = true;
+    
+    const itemForm = document.getElementById('item-form');
+    if (itemForm) {
+        // Supprimer les anciens event listeners
+        const newForm = itemForm.cloneNode(true);
+        itemForm.parentNode.replaceChild(newForm, itemForm);
+        
+        newForm.addEventListener('submit', function(e) {
+            e.preventDefault();
+            console.log('Formulaire soumis');
+            
+            const formData = new FormData(this);
+            const data = Object.fromEntries(formData.entries());
+            console.log('Données du formulaire:', data);
+            
+            addItem(data);
+        });
+        
+        console.log('Event listener attaché au formulaire');
+    }
+    
+    // Gestion du sélecteur de produits
+    const produitSelector = document.getElementById('produit-selector');
+    if (produitSelector) {
+        produitSelector.addEventListener('change', function() {
+            if (this.value) {
+                fillFormFromProduit(this.value);
+            }
+        });
+    }
+});
+</script>
+{% endblock %}
+{% endblock %}

@@ -1,0 +1,644 @@
+{% extends 'base.html.twig' %}
+
+{% block title %}Client {{ client.code }}{% endblock %}
+
+{% block stylesheets %}
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
+    <style>
+        .client-header {
+            background: linear-gradient(135deg, #28a745 0%, #20c997 100%);
+            color: white;
+            padding: 1.5rem 0;
+            margin-bottom: 0;
+        }
+        .client-tabs {
+            background-color: #f8f9fa;
+            border-bottom: 1px solid #dee2e6;
+            margin-bottom: 0;
+        }
+        .nav-tabs .nav-link {
+            border: none;
+            border-bottom: 3px solid transparent;
+            background: none;
+            color: #6c757d;
+            padding: 1rem 1.5rem;
+        }
+        .nav-tabs .nav-link:hover {
+            border-bottom-color: #dee2e6;
+            color: #495057;
+        }
+        .nav-tabs .nav-link.active {
+            background: white;
+            color: #495057;
+            border-bottom-color: #28a745;
+            font-weight: 600;
+        }
+        .tab-content {
+            background: white;
+            min-height: 400px;
+        }
+        .info-group {
+            background: #f8f9fa;
+            border-radius: 8px;
+            padding: 1rem;
+            margin-bottom: 1rem;
+        }
+        .info-group h6 {
+            color: #495057;
+            font-weight: 600;
+            margin-bottom: 0.75rem;
+            border-bottom: 2px solid #dee2e6;
+            padding-bottom: 0.5rem;
+        }
+        .action-buttons {
+            background: #fff;
+            border-top: 1px solid #dee2e6;
+            padding: 1rem;
+        }
+        .status-badge {
+            font-size: 0.875rem;
+            padding: 0.5rem 1rem;
+        }
+        .identique-note {
+            background: #e7f3ff;
+            border: 1px solid #b3d9ff;
+            border-radius: 4px;
+            padding: 0.75rem;
+            color: #0056b3;
+            font-style: italic;
+        }
+    </style>
+{% endblock %}
+
+{% block body %}
+<!-- En-tête ---->
+<div class="client-header">
+    <div class="container-fluid">
+        <div class="row align-items-center">
+            <div class="col-md-8">
+                <div class="d-flex align-items-center">
+                    <div class="me-3">
+                        <i class="fas fa-user-check fa-2x"></i>
+                    </div>
+                    <div>
+                        <h1 class="mb-1">{{ client.nomComplet }}</h1>
+                        <p class="mb-0">
+                            <span class="badge bg-success status-badge">CLIENT</span>
+                            <span class="ms-2">{{ client.code }}</span>
+                            {% if client.famille %}
+                                <span class="ms-2">• {{ client.famille }}</span>
+                            {% endif %}
+                        </p>
+                    </div>
+                </div>
+            </div>
+            <div class="col-md-4 text-end">
+                <div class="btn-group">
+                    <a href="{{ path('app_client_edit', {'id': client.id}) }}" class="btn btn-light">
+                        <i class="fas fa-edit"></i> Modifier
+                    </a>
+                    {% set contactFactu = null %}
+                    {% for contact in client.contacts %}
+                        {% if contact.isFacturationDefault %}
+                            {% set contactFactu = contact %}
+                        {% endif %}
+                    {% endfor %}
+                    {% if contactFactu and contactFactu.adresse and contactFactu.adresse.isNavigable %}
+                        <div class="btn-group">
+                            <button type="button" class="btn btn-outline-light dropdown-toggle" data-bs-toggle="dropdown">
+                                <i class="fas fa-map-marker-alt"></i> Itinéraire
+                            </button>
+                            <ul class="dropdown-menu">
+                                {% set adresse = contactFactu.adresse %}
+                                <li><a class="dropdown-item" href="{{ adresse.itineraireGoogleMapsUrl }}" target="_blank">
+                                    <i class="fab fa-google text-primary"></i> Google Maps
+                                </a></li>
+                                <li><a class="dropdown-item" href="{{ adresse.wazeUrl }}" target="_blank">
+                                    <i class="fas fa-route text-info"></i> Waze
+                                </a></li>
+                                <li><a class="dropdown-item" href="{{ adresse.googleMapsUrl }}" target="_blank">
+                                    <i class="fas fa-map text-success"></i> Voir sur la carte
+                                </a></li>
+                            </ul>
+                        </div>
+                    {% else %}
+                        <button type="button" class="btn btn-outline-light" disabled title="Adresse incomplète">
+                            <i class="fas fa-map-marker-alt"></i> Itinéraire
+                        </button>
+                    {% endif %}
+                    <button type="button" class="btn btn-outline-light">
+                        <i class="fas fa-history"></i> Historique
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Onglets ---->
+<div class="client-tabs">
+    <div class="container-fluid">
+        <ul class="nav nav-tabs" id="clientTabs" role="tablist">
+            <li class="nav-item" role="presentation">
+                <button class="nav-link active" id="facturation-tab" data-bs-toggle="tab" data-bs-target="#facturation" type="button" role="tab">
+                    <i class="fas fa-file-invoice me-2"></i>Facturation
+                </button>
+            </li>
+            <li class="nav-item" role="presentation">
+                <button class="nav-link" id="livraison-tab" data-bs-toggle="tab" data-bs-target="#livraison" type="button" role="tab">
+                    <i class="fas fa-truck me-2"></i>Livraison
+                </button>
+            </li>
+            <li class="nav-item" role="presentation">
+                <button class="nav-link" id="gestion-tab" data-bs-toggle="tab" data-bs-target="#gestion" type="button" role="tab">
+                    <i class="fas fa-cogs me-2"></i>Gestion
+                </button>
+            </li>
+            <li class="nav-item" role="presentation">
+                <button class="nav-link" id="tarifs-tab" data-bs-toggle="tab" data-bs-target="#tarifs" type="button" role="tab">
+                    <i class="fas fa-tags me-2"></i>Tarifs
+                </button>
+            </li>
+            <li class="nav-item" role="presentation">
+                <button class="nav-link" id="compte-tab" data-bs-toggle="tab" data-bs-target="#compte" type="button" role="tab">
+                    <i class="fas fa-chart-bar me-2"></i>Compte
+                </button>
+            </li>
+            <li class="nav-item" role="presentation">
+                <button class="nav-link" id="notes-tab" data-bs-toggle="tab" data-bs-target="#notes" type="button" role="tab">
+                    <i class="fas fa-sticky-note me-2"></i>Notes
+                </button>
+            </li>
+        </ul>
+    </div>
+</div>
+
+<!-- Contenu des onglets ---->
+<div class="container-fluid">
+    <div class="tab-content" id="clientTabsContent">
+        <!-- Onglet Facturation ---->
+        <div class="tab-pane fade show active" id="facturation" role="tabpanel">
+            <div class="row p-4">
+                <div class="col-md-12">
+                    <!-- Informations générales -->
+                    <div class="info-group mb-4">
+                        <h6><i class="fas fa-building me-2"></i>Informations générales</h6>
+                        <div class="row">
+                            <div class="col-md-6">
+                                <p class="mb-2"><strong>Code client :</strong> {{ client.code }}</p>
+                                <p class="mb-2"><strong>Nom complet :</strong> {{ client.nomComplet }}</p>
+                                <p class="mb-2"><strong>Type :</strong> {{ client.type|default('Non défini') }}</p>
+                            </div>
+                            <div class="col-md-6">
+                                <p class="mb-2"><strong>Famille :</strong> {{ client.famille|default('Non définie') }}</p>
+                                <p class="mb-2"><strong>Secteur :</strong> {{ client.secteur ? client.secteur.nomSecteur : 'Non défini' }}</p>
+                                <p class="mb-2"><strong>Commercial :</strong> {{ client.commercial ? client.commercial.fullName : 'Non assigné' }}</p>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Contacts -->
+                    <div class="info-group mb-4">
+                        <h6><i class="fas fa-users me-2"></i>Contacts</h6>
+                        {% if client.contacts|length > 0 %}
+                            <div class="table-responsive">
+                                <table class="table table-sm table-hover">
+                                    <thead class="table-light">
+                                        <tr>
+                                            <th>Nom</th>
+                                            <th>Fonction</th>
+                                            <th>Téléphone</th>
+                                            <th>Email</th>
+                                            <th>Adresse</th>
+                                            <th class="text-center">Facturation</th>
+                                            <th class="text-center">Livraison</th>
+                                            <th class="text-center">Actions</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody>
+                                        {% for contact in client.contacts %}
+                                            <tr>
+                                                <td><strong>{{ contact.nomComplet }}</strong></td>
+                                                <td>{{ contact.fonction|default('-') }}</td>
+                                                <td>
+                                                    {% if contact.telephone %}
+                                                        <a href="tel:{{ contact.telephoneForCall }}" class="text-decoration-none call-btn">
+                                                            <i class="fas fa-phone text-success"></i> {{ contact.telephone }}
+                                                        </a>
+                                                    {% elseif contact.telephoneMobile %}
+                                                        <a href="tel:{{ contact.telephoneMobileForCall }}" class="text-decoration-none call-btn">
+                                                            <i class="fas fa-mobile text-success"></i> {{ contact.telephoneMobile }}
+                                                        </a>
+                                                    {% else %}
+                                                        -
+                                                    {% endif %}
+                                                </td>
+                                                <td>{{ contact.email|default('-') }}</td>
+                                                <td>{{ contact.adresse ? contact.adresse.nom : '-' }}</td>
+                                                <td class="text-center">
+                                                    {% if contact.isFacturationDefault %}
+                                                        <i class="fas fa-check text-success"></i>
+                                                    {% else %}
+                                                        -
+                                                    {% endif %}
+                                                </td>
+                                                <td class="text-center">
+                                                    {% if contact.isLivraisonDefault %}
+                                                        <i class="fas fa-check text-success"></i>
+                                                    {% else %}
+                                                        -
+                                                    {% endif %}
+                                                </td>
+                                                <td class="text-center">
+                                                    {% if contact.telephone or contact.telephoneMobile %}
+                                                        <a href="tel:{{ contact.telephoneForCall ?: contact.telephoneMobileForCall }}" class="btn btn-outline-success btn-sm call-btn">
+                                                            <i class="fas fa-phone"></i>
+                                                        </a>
+                                                    {% endif %}
+                                                </td>
+                                            </tr>
+                                        {% endfor %}
+                                    </tbody>
+                                </table>
+                            </div>
+                        {% else %}
+                            <p class="text-muted mb-0">Aucun contact enregistré</p>
+                        {% endif %}
+                    </div>
+
+                    <!-- Adresses -->
+                    <div class="info-group mb-4">
+                        <h6><i class="fas fa-map-marker-alt me-2"></i>Adresses</h6>
+                        {% if client.adresses|length > 0 %}
+                            <div class="table-responsive">
+                                <table class="table table-sm table-hover">
+                                    <thead class="table-light">
+                                        <tr>
+                                            <th>Nom</th>
+                                            <th>Adresse</th>
+                                            <th>Code postal</th>
+                                            <th>Ville</th>
+                                            <th>Pays</th>
+                                            <th class="text-center">Utilisée par</th>
+                                            <th class="text-center">Navigation</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody>
+                                        {% for adresse in client.adresses %}
+                                            {% set contactsUsing = [] %}
+                                            {% for contact in client.contacts %}
+                                                {% if contact.adresse and contact.adresse.id == adresse.id %}
+                                                    {% set contactsUsing = contactsUsing|merge([contact.nomComplet]) %}
+                                                {% endif %}
+                                            {% endfor %}
+                                            <tr>
+                                                <td><strong>{{ adresse.nom }}</strong></td>
+                                                <td>{{ adresse.ligne1 }}{% if adresse.ligne2 %}<br><small class="text-muted">{{ adresse.ligne2 }}</small>{% endif %}</td>
+                                                <td>{{ adresse.codePostal }}</td>
+                                                <td>{{ adresse.ville }}</td>
+                                                <td>{{ adresse.pays }}</td>
+                                                <td class="text-center">
+                                                    {% if contactsUsing|length > 0 %}
+                                                        <span class="badge bg-info">{{ contactsUsing|length }}</span>
+                                                        <small class="d-block text-muted">{{ contactsUsing|join(', ') }}</small>
+                                                    {% else %}
+                                                        <span class="text-muted">-</span>
+                                                    {% endif %}
+                                                </td>
+                                                <td class="text-center">
+                                                    {% if adresse.isNavigable %}
+                                                        <div class="btn-group btn-group-sm">
+                                                            <a href="{{ adresse.itineraireGoogleMapsUrl }}" target="_blank" class="btn btn-outline-primary btn-sm" title="Google Maps">
+                                                                <i class="fab fa-google"></i>
+                                                            </a>
+                                                            <a href="{{ adresse.wazeUrl }}" target="_blank" class="btn btn-outline-info btn-sm" title="Waze">
+                                                                <i class="fas fa-route"></i>
+                                                            </a>
+                                                        </div>
+                                                    {% else %}
+                                                        <span class="text-muted">-</span>
+                                                    {% endif %}
+                                                </td>
+                                            </tr>
+                                        {% endfor %}
+                                    </tbody>
+                                </table>
+                            </div>
+                        {% else %}
+                            <p class="text-muted mb-0">Aucune adresse enregistrée</p>
+                        {% endif %}
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Onglet Livraison ---->
+        <div class="tab-pane fade" id="livraison" role="tabpanel">
+            <div class="row p-4">
+                <div class="col-md-12">
+                    <div class="info-group">
+                        <h6><i class="fas fa-truck me-2"></i>Contacts par défaut</h6>
+                        <div class="row">
+                            <div class="col-md-6">
+                                <div class="card border-success">
+                                    <div class="card-header bg-light">
+                                        <h6 class="mb-0"><i class="fas fa-file-invoice me-2"></i>Contact de facturation par défaut</h6>
+                                    </div>
+                                    <div class="card-body">
+                                        {% set contactFactu = null %}
+                                        {% for contact in client.contacts %}
+                                            {% if contact.isFacturationDefault %}
+                                                {% set contactFactu = contact %}
+                                            {% endif %}
+                                        {% endfor %}
+                                        {% if contactFactu %}
+                                            <p class="mb-2"><strong>{{ contactFactu.nomComplet }}</strong></p>
+                                            {% if contactFactu.fonction %}<p class="mb-2 text-muted">{{ contactFactu.fonction }}</p>{% endif %}
+                                            {% if contactFactu.telephone %}
+                                                <div class="d-flex justify-content-between align-items-center mb-2">
+                                                    <span><i class="fas fa-phone me-1"></i> {{ contactFactu.telephone }}</span>
+                                                    <a href="tel:{{ contactFactu.telephoneForCall }}" class="btn btn-success btn-sm call-btn">
+                                                        <i class="fas fa-phone"></i>
+                                                    </a>
+                                                </div>
+                                            {% endif %}
+                                            {% if contactFactu.telephoneMobile %}
+                                                <div class="d-flex justify-content-between align-items-center mb-2">
+                                                    <span><i class="fas fa-mobile me-1"></i> {{ contactFactu.telephoneMobile }}</span>
+                                                    <a href="tel:{{ contactFactu.telephoneMobileForCall }}" class="btn btn-success btn-sm call-btn">
+                                                        <i class="fas fa-phone"></i>
+                                                    </a>
+                                                </div>
+                                            {% endif %}
+                                            {% if contactFactu.email %}<p class="mb-2"><i class="fas fa-envelope me-1"></i> {{ contactFactu.email }}</p>{% endif %}
+                                            {% if contactFactu.adresse %}
+                                                <hr>
+                                                <p class="mb-1"><strong>Adresse :</strong> {{ contactFactu.adresse.nom }}</p>
+                                                <address class="mb-2 text-muted small">
+                                                    {{ contactFactu.adresse.ligne1 }}<br>
+                                                    {% if contactFactu.adresse.ligne2 %}{{ contactFactu.adresse.ligne2 }}<br>{% endif %}
+                                                    {{ contactFactu.adresse.codePostal }} {{ contactFactu.adresse.ville }}
+                                                </address>
+                                                {% if contactFactu.adresse.isNavigable %}
+                                                    <div class="btn-group btn-group-sm">
+                                                        <a href="{{ contactFactu.adresse.itineraireGoogleMapsUrl }}" target="_blank" class="btn btn-outline-primary btn-sm">
+                                                            <i class="fab fa-google"></i>
+                                                        </a>
+                                                        <a href="{{ contactFactu.adresse.wazeUrl }}" target="_blank" class="btn btn-outline-info btn-sm">
+                                                            <i class="fas fa-route"></i>
+                                                        </a>
+                                                    </div>
+                                                {% endif %}
+                                            {% endif %}
+                                        {% else %}
+                                            <p class="text-muted mb-0">Aucun contact de facturation par défaut</p>
+                                        {% endif %}
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="col-md-6">
+                                <div class="card border-info">
+                                    <div class="card-header bg-light">
+                                        <h6 class="mb-0"><i class="fas fa-truck me-2"></i>Contact de livraison par défaut</h6>
+                                    </div>
+                                    <div class="card-body">
+                                        {% set contactLivr = null %}
+                                        {% for contact in client.contacts %}
+                                            {% if contact.isLivraisonDefault %}
+                                                {% set contactLivr = contact %}
+                                            {% endif %}
+                                        {% endfor %}
+                                        {% if contactLivr %}
+                                            {% if contactLivr == contactFactu %}
+                                                <div class="identique-note">
+                                                    <i class="fas fa-link me-2"></i>Identique au contact de facturation
+                                                </div>
+                                            {% else %}
+                                                <p class="mb-2"><strong>{{ contactLivr.nomComplet }}</strong></p>
+                                                {% if contactLivr.fonction %}<p class="mb-2 text-muted">{{ contactLivr.fonction }}</p>{% endif %}
+                                                {% if contactLivr.telephone %}
+                                                    <div class="d-flex justify-content-between align-items-center mb-2">
+                                                        <span><i class="fas fa-phone me-1"></i> {{ contactLivr.telephone }}</span>
+                                                        <a href="tel:{{ contactLivr.telephoneForCall }}" class="btn btn-success btn-sm call-btn">
+                                                            <i class="fas fa-phone"></i>
+                                                        </a>
+                                                    </div>
+                                                {% endif %}
+                                                {% if contactLivr.telephoneMobile %}
+                                                    <div class="d-flex justify-content-between align-items-center mb-2">
+                                                        <span><i class="fas fa-mobile me-1"></i> {{ contactLivr.telephoneMobile }}</span>
+                                                        <a href="tel:{{ contactLivr.telephoneMobileForCall }}" class="btn btn-success btn-sm call-btn">
+                                                            <i class="fas fa-phone"></i>
+                                                        </a>
+                                                    </div>
+                                                {% endif %}
+                                                {% if contactLivr.email %}<p class="mb-2"><i class="fas fa-envelope me-1"></i> {{ contactLivr.email }}</p>{% endif %}
+                                                {% if contactLivr.adresse %}
+                                                    <hr>
+                                                    <p class="mb-1"><strong>Adresse :</strong> {{ contactLivr.adresse.nom }}</p>
+                                                    <address class="mb-2 text-muted small">
+                                                        {{ contactLivr.adresse.ligne1 }}<br>
+                                                        {% if contactLivr.adresse.ligne2 %}{{ contactLivr.adresse.ligne2 }}<br>{% endif %}
+                                                        {{ contactLivr.adresse.codePostal }} {{ contactLivr.adresse.ville }}
+                                                    </address>
+                                                    {% if contactLivr.adresse.isNavigable %}
+                                                        <div class="btn-group btn-group-sm">
+                                                            <a href="{{ contactLivr.adresse.itineraireGoogleMapsUrl }}" target="_blank" class="btn btn-outline-primary btn-sm">
+                                                                <i class="fab fa-google"></i>
+                                                            </a>
+                                                            <a href="{{ contactLivr.adresse.wazeUrl }}" target="_blank" class="btn btn-outline-info btn-sm">
+                                                                <i class="fas fa-route"></i>
+                                                            </a>
+                                                        </div>
+                                                    {% endif %}
+                                                {% endif %}
+                                            {% endif %}
+                                        {% else %}
+                                            <p class="text-muted mb-0">Aucun contact de livraison par défaut</p>
+                                        {% endif %}
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Onglet Gestion ---->
+        <div class="tab-pane fade" id="gestion" role="tabpanel">
+            <div class="row p-4">
+                <div class="col-md-6">
+                    <div class="info-group">
+                        <h6><i class="fas fa-calculator me-2"></i>Paramètres comptables</h6>
+                        <div class="row">
+                            <div class="col-6">
+                                <p class="mb-2"><strong>Régime :</strong><br>{{ client.regimeComptable|default('Non défini') }}</p>
+                                <p class="mb-2"><strong>TVA :</strong><br>{{ client.assujettiTva ? 'Assujetti' : 'Non assujetti' }}</p>
+                            </div>
+                            <div class="col-6">
+                                <p class="mb-2"><strong>Taux TVA :</strong><br>{{ client.tauxTva ? client.tauxTva ~ '%' : 'Non défini' }}</p>
+                                <p class="mb-0"><strong>Secteur :</strong><br>{{ client.secteur ? client.secteur.nomSecteur : 'Non défini' }}</p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                <div class="col-md-6">
+                    <div class="info-group">
+                        <h6><i class="fas fa-credit-card me-2"></i>Conditions de paiement</h6>
+                        <div class="row">
+                            <div class="col-6">
+                                <p class="mb-2"><strong>Mode :</strong><br>{{ client.modePaiement|default('Non défini') }}</p>
+                                <p class="mb-0"><strong>Délai :</strong><br>{{ client.delaiPaiement ? client.delaiPaiement ~ ' jours' : 'Non défini' }}</p>
+                            </div>
+                            <div class="col-6">
+                                <p class="mb-2"><strong>Conditions :</strong><br>{{ client.conditionsTarifs|default('Standard') }}</p>
+                                <p class="mb-0"><strong>Commercial :</strong><br>{{ client.commercial ? client.commercial.fullName : 'Non assigné' }}</p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Onglet Tarifs ---->
+        <div class="tab-pane fade" id="tarifs" role="tabpanel">
+            <div class="p-4">
+                <div class="info-group">
+                    <h6><i class="fas fa-tags me-2"></i>Tarifs spécifiques</h6>
+                    <p class="text-muted">Fonctionnalité à implémenter : gestion des tarifs personnalisés par client.</p>
+                </div>
+            </div>
+        </div>
+
+        <!-- Onglet Compte ---->
+        <div class="tab-pane fade" id="compte" role="tabpanel">
+            <div class="p-4">
+                <div class="row">
+                    <div class="col-md-6">
+                        <div class="info-group">
+                            <h6><i class="fas fa-chart-line me-2"></i>Statistiques</h6>
+                            <p class="text-muted">Historique des commandes et statistiques à venir.</p>
+                        </div>
+                    </div>
+                    <div class="col-md-6">
+                        <div class="info-group">
+                            <h6><i class="fas fa-euro-sign me-2"></i>Solde</h6>
+                            <p class="text-muted">Encours et solde client à implémenter.</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Onglet Notes ---->
+        <div class="tab-pane fade" id="notes" role="tabpanel">
+            <div class="p-4">
+                <div class="info-group">
+                    <h6><i class="fas fa-sticky-note me-2"></i>Notes et remarques</h6>
+                    {% if client.notes %}
+                        <p class="mb-0">{{ client.notes|nl2br }}</p>
+                    {% else %}
+                        <p class="text-muted mb-0">Aucune note enregistrée.</p>
+                    {% endif %}
+                </div>
+                <div class="info-group">
+                    <h6><i class="fas fa-paperclip me-2"></i>Fichiers joints</h6>
+                    <p class="text-muted mb-0">Fonctionnalité à implémenter : gestion des fichiers joints.</p>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Actions ---->
+<div class="action-buttons">
+    <div class="container-fluid">
+        <div class="d-flex justify-content-between align-items-center">
+            <div>
+                <a href="{{ path('app_client_index') }}" class="btn btn-secondary">
+                    <i class="fas fa-arrow-left"></i> Retour à la liste
+                </a>
+            </div>
+            <div>
+                <span class="text-muted me-3">
+                    Créé le {{ client.createdAt|date('d/m/Y') }}
+                    {% if client.dateConversionClient %}
+                        • Client depuis le {{ client.dateConversionClient|date('d/m/Y') }}
+                    {% endif %}
+                </span>
+                {{ include('client/_delete_form.html.twig') }}
+            </div>
+        </div>
+    </div>
+</div>
+
+{% block javascripts %}
+<script>
+// Activer les tooltips Bootstrap
+var tooltipTriggerList = [].slice.call(document.querySelectorAll('[data-bs-toggle="tooltip"]'))
+var tooltipList = tooltipTriggerList.map(function (tooltipTriggerEl) {
+    return new bootstrap.Tooltip(tooltipTriggerEl)
+});
+
+// Fonction pour confirmer et lancer l'appel
+function confirmCall(phoneNumber) {
+    return confirm(`Voulez-vous appeler le ${phoneNumber} ?\n\nNote: Cette fonction nécessite un appareil compatible (téléphone, logiciel de téléphonie).`);
+}
+
+// Fonction alternative pour les navigateurs qui ne supportent pas tel:
+function initiateCall(phoneNumber) {
+    // Nettoyage du numéro
+    const cleanNumber = phoneNumber.replace(/[^\d+]/g, '');
+    const telUrl = `tel:${cleanNumber}`;
+    
+    console.log('Tentative d\'appel vers:', cleanNumber);
+    
+    // Vérification du support tel: 
+    if (navigator.userAgent.match(/Android|iPhone|iPad|iPod|Windows Phone/i)) {
+        // Sur mobile, utilise le lien tel: direct
+        window.location.href = telUrl;
+    } else {
+        // Sur desktop, affiche le numéro et propose des alternatives
+        const message = `Numéro à appeler: ${phoneNumber}\n\nOptions:\n- Utilisez votre téléphone\n- Copiez le numéro dans votre logiciel de téléphonie\n- Utilisez Skype, Teams, ou un autre service VoIP`;
+        
+        if (confirm(message + '\n\nVoulez-vous copier le numéro dans le presse-papier ?')) {
+            // Copie dans le presse-papier
+            navigator.clipboard.writeText(cleanNumber).then(() => {
+                alert('Numéro copié dans le presse-papier !');
+            }).catch(() => {
+                // Fallback si clipboard n'est pas disponible
+                prompt('Copiez ce numéro:', cleanNumber);
+            });
+        }
+    }
+}
+
+// Gestion des clics sur les boutons d'appel
+document.addEventListener('DOMContentLoaded', function() {
+    document.querySelectorAll('.call-btn').forEach(function(btn) {
+        btn.addEventListener('click', function(e) {
+            e.preventDefault();
+            
+            const href = this.getAttribute('href');
+            const phoneMatch = href.match(/tel:(.+)$/);
+            
+            if (phoneMatch) {
+                const cleanNumber = phoneMatch[1];
+                
+                // Test si tel: est supporté
+                if (window.location.protocol === 'https:' || window.location.hostname === 'localhost') {
+                    // HTTPS ou localhost - les liens tel: fonctionnent mieux
+                    window.location.href = href;
+                } else {
+                    // HTTP - utilise la fonction alternative
+                    initiateCall(cleanNumber);
+                }
+            }
+        });
+    });
+});
+</script>
+{% endblock %}
+{% endblock %}

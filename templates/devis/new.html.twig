@@ -1,0 +1,477 @@
+{% extends 'base.html.twig' %}
+
+{% block title %}Nouveau Devis{% endblock %}
+
+{% block stylesheets %}
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
+    <link href="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/css/select2.min.css" rel="stylesheet">
+    <link href="https://cdn.jsdelivr.net/npm/select2-bootstrap-5-theme@1.3.0/dist/select2-bootstrap-5-theme.min.css" rel="stylesheet">
+    <style>
+        .page-header {
+            background: linear-gradient(135deg, #6f42c1 0%, #e83e8c 100%);
+            color: white;
+            padding: 1.5rem 0;
+            margin-bottom: 2rem;
+        }
+        .form-section {
+            background: white;
+            border-radius: 8px;
+            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+            margin-bottom: 1.5rem;
+        }
+        .form-section-header {
+            background: #f8f9fa;
+            border-bottom: 1px solid #dee2e6;
+            border-radius: 8px 8px 0 0;
+            padding: 1rem 1.5rem;
+            font-weight: 600;
+        }
+        .form-section-body {
+            padding: 1.5rem;
+        }
+        .summary-panel {
+            position: sticky;
+            top: 2rem;
+            background: white;
+            border-radius: 8px;
+            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+            border: 1px solid #dee2e6;
+        }
+        .summary-panel-header {
+            background: linear-gradient(135deg, #28a745 0%, #20c997 100%);
+            color: white;
+            padding: 1rem 1.5rem;
+            border-radius: 8px 8px 0 0;
+            font-weight: 600;
+        }
+        .summary-panel-body {
+            padding: 1.5rem;
+        }
+        .nav-tabs .nav-link {
+            color: #6f42c1;
+            border: none;
+            border-bottom: 2px solid transparent;
+        }
+        .nav-tabs .nav-link.active {
+            background: none;
+            border-bottom: 2px solid #6f42c1;
+            color: #6f42c1;
+            font-weight: 600;
+        }
+        .tab-content {
+            background: white;
+            border-radius: 0 0 8px 8px;
+            padding: 1.5rem;
+            margin-top: -1px;
+            border: 1px solid #dee2e6;
+            border-top: none;
+        }
+        .devis-item {
+            border: 1px solid #dee2e6;
+            border-radius: 6px;
+            padding: 1rem;
+            margin-bottom: 1rem;
+            background: #f8f9fa;
+        }
+        .btn-add-item {
+            border: 2px dashed #6f42c1;
+            color: #6f42c1;
+            background: white;
+            transition: all 0.3s ease;
+        }
+        .btn-add-item:hover {
+            background: #6f42c1;
+            color: white;
+        }
+        .summary-total {
+            font-size: 1.2rem;
+            font-weight: 700;
+            color: #28a745;
+        }
+    </style>
+{% endblock %}
+
+{% block body %}
+<div class="page-header">
+    <div class="container-fluid">
+        <div class="row align-items-center">
+            <div class="col">
+                <h1 class="h3 mb-0">
+                    <i class="fas fa-file-invoice me-2"></i>Nouveau Devis
+                </h1>
+                <p class="mb-0 opacity-75">Créer un nouveau devis commercial</p>
+            </div>
+            <div class="col-auto">
+                <a href="{{ path('app_devis_index') }}" class="btn btn-outline-light">
+                    <i class="fas fa-arrow-left me-2"></i>Retour à la liste
+                </a>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="container-fluid">
+    {{ form_start(form, {'attr': {'class': 'needs-validation', 'novalidate': 'novalidate'}}) }}
+    
+    <div class="row">
+        <div class="col-xl-8 col-lg-7">
+            <!-- Section Informations générales -->
+            <div class="form-section">
+                <div class="form-section-header">
+                    <i class="fas fa-info-circle me-2"></i>Informations générales
+                </div>
+                <div class="form-section-body">
+                    <div class="row">
+                        <div class="col-md-6">
+                            {{ form_row(form.numeroDevis) }}
+                        </div>
+                        <div class="col-md-3">
+                            {{ form_row(form.dateCreation) }}
+                        </div>
+                        <div class="col-md-3">
+                            {{ form_row(form.dateValidite) }}
+                        </div>
+                        <div class="col-md-6">
+                            {{ form_row(form.statut) }}
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Section Tiers -->
+            <div class="form-section">
+                <div class="form-section-header">
+                    <i class="fas fa-user-tie me-2"></i>Tiers
+                </div>
+                <div class="form-section-body">
+                    <div class="row">
+                        <div class="col-12 mb-3">
+                            {{ form_row(form.client) }}
+                        </div>
+                        <div class="col-md-2">
+                            {{ form_row(form.tiersCivilite) }}
+                        </div>
+                        <div class="col-md-5">
+                            {{ form_row(form.tiersNom) }}
+                        </div>
+                        <div class="col-md-5">
+                            {{ form_row(form.tiersPrenom) }}
+                        </div>
+                        <div class="col-md-8">
+                            {{ form_row(form.tiersAdresse) }}
+                        </div>
+                        <div class="col-md-2">
+                            {{ form_row(form.tiersCodePostal) }}
+                        </div>
+                        <div class="col-md-2">
+                            {{ form_row(form.tiersVille) }}
+                        </div>
+                        <div class="col-md-6">
+                            {{ form_row(form.tiersModeReglement) }}
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Corps du devis - Onglets -->
+            <div class="form-section">
+                <div class="form-section-header">
+                    <i class="fas fa-file-contract me-2"></i>Corps du devis
+                </div>
+                
+                <ul class="nav nav-tabs" id="devisTabsNav" role="tablist">
+                    <li class="nav-item" role="presentation">
+                        <button class="nav-link active" id="detail-tab" data-bs-toggle="tab" data-bs-target="#detail" type="button" role="tab">
+                            <i class="fas fa-list me-2"></i>Détail
+                        </button>
+                    </li>
+                    <li class="nav-item" role="presentation">
+                        <button class="nav-link" id="facturation-tab" data-bs-toggle="tab" data-bs-target="#facturation" type="button" role="tab">
+                            <i class="fas fa-calculator me-2"></i>Facturation
+                        </button>
+                    </li>
+                    <li class="nav-item" role="presentation">
+                        <button class="nav-link" id="livraison-tab" data-bs-toggle="tab" data-bs-target="#livraison" type="button" role="tab">
+                            <i class="fas fa-truck me-2"></i>Livraison
+                        </button>
+                    </li>
+                    <li class="nav-item" role="presentation">
+                        <button class="nav-link" id="notes-tab" data-bs-toggle="tab" data-bs-target="#notes" type="button" role="tab">
+                            <i class="fas fa-sticky-note me-2"></i>Notes
+                        </button>
+                    </li>
+                </ul>
+
+                <div class="tab-content" id="devisTabsContent">
+                    <!-- Onglet Détail -->
+                    <div class="tab-pane fade show active" id="detail" role="tabpanel">
+                        <div id="devis-items-container">
+                            {{ form_row(form.devisItems) }}
+                        </div>
+                    </div>
+
+                    <!-- Onglet Facturation -->
+                    <div class="tab-pane fade" id="facturation" role="tabpanel">
+                        <div class="row">
+                            <div class="col-md-6">
+                                <h6 class="mb-3">Totaux</h6>
+                                {{ form_row(form.totalHt) }}
+                                {{ form_row(form.totalTva) }}
+                                {{ form_row(form.totalTtc) }}
+                            </div>
+                            <div class="col-md-6">
+                                <h6 class="mb-3">Remises</h6>
+                                {{ form_row(form.remiseGlobalePercent) }}
+                                {{ form_row(form.remiseGlobaleMontant) }}
+                            </div>
+                            <div class="col-md-6">
+                                <h6 class="mb-3">Acompte</h6>
+                                {{ form_row(form.acomptePercent) }}
+                                {{ form_row(form.acompteMontant) }}
+                            </div>
+                            <div class="col-md-6">
+                                <h6 class="mb-3">Paiement et signature</h6>
+                                {{ form_row(form.modePaiement) }}
+                                {{ form_row(form.signatureNom) }}
+                                {{ form_row(form.signatureEmail) }}
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Onglet Livraison -->
+                    <div class="tab-pane fade" id="livraison" role="tabpanel">
+                        <div class="row">
+                            <div class="col-md-6">
+                                <h6 class="mb-3">Facturation</h6>
+                                {{ form_row(form.contactFacturation) }}
+                                {{ form_row(form.adresseFacturation) }}
+                            </div>
+                            <div class="col-md-6">
+                                <h6 class="mb-3">Livraison</h6>
+                                {{ form_row(form.contactLivraison) }}
+                                {{ form_row(form.adresseLivraison) }}
+                                {{ form_row(form.delaiLivraison) }}
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Onglet Notes -->
+                    <div class="tab-pane fade" id="notes" role="tabpanel">
+                        <div class="row">
+                            <div class="col-md-6">
+                                {{ form_row(form.notesClient) }}
+                            </div>
+                            <div class="col-md-6">
+                                {{ form_row(form.notesInternes) }}
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Panneau Récapitulatif -->
+        <div class="col-xl-4 col-lg-5">
+            <div class="summary-panel">
+                <div class="summary-panel-header">
+                    <i class="fas fa-chart-line me-2"></i>Récapitulatif
+                </div>
+                <div class="summary-panel-body">
+                    <div class="row mb-3">
+                        <div class="col">
+                            <strong>Statut :</strong><br>
+                            <span class="badge bg-secondary">Brouillon</span>
+                        </div>
+                    </div>
+                    
+                    <div class="border-top pt-3">
+                        <div class="d-flex justify-content-between mb-2">
+                            <span>Total HT :</span>
+                            <span id="summary-total-ht">0,00 €</span>
+                        </div>
+                        <div class="d-flex justify-content-between mb-2">
+                            <span>TVA :</span>
+                            <span id="summary-total-tva">0,00 €</span>
+                        </div>
+                        <div class="d-flex justify-content-between">
+                            <strong>Total TTC :</strong>
+                            <strong class="summary-total" id="summary-total-ttc">0,00 €</strong>
+                        </div>
+                    </div>
+
+                    <div class="border-top pt-3 mt-3">
+                        <div class="d-grid gap-2">
+                            <button type="submit" class="btn btn-primary">
+                                <i class="fas fa-save me-2"></i>Enregistrer le devis
+                            </button>
+                            <a href="{{ path('app_devis_index') }}" class="btn btn-outline-secondary">
+                                <i class="fas fa-times me-2"></i>Annuler
+                            </a>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    {{ form_end(form) }}
+</div>
+{% endblock %}
+
+{% block javascripts %}
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/js/bootstrap.bundle.min.js"></script>
+<script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/js/select2.min.js"></script>
+
+<script>
+$(document).ready(function() {
+    // Initialiser Select2
+    $('.form-select').select2({
+        theme: 'bootstrap-5',
+        placeholder: function() {
+            return $(this).attr('placeholder') || 'Choisissez une option';
+        },
+        allowClear: true
+    });
+
+    // Fonction pour filtrer les contacts et adresses selon le client sélectionné
+    function filterContactsAndAddresses(clientId) {
+        console.log('Filtrage pour client:', clientId);
+        
+        // Filtrer les contacts
+        $('.contact-select option').each(function() {
+            const $option = $(this);
+            if ($option.val() === '') {
+                $option.show(); // Toujours afficher le placeholder
+            } else {
+                const optionClientId = $option.attr('data-client-id');
+                if (clientId && optionClientId === clientId) {
+                    $option.show();
+                } else {
+                    $option.hide();
+                }
+            }
+        });
+        
+        // Filtrer les adresses  
+        $('.address-select option').each(function() {
+            const $option = $(this);
+            if ($option.val() === '') {
+                $option.show(); // Toujours afficher le placeholder
+            } else {
+                const optionClientId = $option.attr('data-client-id');
+                if (clientId && optionClientId === clientId) {
+                    $option.show();
+                } else {
+                    $option.hide();
+                }
+            }
+        });
+        
+        // Réinitialiser les sélections si elles ne sont plus valides
+        $('.contact-select, .address-select').each(function() {
+            const $select = $(this);
+            const selectedOption = $select.find('option:selected');
+            if (selectedOption.length && selectedOption.is(':hidden')) {
+                $select.val('').trigger('change');
+            }
+        });
+    }
+
+    // Gestion du changement de client pour pré-remplir les informations tiers et filtrer les contacts
+    $('#devis_client').on('change', function() {
+        const clientId = $(this).val();
+        console.log('Client sélectionné:', clientId);
+        
+        if (clientId) {
+            // Appel AJAX pour récupérer les données du client
+            $.ajax({
+                url: '/client/' + clientId + '/data',
+                method: 'GET',
+                success: function(data) {
+                    // Pré-remplir les champs tiers
+                    $('#devis_tiersCivilite').val(data.civilite).trigger('change');
+                    $('#devis_tiersNom').val(data.nom);
+                    $('#devis_tiersPrenom').val(data.prenom);
+                    $('#devis_tiersAdresse').val(data.adresse);
+                    $('#devis_tiersCodePostal').val(data.codePostal);
+                    $('#devis_tiersVille').val(data.ville);
+                    $('#devis_tiersModeReglement').val(data.modeReglement).trigger('change');
+                },
+                error: function() {
+                    console.log('Erreur lors de la récupération des données du client');
+                }
+            });
+        }
+        
+        // Filtrer les contacts et adresses
+        filterContactsAndAddresses(clientId);
+    });
+
+    // Filtrage initial au chargement de la page
+    const initialClientId = $('#devis_client').val();
+    if (initialClientId) {
+        filterContactsAndAddresses(initialClientId);
+    }
+
+    // Gestion de la collection de lignes de devis
+    const $collectionHolder = $('#devis_devisItems');
+    let index = $collectionHolder.children().length;
+
+    function addNewDevisItem() {
+        const prototype = $collectionHolder.data('prototype');
+        const newForm = prototype.replace(/__name__/g, index);
+        index++;
+
+        const $newItem = $('<div class="devis-item"></div>').html(newForm);
+        $collectionHolder.append($newItem);
+
+        // Réinitialiser Select2 pour les nouveaux éléments
+        $newItem.find('.form-select').select2({
+            theme: 'bootstrap-5'
+        });
+    }
+
+    // Bouton d'ajout de ligne
+    $('<button type="button" class="btn btn-add-item w-100 mt-3"><i class="fas fa-plus me-2"></i>Ajouter une ligne</button>')
+        .appendTo($collectionHolder.parent())
+        .on('click', addNewDevisItem);
+
+    // Calcul automatique des totaux
+    function calculateTotals() {
+        let totalHt = 0;
+        let totalTva = 0;
+
+        $('.devis-item').each(function() {
+            const qte = parseFloat($(this).find('[id$="_quantite"]').val()) || 0;
+            const prixUnitaire = parseFloat($(this).find('[id$="_prixUnitaire"]').val()) || 0;
+            const tvaPercent = parseFloat($(this).find('[id$="_tvaPercent"]').val()) || 20;
+
+            const totalLigneHt = qte * prixUnitaire;
+            const tvaLigne = totalLigneHt * tvaPercent / 100;
+
+            totalHt += totalLigneHt;
+            totalTva += tvaLigne;
+        });
+
+        const totalTtc = totalHt + totalTva;
+
+        // Mettre à jour les champs et l'affichage
+        $('#devis_totalHt').val(totalHt.toFixed(2));
+        $('#devis_totalTva').val(totalTva.toFixed(2));
+        $('#devis_totalTtc').val(totalTtc.toFixed(2));
+
+        $('#summary-total-ht').text(totalHt.toFixed(2) + ' €');
+        $('#summary-total-tva').text(totalTva.toFixed(2) + ' €');
+        $('#summary-total-ttc').text(totalTtc.toFixed(2) + ' €');
+    }
+
+    // Écouter les changements sur les champs de quantité et prix
+    $(document).on('input', '[id$="_quantite"], [id$="_prixUnitaire"], [id$="_tvaPercent"]', calculateTotals);
+
+    // Calcul initial
+    calculateTotals();
+});
+</script>
+{% endblock %}

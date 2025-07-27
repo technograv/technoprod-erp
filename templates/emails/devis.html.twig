@@ -1,0 +1,378 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Devis {{ devis.numeroDevis }} - TechnoProd</title>
+    <style>
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            line-height: 1.6;
+            color: #333;
+            margin: 0;
+            padding: 0;
+            background-color: #f5f5f5;
+        }
+        .container {
+            max-width: 600px;
+            margin: 0 auto;
+            background: white;
+            padding: 0;
+            border-radius: 10px;
+            box-shadow: 0 0 20px rgba(0, 0, 0, 0.1);
+            overflow: hidden;
+        }
+        .header {
+            background: linear-gradient(135deg, #6f42c1 0%, #e83e8c 100%);
+            color: white;
+            padding: 30px 40px;
+            text-align: center;
+        }
+        .header h1 {
+            margin: 0;
+            font-size: 28px;
+            font-weight: 700;
+        }
+        .header p {
+            margin: 10px 0 0 0;
+            font-size: 16px;
+            opacity: 0.9;
+        }
+        .content {
+            padding: 40px;
+        }
+        .greeting {
+            font-size: 18px;
+            margin-bottom: 25px;
+            color: #2c3e50;
+        }
+        .devis-info {
+            background: #f8f9fa;
+            border-left: 4px solid #6f42c1;
+            padding: 20px;
+            margin: 25px 0;
+            border-radius: 5px;
+        }
+        .devis-info h3 {
+            margin: 0 0 15px 0;
+            color: #6f42c1;
+            font-size: 20px;
+        }
+        .info-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 15px;
+            margin-top: 15px;
+        }
+        .info-item {
+            display: flex;
+            flex-direction: column;
+        }
+        .info-label {
+            font-weight: 600;
+            color: #7c8ba1;
+            font-size: 12px;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            margin-bottom: 5px;
+        }
+        .info-value {
+            font-size: 16px;
+            color: #2c3e50;
+            font-weight: 500;
+        }
+        .totals-section {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            padding: 25px;
+            margin: 25px 0;
+            border-radius: 10px;
+        }
+        .totals-section h4 {
+            margin: 0 0 15px 0;
+            font-size: 18px;
+        }
+        .total-line {
+            display: flex;
+            justify-content: space-between;
+            margin: 8px 0;
+            padding: 8px 0;
+            border-bottom: 1px solid rgba(255, 255, 255, 0.2);
+        }
+        .total-line:last-child {
+            border-bottom: none;
+            font-weight: 700;
+            font-size: 18px;
+            margin-top: 15px;
+            padding-top: 15px;
+            border-top: 2px solid rgba(255, 255, 255, 0.3);
+        }
+        .cta-section {
+            text-align: center;
+            margin: 35px 0;
+        }
+        .cta-button {
+            display: inline-block;
+            background: linear-gradient(135deg, #28a745 0%, #20c997 100%);
+            color: white;
+            text-decoration: none;
+            padding: 15px 30px;
+            border-radius: 50px;
+            font-weight: 600;
+            font-size: 16px;
+            transition: transform 0.3s ease;
+            box-shadow: 0 5px 15px rgba(40, 167, 69, 0.3);
+        }
+        .cta-button:hover {
+            transform: translateY(-2px);
+            text-decoration: none;
+            color: white;
+        }
+        .message-section {
+            background: #e3f2fd;
+            border-left: 4px solid #2196f3;
+            padding: 20px;
+            margin: 25px 0;
+            border-radius: 5px;
+        }
+        .message-section h4 {
+            margin: 0 0 10px 0;
+            color: #1976d2;
+        }
+        .contact-info {
+            background: #f8f9fa;
+            padding: 25px;
+            border-radius: 8px;
+            margin: 25px 0;
+            text-align: center;
+        }
+        .contact-info h4 {
+            margin: 0 0 15px 0;
+            color: #6f42c1;
+        }
+        .contact-details {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 15px;
+            margin-top: 15px;
+        }
+        .footer {
+            background: #2c3e50;
+            color: white;
+            padding: 25px 40px;
+            text-align: center;
+            font-size: 14px;
+        }
+        .footer p {
+            margin: 5px 0;
+            opacity: 0.8;
+        }
+        .footer .company-name {
+            font-weight: 700;
+            font-size: 16px;
+            opacity: 1;
+            margin-bottom: 10px;
+        }
+        .badge {
+            display: inline-block;
+            padding: 4px 12px;
+            font-size: 12px;
+            font-weight: 600;
+            border-radius: 20px;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+        .badge-success { background: #28a745; color: white; }
+        .badge-info { background: #17a2b8; color: white; }
+        .badge-warning { background: #ffc107; color: #212529; }
+        .badge-primary { background: #007bff; color: white; }
+
+        @media (max-width: 600px) {
+            .info-grid {
+                grid-template-columns: 1fr;
+            }
+            .contact-details {
+                grid-template-columns: 1fr;
+            }
+            .content {
+                padding: 25px;
+            }
+            .header {
+                padding: 25px;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <!-- En-tête -->
+        <div class="header">
+            <h1>🚀 TechnoProd</h1>
+            <p>Solutions technologiques innovantes</p>
+        </div>
+
+        <!-- Contenu principal -->
+        <div class="content">
+            <div class="greeting">
+                Bonjour{% if devis.contactFacturation %} {{ devis.contactFacturation.prenom }} {{ devis.contactFacturation.nom }}{% endif %},
+            </div>
+
+            <p>Nous avons le plaisir de vous transmettre notre devis pour votre projet. Vous trouverez en pièce jointe le document détaillé au format PDF.</p>
+
+            <!-- Message personnalisé -->
+            {% if message %}
+            <div class="message-section">
+                <h4>💬 Message personnalisé</h4>
+                <p>{{ message|nl2br }}</p>
+            </div>
+            {% endif %}
+
+            <!-- Informations du devis -->
+            <div class="devis-info">
+                <h3>📋 Informations du devis</h3>
+                <div class="info-grid">
+                    <div class="info-item">
+                        <div class="info-label">Numéro de devis</div>
+                        <div class="info-value">{{ devis.numeroDevis }}</div>
+                    </div>
+                    <div class="info-item">
+                        <div class="info-label">Statut</div>
+                        <div class="info-value">
+                            <span class="badge badge-{{ devis.statutCouleur }}">{{ devis.statutLibelle }}</span>
+                        </div>
+                    </div>
+                    <div class="info-item">
+                        <div class="info-label">Date de création</div>
+                        <div class="info-value">{{ devis.dateCreation|date('d/m/Y') }}</div>
+                    </div>
+                    <div class="info-item">
+                        <div class="info-label">Validité jusqu'au</div>
+                        <div class="info-value">{{ devis.dateValidite|date('d/m/Y') }}</div>
+                    </div>
+                    {% if devis.delaiLivraison %}
+                    <div class="info-item">
+                        <div class="info-label">Délai de livraison</div>
+                        <div class="info-value">{{ devis.delaiLivraison }}</div>
+                    </div>
+                    {% endif %}
+                    {% if devis.commercial %}
+                    <div class="info-item">
+                        <div class="info-label">Votre commercial</div>
+                        <div class="info-value">{{ devis.commercial.fullName }}</div>
+                    </div>
+                    {% endif %}
+                </div>
+            </div>
+
+            <!-- Récapitulatif financier -->
+            <div class="totals-section">
+                <h4>💰 Récapitulatif financier</h4>
+                
+                {% if devis.remiseGlobalePercent %}
+                <div class="total-line">
+                    <span>Sous-total HT :</span>
+                    <span>{{ (devis.totalHt + devis.remiseGlobaleMontant)|number_format(2, ',', ' ') }}€</span>
+                </div>
+                <div class="total-line">
+                    <span>Remise globale ({{ devis.remiseGlobalePercent }}%) :</span>
+                    <span>-{{ devis.remiseGlobaleMontant|number_format(2, ',', ' ') }}€</span>
+                </div>
+                {% endif %}
+                
+                <div class="total-line">
+                    <span>Total HT :</span>
+                    <span>{{ devis.totalHt|number_format(2, ',', ' ') }}€</span>
+                </div>
+                
+                <div class="total-line">
+                    <span>TVA :</span>
+                    <span>{{ devis.totalTva|number_format(2, ',', ' ') }}€</span>
+                </div>
+                
+                <div class="total-line">
+                    <span>TOTAL TTC :</span>
+                    <span>{{ devis.totalTtc|number_format(2, ',', ' ') }}€</span>
+                </div>
+                
+                {% if devis.acomptePercent or devis.acompteMontant %}
+                <div class="total-line">
+                    <span>Acompte à la commande :</span>
+                    <span>{{ devis.calculateAcompte|number_format(2, ',', ' ') }}€</span>
+                </div>
+                {% endif %}
+            </div>
+
+            <!-- Call to action -->
+            <div class="cta-section">
+                <h3>✍️ Consultez et signez votre devis en ligne</h3>
+                <p>Cliquez sur le bouton ci-dessous pour consulter votre devis et le signer électroniquement :</p>
+                <a href="{{ devis.urlAccesClient }}" class="cta-button">
+                    🔗 Consulter et signer le devis
+                </a>
+                <p style="margin-top: 15px; font-size: 14px; color: #6c757d;">
+                    Ce lien est sécurisé et valable pendant toute la durée de validité du devis.
+                </p>
+            </div>
+
+            <!-- Informations complémentaires -->
+            {% if devis.acomptePercent or devis.acompteMontant %}
+            <div class="message-section">
+                <h4>💳 Modalités de paiement</h4>
+                <p>
+                    <strong>Acompte :</strong> {{ devis.calculateAcompte|number_format(2, ',', ' ') }}€ à la signature du devis<br>
+                    <strong>Solde :</strong> {{ (devis.totalTtc - devis.calculateAcompte)|number_format(2, ',', ' ') }}€ à la livraison
+                </p>
+                <p>Modes de paiement acceptés : virement bancaire, chèque, carte bancaire.</p>
+            </div>
+            {% endif %}
+
+            <!-- Contact -->
+            <div class="contact-info">
+                <h4>📞 Besoin d'informations ?</h4>
+                <p>Notre équipe reste à votre disposition pour toute question concernant ce devis.</p>
+                <div class="contact-details">
+                    <div>
+                        <strong>📧 Email :</strong><br>
+                        {% if devis.commercial %}
+                            <a href="mailto:{{ devis.commercial.email }}" style="color: #6f42c1;">{{ devis.commercial.email }}</a>
+                        {% else %}
+                            <a href="mailto:contact@technoprod.com" style="color: #6f42c1;">contact@technoprod.com</a>
+                        {% endif %}
+                    </div>
+                    <div>
+                        <strong>📱 Téléphone :</strong><br>
+                        <a href="tel:+33123456789" style="color: #6f42c1;">+33 1 23 45 67 89</a>
+                    </div>
+                </div>
+            </div>
+
+            <p>Nous vous remercions de la confiance que vous nous accordez et espérons avoir le plaisir de travailler avec vous sur ce projet.</p>
+            
+            <p style="margin-top: 30px;">
+                Cordialement,<br>
+                {% if devis.commercial %}
+                    {% if devis.commercial.gmailSignature %}
+                        {{ devis.commercial.gmailSignature|raw }}
+                    {% else %}
+                        <strong>{{ devis.commercial.fullName }}</strong><br>
+                        <em>{{ devis.commercial.email }}</em>
+                    {% endif %}
+                {% else %}
+                    <strong>L'équipe TechnoProd</strong>
+                {% endif %}
+            </p>
+        </div>
+
+        <!-- Pied de page -->
+        <div class="footer">
+            <p class="company-name">TechnoProd</p>
+            <p>SARL au capital de 50 000€ - SIRET: 123 456 789 00012</p>
+            <p>123 Avenue de l'Innovation, 75001 Paris</p>
+            <p>Tél: +33 1 23 45 67 89 - Email: contact@technoprod.com</p>
+            <p style="margin-top: 15px; font-size: 12px;">
+                Cet email a été envoyé automatiquement, merci de ne pas y répondre directement.
+            </p>
+        </div>
+    </div>
+</body>
+</html>
