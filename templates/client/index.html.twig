@@ -300,20 +300,15 @@
                         <option value="client" {{ app.request.query.get('statut') == 'client' ? 'selected' : '' }}>Clients uniquement</option>
                     </select>
                 </div>
-                <div class="col-md-3">
-                    <label for="famille" class="form-label">Famille</label>
-                    <select name="famille" id="famille" class="form-select">
-                        <option value="">Toutes les familles</option>
-                        <option value="TPE" {{ app.request.query.get('famille') == 'TPE' ? 'selected' : '' }}>TPE</option>
-                        <option value="PME" {{ app.request.query.get('famille') == 'PME' ? 'selected' : '' }}>PME</option>
-                        <option value="ETI" {{ app.request.query.get('famille') == 'ETI' ? 'selected' : '' }}>ETI</option>
-                        <option value="Grand Compte" {{ app.request.query.get('famille') == 'Grand Compte' ? 'selected' : '' }}>Grand Compte</option>
-                        <option value="Administration" {{ app.request.query.get('famille') == 'Administration' ? 'selected' : '' }}>Administration</option>
-                        <option value="Association" {{ app.request.query.get('famille') == 'Association' ? 'selected' : '' }}>Association</option>
-                        <option value="Particulier" {{ app.request.query.get('famille') == 'Particulier' ? 'selected' : '' }}>Particulier</option>
+                <div class="col-md-2">
+                    <label for="actif" class="form-label">État</label>
+                    <select name="actif" id="actif" class="form-select">
+                        <option value="">Tous</option>
+                        <option value="1" {{ app.request.query.get('actif') == '1' ? 'selected' : '' }}>Actifs</option>
+                        <option value="0" {{ app.request.query.get('actif') == '0' ? 'selected' : '' }}>Archivés</option>
                     </select>
                 </div>
-                <div class="col-md-3">
+                <div class="col-md-4">
                     <label for="secteur" class="form-label">Secteur</label>
                     <select name="secteur" id="secteur" class="form-select">
                         <option value="">Tous les secteurs</option>
@@ -401,11 +396,6 @@
                                     <i class="fas fa-sort sort-indicator"></i>
                                     <div class="column-resizer"></div>
                                 </th>
-                                <th class="sortable-header" data-column="famille" data-sort="famille" style="width: 100px;">
-                                    Famille
-                                    <i class="fas fa-sort sort-indicator"></i>
-                                    <div class="column-resizer"></div>
-                                </th>
                                 <th class="sortable-header" data-column="secteur" data-sort="secteur_nom" style="width: 120px;">
                                     Secteur
                                     <i class="fas fa-sort sort-indicator"></i>
@@ -441,7 +431,6 @@
                                     data-contact-telephone="{{ contactFactu ? contactFactu.telephone : '' }}"
                                     data-contact-email="{{ contactFactu ? contactFactu.email|lower : '' }}"
                                     data-adresse-ville="{{ contactFactu and contactFactu.adresse ? contactFactu.adresse.ville|lower : '' }}"
-                                    data-famille="{{ client.famille|lower }}"
                                     data-secteur-nom="{{ client.secteur ? client.secteur.nomSecteur|lower : '' }}"
                                     data-date-conversion="{{ client.dateConversionClient ? client.dateConversionClient|date('Y-m-d') : '' }}"
                                     style="cursor: pointer;">
@@ -503,13 +492,6 @@
                                                 <div>{{ contactFactu.adresse.ville }}</div>
                                                 <small>{{ contactFactu.adresse.codePostal }}</small>
                                             </div>
-                                        {% else %}
-                                            <span class="text-muted">-</span>
-                                        {% endif %}
-                                    </td>
-                                    <td>
-                                        {% if client.famille %}
-                                            <span class="badge bg-light text-dark">{{ client.famille }}</span>
                                         {% else %}
                                             <span class="text-muted">-</span>
                                         {% endif %}
@@ -746,7 +728,6 @@ class TableColumnResizer {
             'telephone': 150,
             'email': 200,
             'adresse': 150,
-            'famille': 100,
             'secteur': 120,
             'conversion': 100,
             'actions': 120
@@ -887,8 +868,6 @@ class TableSorter {
                 return row.getAttribute('data-contact-email');
             case 'adresse_ville':
                 return row.getAttribute('data-adresse-ville');
-            case 'famille':
-                return row.getAttribute('data-famille');
             case 'secteur_nom':
                 return row.getAttribute('data-secteur-nom');
             case 'dateConversionClient':

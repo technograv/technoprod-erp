@@ -88,22 +88,13 @@
                                 </a></li>
                             </ul>
                         </li>
-                        <li class="nav-item dropdown">
-                            <a class="nav-link dropdown-toggle" href="#" id="configDropdown" role="button" data-bs-toggle="dropdown">
-                                <i class="fas fa-cog"></i> Configuration
+                        {% if is_granted('ROLE_ADMIN') %}
+                        <li class="nav-item">
+                            <a class="nav-link text-danger fw-bold" href="{{ path('app_admin_dashboard') }}">
+                                <i class="fas fa-cog"></i> Administration
                             </a>
-                            <ul class="dropdown-menu">
-                                <li><a class="dropdown-item" href="{{ path('app_secteur_index') }}">
-                                    <i class="fas fa-map"></i> Secteurs
-                                </a></li>
-                                <li><a class="dropdown-item" href="{{ path('app_zone_index') }}">
-                                    <i class="fas fa-location-arrow"></i> Zones
-                                </a></li>
-                                <li><a class="dropdown-item" href="/api/produits">
-                                    <i class="fas fa-box"></i> Produits (API)
-                                </a></li>
-                            </ul>
                         </li>
+                        {% endif %}
                     </ul>
                     
                     <ul class="navbar-nav">

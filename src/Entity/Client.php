@@ -25,25 +25,26 @@ class Client
     #[ORM\Column(length: 100, nullable: true)]
     private ?string $famille = null;
 
-    #[ORM\Column(length: 20)]
-    private string $typePersonne = 'morale'; // 'physique' ou 'morale'
 
     #[ORM\Column(length: 10, nullable: true)]
     private ?string $civilite = null; // M., Mme, Mlle
 
-    #[ORM\Column(length: 200)]
-    #[Assert\NotBlank(message: 'Le nom/raison sociale est obligatoire')]
+    #[ORM\Column(length: 200, nullable: true)]
     #[Assert\Length(max: 200, maxMessage: 'Le nom ne peut pas dépasser {{ limit }} caractères')]
     private ?string $nom = null; // Nom de l'entreprise ou nom de famille
 
-    #[ORM\Column(length: 50, nullable: true)]
-    private ?string $formeJuridique = null; // SAS, SARL, EURL, etc.
+    #[ORM\ManyToOne(targetEntity: FormeJuridique::class)]
+    #[ORM\JoinColumn(nullable: true)]
+    private ?FormeJuridique $formeJuridique = null;
 
     #[ORM\Column(length: 100, nullable: true)]
     private ?string $prenom = null; // Uniquement pour personne physique
 
     #[ORM\Column(length: 20)]
     private string $statut = 'prospect'; // 'prospect' ou 'client'
+    
+    #[ORM\Column(type: 'boolean')]
+    private bool $actif = true; // true = actif, false = archivé
     
     #[ORM\Column(length: 180, nullable: true)]
     #[Assert\Email(message: 'L\'adresse email n\'est pas valide')]
@@ -157,16 +158,6 @@ class Client
         return $this;
     }
 
-    public function getTypePersonne(): string
-    {
-        return $this->typePersonne;
-    }
-
-    public function setTypePersonne(string $typePersonne): static
-    {
-        $this->typePersonne = $typePersonne;
-        return $this;
-    }
 
     public function getCivilite(): ?string
     {
@@ -184,7 +175,7 @@ class Client
         return $this->nom;
     }
 
-    public function setNom(string $nom): static
+    public function setNom(?string $nom): static
     {
         $this->nom = $nom;
         return $this;
@@ -209,6 +200,17 @@ class Client
     public function setStatut(string $statut): static
     {
         $this->statut = $statut;
+        return $this;
+    }
+
+    public function isActif(): bool
+    {
+        return $this->actif;
+    }
+
+    public function setActif(bool $actif): static
+    {
+        $this->actif = $actif;
         return $this;
     }
 
@@ -472,10 +474,20 @@ class Client
 
     public function getNomComplet(): string
     {
-        if ($this->typePersonne === 'physique') {
-            return trim(($this->civilite ? $this->civilite . ' ' : '') . $this->prenom . ' ' . $this->nom);
+        if ($this->formeJuridique && $this->formeJuridique->isPersonnePhysique()) {
+            // Pour une personne physique, utiliser civilité + prénom + nom du contact principal
+            $contact = $this->getContactFacturationDefault();
+            if ($contact) {
+                $civilite = $contact->getCivilite() ? $contact->getCivilite() . ' ' : '';
+                $prenom = $contact->getPrenom() ? $contact->getPrenom() . ' ' : '';
+                $nom = $contact->getNom() ?: '';
+                return trim($civilite . $prenom . $nom);
+            }
+            // Fallback si pas de contact
+            return trim(($this->civilite ? $this->civilite . ' ' : '') . ($this->prenom ?: ''));
         } else {
-            return $this->nom;
+            // Pour une personne morale, utiliser la dénomination
+            return $this->nom ?: 'Entreprise sans nom';
         }
     }
 
@@ -496,12 +508,12 @@ class Client
         return $this;
     }
 
-    public function getFormeJuridique(): ?string
+    public function getFormeJuridique(): ?FormeJuridique
     {
         return $this->formeJuridique;
     }
 
-    public function setFormeJuridique(?string $formeJuridique): static
+    public function setFormeJuridique(?FormeJuridique $formeJuridique): static
     {
         $this->formeJuridique = $formeJuridique;
         return $this;

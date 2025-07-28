@@ -289,6 +289,19 @@ class Contact
         return $this->telephoneMobile ?: $this->telephone;
     }
 
+    /**
+     * Numéro de téléphone mobile nettoyé pour l'appel
+     */
+    public function getTelephoneMobileForCall(): ?string
+    {
+        // Nettoyer le numéro de mobile pour l'appel (supprimer espaces, points, tirets)
+        if (!$this->telephoneMobile) {
+            return null;
+        }
+        
+        return preg_replace('/[^0-9+]/', '', $this->telephoneMobile);
+    }
+
     public function __toString(): string
     {
         return $this->getNomComplet();

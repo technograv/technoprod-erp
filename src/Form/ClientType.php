@@ -4,6 +4,7 @@ namespace App\Form;
 
 use App\Entity\Client;
 use App\Entity\Contact;
+use App\Entity\FormeJuridique;
 use App\Form\ContactType;
 use Symfony\Bridge\Doctrine\Form\Type\EntityType;
 use Symfony\Component\Form\AbstractType;
@@ -16,6 +17,9 @@ use Symfony\Component\Form\Extension\Core\Type\TextareaType;
 use Symfony\Component\Form\Extension\Core\Type\TextType;
 use Symfony\Component\Form\FormBuilderInterface;
 use Symfony\Component\OptionsResolver\OptionsResolver;
+use Symfony\Component\Form\FormEvent;
+use Symfony\Component\Form\FormEvents;
+use Symfony\Component\Validator\Constraints as Assert;
 
 class ClientType extends AbstractType
 {
@@ -37,40 +41,43 @@ class ClientType extends AbstractType
                 'required' => false,
                 'placeholder' => 'Choisir une famille...'
             ])
-            ->add('typePersonne', ChoiceType::class, [
-                'label' => 'Type de personne',
-                'choices' => [
-                    'Personne morale (Entreprise)' => 'morale',
-                    'Personne physique (Particulier)' => 'physique'
-                ],
-                'expanded' => true,
-                'multiple' => false,
-                'attr' => ['class' => 'type-personne-radio']
+            ->add('formeJuridique', EntityType::class, [
+                'label' => 'Forme juridique',
+                'class' => FormeJuridique::class,
+                'choice_label' => 'nom',
+                'query_builder' => function(\Doctrine\ORM\EntityRepository $er) {
+                    return $er->createQueryBuilder('f')
+                        ->where('f.actif = :actif')
+                        ->setParameter('actif', true)
+                        ->orderBy('CASE WHEN f.nom = \'Particulier\' THEN 0 ELSE 1 END, f.nom', 'ASC');
+                },
+                'required' => true,
+                'placeholder' => 'Sélectionner une forme juridique...',
+                'attr' => ['class' => 'forme-juridique-select']
             ])
             ->add('nom', TextType::class, [
                 'label' => 'Nom / Raison sociale',
-                'attr' => ['placeholder' => 'Nom de l\'entreprise ou nom de famille']
-            ])
-            ->add('formeJuridique', ChoiceType::class, [
-                'label' => 'Forme juridique',
-                'choices' => [
-                    'SAS (Société par Actions Simplifiée)' => 'SAS',
-                    'SARL (Société à Responsabilité Limitée)' => 'SARL',
-                    'EURL (Entreprise Unipersonnelle à Responsabilité Limitée)' => 'EURL',
-                    'SA (Société Anonyme)' => 'SA',
-                    'SCI (Société Civile Immobilière)' => 'SCI',
-                    'SASU (Société par Actions Simplifiée Unipersonnelle)' => 'SASU',
-                    'SNC (Société en Nom Collectif)' => 'SNC',
-                    'Micro-entreprise' => 'Micro-entreprise',
-                    'Entreprise individuelle' => 'Entreprise individuelle',
-                    'Association loi 1901' => 'Association',
-                    'Collectivité territoriale' => 'Collectivité',
-                    'Établissement public' => 'Établissement public',
-                    'Autre' => 'Autre'
-                ],
                 'required' => false,
-                'placeholder' => 'Choisir une forme juridique...',
-                'attr' => ['class' => 'forme-juridique-field']
+                'constraints' => [
+                    // Validation conditionnelle selon la forme juridique
+                    new Assert\Callback(function($value, $context) {
+                        $form = $context->getRoot();
+                        $formeJuridique = $form->get('formeJuridique')->getData();
+                        
+                        // Pour personne morale, la dénomination est obligatoire
+                        if ($formeJuridique && $formeJuridique->isPersonneMorale() && empty($value)) {
+                            $context->buildViolation('La dénomination (nom de l\'entreprise) est obligatoire pour une personne morale.')
+                                ->addViolation();
+                        }
+                        
+                        // Pour personne physique, la dénomination doit être NULL (pas de validation requise)
+                        if ($formeJuridique && $formeJuridique->isPersonnePhysique() && !empty($value)) {
+                            $context->buildViolation('Les personnes physiques ne doivent pas avoir de dénomination.')
+                                ->addViolation();
+                        }
+                    })
+                ],
+                'attr' => ['placeholder' => 'Nom de l\'entreprise ou nom de famille']
             ])
             
             // Collection de contacts multiples

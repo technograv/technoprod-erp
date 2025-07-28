@@ -95,23 +95,37 @@ class ClientRepository extends ServiceEntityRepository
      */
     public function getNextClientCode(): string
     {
-        $lastClient = $this->createQueryBuilder('c')
+        // Récupérer tous les codes clients existants et trouver le plus grand numéro
+        $existingCodes = $this->createQueryBuilder('c')
+            ->select('c.code')
             ->where('c.code LIKE :pattern')
             ->setParameter('pattern', 'CLI%')
-            ->orderBy('c.id', 'DESC')
-            ->setMaxResults(1)
             ->getQuery()
-            ->getOneOrNullResult();
+            ->getArrayResult();
 
-        if (!$lastClient) {
-            return 'CLI001';
+        $maxNumber = 0;
+        foreach ($existingCodes as $codeData) {
+            $code = $codeData['code'];
+            // Extraire le numéro (CLI001 -> 001, CLI123 -> 123)
+            if (preg_match('/^CLI(\d+)$/', $code, $matches)) {
+                $number = (int) $matches[1];
+                if ($number > $maxNumber) {
+                    $maxNumber = $number;
+                }
+            }
         }
 
-        // Extraire le numéro du code (CLI001 -> 001)
-        $lastNumber = (int) substr($lastClient->getCode(), 3);
-        $nextNumber = $lastNumber + 1;
-
-        return 'CLI' . str_pad($nextNumber, 3, '0', STR_PAD_LEFT);
+        // Générer le prochain code disponible
+        $nextNumber = $maxNumber + 1;
+        $nextCode = 'CLI' . str_pad($nextNumber, 3, '0', STR_PAD_LEFT);
+        
+        // Vérifier que le code n'existe pas (sécurité supplémentaire)
+        while ($this->findOneBy(['code' => $nextCode])) {
+            $nextNumber++;
+            $nextCode = 'CLI' . str_pad($nextNumber, 3, '0', STR_PAD_LEFT);
+        }
+        
+        return $nextCode;
     }
 
     /**
@@ -119,22 +133,36 @@ class ClientRepository extends ServiceEntityRepository
      */
     public function getNextProspectCode(): string
     {
-        $lastProspect = $this->createQueryBuilder('c')
+        // Récupérer tous les codes prospects existants et trouver le plus grand numéro
+        $existingCodes = $this->createQueryBuilder('c')
+            ->select('c.code')
             ->where('c.code LIKE :pattern')
             ->setParameter('pattern', 'P%')
-            ->orderBy('c.id', 'DESC')
-            ->setMaxResults(1)
             ->getQuery()
-            ->getOneOrNullResult();
+            ->getArrayResult();
 
-        if (!$lastProspect) {
-            return 'P001';
+        $maxNumber = 0;
+        foreach ($existingCodes as $codeData) {
+            $code = $codeData['code'];
+            // Extraire le numéro (P001 -> 001, P123 -> 123)
+            if (preg_match('/^P(\d+)$/', $code, $matches)) {
+                $number = (int) $matches[1];
+                if ($number > $maxNumber) {
+                    $maxNumber = $number;
+                }
+            }
         }
 
-        // Extraire le numéro du code (P001 -> 001)
-        $lastNumber = (int) substr($lastProspect->getCode(), 1);
-        $nextNumber = $lastNumber + 1;
-
-        return 'P' . str_pad($nextNumber, 3, '0', STR_PAD_LEFT);
+        // Générer le prochain code disponible
+        $nextNumber = $maxNumber + 1;
+        $nextCode = 'P' . str_pad($nextNumber, 3, '0', STR_PAD_LEFT);
+        
+        // Vérifier que le code n'existe pas (sécurité supplémentaire)
+        while ($this->findOneBy(['code' => $nextCode])) {
+            $nextNumber++;
+            $nextCode = 'P' . str_pad($nextNumber, 3, '0', STR_PAD_LEFT);
+        }
+        
+        return $nextCode;
     }
 }
