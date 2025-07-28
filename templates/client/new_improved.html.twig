@@ -87,6 +87,62 @@
         .commune-suggestion:last-child {
             border-bottom: none;
         }
+        
+        /* Améliorations esthétiques pour les templates */
+        .template-container {
+            transition: opacity 0.3s ease-in-out;
+        }
+        
+        .template-container .form-section-body hr {
+            border-top: 2px solid #e9ecef;
+            margin: 1.5rem 0;
+            opacity: 0.7;
+        }
+        
+        /* Espacement harmonieux pour les champs d'adresse */
+        .address-fields {
+            background: #f8f9fb;
+            border-radius: 8px;
+            padding: 1.2rem;
+            margin-top: 1rem;
+            border-left: 4px solid #667eea;
+        }
+        
+        /* Style pour le sélecteur de forme juridique */
+        .legal-form-selector {
+            background: linear-gradient(135deg, #f8f9fa 0%, #e9ecef 100%);
+            border: 2px solid #667eea;
+            transition: all 0.3s ease;
+        }
+        
+        .legal-form-selector:hover {
+            box-shadow: 0 4px 12px rgba(102, 126, 234, 0.15);
+            transform: translateY(-1px);
+        }
+        
+        /* Headers des sections avec icônes */
+        .form-section-header i {
+            background: rgba(255, 255, 255, 0.2);
+            padding: 0.3rem;
+            border-radius: 50%;
+            margin-right: 0.8rem;
+        }
+        
+        /* Amélioration visuelle des champs requis */
+        .required {
+            font-weight: 600;
+            font-size: 0.9em;
+        }
+        
+        /* Responsive pour mobile */
+        @media (max-width: 768px) {
+            .form-section-body {
+                padding: 1rem;
+            }
+            .address-fields {
+                padding: 0.8rem;
+            }
+        }
     </style>
 {% endblock %}
 
@@ -111,59 +167,51 @@
 </div>
 
 <div class="container-fluid">
+    <!-- Messages flash pour debug -->
+    {% for message in app.flashes('error') %}
+        <div class="alert alert-danger alert-dismissible fade show" role="alert">
+            <i class="fas fa-exclamation-triangle me-2"></i>{{ message }}
+            <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+        </div>
+    {% endfor %}
+    {% for message in app.flashes('success') %}
+        <div class="alert alert-success alert-dismissible fade show" role="alert">
+            <i class="fas fa-check-circle me-2"></i>{{ message }}
+            <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+        </div>
+    {% endfor %}
+
     {{ form_start(form) }}
         <div class="row">
             <div class="col-lg-8">
-                <!-- Sélection du type de personne (condensée) -->
-                <div class="bg-light border rounded p-3 mb-3">
-                    <div class="d-flex align-items-center">
-                        <label class="form-label fw-bold mb-0 me-3">Type de client :</label>
-                        <div class="d-flex">
-                            {{ form_widget(form.typePersonne, {'attr': {'class': 'd-flex gap-3'}}) }}
+                <!-- Sélection de la forme juridique -->
+                <div class="legal-form-selector rounded p-3 mb-3">
+                    <div class="row">
+                        <div class="col-md-12">
+                            <label class="form-label fw-bold">Forme juridique <span class="required">*</span></label>
+                            {{ form_widget(form.formeJuridique, {'attr': {'class': 'form-select'}}) }}
+                            <small class="text-muted">Sélectionnez la forme juridique pour adapter automatiquement le formulaire</small>
                         </div>
                     </div>
                 </div>
 
-                <!-- Section 1: Informations générales -->
-                <div class="form-section">
-                    <div class="form-section-header">
-                        <i class="fas fa-info-circle me-2"></i>Informations générales
-                    </div>
-                    <div class="form-section-body">
-                        <div class="row">
-                            <div class="col-md-6">
-                                <div class="mb-3">
-                                    {{ form_row(form.famille) }}
-                                </div>
-                            </div>
-                            <div class="col-md-6" id="forme-juridique-field">
-                                <div class="mb-3">
-                                    {{ form_row(form.formeJuridique) }}
-                                </div>
-                            </div>
+                <!-- TEMPLATE PERSONNE PHYSIQUE (Particulier) -->
+                <div id="template-personne-physique" style="display: none;" class="template-container">
+                    <!-- Section: Informations personnelles -->
+                    <div class="form-section">
+                        <div class="form-section-header">
+                            <i class="fas fa-user me-2"></i>Informations personnelles
                         </div>
-                        
-                        <!-- Famille pour personne physique (cachée mais avec valeur par défaut) -->
-                        <input type="hidden" id="famille-physique" value="Particulier">
-
-                        <!-- Champs personne morale -->
-                        <div id="personne-morale-fields">
-                            <div class="row">
-                                <div class="col-md-12">
-                                    <div class="mb-3">
-                                        {{ form_row(form.nom) }}
-                                    </div>
-                                </div>
-                            </div>
-                        </div>
-                        
-                        <!-- Champs spécifiques personne physique -->
-                        <div id="personne-physique-fields" style="display: none;">
+                        <div class="form-section-body">
+                            <!-- Famille automatique pour particulier -->
+                            <input type="hidden" name="famille_auto" value="Particulier">
+                            
                             <div class="row">
                                 <div class="col-md-2">
                                     <div class="mb-3">
                                         <label class="form-label">Civilité <span class="required">*</span></label>
                                         <select class="form-select" name="personne_civilite" required>
+                                            <option value="">--</option>
                                             <option value="M.">M.</option>
                                             <option value="Mme">Mme</option>
                                             <option value="Mlle">Mlle</option>
@@ -172,14 +220,14 @@
                                 </div>
                                 <div class="col-md-5">
                                     <div class="mb-3">
-                                        <label class="form-label">Prénom <span class="required">*</span></label>
-                                        <input type="text" class="form-control" name="personne_prenom" placeholder="Prénom" required>
+                                        <label class="form-label">Nom de famille <span class="required">*</span></label>
+                                        <input type="text" class="form-control" name="personne_nom" placeholder="Nom de famille" required>
                                     </div>
                                 </div>
                                 <div class="col-md-5">
                                     <div class="mb-3">
-                                        <label class="form-label">Nom de famille <span class="required">*</span></label>
-                                        <input type="text" class="form-control" name="personne_nom" placeholder="Nom de famille" required>
+                                        <label class="form-label">Prénom <span class="required">*</span></label>
+                                        <input type="text" class="form-control" name="personne_prenom" placeholder="Prénom" required>
                                     </div>
                                 </div>
                             </div>
@@ -187,13 +235,13 @@
                                 <div class="col-md-6">
                                     <div class="mb-3">
                                         <label class="form-label">Email <span class="required">*</span></label>
-                                        <input type="email" class="form-control" name="personne_email" placeholder="Email" required>
+                                        <input type="email" class="form-control" name="personne_email" placeholder="email@exemple.fr" required>
                                     </div>
                                 </div>
                                 <div class="col-md-6">
                                     <div class="mb-3">
                                         <label class="form-label">Téléphone <span class="required">*</span></label>
-                                        <input type="tel" class="form-control" name="personne_telephone" placeholder="Téléphone" required>
+                                        <input type="tel" class="form-control" name="personne_telephone" placeholder="01 23 45 67 89" required>
                                     </div>
                                 </div>
                             </div>
@@ -201,7 +249,7 @@
                                 <div class="col-md-6">
                                     <div class="mb-3">
                                         <label class="form-label">Téléphone mobile</label>
-                                        <input type="tel" class="form-control" name="personne_telephone_mobile" placeholder="Téléphone mobile">
+                                        <input type="tel" class="form-control" name="personne_telephone_mobile" placeholder="06 12 34 56 78">
                                     </div>
                                 </div>
                                 <div class="col-md-6">
@@ -212,8 +260,8 @@
                                 </div>
                             </div>
                             
-                            <!-- Adresse pour personne physique intégrée dans les informations générales -->
-                            <hr class="my-3">
+                            <!-- Adresse intégrée -->
+                            <div class="address-fields">
                             <div class="row">
                                 <div class="col-md-12">
                                     <div class="mb-3">
@@ -226,13 +274,13 @@
                                 <div class="col-md-6">
                                     <div class="mb-3">
                                         <label class="form-label">Adresse ligne 2</label>
-                                        <input type="text" class="form-control" name="personne_adresse_ligne2" placeholder="Complément">
+                                        <input type="text" class="form-control" name="personne_adresse_ligne2" placeholder="Complément d'adresse">
                                     </div>
                                 </div>
                                 <div class="col-md-6">
                                     <div class="mb-3">
                                         <label class="form-label">Adresse ligne 3</label>
-                                        <input type="text" class="form-control" name="personne_adresse_ligne3" placeholder="Complément">
+                                        <input type="text" class="form-control" name="personne_adresse_ligne3" placeholder="Complément d'adresse">
                                     </div>
                                 </div>
                             </div>
@@ -258,88 +306,34 @@
                                     </div>
                                 </div>
                             </div>
-                        </div>
-                    </div>
-                </div>
-
-                <!-- Section 2: Contact principal (uniquement pour les personnes morales) -->
-                <div class="form-section" id="contact-section">
-                    <div class="form-section-header">
-                        <i class="fas fa-user me-2"></i>Contact principal dans l'entreprise
-                    </div>
-                    <div class="form-section-body">
-                        <div class="contact-form-block">
-                            <div class="row">
-                                <div class="col-md-2">
-                                    <div class="mb-3">
-                                        <label class="form-label">Civilité</label>
-                                        <select class="form-select" name="contact_civilite">
-                                            <option value="M.">M.</option>
-                                            <option value="Mme">Mme</option>
-                                            <option value="Mlle">Mlle</option>
-                                        </select>
-                                    </div>
-                                </div>
-                                <div class="col-md-5">
-                                    <div class="mb-3">
-                                        <label class="form-label">Nom <span class="required">*</span></label>
-                                        <input type="text" class="form-control" name="contact_nom" required>
-                                    </div>
-                                </div>
-                                <div class="col-md-5">
-                                    <div class="mb-3">
-                                        <label class="form-label">Prénom <span class="required">*</span></label>
-                                        <input type="text" class="form-control" name="contact_prenom" required>
-                                    </div>
-                                </div>
-                            </div>
-                            <div class="row">
-                                <div class="col-md-6">
-                                    <div class="mb-3">
-                                        <label class="form-label">Fonction</label>
-                                        <input type="text" class="form-control" name="contact_fonction" placeholder="Fonction">
-                                    </div>
-                                </div>
-                                <div class="col-md-6">
-                                    <div class="mb-3">
-                                        <label class="form-label">Email <span class="required">*</span></label>
-                                        <input type="email" class="form-control" name="contact_email" required>
-                                    </div>
-                                </div>
-                            </div>
-                            <div class="row">
-                                <div class="col-md-6">
-                                    <div class="mb-3">
-                                        <label class="form-label">Téléphone <span class="required">*</span></label>
-                                        <input type="tel" class="form-control" name="contact_telephone" required>
-                                    </div>
-                                </div>
-                                <div class="col-md-6">
-                                    <div class="mb-3">
-                                        <label class="form-label">Téléphone mobile</label>
-                                        <input type="tel" class="form-control" name="contact_telephone_mobile">
-                                    </div>
-                                </div>
                             </div>
                         </div>
                     </div>
                 </div>
 
-                <!-- Section 3: Adresse principale (uniquement pour les personnes morales) -->
-                <div class="form-section" id="adresse-section">
-                    <div class="form-section-header">
-                        <i class="fas fa-map-marker-alt me-2"></i>Adresse principale
-                    </div>
-                    <div class="form-section-body">
-                        <div class="address-form-block">
+                <!-- TEMPLATE PERSONNE MORALE (Entreprises) -->
+                <div id="template-personne-morale" style="display: none;" class="template-container">
+                    <!-- Section: Informations générales -->
+                    <div class="form-section">
+                        <div class="form-section-header">
+                            <i class="fas fa-building me-2"></i>Informations générales
+                        </div>
+                        <div class="form-section-body">
+                            <!-- Dénomination -->
                             <div class="row">
-                                <div class="col-md-4">
+                                <div class="col-md-12">
                                     <div class="mb-3">
-                                        <label class="form-label">Nom de l'adresse</label>
-                                        <input type="text" class="form-control" name="adresse_nom" value="Siège">
+                                        <label class="form-label">Dénomination <span class="required">*</span></label>
+                                        {{ form_widget(form.nom, {'attr': {'placeholder': 'Nom de l\'entreprise, raison sociale...'}}) }}
                                     </div>
                                 </div>
-                                <div class="col-md-8">
+                            </div>
+                            
+                            <!-- Champ caché pour nom d'adresse automatique -->
+                            <input type="hidden" name="adresse_nom" value="Adresse principale">
+                            <div class="address-fields">
+                            <div class="row">
+                                <div class="col-md-12">
                                     <div class="mb-3">
                                         <label class="form-label">Adresse ligne 1 <span class="required">*</span></label>
                                         <input type="text" class="form-control" name="adresse_ligne1" placeholder="Numéro et nom de rue" required>
@@ -350,13 +344,13 @@
                                 <div class="col-md-6">
                                     <div class="mb-3">
                                         <label class="form-label">Adresse ligne 2</label>
-                                        <input type="text" class="form-control" name="adresse_ligne2" placeholder="Complément">
+                                        <input type="text" class="form-control" name="adresse_ligne2" placeholder="Complément d'adresse">
                                     </div>
                                 </div>
                                 <div class="col-md-6">
                                     <div class="mb-3">
                                         <label class="form-label">Adresse ligne 3</label>
-                                        <input type="text" class="form-control" name="adresse_ligne3" placeholder="Complément">
+                                        <input type="text" class="form-control" name="adresse_ligne3" placeholder="Complément d'adresse">
                                     </div>
                                 </div>
                             </div>
@@ -379,6 +373,71 @@
                                     <div class="mb-3">
                                         <label class="form-label">Pays</label>
                                         <input type="text" class="form-control" name="adresse_pays" value="France">
+                                    </div>
+                                </div>
+                            </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Section: Contact principal -->
+                    <div class="form-section">
+                        <div class="form-section-header">
+                            <i class="fas fa-user me-2"></i>Contact principal dans l'entreprise
+                        </div>
+                        <div class="form-section-body">
+                            <div class="contact-form-block">
+                                <div class="row">
+                                    <div class="col-md-2">
+                                        <div class="mb-3">
+                                            <label class="form-label">Civilité</label>
+                                            <select class="form-select" name="contact_civilite">
+                                                <option value="">--</option>
+                                                <option value="M.">M.</option>
+                                                <option value="Mme">Mme</option>
+                                                <option value="Mlle">Mlle</option>
+                                            </select>
+                                        </div>
+                                    </div>
+                                    <div class="col-md-5">
+                                        <div class="mb-3">
+                                            <label class="form-label">Nom <span class="required">*</span></label>
+                                            <input type="text" class="form-control" name="contact_nom" placeholder="Nom de famille" required>
+                                        </div>
+                                    </div>
+                                    <div class="col-md-5">
+                                        <div class="mb-3">
+                                            <label class="form-label">Prénom <span class="required">*</span></label>
+                                            <input type="text" class="form-control" name="contact_prenom" placeholder="Prénom" required>
+                                        </div>
+                                    </div>
+                                </div>
+                                <div class="row">
+                                    <div class="col-md-6">
+                                        <div class="mb-3">
+                                            <label class="form-label">Fonction</label>
+                                            <input type="text" class="form-control" name="contact_fonction" placeholder="Directeur, Responsable...">
+                                        </div>
+                                    </div>
+                                    <div class="col-md-6">
+                                        <div class="mb-3">
+                                            <label class="form-label">Email <span class="required">*</span></label>
+                                            <input type="email" class="form-control" name="contact_email" placeholder="email@entreprise.fr" required>
+                                        </div>
+                                    </div>
+                                </div>
+                                <div class="row">
+                                    <div class="col-md-6">
+                                        <div class="mb-3">
+                                            <label class="form-label">Téléphone <span class="required">*</span></label>
+                                            <input type="tel" class="form-control" name="contact_telephone" placeholder="01 23 45 67 89" required>
+                                        </div>
+                                    </div>
+                                    <div class="col-md-6">
+                                        <div class="mb-3">
+                                            <label class="form-label">Téléphone mobile</label>
+                                            <input type="tel" class="form-control" name="contact_telephone_mobile" placeholder="06 12 34 56 78">
+                                        </div>
                                     </div>
                                 </div>
                             </div>
@@ -465,20 +524,12 @@
                                     <small class="text-muted">Email :</small>
                                     <div id="summary-email" class="text-muted fst-italic">Non défini</div>
                                 </div>
-                                <div class="mb-3">
-                                    <small class="text-muted">Famille :</small>
-                                    <div id="summary-famille" class="text-muted fst-italic">Non définie</div>
-                                </div>
                                 <hr>
                                 <div class="mb-3">
                                     <small class="text-muted">Ville :</small>
                                     <div id="summary-ville" class="text-muted fst-italic">Non définie</div>
                                 </div>
                                 <hr>
-                                <div class="alert alert-info">
-                                    <i class="fas fa-info-circle me-1"></i>
-                                    <span id="summary-info-text">Le contact principal sera automatiquement assigné comme contact de facturation et livraison par défaut</span>
-                                </div>
                             </div>
                         </div>
                     </div>
@@ -490,6 +541,9 @@
         {{ form_widget(form.contacts, {'attr': {'style': 'display: none;'}}) }}
         {{ form_widget(form.contactFacturationDefault, {'attr': {'style': 'display: none;'}}) }}
         {{ form_widget(form.contactLivraisonDefault, {'attr': {'style': 'display: none;'}}) }}
+        {% if form.famille is defined %}
+            {{ form_widget(form.famille, {'attr': {'style': 'display: none;'}}) }}
+        {% endif %}
     {{ form_end(form) }}
 </div>
 {% endblock %}
@@ -499,73 +553,9 @@
     <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
     <script>
     document.addEventListener('DOMContentLoaded', function() {
-        // Gestion du type de personne (physique/morale)
-        function handleTypePersonneChange() {
-            const typePersonneInputs = document.querySelectorAll('input[name="client[typePersonne]"]');
-            const formeJuridiqueField = document.getElementById('forme-juridique-field');
-            const personnePhysiqueFields = document.getElementById('personne-physique-fields');
-            const personneMoraleFields = document.getElementById('personne-morale-fields');
-            const contactSection = document.getElementById('contact-section');
-            const adresseSection = document.getElementById('adresse-section');
-            
-            typePersonneInputs.forEach(function(input) {
-                input.addEventListener('change', function() {
-                    const infoText = document.getElementById('summary-info-text');
-                    const familleSelect = document.querySelector('select[name="client[famille]"]');
-                    const familleField = familleSelect ? familleSelect.closest('.mb-3') : null;
-                    
-                    if (this.value === 'physique') {
-                        // Personne physique: cacher forme juridique, famille, champs morale, contact et adresse, montrer champs personne physique
-                        formeJuridiqueField.style.display = 'none';
-                        if (familleField) familleField.style.display = 'none';
-                        personneMoraleFields.style.display = 'none';
-                        personnePhysiqueFields.style.display = 'block';
-                        contactSection.style.display = 'none';
-                        adresseSection.style.display = 'none';
-                        
-                        // Définir automatiquement la famille à "Particulier" pour personne physique
-                        if (familleSelect) {
-                            familleSelect.value = 'Particulier';
-                        }
-                        
-                        // Changer le texte d'info pour personne physique
-                        if (infoText) {
-                            infoText.textContent = 'Pour une personne physique, les informations de contact et d\'adresse sont intégrées dans les informations générales';
-                        }
-                    } else {
-                        // Personne morale: montrer forme juridique, famille, champs morale, contact et adresse, cacher champs personne physique
-                        formeJuridiqueField.style.display = 'block';
-                        if (familleField) familleField.style.display = 'block';
-                        personneMoraleFields.style.display = 'block';
-                        personnePhysiqueFields.style.display = 'none';
-                        contactSection.style.display = 'block';
-                        adresseSection.style.display = 'block';
-                        
-                        // Réinitialiser la famille pour personne morale
-                        if (familleSelect) {
-                            familleSelect.value = '';
-                        }
-                        
-                        // Texte d'info normal pour personne morale
-                        if (infoText) {
-                            infoText.textContent = 'Le contact principal sera automatiquement assigné comme contact de facturation et livraison par défaut';
-                        }
-                    }
-                    updateSummary();
-                    
-                    // Réinitialiser l'autocomplétion après changement de type
-                    setTimeout(() => {
-                        setupCommuneAutocomplete();
-                    }, 100);
-                });
-            });
-            
-            // Appliquer l'état initial
-            const checkedInput = document.querySelector('input[name="client[typePersonne]"]:checked');
-            if (checkedInput) {
-                checkedInput.dispatchEvent(new Event('change'));
-            }
-        }
+        // Initialisation du système de templates dynamiques
+        console.log('🚀 Initialisation du système de templates par forme juridique');
+
 
         // Mise à jour du résumé en temps réel
         function updateSummary() {
@@ -576,32 +566,31 @@
             const contactNom = document.querySelector('input[name="contact_nom"]');
             const contactPrenom = document.querySelector('input[name="contact_prenom"]');
             const contactEmail = document.querySelector('input[name="contact_email"]');
-            const familleField = document.querySelector('select[name="client[famille]"]');
+            // const familleField = document.querySelector('select[name="client[famille]"]'); // Removed famille field
             const villeField = document.querySelector('input[name="adresse_ville"]');
             const personneAdresseVille = document.querySelector('input[name="personne_adresse_ville"]');
-            const typePersonne = document.querySelector('input[name="client[typePersonne]"]:checked');
+            const formeJuridiqueSelect = document.getElementById('forme-juridique-select');
+            const selectedFormeJuridique = formeJuridiqueSelect ? formeJuridiqueSelect.options[formeJuridiqueSelect.selectedIndex]?.text : '';
             
-            // Construire le nom complet selon le type de personne
+            // Construire le nom complet selon la forme juridique
             let displayName = 'Non défini';
             let contactName = 'Non défini';
             let emailAddress = 'Non défini';
             
-            if (typePersonne && typePersonne.value === 'physique') {
-                // Personne physique: Prénom Nom (utiliser personneNom et personnePrenom)
+            if (selectedFormeJuridique === 'Particulier') {
+                // Template personne physique
                 if (personneNom && personneNom.value) {
                     displayName = personnePrenom && personnePrenom.value ? 
                         (personnePrenom.value + ' ' + personneNom.value).trim() : 
                         personneNom.value;
                 }
-                // Pour personne physique, contact = client
                 contactName = displayName;
                 emailAddress = personneEmail ? personneEmail.value || 'Non défini' : 'Non défini';
-            } else {
-                // Personne morale: Nom de l'entreprise (utiliser nomField)
+            } else if (selectedFormeJuridique && selectedFormeJuridique !== '') {
+                // Template personne morale
                 if (nomField && nomField.value) {
                     displayName = nomField.value;
                 }
-                // Contact séparé pour personne morale
                 if (contactNom && contactPrenom) {
                     contactName = (contactPrenom.value + ' ' + contactNom.value).trim() || 'Non défini';
                 }
@@ -612,17 +601,16 @@
             document.getElementById('summary-contact').textContent = contactName;
             document.getElementById('summary-email').textContent = emailAddress;
             
-            if (familleField) {
-                const selectedOption = familleField.options[familleField.selectedIndex];
-                document.getElementById('summary-famille').textContent = selectedOption.text || 'Non définie';
-            }
+            // Famille field removed from summary
             
-            // Ville selon le type de personne
-            if (typePersonne && typePersonne.value === 'physique') {
+            // Ville selon la forme juridique  
+            if (selectedFormeJuridique === 'Particulier') {
+                // Template personne physique
                 if (personneAdresseVille) {
                     document.getElementById('summary-ville').textContent = personneAdresseVille.value || 'Non définie';
                 }
-            } else {
+            } else if (selectedFormeJuridique && selectedFormeJuridique !== '') {
+                // Template personne morale
                 if (villeField) {
                     document.getElementById('summary-ville').textContent = villeField.value || 'Non définie';
                 }
@@ -630,13 +618,86 @@
         }
 
         // Événements pour la mise à jour du résumé
-        document.querySelectorAll('input[name="client[nom]"], input[name="contact_nom"], input[name="contact_prenom"], input[name="contact_email"], input[name="adresse_ville"], select[name="client[famille]"], input[name="personne_prenom"], input[name="personne_nom"], input[name="personne_email"], input[name="personne_adresse_ville"]').forEach(function(field) {
+        document.querySelectorAll('input[name="client[nom]"], input[name="contact_nom"], input[name="contact_prenom"], input[name="contact_email"], input[name="adresse_ville"], input[name="personne_prenom"], input[name="personne_nom"], input[name="personne_email"], input[name="personne_adresse_ville"]').forEach(function(field) {
             field.addEventListener('input', updateSummary);
             field.addEventListener('change', updateSummary);
         });
 
-        // Initialiser la gestion du type de personne
-        handleTypePersonneChange();
+        // Fonction pour appliquer l'état initial et gérer les changements
+        function setupFormeJuridiqueHandler() {
+            // Utiliser l'ID généré par Symfony
+            const formeJuridiqueSelect = document.getElementById('client_formeJuridique');
+            
+            if (!formeJuridiqueSelect) {
+                console.error('Select forme juridique non trouvé');
+                return;
+            }
+            
+            console.log('✅ Select forme juridique trouvé:', formeJuridiqueSelect.id);
+
+            // Fonction qui gère le changement de forme juridique
+            function handleChange() {
+                const selectedText = formeJuridiqueSelect.options[formeJuridiqueSelect.selectedIndex]?.text;
+                const templatePersonnePhysique = document.getElementById('template-personne-physique');
+                const templatePersonneMorale = document.getElementById('template-personne-morale');
+                
+                console.log('📋 Forme juridique sélectionnée:', selectedText);
+                
+                if (!templatePersonnePhysique || !templatePersonneMorale) {
+                    console.error('Templates non trouvés');
+                    return;
+                }
+
+                // Masquer tous les templates d'abord
+                templatePersonnePhysique.style.display = 'none';
+                templatePersonneMorale.style.display = 'none';
+
+                if (selectedText === 'Particulier') {
+                    console.log('👤 Affichage template Personne Physique');
+                    templatePersonnePhysique.style.display = 'block';
+                    
+                    // Activer champs personne physique
+                    document.querySelectorAll('#template-personne-physique input, #template-personne-physique select').forEach(field => {
+                        field.disabled = false;
+                    });
+                    
+                    // Désactiver champs personne morale
+                    document.querySelectorAll('#template-personne-morale input, #template-personne-morale select').forEach(field => {
+                        field.disabled = true;
+                        field.removeAttribute('required');
+                    });
+                    
+                } else if (selectedText && selectedText !== '' && selectedText !== 'Sélectionner une forme juridique...') {
+                    console.log('🏢 Affichage template Personne Morale');
+                    templatePersonneMorale.style.display = 'block';
+                    
+                    // Activer champs personne morale
+                    document.querySelectorAll('#template-personne-morale input, #template-personne-morale select').forEach(field => {
+                        field.disabled = false;
+                    });
+                    
+                    // Désactiver champs personne physique
+                    document.querySelectorAll('#template-personne-physique input, #template-personne-physique select').forEach(field => {
+                        field.disabled = true;
+                        field.removeAttribute('required');
+                    });
+                } else {
+                    console.log('Aucun template sélectionné');
+                }
+                
+                updateSummary();
+            }
+
+            // Ajouter l'écouteur d'événement
+            formeJuridiqueSelect.addEventListener('change', handleChange);
+            
+            // Appliquer l'état initial
+            handleChange();
+        }
+        
+        // Initialiser la gestion des formes juridiques
+        setupFormeJuridiqueHandler();
+
 
 
         // Créer un conteneur de suggestions global
@@ -784,6 +845,40 @@
 
         // Initialiser l'autocomplétion des communes
         setupCommuneAutocomplete();
+
+        // Gestion de la soumission du formulaire pour éviter les erreurs de validation
+        const form = document.querySelector('form');
+        if (form) {
+            form.addEventListener('submit', function(e) {
+                // Désactiver temporairement tous les champs cachés pour éviter les erreurs de validation
+                const hiddenSections = document.querySelectorAll('#personne-physique-fields, #contact-section, #adresse-section');
+                hiddenSections.forEach(section => {
+                    if (section.style.display === 'none') {
+                        section.querySelectorAll('input, select').forEach(field => {
+                            field.disabled = true;
+                            field.removeAttribute('required');
+                        });
+                    }
+                });
+                
+                // Gérer spécialement le champ nom d'entreprise selon la forme juridique
+                const formeJuridiqueSelect = document.getElementById('forme-juridique-select');
+                const selectedFormeJuridique = formeJuridiqueSelect ? formeJuridiqueSelect.options[formeJuridiqueSelect.selectedIndex]?.text : '';
+                const nomEntrepriseField = document.querySelector('input[name="client[nom]"]');
+                
+                if (formeJuridiqueSelect && nomEntrepriseField) {
+                    if (selectedFormeJuridique === 'Particulier') {
+                        // Pour personne physique, désactiver le champ nom d'entreprise
+                        nomEntrepriseField.disabled = true;
+                        nomEntrepriseField.removeAttribute('required');
+                    } else {
+                        // Pour personne morale, s'assurer que le champ est actif et requis
+                        nomEntrepriseField.disabled = false;
+                        nomEntrepriseField.setAttribute('required', 'required');
+                    }
+                }
+            });
+        }
 
         // Mise à jour initiale du résumé
         updateSummary();

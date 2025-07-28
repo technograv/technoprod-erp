@@ -1,0 +1,434 @@
+{% extends 'base.html.twig' %}
+
+{% block title %}Administration - TechnoProd{% endblock %}
+
+{% block stylesheets %}
+    {{ parent() }}
+    <style>
+        .admin-header {
+            background: linear-gradient(135deg, #dc3545 0%, #e83e53 100%);
+            color: white;
+            padding: 2rem 0;
+            margin-bottom: 2rem;
+            box-shadow: 0 4px 12px rgba(220, 53, 69, 0.3);
+        }
+        
+        .admin-nav {
+            background: white;
+            border-radius: 12px;
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+            margin-bottom: 2rem;
+            overflow: hidden;
+        }
+        
+        .admin-nav .nav-link {
+            border: none;
+            border-radius: 0;
+            color: #495057;
+            font-weight: 600;
+            padding: 1rem 1.5rem;
+            transition: all 0.3s ease;
+            border-bottom: 3px solid transparent;
+        }
+        
+        .admin-nav .nav-link:hover,
+        .admin-nav .nav-link.active {
+            background: linear-gradient(135deg, #dc3545 0%, #e83e53 100%);
+            color: white;
+            border-bottom-color: #c82333;
+        }
+        
+        .stats-card {
+            background: white;
+            border-radius: 12px;
+            padding: 2rem;
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+            border-left: 4px solid #dc3545;
+            transition: transform 0.3s ease;
+        }
+        
+        .stats-card:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 8px 16px rgba(0, 0, 0, 0.15);
+        }
+        
+        .stats-number {
+            font-size: 3rem;
+            font-weight: 700;
+            color: #dc3545;
+            line-height: 1;
+            margin-bottom: 0.5rem;
+        }
+        
+        .stats-label {
+            color: #6c757d;
+            font-weight: 600;
+            text-transform: uppercase;
+            font-size: 0.875rem;
+            letter-spacing: 0.5px;
+        }
+        
+        .admin-section {
+            background: white;
+            border-radius: 12px;
+            padding: 2rem;
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+            margin-bottom: 2rem;
+        }
+        
+        .section-title {
+            color: #495057;
+            font-weight: 700;
+            font-size: 1.5rem;
+            margin-bottom: 1.5rem;
+            padding-bottom: 1rem;
+            border-bottom: 2px solid #dc3545;
+        }
+        
+        .quick-action-btn {
+            background: linear-gradient(135deg, #dc3545 0%, #e83e53 100%);
+            border: none;
+            border-radius: 8px;
+            padding: 1rem 1.5rem;
+            color: white;
+            font-weight: 600;
+            transition: all 0.3s ease;
+            text-decoration: none;
+            display: inline-block;
+            margin-right: 1rem;
+            margin-bottom: 1rem;
+        }
+        
+        .quick-action-btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 6px 12px rgba(220, 53, 69, 0.4);
+            color: white;
+            text-decoration: none;
+        }
+        
+        .warning-badge {
+            background: #ffc107;
+            color: #212529;
+            padding: 0.5rem 1rem;
+            border-radius: 20px;
+            font-weight: 600;
+            font-size: 0.875rem;
+        }
+    </style>
+{% endblock %}
+
+{% block body %}
+<!-- En-tête Admin -->
+<div class="admin-header">
+    <div class="container-fluid">
+        <div class="row align-items-center">
+            <div class="col-md-8">
+                <h1 class="mb-1">
+                    <i class="fas fa-cog fa-2x me-3"></i>Administration TechnoProd
+                </h1>
+                <p class="mb-0 opacity-75">
+                    Panneau de configuration et gestion système
+                </p>
+            </div>
+            <div class="col-md-4 text-end">
+                <div class="warning-badge">
+                    <i class="fas fa-shield-alt me-1"></i>Accès Administrateur
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="container-fluid">
+    <!-- Navigation Admin -->
+    <div class="admin-nav">
+        <ul class="nav nav-tabs" role="tablist">
+            <li class="nav-item">
+                <a class="nav-link active" data-bs-toggle="tab" href="#dashboard" role="tab">
+                    <i class="fas fa-tachometer-alt me-2"></i>Dashboard
+                </a>
+            </li>
+            <li class="nav-item">
+                <a class="nav-link" data-bs-toggle="tab" href="#formes-juridiques" role="tab">
+                    <i class="fas fa-building me-2"></i>Formes Juridiques
+                </a>
+            </li>
+            <li class="nav-item">
+                <a class="nav-link" data-bs-toggle="tab" href="#users" role="tab">
+                    <i class="fas fa-users me-2"></i>Utilisateurs
+                </a>
+            </li>
+            <li class="nav-item">
+                <a class="nav-link" data-bs-toggle="tab" href="#secteurs" role="tab">
+                    <i class="fas fa-map me-2"></i>Secteurs
+                </a>
+            </li>
+            <li class="nav-item">
+                <a class="nav-link" data-bs-toggle="tab" href="#zones" role="tab">
+                    <i class="fas fa-location-arrow me-2"></i>Zones
+                </a>
+            </li>
+            <li class="nav-item">
+                <a class="nav-link" data-bs-toggle="tab" href="#produits" role="tab">
+                    <i class="fas fa-box me-2"></i>Produits
+                </a>
+            </li>
+            <li class="nav-item">
+                <a class="nav-link" data-bs-toggle="tab" href="#settings" role="tab">
+                    <i class="fas fa-cogs me-2"></i>Paramètres
+                </a>
+            </li>
+        </ul>
+    </div>
+
+    <div class="tab-content">
+        <!-- Dashboard -->
+        <div class="tab-pane fade show active" id="dashboard" role="tabpanel">
+            <!-- Statistiques -->
+            <div class="row mb-4">
+                <div class="col-md-3 mb-3">
+                    <div class="stats-card">
+                        <div class="stats-number">{{ stats.users }}</div>
+                        <div class="stats-label">Utilisateurs</div>
+                    </div>
+                </div>
+                <div class="col-md-3 mb-3">
+                    <div class="stats-card">
+                        <div class="stats-number">{{ stats.users_actifs }}</div>
+                        <div class="stats-label">Actifs</div>
+                    </div>
+                </div>
+                <div class="col-md-3 mb-3">
+                    <div class="stats-card">
+                        <div class="stats-number">{{ stats.admins }}</div>
+                        <div class="stats-label">Administrateurs</div>
+                    </div>
+                </div>
+                <div class="col-md-3 mb-3">
+                    <div class="stats-card">
+                        <div class="stats-number">{{ stats.formes_juridiques }}</div>
+                        <div class="stats-label">Formes Juridiques</div>
+                    </div>
+                </div>
+            </div>
+            <div class="row mb-4">
+                <div class="col-md-4 mb-3">
+                    <div class="stats-card">
+                        <div class="stats-number">{{ stats.secteurs }}</div>
+                        <div class="stats-label">Secteurs</div>
+                    </div>
+                </div>
+                <div class="col-md-4 mb-3">
+                    <div class="stats-card">
+                        <div class="stats-number">{{ stats.zones }}</div>
+                        <div class="stats-label">Zones</div>
+                    </div>
+                </div>
+                <div class="col-md-4 mb-3">
+                    <div class="stats-card">
+                        <div class="stats-number">{{ stats.produits }}</div>
+                        <div class="stats-label">Produits</div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Actions rapides -->
+            <div class="admin-section">
+                <h3 class="section-title">
+                    <i class="fas fa-bolt me-2"></i>Actions Rapides
+                </h3>
+                <div class="row">
+                    <div class="col-md-6">
+                        <h5 class="mb-3">Gestion des Utilisateurs</h5>
+                        <a href="#users" class="quick-action-btn" data-bs-toggle="tab">
+                            <i class="fas fa-users me-2"></i>Gérer les Utilisateurs
+                        </a>
+                        <a href="#" class="quick-action-btn" onclick="alert('Fonctionnalité à venir')">
+                            <i class="fas fa-user-plus me-2"></i>Nouvel Utilisateur
+                        </a>
+                    </div>
+                    <div class="col-md-6">
+                        <h5 class="mb-3">Configuration Métier</h5>
+                        <a href="#formes-juridiques" class="quick-action-btn" data-bs-toggle="tab">
+                            <i class="fas fa-building me-2"></i>Formes Juridiques
+                        </a>
+                        <a href="#secteurs" class="quick-action-btn" data-bs-toggle="tab">
+                            <i class="fas fa-map me-2"></i>Secteurs
+                        </a>
+                        <a href="#zones" class="quick-action-btn" data-bs-toggle="tab">
+                            <i class="fas fa-location-arrow me-2"></i>Zones
+                        </a>
+                        <a href="#produits" class="quick-action-btn" data-bs-toggle="tab">
+                            <i class="fas fa-box me-2"></i>Produits
+                        </a>
+                        <a href="#settings" class="quick-action-btn" data-bs-toggle="tab">
+                            <i class="fas fa-cogs me-2"></i>Paramètres Système
+                        </a>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Informations système -->
+            <div class="admin-section">
+                <h3 class="section-title">
+                    <i class="fas fa-info-circle me-2"></i>Informations Système
+                </h3>
+                <div class="row">
+                    <div class="col-md-6">
+                        <p><strong>Version PHP :</strong> {{ constant('PHP_VERSION') }}</p>
+                        <p><strong>Version Symfony :</strong> {{ constant('Symfony\\Component\\HttpKernel\\Kernel::VERSION') }}</p>
+                        <p><strong>Environnement :</strong> {{ app.environment }}</p>
+                    </div>
+                    <div class="col-md-6">
+                        <p><strong>Debug :</strong> {{ app.debug ? 'Activé' : 'Désactivé' }}</p>
+                        <p><strong>Utilisateur connecté :</strong> {{ app.user.fullName }}</p>
+                        <p><strong>Rôles :</strong> {{ app.user.roles|join(', ') }}</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Placeholder pour les autres onglets -->
+        <div class="tab-pane fade" id="formes-juridiques" role="tabpanel">
+            <div class="admin-section">
+                <h3 class="section-title">
+                    <i class="fas fa-building me-2"></i>Gestion des Formes Juridiques
+                </h3>
+                <p class="text-muted">Chargement en cours...</p>
+                <div class="text-center">
+                    <div class="spinner-border text-primary" role="status">
+                        <span class="visually-hidden">Chargement...</span>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="tab-pane fade" id="users" role="tabpanel">
+            <div class="admin-section">
+                <h3 class="section-title">
+                    <i class="fas fa-users me-2"></i>Gestion des Utilisateurs
+                </h3>
+                <p class="text-muted">Chargement en cours...</p>
+                <div class="text-center">
+                    <div class="spinner-border text-primary" role="status">
+                        <span class="visually-hidden">Chargement...</span>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="tab-pane fade" id="secteurs" role="tabpanel">
+            <div class="admin-section">
+                <h3 class="section-title">
+                    <i class="fas fa-map me-2"></i>Gestion des Secteurs
+                </h3>
+                <p class="text-muted">Chargement en cours...</p>
+                <div class="text-center">
+                    <div class="spinner-border text-primary" role="status">
+                        <span class="visually-hidden">Chargement...</span>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="tab-pane fade" id="zones" role="tabpanel">
+            <div class="admin-section">
+                <h3 class="section-title">
+                    <i class="fas fa-location-arrow me-2"></i>Gestion des Zones
+                </h3>
+                <p class="text-muted">Chargement en cours...</p>
+                <div class="text-center">
+                    <div class="spinner-border text-primary" role="status">
+                        <span class="visually-hidden">Chargement...</span>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="tab-pane fade" id="produits" role="tabpanel">
+            <div class="admin-section">
+                <h3 class="section-title">
+                    <i class="fas fa-box me-2"></i>Gestion des Produits
+                </h3>
+                <p class="text-muted">Chargement en cours...</p>
+                <div class="text-center">
+                    <div class="spinner-border text-primary" role="status">
+                        <span class="visually-hidden">Chargement...</span>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="tab-pane fade" id="settings" role="tabpanel">
+            <div class="admin-section">
+                <h3 class="section-title">
+                    <i class="fas fa-cogs me-2"></i>Paramètres Globaux
+                </h3>
+                <p class="text-muted">Chargement en cours...</p>
+                <div class="text-center">
+                    <div class="spinner-border text-primary" role="status">
+                        <span class="visually-hidden">Chargement...</span>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+{% endblock %}
+
+{% block javascripts %}
+    {{ parent() }}
+    <script>
+    document.addEventListener('DOMContentLoaded', function() {
+        // Gérer le chargement AJAX des onglets
+        document.querySelectorAll('[data-bs-toggle="tab"]').forEach(function(tab) {
+            tab.addEventListener('shown.bs.tab', function(e) {
+                const targetTab = e.target.getAttribute('href');
+                loadTabContent(targetTab);
+            });
+        });
+        
+        function loadTabContent(tabId) {
+            const tabContent = document.querySelector(tabId + ' .admin-section');
+            if (!tabContent || tabContent.dataset.loaded) return;
+            
+            let url = '';
+            switch(tabId) {
+                case '#formes-juridiques':
+                    url = '{{ path("app_admin_formes_juridiques") }}';
+                    break;
+                case '#users':
+                    url = '{{ path("app_admin_users") }}';
+                    break;
+                case '#secteurs':
+                    url = '{{ path("app_admin_secteurs") }}';
+                    break;
+                case '#zones':
+                    url = '{{ path("app_admin_zones") }}';
+                    break;
+                case '#produits':
+                    url = '{{ path("app_admin_produits") }}';
+                    break;
+                case '#settings':
+                    url = '{{ path("app_admin_settings") }}';
+                    break;
+            }
+            
+            if (url) {
+                fetch(url)
+                    .then(response => response.text())
+                    .then(html => {
+                        // Remplacer tout le contenu de l'onglet avec la réponse HTML
+                        tabContent.innerHTML = html;
+                        tabContent.dataset.loaded = 'true';
+                    })
+                    .catch(error => {
+                        console.error('Erreur de chargement:', error);
+                        tabContent.innerHTML = '<p class="text-danger">Erreur de chargement du contenu.</p>';
+                    });
+            }
+        }
+    });
+    </script>
+{% endblock %}

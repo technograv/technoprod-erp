@@ -98,6 +98,26 @@ final class ClientController extends AbstractController
         $client = new Client();
         
         $form = $this->createForm(ClientType::class, $client);
+        
+        // Traitement personnalisé avant validation du formulaire
+        if ($request->isMethod('POST')) {
+            // Récupérer les données du formulaire personnalisé
+            $formData = $request->request->all('client');
+            
+            // Adapter les données selon le type de personne
+            if (isset($formData['typePersonne'])) {
+                if ($formData['typePersonne'] === 'physique') {
+                    // Pour personne physique : pas de dénomination (NULL) et famille "Particulier"
+                    $formData['nom'] = null; // Pas de dénomination pour les particuliers
+                    $formData['famille'] = 'Particulier'; // Famille forcée à "Particulier"
+                } 
+                // Pour personne morale, le nom est déjà dans formData['nom'] et doit être obligatoire
+                
+                // Mettre à jour les données du formulaire
+                $request->request->set('client', $formData);
+            }
+        }
+        
         $form->handleRequest($request);
 
         if ($form->isSubmitted() && $form->isValid()) {
@@ -105,6 +125,13 @@ final class ClientController extends AbstractController
             $this->handleCustomFormSubmission($request, $client, $entityManager);
             
             return $this->redirectToRoute('app_client_show', ['id' => $client->getId()]);
+        }
+        
+        // Afficher les erreurs du formulaire si il y en a
+        if ($form->isSubmitted() && !$form->isValid()) {
+            foreach ($form->getErrors(true, false) as $error) {
+                $this->addFlash('error', 'Erreur: ' . $error->getMessage());
+            }
         }
 
         return $this->render('client/new_improved.html.twig', [
@@ -122,10 +149,10 @@ final class ClientController extends AbstractController
             : $repository->getNextProspectCode();
         $client->setCode($nextCode);
         
-        // Gérer les données spécifiques au type de personne
-        if ($client->getTypePersonne() === 'physique') {
-            // Pour une personne physique, utiliser les données de la personne
-            $client->setNom($request->request->get('personne_nom')); // Utiliser le nom de famille séparé
+        // Gérer les données spécifiques à la forme juridique
+        if ($client->getFormeJuridique() && $client->getFormeJuridique()->isPersonnePhysique()) {
+            // Pour une personne physique, pas de dénomination (reste NULL) mais stocker prénom/nom séparément
+            $client->setNom(null); // Pas de dénomination pour les particuliers
             $client->setPrenom($request->request->get('personne_prenom'));
             $client->setCivilite($request->request->get('personne_civilite'));
             $client->setFamille('Particulier'); // Définir automatiquement la famille
@@ -354,8 +381,12 @@ final class ClientController extends AbstractController
             
             // Mise à jour des informations générales
             if (isset($data['nom'])) $client->setNom($data['nom']);
-            if (isset($data['type_personne'])) $client->setTypePersonne($data['type_personne']);
-            if (isset($data['forme_juridique'])) $client->setFormeJuridique($data['forme_juridique']);
+            if (isset($data['forme_juridique']) && !empty($data['forme_juridique'])) {
+                $formeJuridique = $entityManager->getRepository(\App\Entity\FormeJuridique::class)->find($data['forme_juridique']);
+                if ($formeJuridique) {
+                    $client->setFormeJuridique($formeJuridique);
+                }
+            }
             if (isset($data['famille'])) $client->setFamille($data['famille']);
             if (isset($data['delai_paiement'])) $client->setDelaiPaiement((int)$data['delai_paiement']);
             if (isset($data['mode_paiement'])) $client->setModePaiement($data['mode_paiement']);
@@ -500,6 +531,22 @@ final class ClientController extends AbstractController
         return $this->render('client/edit.html.twig', [
             'client' => $client,
         ]);
+    }
+
+    #[Route('/{id}/archive', name: 'app_client_archive', methods: ['POST'])]
+    public function archive(Client $client, EntityManagerInterface $entityManager): Response
+    {
+        // Archiver le client (le marquer comme inactif)
+        $client->setActif(false);
+        
+        try {
+            $entityManager->flush();
+            $this->addFlash('success', 'Client archivé avec succès ! Il est maintenant inactif.');
+        } catch (\Exception $e) {
+            $this->addFlash('error', 'Erreur lors de l\'archivage : ' . $e->getMessage());
+        }
+        
+        return $this->redirectToRoute('app_client_index');
     }
 
     #[Route('/api/communes/search', name: 'app_api_communes_search', methods: ['GET'])]

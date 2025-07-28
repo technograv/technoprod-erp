@@ -1,0 +1,273 @@
+{# Template pour le chargement AJAX - pas d'extension de base #}
+<div class="admin-section">
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <h3 class="section-title mb-0">
+            <i class="fas fa-users me-2"></i>Gestion des Utilisateurs
+        </h3>
+        <button class="btn btn-primary" onclick="alert('Fonctionnalité à venir')">
+            <i class="fas fa-user-plus me-2"></i>Nouvel Utilisateur
+        </button>
+    </div>
+
+    <div class="table-responsive">
+        <table class="table table-hover" id="usersTable">
+            <thead class="table-dark">
+                <tr>
+                    <th>Utilisateur</th>
+                    <th>Email</th>
+                    <th>Rôles</th>
+                    <th>Statut</th>
+                    <th>Actions</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for user in users %}
+                <tr data-id="{{ user.id }}" class="{{ user.isActive ? '' : 'table-warning' }}">
+                    <td>
+                        <div class="d-flex align-items-center">
+                            <div class="user-avatar me-3">
+                                <i class="fas fa-user-circle fa-2x text-primary"></i>
+                            </div>
+                            <div>
+                                <strong>{{ user.fullName }}</strong>
+                                {% if not user.isActive %}
+                                    <br><small class="text-muted">Compte désactivé</small>
+                                {% endif %}
+                            </div>
+                        </div>
+                    </td>
+                    <td>
+                        <a href="mailto:{{ user.email }}" class="text-decoration-none">
+                            {{ user.email }}
+                        </a>
+                    </td>
+                    <td>
+                        <div class="roles-container" data-user-id="{{ user.id }}">
+                            {% for role in user.roles %}
+                                {% if role != 'ROLE_USER' %}
+                                    <span class="badge bg-{{ role == 'ROLE_ADMIN' ? 'danger' : 'primary' }} me-1">
+                                        {{ role == 'ROLE_ADMIN' ? 'Administrateur' : role }}
+                                    </span>
+                                {% endif %}
+                            {% endfor %}
+                        </div>
+                        <button class="btn btn-outline-primary btn-sm mt-1 edit-roles-btn" 
+                                data-user-id="{{ user.id }}"
+                                data-roles="{{ user.roles|json_encode|e('html_attr') }}">
+                            <i class="fas fa-edit me-1"></i>Modifier
+                        </button>
+                    </td>
+                    <td>
+                        <div class="form-check form-switch">
+                            <input class="form-check-input status-toggle" type="checkbox" 
+                                   data-user-id="{{ user.id }}" {{ user.isActive ? 'checked' : '' }}>
+                            <label class="form-check-label">
+                                {{ user.isActive ? 'Actif' : 'Inactif' }}
+                            </label>
+                        </div>
+                    </td>
+                    <td>
+                        <div class="btn-group btn-group-sm">
+                            <button class="btn btn-outline-info" title="Voir détails"
+                                    onclick="alert('Fonctionnalité à venir')">
+                                <i class="fas fa-eye"></i>
+                            </button>
+                            <button class="btn btn-outline-warning" title="Réinitialiser mot de passe"
+                                    onclick="alert('Fonctionnalité à venir')">
+                                <i class="fas fa-key"></i>
+                            </button>
+                        </div>
+                    </td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+</div>
+
+<!-- Modal Édition des Rôles -->
+<div class="modal fade" id="rolesModal" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">
+                    <i class="fas fa-user-shield me-2"></i>
+                    Modifier les Rôles - <span id="modal-user-name"></span>
+                </h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <input type="hidden" id="modal-user-id">
+                
+                <div class="alert alert-info">
+                    <i class="fas fa-info-circle me-2"></i>
+                    <strong>Information :</strong> Le rôle "ROLE_USER" est automatiquement attribué à tous les utilisateurs.
+                </div>
+                
+                <div class="mb-3">
+                    <label class="form-label fw-bold">Rôles disponibles :</label>
+                    
+                    <div class="form-check">
+                        <input class="form-check-input" type="checkbox" id="role-admin" value="ROLE_ADMIN">
+                        <label class="form-check-label" for="role-admin">
+                            <strong class="text-danger">ROLE_ADMIN</strong>
+                            <br><small class="text-muted">Accès complet à l'administration</small>
+                        </label>
+                    </div>
+                    
+                    <div class="form-check">
+                        <input class="form-check-input" type="checkbox" id="role-manager" value="ROLE_MANAGER">
+                        <label class="form-check-label" for="role-manager">
+                            <strong class="text-primary">ROLE_MANAGER</strong>
+                            <br><small class="text-muted">Gestion des équipes et rapports</small>
+                        </label>
+                    </div>
+                    
+                    <div class="form-check">
+                        <input class="form-check-input" type="checkbox" id="role-commercial" value="ROLE_COMMERCIAL">
+                        <label class="form-check-label" for="role-commercial">
+                            <strong class="text-success">ROLE_COMMERCIAL</strong>
+                            <br><small class="text-muted">Accès avancé aux fonctions commerciales</small>
+                        </label>
+                    </div>
+                </div>
+                
+                <div class="alert alert-warning">
+                    <i class="fas fa-exclamation-triangle me-2"></i>
+                    <strong>Attention :</strong> La modification des rôles prend effet immédiatement.
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Annuler</button>
+                <button type="button" class="btn btn-primary" id="save-roles">
+                    <i class="fas fa-save me-2"></i>Enregistrer
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    const rolesModal = new bootstrap.Modal(document.getElementById('rolesModal'));
+
+    // Toggle statut utilisateur
+    document.querySelectorAll('.status-toggle').forEach(function(toggle) {
+        toggle.addEventListener('change', function() {
+            const userId = this.dataset.userId;
+            const isActive = this.checked;
+            
+            fetch(`/admin/users/${userId}/toggle-active`, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                }
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.success) {
+                    const row = document.querySelector(`tr[data-id="${userId}"]`);
+                    const label = this.nextElementSibling;
+                    
+                    if (data.isActive) {
+                        row.classList.remove('table-warning');
+                        label.textContent = 'Actif';
+                    } else {
+                        row.classList.add('table-warning');
+                        label.textContent = 'Inactif';
+                    }
+                } else {
+                    // Annuler le changement en cas d'erreur
+                    this.checked = !this.checked;
+                    alert('Erreur lors de la modification du statut');
+                }
+            })
+            .catch(error => {
+                console.error('Erreur:', error);
+                this.checked = !this.checked;
+                alert('Erreur de connexion');
+            });
+        });
+    });
+
+    // Édition des rôles
+    document.querySelectorAll('.edit-roles-btn').forEach(function(btn) {
+        btn.addEventListener('click', function() {
+            const userId = this.dataset.userId;
+            const currentRoles = JSON.parse(this.dataset.roles);
+            
+            // Récupérer le nom de l'utilisateur
+            const row = document.querySelector(`tr[data-id="${userId}"]`);
+            const userName = row.querySelector('strong').textContent;
+            
+            // Remplir le modal
+            document.getElementById('modal-user-id').value = userId;
+            document.getElementById('modal-user-name').textContent = userName;
+            
+            // Cocher les rôles actuels
+            document.querySelectorAll('#rolesModal input[type="checkbox"]').forEach(function(checkbox) {
+                checkbox.checked = currentRoles.includes(checkbox.value);
+            });
+            
+            rolesModal.show();
+        });
+    });
+
+    // Sauvegarde des rôles
+    document.getElementById('save-roles').addEventListener('click', function() {
+        const userId = document.getElementById('modal-user-id').value;
+        const roles = ['ROLE_USER']; // Toujours inclure ROLE_USER
+        
+        // Récupérer les rôles cochés
+        document.querySelectorAll('#rolesModal input[type="checkbox"]:checked').forEach(function(checkbox) {
+            if (checkbox.value !== 'ROLE_USER') {
+                roles.push(checkbox.value);
+            }
+        });
+        
+        fetch(`/admin/users/${userId}/update-roles`, {
+            method: 'PUT',
+            headers: {
+                'Content-Type': 'application/json',
+            },
+            body: JSON.stringify({ roles: roles })
+        })
+        .then(response => response.json())
+        .then(data => {
+            if (data.success) {
+                // Mettre à jour l'affichage des rôles dans le tableau
+                updateRolesDisplay(userId, data.roles);
+                rolesModal.hide();
+            } else {
+                alert('Erreur: ' + (data.error || 'Erreur inconnue'));
+            }
+        })
+        .catch(error => {
+            console.error('Erreur:', error);
+            alert('Erreur lors de la sauvegarde');
+        });
+    });
+
+    function updateRolesDisplay(userId, roles) {
+        const container = document.querySelector(`.roles-container[data-user-id="${userId}"]`);
+        const editBtn = document.querySelector(`.edit-roles-btn[data-user-id="${userId}"]`);
+        
+        // Vider le conteneur
+        container.innerHTML = '';
+        
+        // Ajouter les badges pour chaque rôle (sauf ROLE_USER)
+        roles.forEach(function(role) {
+            if (role !== 'ROLE_USER') {
+                const badge = document.createElement('span');
+                badge.className = `badge bg-${role === 'ROLE_ADMIN' ? 'danger' : 'primary'} me-1`;
+                badge.textContent = role === 'ROLE_ADMIN' ? 'Administrateur' : role;
+                container.appendChild(badge);
+            }
+        });
+        
+        // Mettre à jour les données du bouton d'édition
+        editBtn.dataset.roles = JSON.stringify(roles);
+    }
+});
+</script>
+{# Fin du template AJAX #}

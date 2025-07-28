@@ -263,7 +263,7 @@
                                     </div>
                                     <div class="info-row">
                                         <div class="info-label">Personne :</div>
-                                        <div class="info-value">{{ client.typePersonne == 'morale' ? 'Morale' : 'Physique' }}</div>
+                                        <div class="info-value">{{ client.formeJuridique and client.formeJuridique.isPersonneMorale() ? 'Morale' : 'Physique' }}</div>
                                     </div>
                                     <div class="info-row">
                                         <div class="info-label">Nom complet :</div>
@@ -307,10 +307,11 @@
                                             <div class="contact-card {% if contact.isFacturationDefault or contact.isLivraisonDefault %}default-contact{% endif %}">
                                                 <div class="contact-name">
                                                     {{ contact.nomComplet }}
-                                                    {% if contact.isFacturationDefault %}
+                                                    {% if contact.isFacturationDefault and contact.isLivraisonDefault %}
+                                                        <span class="default-badge">Facturation et livraison</span>
+                                                    {% elseif contact.isFacturationDefault %}
                                                         <span class="default-badge">Facturation</span>
-                                                    {% endif %}
-                                                    {% if contact.isLivraisonDefault %}
+                                                    {% elseif contact.isLivraisonDefault %}
                                                         <span class="default-badge">Livraison</span>
                                                     {% endif %}
                                                 </div>
@@ -376,6 +377,38 @@
                                     {% for adresse in client.adresses %}
                                         <div class="col-md-6 mb-3">
                                             <div class="address-card">
+                                                <!-- Badges d'usage dynamiques -->
+                                                {% set isFacturation = false %}
+                                                {% set isLivraison = false %}
+                                                {% for contact in client.contacts %}
+                                                    {% if contact.adresse and contact.adresse.id == adresse.id %}
+                                                        {% if contact.isFacturationDefault %}
+                                                            {% set isFacturation = true %}
+                                                        {% endif %}
+                                                        {% if contact.isLivraisonDefault %}
+                                                            {% set isLivraison = true %}
+                                                        {% endif %}
+                                                    {% endif %}
+                                                {% endfor %}
+                                                
+                                                {% if isFacturation or isLivraison %}
+                                                    <div class="mb-2">
+                                                        {% if isFacturation and isLivraison %}
+                                                            <span class="badge bg-primary me-1">
+                                                                <i class="fas fa-file-invoice me-1"></i>Facturation et livraison
+                                                            </span>
+                                                        {% elseif isFacturation %}
+                                                            <span class="badge bg-success me-1">
+                                                                <i class="fas fa-file-invoice me-1"></i>Facturation
+                                                            </span>
+                                                        {% elseif isLivraison %}
+                                                            <span class="badge bg-info me-1">
+                                                                <i class="fas fa-truck me-1"></i>Livraison
+                                                            </span>
+                                                        {% endif %}
+                                                    </div>
+                                                {% endif %}
+                                                
                                                 <div class="address-name">{{ adresse.nom }}</div>
                                                 <div class="address-line">{{ adresse.ligne1 }}</div>
                                                 {% if adresse.ligne2 %}
@@ -563,9 +596,12 @@
                             </h6>
                         </div>
                         <div class="card-body">
-                            {% if contactFactu %}
-                                <div class="mb-3">
-                                    <h6 class="text-muted">Facturation</h6>
+                            {% if contactFactu and contactLivr and contactFactu.id == contactLivr.id %}
+                                {# Même contact pour facturation et livraison #}
+                                <div>
+                                    <h6 class="text-muted">
+                                        <i class="fas fa-file-invoice me-1"></i>Facturation et livraison
+                                    </h6>
                                     <p class="mb-1"><strong>{{ contactFactu.nomComplet }}</strong></p>
                                     {% if contactFactu.telephone %}
                                         <p class="mb-1">
@@ -582,32 +618,53 @@
                                         </p>
                                     {% endif %}
                                 </div>
-                            {% endif %}
+                            {% else %}
+                                {# Contacts différents pour facturation et livraison #}
+                                {% if contactFactu %}
+                                    <div class="mb-3">
+                                        <h6 class="text-muted">
+                                            <i class="fas fa-file-invoice me-1"></i>Facturation
+                                        </h6>
+                                        <p class="mb-1"><strong>{{ contactFactu.nomComplet }}</strong></p>
+                                        {% if contactFactu.telephone %}
+                                            <p class="mb-1">
+                                                <a href="tel:{{ contactFactu.telephoneForCall }}" class="text-decoration-none call-btn">
+                                                    <i class="fas fa-phone text-success me-1"></i>{{ contactFactu.telephone }}
+                                                </a>
+                                            </p>
+                                        {% endif %}
+                                        {% if contactFactu.email %}
+                                            <p class="mb-0">
+                                                <a href="mailto:{{ contactFactu.email }}" class="text-decoration-none">
+                                                    <i class="fas fa-envelope text-primary me-1"></i>{{ contactFactu.email }}
+                                                </a>
+                                            </p>
+                                        {% endif %}
+                                    </div>
+                                {% endif %}
 
-                            {% if contactLivr and contactLivr != contactFactu %}
-                                <div>
-                                    <h6 class="text-muted">Livraison</h6>
-                                    <p class="mb-1"><strong>{{ contactLivr.nomComplet }}</strong></p>
-                                    {% if contactLivr.telephone %}
-                                        <p class="mb-1">
-                                            <a href="tel:{{ contactLivr.telephoneForCall }}" class="text-decoration-none call-btn">
-                                                <i class="fas fa-phone text-success me-1"></i>{{ contactLivr.telephone }}
-                                            </a>
-                                        </p>
-                                    {% endif %}
-                                    {% if contactLivr.email %}
-                                        <p class="mb-0">
-                                            <a href="mailto:{{ contactLivr.email }}" class="text-decoration-none">
-                                                <i class="fas fa-envelope text-primary me-1"></i>{{ contactLivr.email }}
-                                            </a>
-                                        </p>
-                                    {% endif %}
-                                </div>
-                            {% elseif contactLivr == contactFactu %}
-                                <div class="alert alert-info alert-sm mb-0">
-                                    <i class="fas fa-info-circle me-1"></i>
-                                    Contact identique pour facturation et livraison
-                                </div>
+                                {% if contactLivr %}
+                                    <div>
+                                        <h6 class="text-muted">
+                                            <i class="fas fa-truck me-1"></i>Livraison
+                                        </h6>
+                                        <p class="mb-1"><strong>{{ contactLivr.nomComplet }}</strong></p>
+                                        {% if contactLivr.telephone %}
+                                            <p class="mb-1">
+                                                <a href="tel:{{ contactLivr.telephoneForCall }}" class="text-decoration-none call-btn">
+                                                    <i class="fas fa-phone text-success me-1"></i>{{ contactLivr.telephone }}
+                                                </a>
+                                            </p>
+                                        {% endif %}
+                                        {% if contactLivr.email %}
+                                            <p class="mb-0">
+                                                <a href="mailto:{{ contactLivr.email }}" class="text-decoration-none">
+                                                    <i class="fas fa-envelope text-primary me-1"></i>{{ contactLivr.email }}
+                                                </a>
+                                            </p>
+                                        {% endif %}
+                                    </div>
+                                {% endif %}
                             {% endif %}
                         </div>
                     </div>
