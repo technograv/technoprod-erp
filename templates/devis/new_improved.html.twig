@@ -86,6 +86,41 @@
         .dropdown-menu {
             z-index: 9999 !important;
         }
+
+        /* Styles pour les adresses des contacts */
+        .address-display {
+            background-color: #f8f9fa;
+            border: 1px solid #dee2e6;
+            font-size: 0.9rem;
+        }
+        
+        /* Forcer Select2 à prendre toute la largeur dans les conteneurs flex */
+        .d-flex .select2-container {
+            flex-grow: 1 !important;
+            min-width: 0 !important;
+            width: auto !important;
+        }
+        
+        .d-flex .select2-container .select2-selection {
+            width: 100% !important;
+        }
+        
+        .address-display .current-address {
+            line-height: 1.4;
+        }
+        
+        .address-edit-section {
+            background-color: #fff;
+            border: 2px solid #007bff;
+            border-radius: 8px;
+            padding: 15px;
+        }
+        
+        .btn-address {
+            font-size: 0.8rem;
+            padding: 0.25rem 0.5rem;
+        }
+
     </style>
 {% endblock %}
 
@@ -139,18 +174,25 @@
                         </div>
                         
                         <div class="row">
-                            <div class="col-md-6">
+                            <div class="col-md-4">
                                 <div class="mb-3">
                                     <label for="date_creation" class="form-label">Date de création</label>
                                     <input type="date" class="form-control" id="date_creation" 
                                            name="date_creation" value="{{ 'now'|date('Y-m-d') }}">
                                 </div>
                             </div>
-                            <div class="col-md-6">
+                            <div class="col-md-4">
                                 <div class="mb-3">
                                     <label for="date_validite" class="form-label">Date de validité</label>
                                     <input type="date" class="form-control" id="date_validite" 
                                            name="date_validite" value="{{ '+30 days'|date('Y-m-d') }}">
+                                </div>
+                            </div>
+                            <div class="col-md-4">
+                                <div class="mb-3">
+                                    <label for="delai_livraison" class="form-label">Délai de livraison</label>
+                                    <input type="text" class="form-control" id="delai_livraison" name="delai_livraison" 
+                                           placeholder="Ex: 2-3 semaines">
                                 </div>
                             </div>
                         </div>
@@ -165,32 +207,56 @@
                     <div class="form-section-body">
                         <div class="client-selector-container">
                             <label for="prospect" class="form-label">Sélectionner un client/prospect *</label>
-                            <div class="d-flex align-items-center gap-2">
+                            <div class="d-flex align-items-center gap-2" style="width: 100% !important;">
                                 {# Champ caché pour synchroniser avec le formulaire #}
                                 <input type="hidden" id="client_field" name="client" value="">
-                                <select class="form-select" id="prospect" name="prospect" style="flex: 1">
+                                <select class="form-select" id="prospect" name="prospect" style="flex-grow: 1 !important; min-width: 0;">
                                     <option value="">Choisir un client/prospect...</option>
                                     {% for prospect in prospects %}
                                         {% set contacts = [] %}
-                                        {% if prospect.contactFacturation %}
-                                            {% set contacts = contacts|merge([{
-                                                'id': prospect.contactFacturation.id,
-                                                'nom': prospect.contactFacturation.nom,
-                                                'prenom': prospect.contactFacturation.prenom,
-                                                'fonction': prospect.contactFacturation.fonction ?? 'Contact facturation'
-                                            }]) %}
+                                        {% set defaultContactFacturation = null %}
+                                        {% set defaultContactLivraison = null %}
+                                        
+                                        {# Identifier les contacts par défaut #}
+                                        {% if prospect.contactFacturationDefault %}
+                                            {% set defaultContactFacturation = prospect.contactFacturationDefault.id %}
                                         {% endif %}
-                                        {% if prospect.contactLivraison and (not prospect.contactFacturation or prospect.contactLivraison.id != prospect.contactFacturation.id) %}
-                                            {% set contacts = contacts|merge([{
-                                                'id': prospect.contactLivraison.id,
-                                                'nom': prospect.contactLivraison.nom,
-                                                'prenom': prospect.contactLivraison.prenom,
-                                                'fonction': prospect.contactLivraison.fonction ?? 'Contact livraison'
-                                            }]) %}
+                                        {% if prospect.contactLivraisonDefault %}
+                                            {% set defaultContactLivraison = prospect.contactLivraisonDefault.id %}
                                         {% endif %}
+                                        
+                                        {# Récupérer TOUS les contacts du client avec info sur les contacts par défaut et adresses #}
+                                        {% for contact in prospect.contacts %}
+                                            {% set adresse = null %}
+                                            {% if contact.adresse %}
+                                                {% set adresse = {
+                                                    'id': contact.adresse.id,
+                                                    'ligne1': contact.adresse.ligne1,
+                                                    'ligne2': contact.adresse.ligne2,
+                                                    'codePostal': contact.adresse.codePostal,
+                                                    'ville': contact.adresse.ville,
+                                                    'pays': contact.adresse.pays ?? 'France'
+                                                } %}
+                                            {% endif %}
+                                            
+                                            {% set contacts = contacts|merge([{
+                                                'id': contact.id,
+                                                'nom': contact.nom,
+                                                'prenom': contact.prenom,
+                                                'fonction': contact.fonction ?? 'Contact',
+                                                'is_facturation_default': contact.isFacturationDefault,
+                                                'is_livraison_default': contact.isLivraisonDefault,
+                                                'adresse': adresse
+                                            }]) %}
+                                        {% endfor %}
                                         <option value="{{ prospect.id }}" 
                                                 data-contacts="{{ contacts|json_encode }}"
-                                                data-projects="[]">
+                                                data-projects="[]"
+                                                data-default-facturation="{{ defaultContactFacturation }}"
+                                                data-default-livraison="{{ defaultContactLivraison }}">
+                                            {% if prospect.formeJuridique %}
+                                                {{ prospect.formeJuridique.nom }} 
+                                            {% endif %}
                                             {% if prospect.nomEntreprise %}
                                                 {{ prospect.nomEntreprise }}
                                             {% else %}
@@ -200,25 +266,92 @@
                                     {% endfor %}
                                 </select>
                                 <button type="button" class="add-client-btn" id="add-client-btn" 
-                                        title="Ajouter un nouveau client">
+                                        title="Ajouter un nouveau client" style="flex-shrink: 0 !important;">
                                     <i class="fas fa-plus"></i>
                                 </button>
                             </div>
                         </div>
 
-                        <!-- Menu contact (apparaît après sélection client) -->
+                        <!-- Menu contacts (apparaît après sélection client) -->
                         <div id="contact-selection" class="contact-dropdown" style="display: none;">
-                            <label for="contact_defaut" class="form-label">Contact par défaut</label>
-                            <div class="d-flex align-items-center gap-2">
-                                <select class="form-select" id="contact_defaut" name="contact_defaut" style="flex: 1">
-                                    <option value="">Aucun contact spécifique</option>
-                                </select>
-                                <button type="button" class="add-client-btn" id="add-contact-btn" 
-                                        title="Ajouter un nouveau contact">
-                                    <i class="fas fa-plus"></i>
-                                </button>
+                            <div class="row">
+                                <div class="col-md-6">
+                                    <label for="contact_defaut" class="form-label">Contact en charge du projet</label>
+                                    <div class="d-flex align-items-center gap-2" style="width: 100% !important;">
+                                        <select class="form-select" id="contact_defaut" name="contact_defaut" style="flex-grow: 1 !important; min-width: 0;">
+                                            <option value="">Choisir un contact...</option>
+                                        </select>
+                                        <button type="button" class="add-client-btn" id="add-contact-btn" 
+                                                title="Ajouter un nouveau contact" style="flex-shrink: 0 !important;">
+                                            <i class="fas fa-plus"></i>
+                                        </button>
+                                    </div>
+                                    <!-- Adresse du contact en charge du projet -->
+                                    <div id="adresse-contact-projet" class="mt-3" style="display: none;">
+                                        <label class="form-label text-muted">Adresse de livraison pour ce projet</label>
+                                        <div class="address-edit-section p-3 bg-light rounded border">
+                                            <div class="row">
+                                                <div class="col-md-12">
+                                                    <label class="form-label">Adresse</label>
+                                                    <input type="text" class="form-control mb-2" id="adresse_projet_ligne1" 
+                                                           name="adresse_projet_ligne1" placeholder="Ex: 123 rue de la Paix">
+                                                </div>
+                                                <div class="col-md-6">
+                                                    <label class="form-label">Code postal</label>
+                                                    <input type="text" class="form-control mb-2" id="adresse_projet_code_postal" 
+                                                           name="adresse_projet_code_postal" placeholder="31000">
+                                                </div>
+                                                <div class="col-md-6">
+                                                    <label class="form-label">Ville</label>
+                                                    <input type="text" class="form-control mb-2" id="adresse_projet_ville" 
+                                                           name="adresse_projet_ville" placeholder="Toulouse">
+                                                </div>
+                                            </div>
+                                            <div class="mt-2">
+                                                <small class="text-muted" id="address-status-projet">Modifiable pour ce projet uniquement</small>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                                <div class="col-md-6">
+                                    <label for="contact_facturation" class="form-label">Contact de facturation</label>
+                                    <div class="d-flex align-items-center gap-2" style="width: 100% !important;">
+                                        <select class="form-select" id="contact_facturation" name="contact_facturation" style="flex-grow: 1 !important; min-width: 0;">
+                                            <option value="">Choisir un contact...</option>
+                                        </select>
+                                        <button type="button" class="add-client-btn" id="add-contact-facturation-btn" 
+                                                title="Ajouter un nouveau contact de facturation" style="flex-shrink: 0 !important;">
+                                            <i class="fas fa-plus"></i>
+                                        </button>
+                                    </div>
+                                    <!-- Adresse du contact de facturation -->
+                                    <div id="adresse-contact-facturation" class="mt-3" style="display: none;">
+                                        <label class="form-label text-muted">Adresse de facturation pour ce projet</label>
+                                        <div class="address-edit-section p-3 bg-light rounded border">
+                                            <div class="row">
+                                                <div class="col-md-12">
+                                                    <label class="form-label">Adresse</label>
+                                                    <input type="text" class="form-control mb-2" id="adresse_facturation_ligne1" 
+                                                           name="adresse_facturation_ligne1" placeholder="Ex: 123 rue de la Paix">
+                                                </div>
+                                                <div class="col-md-6">
+                                                    <label class="form-label">Code postal</label>
+                                                    <input type="text" class="form-control mb-2" id="adresse_facturation_code_postal" 
+                                                           name="adresse_facturation_code_postal" placeholder="31000">
+                                                </div>
+                                                <div class="col-md-6">
+                                                    <label class="form-label">Ville</label>
+                                                    <input type="text" class="form-control mb-2" id="adresse_facturation_ville" 
+                                                           name="adresse_facturation_ville" placeholder="Toulouse">
+                                                </div>
+                                            </div>
+                                            <div class="mt-2">
+                                                <small class="text-muted" id="address-status-facturation">Modifiable pour ce projet uniquement</small>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
                             </div>
-                            <small class="text-muted">Ce contact sera en charge du projet</small>
                         </div>
 
                         <!-- Menu projets existants (apparaît après sélection client) -->
@@ -268,13 +401,6 @@
                         </div>
                         
                         <div class="row">
-                            <div class="col-md-6">
-                                <div class="mb-3">
-                                    <label for="delai_livraison" class="form-label">Délai de livraison</label>
-                                    <input type="text" class="form-control" id="delai_livraison" 
-                                           name="delai_livraison" placeholder="Ex: 15 jours après validation du BAT">
-                                </div>
-                            </div>
                             <div class="col-md-6">
                                 <div class="mb-3">
                                     <label for="methode_expedition" class="form-label">Méthode d'expédition</label>
@@ -346,50 +472,6 @@
                 </div>
 
                 <!-- Boutons d'action -->
-                <!-- Section Contacts et Adresses -->
-                <div class="form-section">
-                    <div class="form-section-header">
-                        <i class="fas fa-users me-2"></i>Contacts et Livraison
-                    </div>
-                    <div class="form-section-body">
-                        <div class="row">
-                            <div class="col-md-6">
-                                <h6 class="mb-3">Facturation</h6>
-                                <div class="mb-3">
-                                    <label for="contact_facturation" class="form-label">Contact facturation</label>
-                                    <select class="form-select" id="contact_facturation" name="contact_facturation">
-                                        <option value="">Choisir un contact de facturation...</option>
-                                    </select>
-                                </div>
-                                <div class="mb-3">
-                                    <label for="adresse_facturation" class="form-label">Adresse de facturation</label>
-                                    <select class="form-select" id="adresse_facturation" name="adresse_facturation">
-                                        <option value="">Choisir une adresse de facturation...</option>
-                                    </select>
-                                </div>
-                            </div>
-                            <div class="col-md-6">
-                                <h6 class="mb-3">Livraison</h6>
-                                <div class="mb-3">
-                                    <label for="contact_livraison" class="form-label">Contact livraison</label>
-                                    <select class="form-select" id="contact_livraison" name="contact_livraison">
-                                        <option value="">Choisir un contact de livraison...</option>
-                                    </select>
-                                </div>
-                                <div class="mb-3">
-                                    <label for="adresse_livraison" class="form-label">Adresse de livraison</label>
-                                    <select class="form-select" id="adresse_livraison" name="adresse_livraison">
-                                        <option value="">Choisir une adresse de livraison...</option>
-                                    </select>
-                                </div>
-                                <div class="mb-3">
-                                    <label for="delai_livraison" class="form-label">Délai de livraison</label>
-                                    <input type="text" class="form-control" id="delai_livraison" name="delai_livraison" placeholder="Ex: 2-3 semaines">
-                                </div>
-                            </div>
-                        </div>
-                    </div>
-                </div>
 
                 <div class="d-flex justify-content-between mb-4">
                     <button type="button" class="btn btn-secondary">
@@ -452,6 +534,19 @@
     </form>
 </div>
 
+<!-- Barre d'actions flottante -->
+{% include '_partials/floating_action_bar.html.twig' with {
+    'bar_color': 'blue',
+    'left_buttons': [
+        {'url': path('app_devis_index'), 'icon': 'fas fa-arrow-left', 'text': 'Annuler'}
+    ],
+    'center_text': 'Nouveau Devis - ' ~ next_devis_number,
+    'center_icon': 'fas fa-plus',
+    'right_buttons': [
+        {'type': 'submit', 'form_id': 'devis-form', 'icon': 'fas fa-save', 'text': 'Créer le Devis', 'class': 'btn-success'}
+    ]
+} %}
+
 <!-- Modal pour nouveau client -->
 <div class="modal fade" id="newClientModal" tabindex="-1" aria-hidden="true">
     <div class="modal-dialog modal-lg">
@@ -464,60 +559,96 @@
             </div>
             <div class="modal-body">
                 <form id="new-client-form">
-                    <div class="row">
-                        <div class="col-md-6">
-                            <div class="mb-3">
-                                <label for="new_client_civilite" class="form-label">Civilité</label>
-                                <select class="form-select" id="new_client_civilite" name="civilite">
-                                    <option value="M.">M.</option>
-                                    <option value="Mme">Mme</option>
-                                    <option value="Mlle">Mlle</option>
-                                </select>
-                            </div>
+                    <!-- Ligne 1: Forme juridique et Type -->
+                    <div class="row mb-3">
+                        <div class="col-md-8">
+                            <label for="new_client_forme_juridique" class="form-label">Forme juridique *</label>
+                            <select class="form-select" id="new_client_forme_juridique" name="forme_juridique" required>
+                                {% for forme in formes_juridiques %}
+                                    <option value="{{ forme.id }}" 
+                                            data-template="{{ forme.templateFormulaire }}"
+                                            {{ forme.formeParDefaut ? 'selected' : '' }}>{{ forme.nom }}</option>
+                                {% endfor %}
+                            </select>
                         </div>
-                        <div class="col-md-6">
-                            <div class="mb-3">
-                                <label for="new_client_type" class="form-label">Type</label>
-                                <select class="form-select" id="new_client_type" name="type">
-                                    <option value="prospect">Prospect</option>
-                                    <option value="client">Client</option>
-                                </select>
-                            </div>
+                        <div class="col-md-4">
+                            <label for="new_client_type" class="form-label">Type</label>
+                            <select class="form-select" id="new_client_type" name="type">
+                                <option value="prospect">Prospect</option>
+                                <option value="client">Client</option>
+                            </select>
                         </div>
                     </div>
-                    <div class="mb-3">
-                        <label for="new_client_entreprise" class="form-label">Nom de l'entreprise</label>
+
+                    <!-- Nom d'entreprise (conditionnel) -->
+                    <div class="mb-3" id="entreprise_section" style="display: none;">
+                        <label for="new_client_entreprise" class="form-label">Nom de l'entreprise *</label>
                         <input type="text" class="form-control" id="new_client_entreprise" name="nom_entreprise" 
                                placeholder="Ex: Décor Pub SARL">
-                        <small class="text-muted">Si renseigné, sera utilisé comme nom principal du client</small>
                     </div>
-                    <div class="row">
-                        <div class="col-md-6">
-                            <div class="mb-3">
-                                <label for="new_client_nom" class="form-label">Nom du contact *</label>
-                                <input type="text" class="form-control" id="new_client_nom" name="nom" required
-                                       placeholder="Ex: Gonzalez">
-                            </div>
+
+                    <!-- Ligne 2: Civilité, Nom et Prénom -->
+                    <div class="row mb-3">
+                        <div class="col-md-3">
+                            <label for="new_client_civilite" class="form-label">Civilité</label>
+                            <select class="form-select" id="new_client_civilite" name="civilite">
+                                <option value="M.">M.</option>
+                                <option value="Mme">Mme</option>
+                                <option value="Mlle">Mlle</option>
+                            </select>
                         </div>
-                        <div class="col-md-6">
-                            <div class="mb-3">
-                                <label for="new_client_prenom" class="form-label">Prénom du contact</label>
-                                <input type="text" class="form-control" id="new_client_prenom" name="prenom"
-                                       placeholder="Ex: Sophie">
-                            </div>
+                        <div class="col-md-4">
+                            <label for="new_client_nom" class="form-label">Nom *</label>
+                            <input type="text" class="form-control" id="new_client_nom" name="nom" required
+                                   placeholder="Gonzalez">
+                        </div>
+                        <div class="col-md-5">
+                            <label for="new_client_prenom" class="form-label">Prénom</label>
+                            <input type="text" class="form-control" id="new_client_prenom" name="prenom"
+                                   placeholder="Sophie">
                         </div>
                     </div>
-                    <div class="row">
-                        <div class="col-md-6">
-                            <div class="mb-3">
-                                <label for="new_client_email" class="form-label">Email *</label>
-                                <input type="email" class="form-control" id="new_client_email" name="email" required>
+
+                    <!-- Ligne 3: Email et Téléphone -->
+                    <div class="row mb-3">
+                        <div class="col-md-7">
+                            <label for="new_client_email" class="form-label">Email *</label>
+                            <input type="email" class="form-control" id="new_client_email" name="email" required
+                                   placeholder="sophie.gonzalez@exemple.com">
+                        </div>
+                        <div class="col-md-5">
+                            <label for="new_client_telephone" class="form-label">Téléphone</label>
+                            <input type="tel" class="form-control" id="new_client_telephone" name="telephone"
+                                   placeholder="06 12 34 56 78">
+                        </div>
+                    </div>
+
+                    <!-- Ligne 4: Adresse -->
+                    <div class="border rounded p-3 bg-light">
+                        <h6 class="mb-3"><i class="fas fa-map-marker-alt me-2"></i>Adresse</h6>
+                        <div class="mb-3">
+                            <label for="new_client_adresse" class="form-label">Adresse</label>
+                            <input type="text" class="form-control" id="new_client_adresse" name="adresse" 
+                                   placeholder="123 rue de la Paix">
+                        </div>
+                        <div class="row mb-3">
+                            <div class="col-md-4">
+                                <label for="new_client_code_postal" class="form-label">Code postal</label>
+                                <input type="text" class="form-control" id="new_client_code_postal" name="code_postal" 
+                                       placeholder="75001" pattern="[0-9]{5}" maxlength="5"
+                                       title="Code postal français (5 chiffres)">
+                            </div>
+                            <div class="col-md-8">
+                                <label for="new_client_ville" class="form-label">Ville</label>
+                                <input type="text" class="form-control" id="new_client_ville" name="ville" 
+                                       placeholder="Paris" maxlength="100">
                             </div>
                         </div>
-                        <div class="col-md-6">
-                            <div class="mb-3">
-                                <label for="new_client_telephone" class="form-label">Téléphone</label>
-                                <input type="tel" class="form-control" id="new_client_telephone" name="telephone">
+                        <div class="row">
+                            <div class="col-md-12">
+                                <label for="new_client_pays" class="form-label">Pays</label>
+                                <input type="text" class="form-control" id="new_client_pays" name="pays" 
+                                       value="France" placeholder="France">
                             </div>
                         </div>
                     </div>
@@ -619,33 +750,115 @@
     <script src="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/js/select2.min.js"></script>
     <script>
     document.addEventListener('DOMContentLoaded', function() {
-        // Initialisation Select2
-        $('#prospect').select2({
+        // ====== AMÉLIORATION UX : AUTO-FOCUS SELECT2 ======
+        // Extension globale jQuery pour appliquer l'auto-focus à tous les Select2
+        $.fn.extend({
+            select2AutoFocus: function(options) {
+                return this.each(function() {
+                    const element = $(this);
+                    
+                    // Ajouter une option pour désactiver la recherche si elle n'est pas nécessaire
+                    const finalOptions = {
+                        ...options,
+                        // S'assurer que la recherche est activée
+                        minimumResultsForSearch: 0
+                    };
+                    
+                    element.select2(finalOptions);
+                    
+                    // Utiliser l'événement select2:open pour déclencher le focus
+                    element.on('select2:open', function(e) {
+                        console.log('🔍 Select2 ouvert pour:', element.attr('id'));
+                        
+                        // Forcer le focus après que Select2 ait fini son initialisation
+                        setTimeout(function() {
+                            // Méthode directe via le DOM natif
+                            const searchInput = document.querySelector('.select2-container--open .select2-search__field');
+                            if (searchInput) {
+                                console.log('✅ Focus appliqué via DOM natif');
+                                searchInput.focus();
+                                // Déclencher aussi l'événement pour s'assurer que Select2 le reconnaît
+                                searchInput.dispatchEvent(new Event('focus'));
+                            } else {
+                                console.log('❌ Aucun champ de recherche trouvé');
+                            }
+                        }, 1);
+                    });
+                });
+            }
+        });
+
+        // Hook global pour attraper tous les événements Select2 open
+        $(document).on('select2:open', function(e) {
+            console.log('🌍 Événement global Select2:open détecté');
+            
+            // Triple approche pour maximiser les chances de succès
+            const applyFocus = () => {
+                const openContainer = document.querySelector('.select2-container--open');
+                if (openContainer) {
+                    const searchField = openContainer.querySelector('.select2-search__field');
+                    if (searchField) {
+                        console.log('🎯 Focus global appliqué!');
+                        
+                        // Méthode 1: Focus standard
+                        searchField.focus();
+                        
+                        // Méthode 2: Click pour déclencher l'activation
+                        searchField.click();
+                        
+                        // Méthode 3: Déclencher les événements manuellement
+                        const focusEvent = new FocusEvent('focus', { bubbles: true });
+                        const clickEvent = new MouseEvent('click', { bubbles: true });
+                        searchField.dispatchEvent(focusEvent);
+                        searchField.dispatchEvent(clickEvent);
+                        
+                        // Vérifier si le focus a été appliqué
+                        setTimeout(() => {
+                            if (document.activeElement === searchField) {
+                                console.log('✅ Focus confirmé actif!');
+                            } else {
+                                console.log('⚠️ Focus appliqué mais élément pas actif:', document.activeElement);
+                            }
+                        }, 10);
+                        
+                        return true;
+                    }
+                }
+                return false;
+            };
+            
+            // Essayer immédiatement
+            if (!applyFocus()) {
+                // Réessayer avec requestAnimationFrame
+                requestAnimationFrame(() => {
+                    if (!applyFocus()) {
+                        // Dernière tentative avec setTimeout
+                        setTimeout(applyFocus, 10);
+                    }
+                });
+            }
+        });
+
+        // Initialisation Select2 avec auto-focus (méthode simplifiée)
+        $('#prospect').select2AutoFocus({
             theme: 'bootstrap-5',
             placeholder: 'Choisir un client/prospect...',
             allowClear: true
         });
 
-        $('#contact_defaut').select2({
+        $('#contact_defaut').select2AutoFocus({
             theme: 'bootstrap-5',
             placeholder: 'Sélectionner un contact...'
         });
 
-        $('#projet_existant').select2({
+        $('#projet_existant').select2AutoFocus({
             theme: 'bootstrap-5',
             placeholder: 'Sélectionner un projet...'
         });
 
-        // Initialiser Select2 pour les nouveaux champs de contact et adresse
-        $('#contact_facturation, #contact_livraison').select2({
+        $('#contact_facturation').select2AutoFocus({
             theme: 'bootstrap-5',
             placeholder: 'Choisir un contact...',
-            allowClear: true
-        });
-
-        $('#adresse_facturation, #adresse_livraison').select2({
-            theme: 'bootstrap-5',
-            placeholder: 'Choisir une adresse...',
             allowClear: true
         });
 
@@ -693,94 +906,86 @@
             });
         }
 
-        // Fonction pour populer les dropdowns de contacts et adresses
-        function populateContactsAndAddresses(clientId) {
-            if (!clientId) {
-                // Vider les dropdowns si aucun client sélectionné
-                $('#contact_facturation, #contact_livraison').empty().append('<option value="">Choisir un contact...</option>');
-                $('#adresse_facturation, #adresse_livraison').empty().append('<option value="">Choisir une adresse...</option>');
-                return;
-            }
-
-            // Récupérer les contacts du client via AJAX
-            $.ajax({
-                url: '/client/' + clientId + '/contacts',
-                method: 'GET',
-                success: function(data) {
-                    // Populer les dropdowns de contacts
-                    const contactSelects = $('#contact_facturation, #contact_livraison');
-                    contactSelects.empty().append('<option value="">Choisir un contact...</option>');
-                    
-                    if (data.contacts && data.contacts.length > 0) {
-                        data.contacts.forEach(function(contact) {
-                            const label = `${contact.civilite || ''} ${contact.prenom || ''} ${contact.nom || ''}`.trim();
-                            const displayLabel = label || 'Contact sans nom';
-                            contactSelects.append(`<option value="${contact.id}">${displayLabel}${contact.fonction ? ' (' + contact.fonction + ')' : ''}</option>`);
-                        });
-                    }
-                },
-                error: function() {
-                    console.log('Erreur lors de la récupération des contacts');
-                }
-            });
-
-            // Récupérer les adresses du client via AJAX  
-            $.ajax({
-                url: '/client/' + clientId + '/addresses',
-                method: 'GET',
-                success: function(data) {
-                    // Populer les dropdowns d'adresses
-                    const addressSelects = $('#adresse_facturation, #adresse_livraison');
-                    addressSelects.empty().append('<option value="">Choisir une adresse...</option>');
-                    
-                    if (data.addresses && data.addresses.length > 0) {
-                        data.addresses.forEach(function(address) {
-                            const label = `${address.nom || 'Adresse'} - ${address.ligne1} - ${address.ville}`;
-                            addressSelects.append(`<option value="${address.id}">${label}</option>`);
-                        });
-                    }
-                },
-                error: function() {
-                    console.log('Erreur lors de la récupération des adresses');
-                }
-            });
-        }
 
         // Gestion de la sélection de prospect
         $('#prospect').on('change', function() {
-            console.log('Prospect sélectionné, événement déclenché');
             const selectedOption = $(this).find('option:selected');
             const prospectName = selectedOption.text();
             const contacts = selectedOption.data('contacts') || [];
             const projects = selectedOption.data('projects') || [];
+            const defaultFacturationId = selectedOption.data('default-facturation');
+            const defaultLivraisonId = selectedOption.data('default-livraison');
             
-            console.log('Prospect name:', prospectName);
-            console.log('Contacts:', contacts);
-            console.log('Projects:', projects);
+            // METTRE À JOUR LES CONTACTS GLOBAUX EN PREMIER
+            currentContacts = contacts;
 
             // Mise à jour du résumé
             $('#summary-client').text(prospectName || 'Non sélectionné');
             
-            // Gestion des contacts
+            // Gestion des contacts - Contact en charge du projet
             const contactSelect = $('#contact_defaut');
-            contactSelect.empty().append('<option value="">Aucun contact spécifique</option>');
+            contactSelect.empty().append('<option value="">Choisir un contact...</option>');
+            
+            // Gestion des contacts - Contact de facturation
+            const contactFacturationSelect = $('#contact_facturation');
+            contactFacturationSelect.empty().append('<option value="">Choisir un contact...</option>');
             
             if (contacts.length > 0) {
-                console.log('Ajout des contacts au select');
                 contacts.forEach(contact => {
-                    contactSelect.append(`<option value="${contact.id}">${contact.prenom} ${contact.nom} (${contact.fonction || 'N/A'})</option>`);
+                    // Créer le nom d'affichage sans parenthèses inutiles
+                    let displayName = `${contact.prenom} ${contact.nom}`.trim();
+                    // Ajouter la fonction seulement si elle existe et n'est pas générique
+                    if (contact.fonction && contact.fonction !== 'Contact' && contact.fonction !== 'N/A') {
+                        displayName += ` - ${contact.fonction}`;
+                    }
+                    const optionHtml = `<option value="${contact.id}">${displayName}</option>`;
+                    contactSelect.append(optionHtml);
+                    contactFacturationSelect.append(optionHtml);
                 });
                 
-                // Si un seul contact, le sélectionner automatiquement
-                if (contacts.length === 1) {
+                // Pré-sélectionner les contacts par défaut
+                if (defaultLivraisonId) {
+                    contactSelect.val(defaultLivraisonId);
+                } else if (contacts.length === 1) {
+                    // Si pas de contact de livraison par défaut mais un seul contact, le sélectionner
                     contactSelect.val(contacts[0].id);
-                    console.log('Contact unique sélectionné automatiquement:', contacts[0]);
+                }
+                
+                if (defaultFacturationId) {
+                    contactFacturationSelect.val(defaultFacturationId);
+                } else if (contacts.length === 1) {
+                    // Si pas de contact de facturation par défaut mais un seul contact, le sélectionner
+                    contactFacturationSelect.val(contacts[0].id);
+                }
+                
+                // Mettre à jour le résumé du contact sélectionné
+                const selectedContactOption = contactSelect.find('option:selected');
+                if (selectedContactOption.val()) {
+                    $('#summary-contact').text(selectedContactOption.text());
                 }
                 
                 $('#contact-selection').show();
-                console.log('Section contacts affichée');
+                
+                // DÉCLENCHER les événements change pour afficher les adresses automatiquement
+                setTimeout(() => {
+                    if (contactSelect.val()) {
+                        contactSelect.trigger('change');
+                    }
+                    if (contactFacturationSelect.val()) {
+                        contactFacturationSelect.trigger('change');
+                    }
+                }, 100);
+                
+                // Appel direct pour s'assurer que les adresses s'affichent
+                setTimeout(() => {
+                    if (contactSelect.val()) {
+                        updateContactAddress('projet', contactSelect.val());
+                    }
+                    if (contactFacturationSelect.val()) {
+                        updateContactAddress('facturation', contactFacturationSelect.val());
+                    }
+                }, 200);
             } else {
-                console.log('Aucun contact trouvé, section contacts visible');
                 $('#contact-selection').show();
             }
 
@@ -800,15 +1005,20 @@
             // Synchroniser avec le champ client caché
             const clientId = $(this).val();
             $('#client_field').val(clientId);
-
-            // Populer les nouveaux champs de contact et adresse
-            populateContactsAndAddresses(clientId);
         });
 
-        // Gestion du contact sélectionné
+        // Gestion du contact sélectionné et de son adresse
         $('#contact_defaut').on('change', function() {
             const selectedContact = $(this).find('option:selected').text();
-            $('#summary-contact').text(selectedContact === 'Aucun contact spécifique' ? 'Non défini' : selectedContact);
+            $('#summary-contact').text(selectedContact === 'Choisir un contact...' ? 'Non défini' : selectedContact);
+            
+            // Afficher l'adresse du contact
+            updateContactAddress('projet', $(this).val());
+        });
+
+        // Gestion du contact de facturation et de son adresse
+        $('#contact_facturation').on('change', function() {
+            updateContactAddress('facturation', $(this).val());
         });
 
         // Gestion du nom de projet
@@ -834,6 +1044,251 @@
             $('#newClientModal').modal('show');
         });
 
+        // Logique d'affichage conditionnel du champ entreprise selon la forme juridique
+        function updateEntrepriseField() {
+            const formeJuridiqueSelect = $('#new_client_forme_juridique');
+            const selectedOption = formeJuridiqueSelect.find('option:selected');
+            const template = selectedOption.data('template');
+            const entrepriseSection = $('#entreprise_section');
+            const entrepriseInput = $('#new_client_entreprise');
+            
+            if (template === 'personne_morale') {
+                // Personne morale -> afficher le champ entreprise
+                entrepriseSection.show();
+                entrepriseInput.prop('required', true);
+            } else {
+                // Personne physique -> masquer le champ entreprise
+                entrepriseSection.hide();
+                entrepriseInput.prop('required', false);
+                entrepriseInput.val(''); // Vider le champ
+            }
+        }
+        
+        // Mettre à jour l'affichage quand on change la forme juridique
+        $('#new_client_forme_juridique').on('change', function() {
+            updateEntrepriseField();
+        });
+
+        // Autocomplétion française pour l'adresse dans le popup
+        function setupAddressAutocomplete() {
+            const codePostalInput = $('#new_client_code_postal');
+            const villeInput = $('#new_client_ville');
+            
+            console.log('Setup autocomplétion - Code postal found:', codePostalInput.length);
+            console.log('Setup autocomplétion - Ville found:', villeInput.length);
+            
+            // Supprimer les anciens event listeners pour éviter les doublons
+            codePostalInput.off('input.autocomplete');
+            villeInput.off('input.autocomplete');
+            
+            // Autocomplétion code postal
+            codePostalInput.on('input.autocomplete', function() {
+                const query = $(this).val();
+                console.log('Code postal input:', query);
+                if (query.length >= 2) {
+                    searchCommunes(query, 'code_postal', codePostalInput, villeInput);
+                }
+            });
+            
+            // Autocomplétion ville
+            villeInput.on('input.autocomplete', function() {
+                const query = $(this).val();
+                console.log('Ville input:', query);
+                if (query.length >= 2) {
+                    searchCommunes(query, 'nom', villeInput, codePostalInput);
+                }
+            });
+        }
+        
+        function searchCommunes(query, type, primaryInput, secondaryInput) {
+            const url = `{{ path('app_api_communes_search') }}?q=${encodeURIComponent(query)}&type=${type}`;
+            console.log('Recherche communes:', url);
+            
+            fetch(url)
+                .then(response => {
+                    console.log('Response status:', response.status);
+                    if (!response.ok) {
+                        throw new Error(`HTTP ${response.status}`);
+                    }
+                    return response.json();
+                })
+                .then(communes => {
+                    console.log('Communes trouvées:', communes.length);
+                    showCommunesSuggestions(communes, primaryInput, secondaryInput, type);
+                })
+                .catch(error => {
+                    console.error('Erreur autocomplétion:', error);
+                });
+        }
+        
+        // Fonction pour sélectionner une commune (réutilisable pour souris et clavier)
+        function selectCommune(commune, primaryInput, secondaryInput, type, suggestions) {
+            primaryInput.val(type === 'code_postal' ? commune.codePostal : commune.nomCommune);
+            secondaryInput.val(type === 'code_postal' ? commune.nomCommune : commune.codePostal);
+            suggestions.remove();
+            // Retirer les événements clavier
+            primaryInput.off('keydown.communes');
+        }
+        
+        function showCommunesSuggestions(communes, primaryInput, secondaryInput, type) {
+            console.log('Affichage suggestions:', communes.length, 'communes');
+            // Supprimer les suggestions existantes
+            $('.commune-suggestions').remove();
+            
+            if (communes.length === 0) return;
+            
+            // Créer la liste de suggestions
+            const suggestions = $('<div class="commune-suggestions"></div>');
+            
+            // Positionnement relatif au modal pour éviter les problèmes de z-index
+            const modalBody = primaryInput.closest('.modal-body');
+            const inputPosition = primaryInput.position();
+            const inputOffset = primaryInput.offset();
+            
+            suggestions.css({
+                position: 'absolute',
+                top: inputOffset.top + primaryInput.outerHeight(),
+                left: inputOffset.left,
+                width: primaryInput.outerWidth(),
+                backgroundColor: 'white',
+                border: '1px solid #ccc',
+                borderRadius: '4px',
+                maxHeight: '200px',
+                overflowY: 'auto',
+                zIndex: 1070, // Au-dessus des modals Bootstrap (1060)
+                boxShadow: '0 2px 5px rgba(0,0,0,0.2)',
+                display: 'block' // Force l'affichage
+            });
+            
+            console.log('Position input:', inputOffset.top, inputOffset.left);
+            console.log('Position suggestions:', inputOffset.top + primaryInput.outerHeight(), inputOffset.left);
+            
+            communes.forEach((commune, index) => {
+                const item = $('<div class="commune-item"></div>');
+                item.css({
+                    padding: '8px 12px',
+                    cursor: 'pointer',
+                    borderBottom: '1px solid #eee'
+                });
+                
+                // Ajouter un attribut data pour identifier l'élément
+                item.attr('data-index', index);
+                item.attr('data-commune-data', JSON.stringify(commune));
+                
+                if (type === 'code_postal') {
+                    item.text(`${commune.codePostal} - ${commune.nomCommune}`);
+                } else {
+                    item.text(`${commune.nomCommune} (${commune.codePostal})`);
+                }
+                
+                item.hover(
+                    function() { 
+                        // Retirer la sélection clavier quand on survole à la souris
+                        $('.commune-item.keyboard-selected').removeClass('keyboard-selected');
+                        $(this).addClass('mouse-hover').css('backgroundColor', '#f0f0f0'); 
+                    },
+                    function() { 
+                        $(this).removeClass('mouse-hover').css('backgroundColor', 'white'); 
+                    }
+                );
+                
+                item.click(function() {
+                    selectCommune(commune, primaryInput, secondaryInput, type, suggestions);
+                });
+                
+                suggestions.append(item);
+            });
+            
+            $('body').append(suggestions);
+            console.log('Suggestions ajoutées au DOM:', suggestions.length, 'élément(s)');
+            console.log('Suggestions HTML:', suggestions[0].outerHTML.substring(0, 200));
+            console.log('Suggestions visible:', suggestions.is(':visible'));
+            console.log('Suggestions CSS zIndex:', suggestions.css('z-index'));
+            
+            // Gestion de la navigation clavier
+            let selectedIndex = -1;
+            
+            // Ajouter la gestion des événements clavier
+            primaryInput.off('keydown.communes').on('keydown.communes', function(e) {
+                const items = suggestions.find('.commune-item');
+                
+                switch(e.keyCode) {
+                    case 38: // Flèche haut
+                        e.preventDefault();
+                        selectedIndex = Math.max(-1, selectedIndex - 1);
+                        updateKeyboardSelection(items, selectedIndex);
+                        break;
+                        
+                    case 40: // Flèche bas
+                        e.preventDefault();
+                        selectedIndex = Math.min(items.length - 1, selectedIndex + 1);
+                        updateKeyboardSelection(items, selectedIndex);
+                        break;
+                        
+                    case 13: // Entrée
+                        e.preventDefault();
+                        if (selectedIndex >= 0 && selectedIndex < items.length) {
+                            const selectedItem = $(items[selectedIndex]);
+                            const communeData = JSON.parse(selectedItem.attr('data-commune-data'));
+                            selectCommune(communeData, primaryInput, secondaryInput, type, suggestions);
+                        }
+                        break;
+                        
+                    case 27: // Échap
+                        e.preventDefault();
+                        suggestions.remove();
+                        primaryInput.off('keydown.communes');
+                        break;
+                }
+            });
+            
+            // Fonction pour mettre à jour la sélection visuelle
+            function updateKeyboardSelection(items, index) {
+                // Retirer l'ancienne sélection
+                items.removeClass('keyboard-selected').css({
+                    backgroundColor: 'white',
+                    color: 'black'
+                });
+                
+                // Ajouter la nouvelle sélection
+                if (index >= 0 && index < items.length) {
+                    const selectedItem = $(items[index]);
+                    selectedItem.addClass('keyboard-selected').css({
+                        backgroundColor: '#007bff',
+                        color: 'white'
+                    });
+                    
+                    // Faire défiler pour rendre visible l'élément sélectionné
+                    const suggestionsContainer = suggestions[0];
+                    const selectedElement = selectedItem[0];
+                    const containerTop = suggestionsContainer.scrollTop;
+                    const containerBottom = containerTop + suggestionsContainer.clientHeight;
+                    const elementTop = selectedElement.offsetTop;
+                    const elementBottom = elementTop + selectedElement.offsetHeight;
+                    
+                    if (elementTop < containerTop) {
+                        suggestionsContainer.scrollTop = elementTop;
+                    } else if (elementBottom > containerBottom) {
+                        suggestionsContainer.scrollTop = elementBottom - suggestionsContainer.clientHeight;
+                    }
+                }
+            }
+            
+            // Supprimer les suggestions si on clique ailleurs
+            $(document).one('click', function(e) {
+                if (!suggestions.is(e.target) && suggestions.has(e.target).length === 0) {
+                    suggestions.remove();
+                    primaryInput.off('keydown.communes');
+                }
+            });
+        }
+        
+        // Initialiser l'autocomplétion quand le modal s'ouvre
+        $('#newClientModal').on('shown.bs.modal', function() {
+            updateEntrepriseField();
+            setupAddressAutocomplete();
+        });
+
         // Sauvegarde nouveau client
         $('#save-new-client').on('click', function() {
             const $button = $(this);
@@ -844,12 +1299,42 @@
                 nom_entreprise: $('#new_client_entreprise').val(),
                 email: $('#new_client_email').val(),
                 telephone: $('#new_client_telephone').val(),
-                type: $('#new_client_type').val()
+                type: $('#new_client_type').val(),
+                forme_juridique_id: $('#new_client_forme_juridique').val(),
+                adresse: $('#new_client_adresse').val(),
+                code_postal: $('#new_client_code_postal').val(),
+                ville: $('#new_client_ville').val(),
+                pays: $('#new_client_pays').val()
             };
 
+            // Validation selon le type de forme juridique
+            const selectedFormeOption = $('#new_client_forme_juridique option:selected');
+            const template = selectedFormeOption.data('template');
+            
             if (!formData.nom || !formData.email) {
                 alert('Le nom et l\'email sont obligatoires');
                 return;
+            }
+            
+            // Si personne morale, vérifier que le nom d'entreprise est renseigné
+            if (template === 'personne_morale' && !formData.nom_entreprise) {
+                alert('Le nom de l\'entreprise est obligatoire pour une personne morale');
+                return;
+            }
+            
+            // Validation de l'adresse - si une partie est renseignée, vérifier que les champs obligatoires le sont aussi
+            const hasAddressData = formData.adresse || formData.code_postal || formData.ville;
+            if (hasAddressData) {
+                if (!formData.adresse || !formData.code_postal || !formData.ville) {
+                    alert('Si vous renseignez une adresse, les champs Adresse, Code postal et Ville sont tous obligatoires');
+                    return;
+                }
+                
+                // Validation format code postal français
+                if (!/^\d{5}$/.test(formData.code_postal)) {
+                    alert('Le code postal doit contenir exactement 5 chiffres');
+                    return;
+                }
             }
 
             // Désactiver le bouton pendant la requête
@@ -884,11 +1369,10 @@
                         // Ajouter les data attributes pour les contacts et projets
                         $(newOption).attr('data-contacts', JSON.stringify(response.client.contacts || []));
                         $(newOption).attr('data-projects', JSON.stringify(response.client.projects || []));
+                        $(newOption).attr('data-default-facturation', response.client.default_facturation_id || '');
+                        $(newOption).attr('data-default-livraison', response.client.default_livraison_id || '');
                         
                         $('#prospect').append(newOption).trigger('change');
-
-                        // Populer les dropdowns de contacts et adresses avec le nouveau client
-                        populateContactsAndAddresses(response.client.id);
 
                         // Fermer la modal et reset le formulaire
                         $('#newClientModal').modal('hide');
@@ -913,17 +1397,31 @@
             });
         });
 
-        // Bouton ajouter contact
+        // Bouton ajouter contact en charge du projet
         $('#add-contact-btn').on('click', function() {
-            console.log('Bouton + cliqué pour nouveau contact');
             const selectedProspectId = $('#prospect').val();
             if (!selectedProspectId) {
                 alert('Veuillez d\'abord sélectionner un client/prospect');
                 return;
             }
             
-            // Stocker l'ID du prospect pour l'utiliser lors de la création
+            // Stocker l'ID du prospect et le type de contact
             $('#newContactModal').data('prospect-id', selectedProspectId);
+            $('#newContactModal').data('contact-type', 'projet');
+            $('#newContactModal').modal('show');
+        });
+
+        // Bouton ajouter contact de facturation
+        $('#add-contact-facturation-btn').on('click', function() {
+            const selectedProspectId = $('#prospect').val();
+            if (!selectedProspectId) {
+                alert('Veuillez d\'abord sélectionner un client/prospect');
+                return;
+            }
+            
+            // Stocker l'ID du prospect et le type de contact
+            $('#newContactModal').data('prospect-id', selectedProspectId);
+            $('#newContactModal').data('contact-type', 'facturation');
             $('#newContactModal').modal('show');
         });
 
@@ -931,6 +1429,7 @@
         $('#save-new-contact').on('click', function() {
             const $button = $(this);
             const prospectId = $('#newContactModal').data('prospect-id');
+            const contactType = $('#newContactModal').data('contact-type') || 'projet';
             
             if (!prospectId) {
                 alert('Erreur: Aucun prospect sélectionné');
@@ -964,7 +1463,7 @@
                 data: JSON.stringify(formData),
                 success: function(response) {
                     if (response.success) {
-                        // Ajouter le contact au select
+                        // Ajouter le contact au bon select selon le type
                         const newOption = new Option(
                             response.contact.display_name,
                             response.contact.id,
@@ -972,16 +1471,23 @@
                             true
                         );
                         
-                        $('#contact_defaut').append(newOption).trigger('change');
+                        // Ajouter aux deux dropdowns mais sélectionner dans le bon
+                        $('#contact_defaut').append(newOption.cloneNode(true));
+                        $('#contact_facturation').append(newOption.cloneNode(true));
+                        
+                        if (contactType === 'facturation') {
+                            $('#contact_facturation').val(response.contact.id).trigger('change');
+                        } else {
+                            $('#contact_defaut').val(response.contact.id).trigger('change');
+                            // Mettre à jour le résumé seulement si c'est le contact projet
+                            $('#summary-contact').text(response.contact.display_name);
+                        }
 
                         // Fermer la modal et reset le formulaire
                         $('#newContactModal').modal('hide');
                         $('#new-contact-form')[0].reset();
                         
-                        // Mettre à jour le résumé
-                        $('#summary-contact').text(response.contact.display_name);
-                        
-                        // Contact créé et ajouté aux dropdowns - pas besoin de message
+                        // Contact créé et ajouté aux dropdowns
                     } else {
                         alert('Erreur: ' + response.message);
                     }
@@ -1010,6 +1516,80 @@
             
             // Ici vous pourriez rediriger vers l'étape suivante
             alert('Redirection vers l\'étape de saisie des lignes du devis...');
+        });
+
+        // Variables globales pour les données des contacts
+        let currentContacts = [];
+        let originalAddresses = {};
+
+        // Fonction pour mettre à jour l'affichage de l'adresse d'un contact
+        function updateContactAddress(type, contactId) {
+            const addressDiv = $(`#adresse-contact-${type}`);
+            const statusDiv = $(`#address-status-${type}`);
+            
+            if (!contactId) {
+                addressDiv.hide();
+                return;
+            }
+
+            // Trouver le contact dans les données
+            const contact = currentContacts.find(c => c.id == contactId);
+            
+            if (!contact) {
+                addressDiv.hide();
+                return;
+            }
+
+            // Afficher la section d'adresse
+            addressDiv.show();
+
+            if (contact.adresse) {
+                // Contact avec adresse : pré-remplir les champs
+                originalAddresses[type] = contact.adresse;
+                $(`#adresse_${type}_ligne1`).val(contact.adresse.ligne1 || '');
+                $(`#adresse_${type}_code_postal`).val(contact.adresse.codePostal || '');
+                $(`#adresse_${type}_ville`).val(contact.adresse.ville || '');
+                
+                statusDiv.text('Adresse du contact - modifiable pour ce projet');
+            } else {
+                // Contact sans adresse : champs vides
+                originalAddresses[type] = null;
+                $(`#adresse_${type}_ligne1`).val('');
+                $(`#adresse_${type}_code_postal`).val('');
+                $(`#adresse_${type}_ville`).val('');
+                
+                statusDiv.text('Aucune adresse définie - saisissez une adresse pour ce projet');
+            }
+        }
+
+        // Fonction pour formater l'affichage d'une adresse
+        function formatAddress(adresse) {
+            let formatted = '';
+            if (adresse.ligne1) formatted += adresse.ligne1;
+            if (adresse.ligne2) formatted += '<br>' + adresse.ligne2;
+            if (adresse.codePostal || adresse.ville) {
+                formatted += '<br>' + (adresse.codePostal || '') + ' ' + (adresse.ville || '');
+            }
+            if (adresse.pays && adresse.pays !== 'France') {
+                formatted += '<br>' + adresse.pays;
+            }
+            return formatted || 'Adresse non définie';
+        }
+
+        // Les boutons d'édition ne sont plus nécessaires car les champs sont directement éditables
+
+        // Les boutons de réinitialisation ont été supprimés de l'interface
+
+
+        // Fonction pour réinitialiser à l'adresse originale (supprimée car plus de bouton)
+
+
+        // Cette mise à jour est maintenant gérée dans le handler principal du prospect
+        // Réinitialiser les adresses quand le prospect change
+        $('#prospect').on('change', function() {
+            // Réinitialiser les adresses
+            originalAddresses = {};
+            $('#adresse-contact-projet, #adresse-contact-facturation').hide();
         });
     });
     </script>
