@@ -21,6 +21,7 @@ use Symfony\Component\Routing\Generator\UrlGeneratorInterface;
 use Symfony\Component\Mailer\MailerInterface;
 use Symfony\Component\Mime\Email;
 use App\Service\GmailMailerService;
+use App\Service\DocumentNumerotationService;
 use Dompdf\Dompdf;
 use Dompdf\Options;
 
@@ -73,7 +74,7 @@ final class DevisController extends AbstractController
     }
 
     #[Route('/new-improved', name: 'app_devis_new_improved', methods: ['GET', 'POST'])]
-    public function newImproved(Request $request, EntityManagerInterface $entityManager, ClientRepository $clientRepository): Response
+    public function newImproved(Request $request, EntityManagerInterface $entityManager, ClientRepository $clientRepository, DocumentNumerotationService $numerotationService): Response
     {
         $devis = new Devis();
         
@@ -83,10 +84,8 @@ final class DevisController extends AbstractController
         // Définir le statut par défaut comme "brouillon"
         $devis->setStatut('brouillon');
         
-        // Générer le prochain numéro de devis pour l'affichage
-        $year = date('Y');
-        $count = $entityManager->getRepository(Devis::class)->count([]);
-        $nextDevisNumber = $year . '-DEV-' . str_pad($count + 1, 4, '0', STR_PAD_LEFT);
+        // Générer le prochain numéro de devis avec le nouveau système
+        $nextDevisNumber = $numerotationService->getProchainNumero('DE');
         
         // Si un prospect est passé en paramètre
         $prospectId = $request->query->get('prospect');
@@ -141,9 +140,15 @@ final class DevisController extends AbstractController
             $contactDefaut = $request->request->get('contact_defaut');
             $projetExistant = $request->request->get('projet_existant');
             $contactFacturation = $request->request->get('contact_facturation');
-            $contactLivraison = $request->request->get('contact_livraison');
-            $adresseFacturation = $request->request->get('adresse_facturation');
-            $adresseLivraison = $request->request->get('adresse_livraison');
+            
+            // Récupération des adresses modifiées pour le projet
+            $adresseProjetLigne1 = $request->request->get('adresse_projet_ligne1');
+            $adresseProjetCodePostal = $request->request->get('adresse_projet_code_postal');
+            $adresseProjetVille = $request->request->get('adresse_projet_ville');
+            
+            $adresseFacturationLigne1 = $request->request->get('adresse_facturation_ligne1');
+            $adresseFacturationCodePostal = $request->request->get('adresse_facturation_code_postal');
+            $adresseFacturationVille = $request->request->get('adresse_facturation_ville');
             
             // Validation basique
             if (!$prospectId) {
@@ -158,9 +163,10 @@ final class DevisController extends AbstractController
                 return $this->redirectToRoute('app_devis_new_improved');
             }
             
-            // Configurer le devis
+            // Configurer le devis avec le numéro généré par le service
             $devis->setClient($prospect);
-            $devis->setNumeroDevis($nextDevisNumber);
+            $numeroGenere = $numerotationService->genererNumero('DE');
+            $devis->setNumeroDevis($numeroGenere);
             $devis->setDateCreation(new \DateTime($dateCreation ?: 'now'));
             $devis->setDateValidite(new \DateTime($dateValidite ?: '+30 days'));
             $devis->setDelaiLivraison($delaiLivraison);
@@ -181,7 +187,7 @@ final class DevisController extends AbstractController
                 $devis->setAdresseFacturation($adresse);
             }
             
-            // Gestion des contacts et adresses sélectionnés
+            // Gestion des contacts sélectionnés
             if ($contactFacturation) {
                 $contact = $entityManager->getRepository(Contact::class)->find($contactFacturation);
                 if ($contact) {
@@ -189,27 +195,43 @@ final class DevisController extends AbstractController
                 }
             }
             
-            if ($contactLivraison) {
-                $contact = $entityManager->getRepository(Contact::class)->find($contactLivraison);
+            // Le contact en charge du projet devient le contact de livraison
+            if ($contactDefaut) {
+                $contact = $entityManager->getRepository(Contact::class)->find($contactDefaut);
                 if ($contact) {
                     $devis->setContactLivraison($contact);
                 }
             }
             
-            if ($adresseFacturation) {
-                $adresse = $entityManager->getRepository(Adresse::class)->find($adresseFacturation);
-                if ($adresse) {
-                    $devis->setAdresseFacturation($adresse);
+            // Gestion des adresses modifiées pour le projet
+            $notesAdresses = '';
+            if ($adresseProjetLigne1 && $adresseProjetVille) {
+                $notesAdresses .= "ADRESSE DE LIVRAISON MODIFIÉE POUR CE PROJET:\n";
+                $notesAdresses .= $adresseProjetLigne1 . "\n";
+                if ($adresseProjetCodePostal && $adresseProjetVille) {
+                    $notesAdresses .= $adresseProjetCodePostal . ' ' . $adresseProjetVille . "\n";
+                }
+                $notesAdresses .= "\n";
+            }
+            
+            if ($adresseFacturationLigne1 && $adresseFacturationVille) {
+                $notesAdresses .= "ADRESSE DE FACTURATION MODIFIÉE POUR CE PROJET:\n";
+                $notesAdresses .= $adresseFacturationLigne1 . "\n";
+                if ($adresseFacturationCodePostal && $adresseFacturationVille) {
+                    $notesAdresses .= $adresseFacturationCodePostal . ' ' . $adresseFacturationVille . "\n";
                 }
             }
             
-            if ($adresseLivraison) {
-                $adresse = $entityManager->getRepository(Adresse::class)->find($adresseLivraison);
-                if ($adresse) {
-                    $devis->setAdresseLivraison($adresse);
+            if ($notesAdresses) {
+                $notesInternes = $devis->getNotesInternes() ?: '';
+                if ($notesInternes) {
+                    $notesInternes .= "\n\n" . $notesAdresses;
+                } else {
+                    $notesInternes = $notesAdresses;
                 }
+                $devis->setNotesInternes($notesInternes);
             }
-            
+
             // Sauvegarder le devis
             $entityManager->persist($devis);
             $entityManager->flush();
@@ -218,13 +240,25 @@ final class DevisController extends AbstractController
             return $this->redirectToRoute('app_devis_edit', ['id' => $devis->getId()]);
         }
         
-        // Récupérer tous les prospects pour le sélecteur
-        $prospects = $clientRepository->findAll();
+        // Récupérer tous les prospects pour le sélecteur avec leurs contacts, adresses et formes juridiques
+        $prospects = $entityManager->createQuery('
+            SELECT c, contacts, adresse, fj
+            FROM App\Entity\Client c
+            LEFT JOIN c.contacts contacts
+            LEFT JOIN contacts.adresse adresse
+            LEFT JOIN c.formeJuridique fj
+            ORDER BY c.nom ASC
+        ')->getResult();
+
+        // Récupérer les formes juridiques pour le modal de création client
+        $formesJuridiques = $entityManager->getRepository(\App\Entity\FormeJuridique::class)
+            ->findBy(['actif' => true], ['ordre' => 'ASC']);
 
         return $this->render('devis/new_improved.html.twig', [
             'devis' => $devis,
             'prospects' => $prospects,
             'next_devis_number' => $nextDevisNumber,
+            'formes_juridiques' => $formesJuridiques,
         ]);
     }
 
@@ -462,17 +496,6 @@ final class DevisController extends AbstractController
                 ], 400);
             }
             
-            // Vérifier si un prospect/client existe déjà (par email ou nom d'entreprise)
-            $existingByEmail = $entityManager->getRepository(Client::class)
-                ->findOneBy(['email' => $data['email']]);
-            
-            if ($existingByEmail) {
-                return new JsonResponse([
-                    'success' => false,
-                    'message' => 'Un client avec cet email existe déjà : ' . $existingByEmail->getNom()
-                ], 400);
-            }
-            
             // Si nom d'entreprise fourni, vérifier s'il existe déjà
             if (!empty($data['nom_entreprise'])) {
                 $existingByCompany = $entityManager->getRepository(Client::class)
@@ -518,6 +541,14 @@ final class DevisController extends AbstractController
             
             $prospect->setModePaiement('virement');
             
+            // Gestion de la forme juridique
+            if (!empty($data['forme_juridique_id'])) {
+                $formeJuridique = $entityManager->getRepository(\App\Entity\FormeJuridique::class)->find($data['forme_juridique_id']);
+                if ($formeJuridique) {
+                    $prospect->setFormeJuridique($formeJuridique);
+                }
+            }
+            
             // Générer un code temporaire court (max 20 caractères)
             $tempCode = 'T' . substr(uniqid(), -7) . substr(time(), -7);
             $prospect->setCode($tempCode);
@@ -528,18 +559,44 @@ final class DevisController extends AbstractController
             // Maintenant générer le vrai code avec l'ID
             $prospect->setCode($prospect->generateCode());
             
-            // Créer automatiquement un contact principal si c'est une entreprise avec une personne de contact
-            if (!empty($data['nom_entreprise']) && !empty($data['nom'])) {
+            // Créer une adresse automatique si les données obligatoires sont fournies
+            $adresseAutomatique = null;
+            if (!empty($data['adresse']) && !empty($data['code_postal']) && !empty($data['ville'])) {
+                $adresseAutomatique = new Adresse();
+                $adresseAutomatique->setClient($prospect); // IMPORTANT: Assigner le client à l'adresse
+                $adresseAutomatique->setNom('Automatique');
+                $adresseAutomatique->setLigne1($data['adresse']);
+                $adresseAutomatique->setCodePostal($data['code_postal']);
+                $adresseAutomatique->setVille($data['ville']);
+                $adresseAutomatique->setPays($data['pays'] ?? 'France');
+                
+                $entityManager->persist($adresseAutomatique);
+            }
+            
+            // Créer automatiquement un contact par défaut pour tous les clients (avec nom et prénom)
+            if (!empty($data['nom'])) {
                 $contact = new Contact();
                 $contact->setClient($prospect);
                 $contact->setCivilite($data['civilite'] ?? 'M.');
                 $contact->setNom($data['nom']); // Nom de famille de la personne
                 $contact->setPrenom($data['prenom'] ?? '');
-                $contact->setFonction('Contact principal');
+                
+                // Fonction selon le type de client
+                if (!empty($data['nom_entreprise'])) {
+                    $contact->setFonction('Contact principal');
+                } else {
+                    $contact->setFonction(''); // Pas de fonction pour les particuliers
+                }
+                
                 $contact->setEmail($data['email']);
                 $contact->setTelephone($data['telephone'] ?? '');
                 $contact->setIsFacturationDefault(true);
                 $contact->setIsLivraisonDefault(true);
+                
+                // Assigner l'adresse automatique au contact
+                if ($adresseAutomatique) {
+                    $contact->setAdresse($adresseAutomatique);
+                }
                 
                 $prospect->addContact($contact);
                 $entityManager->persist($contact);
@@ -573,15 +630,31 @@ final class DevisController extends AbstractController
                     'display_name' => $displayName,
                     'contacts' => array_map(function($contact) {
                         $label = trim(($contact->getCivilite() ?? '') . ' ' . ($contact->getPrenom() ?? '') . ' ' . ($contact->getNom() ?? ''));
+                        $adresse = null;
+                        if ($contact->getAdresse()) {
+                            $adresse = [
+                                'id' => $contact->getAdresse()->getId(),
+                                'ligne1' => $contact->getAdresse()->getLigne1(),
+                                'ligne2' => $contact->getAdresse()->getLigne2(),
+                                'codePostal' => $contact->getAdresse()->getCodePostal(),
+                                'ville' => $contact->getAdresse()->getVille(),
+                                'pays' => $contact->getAdresse()->getPays() ?? 'France'
+                            ];
+                        }
                         return [
                             'id' => $contact->getId(),
                             'nom' => $contact->getNom(),
                             'prenom' => $contact->getPrenom(),
                             'fonction' => $contact->getFonction(),
-                            'label' => $label ?: 'Contact sans nom'
+                            'label' => $label ?: 'Contact sans nom',
+                            'is_facturation_default' => $contact->isFacturationDefault(),
+                            'is_livraison_default' => $contact->isLivraisonDefault(),
+                            'adresse' => $adresse
                         ];
                     }, $prospect->getContacts()->toArray()),
-                    'projects' => []  // Nouveau client, pas encore de projets
+                    'projects' => [],  // Nouveau client, pas encore de projets
+                    'default_facturation_id' => $prospect->getContactFacturationDefault() ? $prospect->getContactFacturationDefault()->getId() : null,
+                    'default_livraison_id' => $prospect->getContactLivraisonDefault() ? $prospect->getContactLivraisonDefault()->getId() : null
                 ]
             ]);
             
@@ -655,7 +728,11 @@ final class DevisController extends AbstractController
             
             // Préparer la réponse
             $contactName = trim($contact->getPrenom() . ' ' . $contact->getNom());
-            $displayName = $contactName . ' (' . ($contact->getFonction() ?: 'Contact ' . $contactType) . ')';
+            $displayName = $contactName;
+            // Ajouter la fonction seulement si elle existe et n'est pas générique
+            if ($contact->getFonction() && !in_array($contact->getFonction(), ['Contact', 'Contact facturation', 'Contact livraison'])) {
+                $displayName .= ' - ' . $contact->getFonction();
+            }
             
             return new JsonResponse([
                 'success' => true,

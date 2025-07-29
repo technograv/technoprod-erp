@@ -7,6 +7,7 @@ use App\Entity\FormeJuridique;
 use App\Entity\Secteur;
 use App\Entity\Zone;
 use App\Entity\Produit;
+use App\Service\DocumentNumerotationService;
 use Doctrine\ORM\EntityManagerInterface;
 use Symfony\Bundle\FrameworkBundle\Controller\AbstractController;
 use Symfony\Component\HttpFoundation\Request;
@@ -44,7 +45,7 @@ final class AdminController extends AbstractController
     #[Route('/formes-juridiques', name: 'app_admin_formes_juridiques', methods: ['GET'])]
     public function formesJuridiques(EntityManagerInterface $entityManager): Response
     {
-        $formesJuridiques = $entityManager->getRepository(FormeJuridique::class)->findBy([], ['nom' => 'ASC']);
+        $formesJuridiques = $entityManager->getRepository(FormeJuridique::class)->findBy([], ['ordre' => 'ASC']);
 
         return $this->render('admin/formes_juridiques.html.twig', [
             'formes_juridiques' => $formesJuridiques,
@@ -67,20 +68,44 @@ final class AdminController extends AbstractController
             return $this->json(['error' => 'Cette forme juridique existe déjà'], 400);
         }
 
+        // Si forme par défaut demandée, désactiver les autres
+        if (!empty($data['formeParDefaut'])) {
+            $entityManager->createQuery('UPDATE App\Entity\FormeJuridique f SET f.formeParDefaut = false')->execute();
+        }
+
         $formeJuridique = new FormeJuridique();
         $formeJuridique->setNom($data['nom']);
         $formeJuridique->setTemplateFormulaire($data['templateFormulaire']);
         $formeJuridique->setActif($data['actif'] ?? true);
-
-        $entityManager->persist($formeJuridique);
-        $entityManager->flush();
+        $formeJuridique->setFormeParDefaut($data['formeParDefaut'] ?? false);
+        // Gestion intelligente de l'ordre pour une nouvelle forme juridique
+        if (isset($data['ordre']) && $data['ordre'] > 0) {
+            // Si un ordre spécifique est demandé, l'assigner temporairement
+            $formeJuridique->setOrdre($data['ordre']);
+            $entityManager->persist($formeJuridique);
+            $entityManager->flush();
+            
+            // Puis réorganiser tous les ordres
+            $repository = $entityManager->getRepository(FormeJuridique::class);
+            $repository->reorganizeOrdres($formeJuridique, $data['ordre']);
+        } else {
+            // Si pas d'ordre spécifié, prendre le prochain ordre disponible
+            $maxOrdre = $entityManager->createQuery('SELECT MAX(f.ordre) FROM App\Entity\FormeJuridique f')
+                ->getSingleScalarResult();
+            $formeJuridique->setOrdre(($maxOrdre ?? 0) + 1);
+            
+            $entityManager->persist($formeJuridique);
+            $entityManager->flush();
+        }
 
         return $this->json([
             'success' => true,
             'id' => $formeJuridique->getId(),
             'nom' => $formeJuridique->getNom(),
             'templateFormulaire' => $formeJuridique->getTemplateFormulaire(),
-            'actif' => $formeJuridique->isActif()
+            'actif' => $formeJuridique->isActif(),
+            'formeParDefaut' => $formeJuridique->isFormeParDefaut(),
+            'ordre' => $formeJuridique->getOrdre()
         ]);
     }
 
@@ -88,6 +113,13 @@ final class AdminController extends AbstractController
     public function updateFormeJuridique(FormeJuridique $formeJuridique, Request $request, EntityManagerInterface $entityManager): JsonResponse
     {
         $data = json_decode($request->getContent(), true);
+
+        // Si forme par défaut demandée, désactiver les autres d'abord
+        if (isset($data['formeParDefaut']) && $data['formeParDefaut']) {
+            $entityManager->createQuery('UPDATE App\Entity\FormeJuridique f SET f.formeParDefaut = false WHERE f.id != :id')
+                ->setParameter('id', $formeJuridique->getId())
+                ->execute();
+        }
 
         if (isset($data['nom'])) {
             $formeJuridique->setNom($data['nom']);
@@ -98,15 +130,30 @@ final class AdminController extends AbstractController
         if (isset($data['actif'])) {
             $formeJuridique->setActif($data['actif']);
         }
-
-        $entityManager->flush();
+        if (isset($data['formeParDefaut'])) {
+            $formeJuridique->setFormeParDefaut($data['formeParDefaut']);
+        }
+        
+        // Gestion intelligente de l'ordre avec réorganisation automatique
+        if (isset($data['ordre'])) {
+            $newOrdre = (int)$data['ordre'];
+            
+            // Utiliser la méthode de réorganisation du repository
+            $repository = $entityManager->getRepository(FormeJuridique::class);
+            $repository->reorganizeOrdres($formeJuridique, $newOrdre);
+        } else {
+            // Si pas de changement d'ordre, flush normal
+            $entityManager->flush();
+        }
 
         return $this->json([
             'success' => true,
             'id' => $formeJuridique->getId(),
             'nom' => $formeJuridique->getNom(),
             'templateFormulaire' => $formeJuridique->getTemplateFormulaire(),
-            'actif' => $formeJuridique->isActif()
+            'actif' => $formeJuridique->isActif(),
+            'formeParDefaut' => $formeJuridique->isFormeParDefaut(),
+            'ordre' => $formeJuridique->getOrdre()
         ]);
     }
 
@@ -231,5 +278,47 @@ www.technoprod.com';
         // Pour l'instant, on redirige vers l'API existante
         // Plus tard on pourra créer une vraie interface d'administration
         return $this->render('admin/produits.html.twig');
+    }
+
+    #[Route('/numerotation', name: 'app_admin_numerotation', methods: ['GET'])]
+    public function numerotation(DocumentNumerotationService $numerotationService): Response
+    {
+        $numerotations = $numerotationService->getToutesLesNumerotations();
+
+        return $this->render('admin/numerotation.html.twig', [
+            'numerotations' => $numerotations,
+        ]);
+    }
+
+    #[Route('/numerotation/{prefixe}/update', name: 'app_admin_numerotation_update', methods: ['POST'])]
+    public function updateNumerotation(string $prefixe, Request $request, DocumentNumerotationService $numerotationService): JsonResponse
+    {
+        $data = json_decode($request->getContent(), true);
+        $nouveauCompteur = (int) $data['compteur'];
+
+        if ($nouveauCompteur < 1) {
+            return $this->json([
+                'success' => false,
+                'error' => 'Le compteur doit être supérieur ou égal à 1'
+            ], 400);
+        }
+
+        try {
+            $numerotationService->setCompteur($prefixe, $nouveauCompteur);
+            
+            $prochainNumero = $numerotationService->getProchainNumero($prefixe);
+
+            return $this->json([
+                'success' => true,
+                'message' => 'Compteur mis à jour avec succès',
+                'compteur' => $nouveauCompteur,
+                'prochain_numero' => $prochainNumero
+            ]);
+        } catch (\Exception $e) {
+            return $this->json([
+                'success' => false,
+                'error' => 'Erreur lors de la mise à jour: ' . $e->getMessage()
+            ], 500);
+        }
     }
 }
