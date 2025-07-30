@@ -1,0 +1,248 @@
+{# Template pour le chargement AJAX - pas d'extension de base #}
+<div class="admin-section">
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <h3 class="section-title mb-0">
+            <i class="fas fa-credit-card me-2"></i>Gestion des Modes de Règlement
+        </h3>
+        <button class="btn btn-primary" data-bs-toggle="modal" data-bs-target="#modeReglementModal">
+            <i class="fas fa-plus me-2"></i>Nouveau Mode de Règlement
+        </button>
+    </div>
+
+    <div class="table-responsive">
+        <table class="table table-hover" id="modesReglementTable">
+            <thead class="table-dark">
+                <tr>
+                    <th>Ordre</th>
+                    <th>Code</th>
+                    <th>Nom</th>
+                    <th>Type Règlement</th>
+                    <th>Nb Jours</th>
+                    <th>Jour Règlement</th>
+                    <th>Mode Paiement</th>
+                    <th>Défaut</th>
+                    <th>Statut</th>
+                    <th>Actions</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for mode in modes_reglement %}
+                <tr data-id="{{ mode.id }}">
+                    <td>
+                        <span class="badge bg-secondary">{{ mode.ordre }}</span>
+                    </td>
+                    <td>
+                        <code class="small">{{ mode.code }}</code>
+                    </td>
+                    <td>
+                        <strong>{{ mode.nom }}</strong>
+                        {% if mode.note %}
+                            <i class="fas fa-sticky-note ms-1 text-warning" 
+                               title="{{ mode.note }}" data-bs-toggle="tooltip"></i>
+                        {% endif %}
+                    </td>
+                    <td>
+                        <span class="badge bg-info">{{ mode.typeReglementLibelle }}</span>
+                    </td>
+                    <td class="text-center">
+                        {% if mode.nombreJours %}
+                            <span class="badge bg-primary">{{ mode.nombreJours }}</span>
+                            <div class="small text-muted">jours</div>
+                        {% else %}
+                            <span class="text-muted">-</span>
+                        {% endif %}
+                    </td>
+                    <td class="text-center">
+                        {% if mode.jourReglement %}
+                            <span class="badge bg-success">{{ mode.jourReglement }}</span>
+                            <div class="small text-muted">du mois</div>
+                        {% else %}
+                            <span class="text-muted">-</span>
+                        {% endif %}
+                    </td>
+                    <td>
+                        {% if mode.modePaiement %}
+                            <span class="badge bg-success">{{ mode.modePaiement.nom }}</span>
+                            {% if mode.modePaiement.nature %}
+                                <br><small class="text-muted">{{ mode.modePaiement.nature }}</small>
+                            {% endif %}
+                        {% else %}
+                            <span class="text-muted">-</span>
+                        {% endif %}
+                    </td>
+                    <td>
+                        {% if mode.modeParDefaut %}
+                            <span class="badge bg-warning text-dark">
+                                <i class="fas fa-star me-1"></i>Défaut
+                            </span>
+                        {% else %}
+                            <span class="text-muted">-</span>
+                        {% endif %}
+                    </td>
+                    <td>
+                        <div class="form-check form-switch">
+                            <input class="form-check-input status-toggle" type="checkbox" 
+                                   data-id="{{ mode.id }}" {{ mode.actif ? 'checked' : '' }}>
+                            <label class="form-check-label">
+                                {{ mode.actif ? 'Actif' : 'Inactif' }}
+                            </label>
+                        </div>
+                    </td>
+                    <td>
+                        <div class="btn-group btn-group-sm">
+                            <button class="btn btn-outline-primary edit-btn" 
+                                    data-id="{{ mode.id }}"
+                                    data-code="{{ mode.code }}"
+                                    data-nom="{{ mode.nom }}"
+                                    data-nombrejours="{{ mode.nombreJours ?? '' }}"
+                                    data-typereglement="{{ mode.typeReglement }}"
+                                    data-jourreglement="{{ mode.jourReglement ?? '' }}"
+                                    data-modepaiementid="{{ mode.modePaiement ? mode.modePaiement.id : '' }}"
+                                    data-note="{{ mode.note ?? '' }}"
+                                    data-actif="{{ mode.actif ? 'true' : 'false' }}"
+                                    data-defaut="{{ mode.modeParDefaut ? 'true' : 'false' }}"
+                                    data-ordre="{{ mode.ordre }}">
+                                <i class="fas fa-edit"></i>
+                            </button>
+                            <button class="btn btn-outline-danger delete-btn" 
+                                    data-id="{{ mode.id }}"
+                                    data-nom="{{ mode.nom }}">
+                                <i class="fas fa-trash"></i>
+                            </button>
+                        </div>
+                    </td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+</div>
+
+<!-- Modal Mode de Règlement -->
+<div class="modal fade" id="modeReglementModal" tabindex="-1">
+    <div class="modal-dialog modal-lg">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">
+                    <i class="fas fa-credit-card me-2"></i>
+                    <span id="modal-title">Nouveau Mode de Règlement</span>
+                </h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <form id="modeReglementForm">
+                    <input type="hidden" id="mode-id">
+                    
+                    <div class="row">
+                        <div class="col-md-4">
+                            <div class="mb-3">
+                                <label for="mode-code" class="form-label">Code *</label>
+                                <input type="text" class="form-control" id="mode-code" required
+                                       maxlength="6" placeholder="Ex: REG01">
+                                <div class="form-text">Code unique (6 caractères max)</div>
+                            </div>
+                        </div>
+                        <div class="col-md-8">
+                            <div class="mb-3">
+                                <label for="mode-nom" class="form-label">Nom *</label>
+                                <input type="text" class="form-control" id="mode-nom" required
+                                       placeholder="Ex: 30 jours net">
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="row">
+                        <div class="col-md-6">
+                            <div class="mb-3">
+                                <label for="mode-type-reglement" class="form-label">Type de règlement *</label>
+                                <select class="form-select" id="mode-type-reglement" required>
+                                    <option value="">Sélectionner un type</option>
+                                    <option value="comptant">Comptant</option>
+                                    <option value="fin_de_mois">Fin de mois</option>
+                                    <option value="fin_de_mois_plus_jours">Fin de mois + jours</option>
+                                    <option value="fin_de_mois_le_jour">Fin de mois le jour</option>
+                                </select>
+                            </div>
+                        </div>
+                        <div class="col-md-6">
+                            <div class="mb-3">
+                                <label for="mode-mode-paiement" class="form-label">Mode de paiement *</label>
+                                <select class="form-select" id="mode-mode-paiement" required>
+                                    <option value="">Sélectionner un mode</option>
+                                    {% for modePaiement in modes_paiement %}
+                                        <option value="{{ modePaiement.id }}">{{ modePaiement.nom }}</option>
+                                    {% endfor %}
+                                </select>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="row" id="type-reglement-fields">
+                        <div class="col-md-6">
+                            <div class="mb-3" id="nombre-jours-field">
+                                <label for="mode-nombre-jours" class="form-label">Nombre de jours</label>
+                                <input type="number" class="form-control" id="mode-nombre-jours" 
+                                       min="0" max="365" placeholder="Ex: 30">
+                                <div class="form-text">Nombre de jours (optionnel)</div>
+                            </div>
+                        </div>
+                        <div class="col-md-6">
+                            <div class="mb-3" id="jour-reglement-field">
+                                <label for="mode-jour-reglement" class="form-label">Jour de règlement</label>
+                                <input type="number" class="form-control" id="mode-jour-reglement" 
+                                       min="1" max="31" placeholder="Ex: 15">
+                                <div class="form-text">Jour du mois 1-31 (optionnel)</div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="mb-3">
+                        <label for="mode-note" class="form-label">Note</label>
+                        <textarea class="form-control" id="mode-note" rows="3"
+                                  placeholder="Commentaires ou notes sur ce mode de règlement..."></textarea>
+                    </div>
+
+                    <div class="row">
+                        <div class="col-md-6">
+                            <div class="mb-3">
+                                <label for="mode-ordre" class="form-label">Ordre d'affichage</label>
+                                <input type="number" class="form-control" id="mode-ordre" 
+                                       min="1" value="1" step="1" required>
+                                <div class="form-text">Position dans les menus déroulants</div>
+                            </div>
+                        </div>
+                        <div class="col-md-6">
+                            <div class="mt-4">
+                                <div class="form-check form-switch">
+                                    <input class="form-check-input" type="checkbox" id="mode-defaut">
+                                    <label class="form-check-label" for="mode-defaut">
+                                        <strong>Mode par défaut</strong>
+                                    </label>
+                                    <div class="form-text">Sélectionné automatiquement</div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div class="mb-3">
+                        <div class="form-check form-switch">
+                            <input class="form-check-input" type="checkbox" id="mode-actif" checked>
+                            <label class="form-check-label" for="mode-actif">
+                                Mode actif
+                            </label>
+                        </div>
+                    </div>
+                </form>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Annuler</button>
+                <button type="button" class="btn btn-primary" id="save-mode">
+                    <i class="fas fa-save me-2"></i>Enregistrer
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+
+
+{# Fin du template AJAX #}
