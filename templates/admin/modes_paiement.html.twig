@@ -259,4 +259,207 @@
 </div>
 
 
+<script>
+function initModesPaiementEvents() {
+    console.log('initModesPaiementEvents called');
+    
+    // Éviter l'exécution multiple
+    if (window.modesPaiementInitialized) {
+        console.log('Modes paiement already initialized, skipping');
+        return;
+    }
+    
+    // Vérifier que tous les éléments nécessaires existent
+    const requiredElements = [
+        'mode-paiement-id', 'mode-paiement-code', 'mode-paiement-nom', 
+        'mode-paiement-nature', 'mode-paiement-banque-defaut', 'mode-paiement-remettre-banque',
+        'mode-paiement-code-journal', 'mode-paiement-compte-remise',
+        'mode-paiement-ordre', 'mode-paiement-note', 'mode-paiement-defaut', 'mode-paiement-actif'
+    ];
+    
+    for (let elementId of requiredElements) {
+        if (!document.getElementById(elementId)) {
+            console.error(`Element ${elementId} not found in DOM`);
+            return;
+        }
+    }
+    
+    console.log('All required elements found, setting up events');
+    
+    // Créer une instance réutilisable du modal
+    const modalElement = document.getElementById('modePaiementModal');
+    const modalInstance = new bootstrap.Modal(modalElement);
+    
+    // Gestion du bouton "Nouveau"
+    const newButton = document.querySelector('[data-bs-target="#modePaiementModal"]');
+    if (newButton) {
+        // Supprimer l'attribut data-bs-toggle pour gérer manuellement
+        newButton.removeAttribute('data-bs-toggle');
+        newButton.removeAttribute('data-bs-target');
+        
+        newButton.addEventListener('click', function() {
+            // Nettoyer les backdrops existants avant d'ouvrir le modal
+            const existingBackdrops = document.querySelectorAll('.modal-backdrop');
+            existingBackdrops.forEach(backdrop => backdrop.remove());
+            document.body.classList.remove('modal-open');
+            
+            // Reset du formulaire pour nouveau
+            document.getElementById('modePaiementForm').reset();
+            document.getElementById('mode-paiement-id').value = '';
+            document.getElementById('modal-title').textContent = 'Nouveau Mode de Paiement';
+            
+            modalInstance.show();
+        });
+    }
+    
+    // Gestion des boutons d'édition
+    document.querySelectorAll('.edit-btn').forEach(btn => {
+        btn.addEventListener('click', function() {
+            console.log('Edit button clicked for:', this.dataset.id);
+            const id = this.dataset.id;
+            document.getElementById('mode-paiement-id').value = id;
+            document.getElementById('mode-paiement-code').value = this.dataset.code;
+            document.getElementById('mode-paiement-nom').value = this.dataset.nom;
+            document.getElementById('mode-paiement-nature').value = this.dataset.nature || '';
+            document.getElementById('mode-paiement-banque-defaut').value = this.dataset.banqueParDefaut || '';
+            document.getElementById('mode-paiement-remettre-banque').checked = this.dataset.remettreEnBanque === 'true';
+            document.getElementById('mode-paiement-code-journal').value = this.dataset.codeJournalRemise || '';
+            document.getElementById('mode-paiement-compte-remise').value = this.dataset.compteRemise || '';
+            document.getElementById('mode-paiement-ordre').value = this.dataset.ordre;
+            document.getElementById('mode-paiement-note').value = this.dataset.note || '';
+            document.getElementById('mode-paiement-defaut').checked = this.dataset.defaut === 'true';
+            document.getElementById('mode-paiement-actif').checked = this.dataset.actif === 'true';
+            
+            document.getElementById('modal-title').textContent = 'Modifier le Mode de Paiement';
+            
+            // Nettoyer les backdrops existants avant d'ouvrir le modal
+            const existingBackdrops = document.querySelectorAll('.modal-backdrop');
+            existingBackdrops.forEach(backdrop => backdrop.remove());
+            
+            modalInstance.show();
+        });
+    });
+
+    // Sauvegarde
+    document.getElementById('save-mode-paiement').addEventListener('click', function() {
+        const id = document.getElementById('mode-paiement-id').value;
+        const data = {
+            code: document.getElementById('mode-paiement-code').value,
+            nom: document.getElementById('mode-paiement-nom').value,
+            nature: document.getElementById('mode-paiement-nature').value,
+            banque_defaut: document.getElementById('mode-paiement-banque-defaut').value || null,
+            remise_banque: document.getElementById('mode-paiement-remettre-banque').checked,
+            code_journal_remise: document.getElementById('mode-paiement-code-journal').value || null,
+            compte_remise: document.getElementById('mode-paiement-compte-remise').value || null,
+            ordre: parseInt(document.getElementById('mode-paiement-ordre').value),
+            note: document.getElementById('mode-paiement-note').value,
+            defaut: document.getElementById('mode-paiement-defaut').checked,
+            actif: document.getElementById('mode-paiement-actif').checked
+        };
+
+        const url = id ? `/admin/modes-paiement/${id}/update` : '/admin/modes-paiement/create';
+        const method = id ? 'PUT' : 'POST';
+
+        fetch(url, {
+            method: method,
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(data)
+        })
+        .then(response => response.json())
+        .then(result => {
+            if (result.success) {
+                location.reload();
+            } else {
+                alert('Erreur : ' + (result.message || result.error));
+            }
+        })
+        .catch(error => {
+            console.error('Error:', error);
+            alert('Erreur lors de la sauvegarde');
+        });
+    });
+
+    // Suppression
+    document.querySelectorAll('.delete-btn').forEach(btn => {
+        btn.addEventListener('click', function() {
+            if (confirm(`Êtes-vous sûr de vouloir supprimer le mode de paiement "${this.dataset.nom}" ?`)) {
+                fetch(`/admin/modes-paiement/${this.dataset.id}/delete`, { method: 'DELETE' })
+                .then(response => response.json())
+                .then(result => {
+                    if (result.success) {
+                        location.reload();
+                    } else {
+                        alert('Erreur : ' + (result.message || result.error));
+                    }
+                })
+                .catch(error => {
+                    console.error('Error:', error);
+                    alert('Erreur lors de la suppression');
+                });
+            }
+        });
+    });
+
+    // Toggle statut
+    document.querySelectorAll('.status-toggle').forEach(toggle => {
+        toggle.addEventListener('change', function() {
+            const id = this.dataset.id;
+            const actif = this.checked;
+            
+            fetch(`/admin/modes-paiement/${id}/update`, {
+                method: 'PUT',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ actif: actif })
+            })
+            .then(response => response.json())
+            .then(result => {
+                if (!result.success) {
+                    this.checked = !actif; // Revert
+                    alert('Erreur : ' + (result.message || result.error));
+                }
+            })
+            .catch(error => {
+                console.error('Error:', error);
+                this.checked = !actif; // Revert
+            });
+        });
+    });
+
+    // Reset du modal
+    document.getElementById('modePaiementModal').addEventListener('hidden.bs.modal', function() {
+        document.getElementById('modePaiementForm').reset();
+        document.getElementById('mode-paiement-id').value = '';
+        document.getElementById('modal-title').textContent = 'Nouveau Mode de Paiement';
+        
+        // Nettoyer manuellement le backdrop qui pourrait rester
+        const backdrops = document.querySelectorAll('.modal-backdrop');
+        backdrops.forEach(backdrop => backdrop.remove());
+        
+        // S'assurer que body n'a plus les classes de modal
+        document.body.classList.remove('modal-open');
+        document.body.style.overflow = '';
+        document.body.style.paddingRight = '';
+    });
+    
+    // Marquer comme initialisé
+    window.modesPaiementInitialized = true;
+    console.log('Modes paiement initialization completed');
+}
+
+// Initialisation pour AJAX loading
+if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', initModesPaiementEvents);
+} else {
+    setTimeout(initModesPaiementEvents, 50);
+}
+
+// Fonction globale pour appel depuis dashboard
+window.initModesPaiement = function() {
+    console.log('window.initModesPaiement called, waiting 300ms');
+    // Réinitialiser le flag pour permettre une nouvelle initialisation
+    window.modesPaiementInitialized = false;
+    setTimeout(initModesPaiementEvents, 300);
+};
+</script>
+
 {# Fin du template AJAX #}

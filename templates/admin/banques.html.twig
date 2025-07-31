@@ -410,4 +410,183 @@
     </div>
 </div>
 
+<script>
+function initBanquesEvents() {
+    // Gestion du bouton "Nouveau"
+    const newButton = document.querySelector('[data-bs-target="#banqueModal"]');
+    if (newButton) {
+        newButton.addEventListener('click', function() {
+            // Nettoyer les backdrops existants avant d'ouvrir le modal
+            const existingBackdrops = document.querySelectorAll('.modal-backdrop');
+            existingBackdrops.forEach(backdrop => backdrop.remove());
+            document.body.classList.remove('modal-open');
+        });
+    }
+    
+    // Gestion des boutons d'édition
+    document.querySelectorAll('.edit-btn').forEach(btn => {
+        btn.addEventListener('click', function() {
+            const id = this.dataset.id;
+            document.getElementById('banque-id').value = id;
+            document.getElementById('banque-code').value = this.dataset.code;
+            document.getElementById('banque-nom').value = this.dataset.nom;
+            document.getElementById('banque-adresse').value = this.dataset.adresse || '';
+            document.getElementById('banque-code-postal').value = this.dataset.codePostal || '';
+            document.getElementById('banque-ville').value = this.dataset.ville || '';
+            document.getElementById('banque-pays').value = this.dataset.pays || '';
+            document.getElementById('banque-telephone').value = this.dataset.telephone || '';
+            document.getElementById('banque-fax').value = this.dataset.fax || '';
+            document.getElementById('banque-email').value = this.dataset.email || '';
+            document.getElementById('banque-site-web').value = this.dataset.siteWeb || '';
+            document.getElementById('banque-iban').value = this.dataset.iban || '';
+            document.getElementById('banque-bic').value = this.dataset.bic || '';
+            document.getElementById('banque-rib-bban').value = this.dataset.ribBban || '';
+            document.getElementById('banque-numero-national-emetteur').value = this.dataset.numeroNationalEmetteur || '';
+            document.getElementById('banque-identifiant-creancier-sepa').value = this.dataset.identifiantCreancierSepa || '';
+            document.getElementById('banque-code-journal').value = this.dataset.codeJournal || '';
+            document.getElementById('banque-compte-comptable').value = this.dataset.compteComptable || '';
+            document.getElementById('banque-code-journal-remise').value = this.dataset.codeJournalRemise || '';
+            document.getElementById('banque-compte-paiements-encaisser').value = this.dataset.comptePaiementsEncaisser || '';
+            document.getElementById('banque-notes').value = this.dataset.notes || '';
+            document.getElementById('banque-ordre').value = this.dataset.ordre;
+            document.getElementById('banque-actif').checked = this.dataset.actif === 'true';
+            
+            document.getElementById('modal-title').textContent = 'Modifier la Banque';
+            
+            // Nettoyer les backdrops existants avant d'ouvrir le modal
+            const existingBackdrops = document.querySelectorAll('.modal-backdrop');
+            existingBackdrops.forEach(backdrop => backdrop.remove());
+            document.body.classList.remove('modal-open');
+            
+            new bootstrap.Modal(document.getElementById('banqueModal')).show();
+        });
+    });
+
+    // Sauvegarde
+    document.getElementById('save-banque').addEventListener('click', function() {
+        const id = document.getElementById('banque-id').value;
+        const data = {
+            code: document.getElementById('banque-code').value,
+            nom: document.getElementById('banque-nom').value,
+            adresse: document.getElementById('banque-adresse').value,
+            code_postal: document.getElementById('banque-code-postal').value,
+            ville: document.getElementById('banque-ville').value,
+            pays: document.getElementById('banque-pays').value,
+            telephone: document.getElementById('banque-telephone').value,
+            fax: document.getElementById('banque-fax').value,
+            email: document.getElementById('banque-email').value,
+            site_web: document.getElementById('banque-site-web').value,
+            iban: document.getElementById('banque-iban').value,
+            bic: document.getElementById('banque-bic').value,
+            rib_bban: document.getElementById('banque-rib-bban').value,
+            numero_national_emetteur: document.getElementById('banque-numero-national-emetteur').value,
+            identifiant_creancier_sepa: document.getElementById('banque-identifiant-creancier-sepa').value,
+            code_journal: document.getElementById('banque-code-journal').value,
+            compte_comptable: document.getElementById('banque-compte-comptable').value,
+            code_journal_remise: document.getElementById('banque-code-journal-remise').value,
+            compte_paiements_encaisser: document.getElementById('banque-compte-paiements-encaisser').value,
+            notes: document.getElementById('banque-notes').value,
+            ordre: parseInt(document.getElementById('banque-ordre').value),
+            actif: document.getElementById('banque-actif').checked
+        };
+
+        const url = id ? `/admin/banques/${id}/update` : '/admin/banques/create';
+        const method = id ? 'PUT' : 'POST';
+
+        fetch(url, {
+            method: method,
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(data)
+        })
+        .then(response => response.json())
+        .then(result => {
+            if (result.success) {
+                location.reload();
+            } else {
+                alert('Erreur : ' + (result.message || result.error));
+            }
+        })
+        .catch(error => {
+            console.error('Error:', error);
+            alert('Erreur lors de la sauvegarde');
+        });
+    });
+
+    // Suppression
+    document.querySelectorAll('.delete-btn').forEach(btn => {
+        btn.addEventListener('click', function() {
+            if (confirm(`Êtes-vous sûr de vouloir supprimer la banque "${this.dataset.nom}" ?`)) {
+                fetch(`/admin/banques/${this.dataset.id}/delete`, { method: 'DELETE' })
+                .then(response => response.json())
+                .then(result => {
+                    if (result.success) {
+                        location.reload();
+                    } else {
+                        alert('Erreur : ' + (result.message || result.error));
+                    }
+                })
+                .catch(error => {
+                    console.error('Error:', error);
+                    alert('Erreur lors de la suppression');
+                });
+            }
+        });
+    });
+
+    // Toggle statut
+    document.querySelectorAll('.status-toggle').forEach(toggle => {
+        toggle.addEventListener('change', function() {
+            const id = this.dataset.id;
+            const actif = this.checked;
+            
+            fetch(`/admin/banques/${id}/update`, {
+                method: 'PUT',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ actif: actif })
+            })
+            .then(response => response.json())
+            .then(result => {
+                if (!result.success) {
+                    this.checked = !actif; // Revert
+                    alert('Erreur : ' + (result.message || result.error));
+                }
+            })
+            .catch(error => {
+                console.error('Error:', error);
+                this.checked = !actif; // Revert
+            });
+        });
+    });
+
+    // Reset du modal
+    document.getElementById('banqueModal').addEventListener('hidden.bs.modal', function() {
+        document.getElementById('banqueForm').reset();
+        document.getElementById('banque-id').value = '';
+        document.getElementById('modal-title').textContent = 'Nouvelle Banque';
+        document.getElementById('banque-pays').value = 'France';
+        
+        // Nettoyer manuellement le backdrop qui pourrait rester
+        const backdrops = document.querySelectorAll('.modal-backdrop');
+        backdrops.forEach(backdrop => backdrop.remove());
+        
+        // S'assurer que body n'a plus les classes de modal
+        document.body.classList.remove('modal-open');
+        document.body.style.overflow = '';
+        document.body.style.paddingRight = '';
+    });
+}
+
+// Initialisation pour AJAX loading
+if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', initBanquesEvents);
+} else {
+    setTimeout(initBanquesEvents, 50);
+}
+
+// Fonction globale pour appel depuis dashboard
+window.initBanques = function() {
+    setTimeout(initBanquesEvents, 100);
+};
+</script>
+
 {# Fin du template AJAX #}

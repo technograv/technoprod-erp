@@ -23,6 +23,9 @@ class FormeJuridique
     #[ORM\Column]
     private bool $actif = true;
 
+    #[ORM\Column]
+    private int $ordre = 0;
+
     #[ORM\Column(type: Types::DATETIME_IMMUTABLE)]
     private ?\DateTimeImmutable $createdAt = null;
 
@@ -72,6 +75,18 @@ class FormeJuridique
     public function setActif(bool $actif): static
     {
         $this->actif = $actif;
+        $this->updatedAt = new \DateTimeImmutable();
+        return $this;
+    }
+
+    public function getOrdre(): int
+    {
+        return $this->ordre;
+    }
+
+    public function setOrdre(int $ordre): static
+    {
+        $this->ordre = $ordre;
         $this->updatedAt = new \DateTimeImmutable();
         return $this;
     }
