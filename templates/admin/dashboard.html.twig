@@ -174,6 +174,31 @@
                 </a>
             </li>
             <li class="nav-item">
+                <a class="nav-link" data-bs-toggle="tab" href="#tags-clients" role="tab">
+                    <i class="fas fa-tags me-2"></i>Tags Clients
+                </a>
+            </li>
+            <li class="nav-item">
+                <a class="nav-link" data-bs-toggle="tab" href="#moyens-paiement" role="tab">
+                    <i class="fas fa-money-check-alt me-2"></i>Moyens de Paiement
+                </a>
+            </li>
+            <li class="nav-item">
+                <a class="nav-link" data-bs-toggle="tab" href="#modes-reglement" role="tab">
+                    <i class="fas fa-credit-card me-2"></i>Modes de Règlement
+                </a>
+            </li>
+            <li class="nav-item">
+                <a class="nav-link" data-bs-toggle="tab" href="#banques" role="tab">
+                    <i class="fas fa-university me-2"></i>Banques
+                </a>
+            </li>
+            <li class="nav-item">
+                <a class="nav-link" data-bs-toggle="tab" href="#taux-tva" role="tab">
+                    <i class="fas fa-percent me-2"></i>Taux TVA
+                </a>
+            </li>
+            <li class="nav-item">
                 <a class="nav-link" data-bs-toggle="tab" href="#settings" role="tab">
                     <i class="fas fa-cogs me-2"></i>Paramètres
                 </a>
@@ -228,6 +253,40 @@
                     <div class="stats-card">
                         <div class="stats-number">{{ stats.produits }}</div>
                         <div class="stats-label">Produits</div>
+                    </div>
+                </div>
+            </div>
+            <div class="row mb-4">
+                <div class="col-md-3 mb-3">
+                    <div class="stats-card">
+                        <div class="stats-number">{{ stats.tags }}</div>
+                        <div class="stats-label">Tags Clients</div>
+                    </div>
+                </div>
+                <div class="col-md-3 mb-3">
+                    <div class="stats-card">
+                        <div class="stats-number">{{ stats.modes_paiement }}</div>
+                        <div class="stats-label">Moyens Paiement</div>
+                    </div>
+                </div>
+                <div class="col-md-3 mb-3">
+                    <div class="stats-card">
+                        <div class="stats-number">{{ stats.modes_reglement }}</div>
+                        <div class="stats-label">Modes Règlement</div>
+                    </div>
+                </div>
+                <div class="col-md-3 mb-3">
+                    <div class="stats-card">
+                        <div class="stats-number">{{ stats.banques }}</div>
+                        <div class="stats-label">Banques</div>
+                    </div>
+                </div>
+            </div>
+            <div class="row mb-4">
+                <div class="col-md-3 mb-3">
+                    <div class="stats-card">
+                        <div class="stats-number">{{ stats.taux_tva }}</div>
+                        <div class="stats-label">Taux TVA</div>
                     </div>
                 </div>
             </div>
@@ -359,6 +418,81 @@
             </div>
         </div>
 
+        <!-- Tags Clients -->
+        <div class="tab-pane fade" id="tags-clients" role="tabpanel">
+            <div class="admin-section">
+                <h3 class="section-title">
+                    <i class="fas fa-tags me-2"></i>Gestion des Tags Clients
+                </h3>
+                <p class="text-muted">Chargement en cours...</p>
+                <div class="text-center">
+                    <div class="spinner-border text-primary" role="status">
+                        <span class="visually-hidden">Chargement...</span>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Moyens de Paiement -->
+        <div class="tab-pane fade" id="moyens-paiement" role="tabpanel">
+            <div class="admin-section">
+                <h3 class="section-title">
+                    <i class="fas fa-money-check-alt me-2"></i>Gestion des Moyens de Paiement
+                </h3>
+                <p class="text-muted">Chargement en cours...</p>
+                <div class="text-center">
+                    <div class="spinner-border text-primary" role="status">
+                        <span class="visually-hidden">Chargement...</span>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Modes de Règlement -->
+        <div class="tab-pane fade" id="modes-reglement" role="tabpanel">
+            <div class="admin-section">
+                <h3 class="section-title">
+                    <i class="fas fa-credit-card me-2"></i>Gestion des Modes de Règlement
+                </h3>
+                <p class="text-muted">Chargement en cours...</p>
+                <div class="text-center">
+                    <div class="spinner-border text-primary" role="status">
+                        <span class="visually-hidden">Chargement...</span>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Banques -->
+        <div class="tab-pane fade" id="banques" role="tabpanel">
+            <div class="admin-section">
+                <h3 class="section-title">
+                    <i class="fas fa-university me-2"></i>Gestion des Banques
+                </h3>
+                <p class="text-muted">Chargement en cours...</p>
+                <div class="text-center">
+                    <div class="spinner-border text-primary" role="status">
+                        <span class="visually-hidden">Chargement...</span>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Taux TVA -->
+        <div class="tab-pane fade" id="taux-tva" role="tabpanel">
+            <div class="admin-section">
+                <h3 class="section-title">
+                    <i class="fas fa-percent me-2"></i>Gestion des Taux TVA
+                </h3>
+                <p class="text-muted">Chargement en cours...</p>
+                <div class="text-center">
+                    <div class="spinner-border text-primary" role="status">
+                        <span class="visually-hidden">Chargement...</span>
+                    </div>
+                </div>
+            </div>
+        </div>
+
         <div class="tab-pane fade" id="settings" role="tabpanel">
             <div class="admin-section">
                 <h3 class="section-title">
@@ -410,25 +544,145 @@
                 case '#produits':
                     url = '{{ path("app_admin_produits") }}';
                     break;
+                case '#tags-clients':
+                    url = '{{ path("app_admin_tags") }}';
+                    break;
+                case '#moyens-paiement':
+                    url = '{{ path("app_admin_modes_paiement") }}';
+                    break;
+                case '#modes-reglement':
+                    url = '{{ path("app_admin_modes_reglement") }}';
+                    break;
+                case '#banques':
+                    url = '{{ path("app_admin_banques") }}';
+                    break;
+                case '#taux-tva':
+                    url = '{{ path("app_admin_taux_tva") }}';
+                    break;
                 case '#settings':
                     url = '{{ path("app_admin_settings") }}';
                     break;
             }
             
             if (url) {
-                fetch(url)
-                    .then(response => response.text())
+                console.log('Loading tab:', tabId, 'URL:', url);
+                fetch(url, {
+                        credentials: 'same-origin',
+                        headers: {
+                            'X-Requested-With': 'XMLHttpRequest'
+                        }
+                    })
+                    .then(response => {
+                        console.log('Response status:', response.status);
+                        console.log('Response URL:', response.url);
+                        
+                        // Check if redirected to login
+                        if (response.url.includes('/login')) {
+                            throw new Error('Session expired - redirected to login');
+                        }
+                        
+                        if (!response.ok) {
+                            throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+                        }
+                        return response.text();
+                    })
                     .then(html => {
+                        console.log('HTML loaded, length:', html.length);
                         // Remplacer tout le contenu de l'onglet avec la réponse HTML
                         tabContent.innerHTML = html;
                         tabContent.dataset.loaded = 'true';
+                        
+                        // Exécuter les scripts qui sont dans le HTML chargé
+                        const scripts = tabContent.querySelectorAll('script');
+                        scripts.forEach(script => {
+                            const newScript = document.createElement('script');
+                            if (script.src) {
+                                newScript.src = script.src;
+                            } else {
+                                newScript.textContent = script.textContent;
+                            }
+                            document.head.appendChild(newScript);
+                            console.log('Script executed for tab:', tabId);
+                        });
+                        
+                        // Initialiser les fonctions JavaScript spécifiques à chaque onglet
+                        // Attendre que les scripts soient exécutés
+                        setTimeout(() => {
+                            console.log('Initializing tab:', tabId);
+                            
+                            let functionName = '';
+                            let initFunction = null;
+                            
+                            switch(tabId) {
+                                case '#formes-juridiques':
+                                    functionName = 'initFormesJuridiques';
+                                    initFunction = window.initFormesJuridiques;
+                                    break;
+                                case '#tags-clients':
+                                    functionName = 'initTagsClients';
+                                    initFunction = window.initTagsClients;
+                                    break;
+                                case '#moyens-paiement':
+                                    functionName = 'initModesPaiement';
+                                    initFunction = window.initModesPaiement;
+                                    break;
+                                case '#modes-reglement':
+                                    functionName = 'initModesReglement';
+                                    initFunction = window.initModesReglement;
+                                    break;
+                                case '#banques':
+                                    functionName = 'initBanques';
+                                    initFunction = window.initBanques;
+                                    break;
+                                case '#taux-tva':
+                                    functionName = 'initTauxTva';
+                                    initFunction = window.initTauxTva;
+                                    break;
+                            }
+                            
+                            if (typeof initFunction === 'function') {
+                                console.log(`Successfully calling ${functionName}`);
+                                initFunction();
+                            } else {
+                                console.error(`${functionName} not found - script may not have executed properly`);
+                            }
+                        }, 100);
                     })
                     .catch(error => {
                         console.error('Erreur de chargement:', error);
-                        tabContent.innerHTML = '<p class="text-danger">Erreur de chargement du contenu.</p>';
+                        
+                        let errorHtml;
+                        if (error.message.includes('Session expired')) {
+                            errorHtml = `
+                                <div class="alert alert-warning">
+                                    <h5><i class="fas fa-exclamation-triangle me-2"></i>Session expirée</h5>
+                                    <p>Votre session d'administration a expiré.</p>
+                                    <button class="btn btn-primary" onclick="window.location.reload()">
+                                        <i class="fas fa-sync me-2"></i>Recharger la page
+                                    </button>
+                                </div>
+                            `;
+                        } else {
+                            errorHtml = `
+                                <div class="alert alert-danger">
+                                    <h5><i class="fas fa-exclamation-circle me-2"></i>Erreur de chargement</h5>
+                                    <p><strong>Onglet:</strong> ${tabId}</p>
+                                    <p><strong>URL:</strong> ${url}</p>
+                                    <p><strong>Erreur:</strong> ${error.message}</p>
+                                    <button class="btn btn-outline-primary" onclick="window.location.reload()">
+                                        <i class="fas fa-sync me-2"></i>Recharger la page
+                                    </button>
+                                </div>
+                            `;
+                        }
+                        
+                        tabContent.innerHTML = errorHtml;
                     });
             }
         }
+        
+        // Les fonctions d'initialisation sont définies dans chaque template AJAX
+        // et seront disponibles après le chargement du contenu
     });
     </script>
 {% endblock %}

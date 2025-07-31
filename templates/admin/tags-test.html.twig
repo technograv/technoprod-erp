@@ -1,0 +1,82 @@
+{% extends 'base.html.twig' %}
+
+{% block title %}Test Tags - TechnoProd{% endblock %}
+
+{% block body %}
+<div class="container-fluid">
+    <h1>Test Tags - Count: {{ tags|length }}</h1>
+    
+    {% if tags is defined and tags is not empty %}
+        <div class="alert alert-success">
+            Variable 'tags' existe et contient {{ tags|length }} éléments
+        </div>
+        
+        <table class="table">
+            <thead>
+                <tr>
+                    <th>ID</th>
+                    <th>Nom</th>
+                    <th>Couleur</th>
+                    <th>Ordre</th>
+                    <th>Actif</th>
+                    <th>Clients</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for tag in tags %}
+                <tr>
+                    <td>{{ tag.id }}</td>
+                    <td>{{ tag.nom }}</td>
+                    <td>{{ tag.couleur ?? 'N/A' }}</td>
+                    <td>{{ tag.ordre }}</td>
+                    <td>{{ tag.actif ? 'Oui' : 'Non' }}</td>
+                    <td>
+                        {% if tag.clients is defined %}
+                            {{ tag.clients|length }}
+                        {% else %}
+                            N/A
+                        {% endif %}
+                    </td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    {% else %}
+        <div class="alert alert-danger">
+            Variable 'tags' n'existe pas ou est vide
+        </div>
+    {% endif %}
+    
+    <hr>
+    <h2>Test boutons JavaScript</h2>
+    <button class="btn btn-primary edit-btn" 
+            data-id="1"
+            data-nom="Test Tag"
+            data-couleur="#ff0000"
+            data-description="Test description"
+            data-actif="true"
+            data-assignation-automatique="true"
+            data-ordre="1">
+        Test Bouton Edit
+    </button>
+    
+    <div id="debug"></div>
+</div>
+
+<script>
+function testTagsEvents() {
+    console.log('testTagsEvents called');
+    
+    document.querySelectorAll('.edit-btn').forEach(btn => {
+        btn.addEventListener('click', function() {
+            console.log('Edit button clicked!');
+            console.log('Dataset:', this.dataset);
+            document.getElementById('debug').innerHTML = 'Bouton cliqué! ID: ' + this.dataset.id;
+        });
+    });
+}
+
+// Appel immédiat
+testTagsEvents();
+</script>
+{% endblock %}

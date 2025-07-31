@@ -245,4 +245,158 @@
 </div>
 
 
+<script>
+function initModesReglementEvents() {
+    // Gestion du bouton "Nouveau"
+    const newButton = document.querySelector('[data-bs-target="#modeReglementModal"]');
+    if (newButton) {
+        newButton.addEventListener('click', function() {
+            // Nettoyer les backdrops existants avant d'ouvrir le modal
+            const existingBackdrops = document.querySelectorAll('.modal-backdrop');
+            existingBackdrops.forEach(backdrop => backdrop.remove());
+            document.body.classList.remove('modal-open');
+        });
+    }
+    
+    // Gestion des boutons d'édition
+    document.querySelectorAll('.edit-btn').forEach(btn => {
+        btn.addEventListener('click', function() {
+            const id = this.dataset.id;
+            document.getElementById('mode-id').value = id;
+            document.getElementById('mode-code').value = this.dataset.code;
+            document.getElementById('mode-nom').value = this.dataset.nom;
+            document.getElementById('mode-type-reglement').value = this.dataset.typereglement || '';
+            document.getElementById('mode-nombre-jours').value = this.dataset.nombrejours || '';
+            document.getElementById('mode-jour-reglement').value = this.dataset.jourreglement || '';
+            document.getElementById('mode-paiement-id').value = this.dataset.modepaiementid || '';
+            document.getElementById('mode-ordre').value = this.dataset.ordre;
+            document.getElementById('mode-note').value = this.dataset.note || '';
+            document.getElementById('mode-defaut').checked = this.dataset.defaut === 'true';
+            document.getElementById('mode-actif').checked = this.dataset.actif === 'true';
+            
+            document.getElementById('modal-title').textContent = 'Modifier le Mode de Règlement';
+            
+            // Nettoyer les backdrops existants avant d'ouvrir le modal
+            const existingBackdrops = document.querySelectorAll('.modal-backdrop');
+            existingBackdrops.forEach(backdrop => backdrop.remove());
+            document.body.classList.remove('modal-open');
+            
+            new bootstrap.Modal(document.getElementById('modeReglementModal')).show();
+        });
+    });
+
+    // Sauvegarde
+    document.getElementById('save-mode').addEventListener('click', function() {
+        const id = document.getElementById('mode-id').value;
+        const data = {
+            code: document.getElementById('mode-code').value,
+            nom: document.getElementById('mode-nom').value,
+            type_reglement: document.getElementById('mode-type-reglement').value,
+            nombre_jours: document.getElementById('mode-nombre-jours').value ? parseInt(document.getElementById('mode-nombre-jours').value) : null,
+            jour_reglement: document.getElementById('mode-jour-reglement').value ? parseInt(document.getElementById('mode-jour-reglement').value) : null,
+            mode_paiement_id: document.getElementById('mode-paiement-id').value || null,
+            ordre: parseInt(document.getElementById('mode-ordre').value),
+            note: document.getElementById('mode-note').value,
+            defaut: document.getElementById('mode-defaut').checked,
+            actif: document.getElementById('mode-actif').checked
+        };
+
+        const url = id ? `/admin/modes-reglement/${id}/update` : '/admin/modes-reglement/create';
+        const method = id ? 'PUT' : 'POST';
+
+        fetch(url, {
+            method: method,
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(data)
+        })
+        .then(response => response.json())
+        .then(result => {
+            if (result.success) {
+                location.reload();
+            } else {
+                alert('Erreur : ' + (result.message || result.error));
+            }
+        })
+        .catch(error => {
+            console.error('Error:', error);
+            alert('Erreur lors de la sauvegarde');
+        });
+    });
+
+    // Suppression
+    document.querySelectorAll('.delete-btn').forEach(btn => {
+        btn.addEventListener('click', function() {
+            if (confirm(`Êtes-vous sûr de vouloir supprimer le mode de règlement "${this.dataset.nom}" ?`)) {
+                fetch(`/admin/modes-reglement/${this.dataset.id}/delete`, { method: 'DELETE' })
+                .then(response => response.json())
+                .then(result => {
+                    if (result.success) {
+                        location.reload();
+                    } else {
+                        alert('Erreur : ' + (result.message || result.error));
+                    }
+                })
+                .catch(error => {
+                    console.error('Error:', error);
+                    alert('Erreur lors de la suppression');
+                });
+            }
+        });
+    });
+
+    // Toggle statut
+    document.querySelectorAll('.status-toggle').forEach(toggle => {
+        toggle.addEventListener('change', function() {
+            const id = this.dataset.id;
+            const actif = this.checked;
+            
+            fetch(`/admin/modes-reglement/${id}/update`, {
+                method: 'PUT',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ actif: actif })
+            })
+            .then(response => response.json())
+            .then(result => {
+                if (!result.success) {
+                    this.checked = !actif; // Revert
+                    alert('Erreur : ' + (result.message || result.error));
+                }
+            })
+            .catch(error => {
+                console.error('Error:', error);
+                this.checked = !actif; // Revert
+            });
+        });
+    });
+
+    // Reset du modal
+    document.getElementById('modeReglementModal').addEventListener('hidden.bs.modal', function() {
+        document.getElementById('modeReglementForm').reset();
+        document.getElementById('mode-id').value = '';
+        document.getElementById('modal-title').textContent = 'Nouveau Mode de Règlement';
+        
+        // Nettoyer manuellement le backdrop qui pourrait rester
+        const backdrops = document.querySelectorAll('.modal-backdrop');
+        backdrops.forEach(backdrop => backdrop.remove());
+        
+        // S'assurer que body n'a plus les classes de modal
+        document.body.classList.remove('modal-open');
+        document.body.style.overflow = '';
+        document.body.style.paddingRight = '';
+    });
+}
+
+// Initialisation pour AJAX loading
+if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', initModesReglementEvents);
+} else {
+    setTimeout(initModesReglementEvents, 50);
+}
+
+// Fonction globale pour appel depuis dashboard
+window.initModesReglement = function() {
+    setTimeout(initModesReglementEvents, 100);
+};
+</script>
+
 {# Fin du template AJAX #}

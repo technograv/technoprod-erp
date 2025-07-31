@@ -10,6 +10,8 @@ use App\Entity\Produit;
 use App\Entity\ModeReglement;
 use App\Entity\ModePaiement;
 use App\Entity\Banque;
+use App\Entity\Tag;
+use App\Entity\TauxTVA;
 use App\Entity\MethodeExpedition;
 use App\Entity\ModeleDocument;
 use App\Service\DocumentNumerotationService;
@@ -43,6 +45,8 @@ final class AdminController extends AbstractController
             'modes_reglement' => $entityManager->getRepository(ModeReglement::class)->count([]),
             'modes_paiement' => $entityManager->getRepository(ModePaiement::class)->count([]),
             'banques' => $entityManager->getRepository(Banque::class)->count([]),
+            'tags' => $entityManager->getRepository(Tag::class)->count([]),
+            'taux_tva' => $entityManager->getRepository(TauxTVA::class)->count([]),
             'methodes_expedition' => $entityManager->getRepository(MethodeExpedition::class)->count([]),
             'modeles_document' => $entityManager->getRepository(ModeleDocument::class)->count([])
         ];
@@ -1033,5 +1037,341 @@ www.technoprod.com';
         } catch (\Exception $e) {
             return $this->json(['success' => false, 'error' => 'Erreur lors de la suppression: ' . $e->getMessage()], 500);
         }
+    }
+
+    #[Route('/tags', name: 'app_admin_tags', methods: ['GET'])]
+    public function tags(EntityManagerInterface $entityManager): Response
+    {
+        try {
+            // Vérifier l'authentification
+            $user = $this->getUser();
+            if (!$user) {
+                error_log('Tags Controller: User not authenticated');
+                return $this->render('admin/tags.html.twig', [
+                    'tags' => [],
+                    'error' => 'User not authenticated'
+                ]);
+            }
+            
+            if (!in_array('ROLE_ADMIN', $user->getRoles())) {
+                error_log('Tags Controller: User not admin: ' . $user->getUserIdentifier());
+                return $this->render('admin/tags.html.twig', [
+                    'tags' => [],
+                    'error' => 'Access denied - not admin'
+                ]);
+            }
+            
+            // Récupération des tags avec chargement des clients
+            $tags = $entityManager->getRepository(Tag::class)
+                ->createQueryBuilder('t')
+                ->leftJoin('t.clients', 'c')
+                ->addSelect('c')
+                ->orderBy('t.ordre', 'ASC')
+                ->getQuery()
+                ->getResult();
+            
+            error_log('Tags Controller SUCCESS - User: ' . $user->getUserIdentifier() . ' - Count: ' . count($tags));
+            
+            return $this->render('admin/tags.html.twig', [
+                'tags' => $tags,
+            ]);
+        } catch (\Exception $e) {
+            error_log('Tags Controller EXCEPTION: ' . $e->getMessage());
+            error_log('Tags Controller Stack: ' . $e->getTraceAsString());
+            
+            // Return a fallback template with empty tags array
+            return $this->render('admin/tags.html.twig', [
+                'tags' => [],
+                'error' => 'Exception: ' . $e->getMessage(),
+            ]);
+        }
+    }
+
+    #[Route('/tags-test', name: 'app_admin_tags_test', methods: ['GET'])]
+    public function tagsTest(EntityManagerInterface $entityManager): Response
+    {
+        $tags = $entityManager->getRepository(Tag::class)->findBy([], ['ordre' => 'ASC']);
+        
+        return $this->render('admin/tags-test.html.twig', [
+            'tags' => $tags,
+        ]);
+    }
+
+    #[Route('/debug-auth', name: 'app_admin_debug_auth', methods: ['GET'])]
+    public function debugAuth(): JsonResponse
+    {
+        $user = $this->getUser();
+        
+        return $this->json([
+            'authenticated' => $user !== null,
+            'user_email' => $user ? $user->getUserIdentifier() : null,
+            'roles' => $user ? $user->getRoles() : [],
+            'has_admin_role' => $user ? in_array('ROLE_ADMIN', $user->getRoles()) : false,
+            'timestamp' => new \DateTime(),
+            'session_id' => session_id(),
+            'php_version' => PHP_VERSION,
+        ]);
+    }
+
+    #[Route('/tags/create', name: 'app_admin_tags_create', methods: ['POST'])]
+    public function createTag(Request $request, EntityManagerInterface $entityManager): JsonResponse
+    {
+        try {
+            $data = json_decode($request->getContent(), true);
+
+            $tag = new Tag();
+            $tag->setNom($data['nom']);
+            $tag->setCouleur($data['couleur'] ?? '#3498db');
+            $tag->setDescription($data['description'] ?? null);
+            $tag->setActif($data['actif'] ?? true);
+            $tag->setAssignationAutomatique($data['assignation_automatique'] ?? true);
+            
+            // Assigner l'ordre
+            if (isset($data['ordre'])) {
+                $tag->setOrdre((int)$data['ordre']);
+            } else {
+                // Si pas d'ordre spécifique, mettre à la fin
+                $maxOrdre = $entityManager->getRepository(Tag::class)->createQueryBuilder('t')
+                    ->select('MAX(t.ordre)')
+                    ->getQuery()
+                    ->getSingleScalarResult();
+                $tag->setOrdre(($maxOrdre ?? 0) + 1);
+            }
+
+            $entityManager->persist($tag);
+            $entityManager->flush();
+
+            // Réorganiser les ordres si nécessaire
+            if (isset($data['ordre'])) {
+                $entityManager->getRepository(Tag::class)->reorganizeOrdres();
+            }
+
+            return $this->json([
+                'success' => true,
+                'message' => 'Tag créé avec succès',
+                'tag' => [
+                    'id' => $tag->getId(),
+                    'nom' => $tag->getNom(),
+                    'couleur' => $tag->getCouleur(),
+                    'description' => $tag->getDescription(),
+                    'actif' => $tag->isActif(),
+                    'assignation_automatique' => $tag->isAssignationAutomatique(),
+                    'ordre' => $tag->getOrdre()
+                ]
+            ]);
+        } catch (Exception $e) {
+            return $this->json(['success' => false, 'message' => 'Erreur lors de la création: ' . $e->getMessage()], 400);
+        }
+    }
+
+    #[Route('/tags/{id}/update', name: 'app_admin_tags_update', methods: ['PUT'])]
+    public function updateTag(Tag $tag, Request $request, EntityManagerInterface $entityManager): JsonResponse
+    {
+        try {
+            $data = json_decode($request->getContent(), true);
+
+            $tag->setNom($data['nom']);
+            $tag->setCouleur($data['couleur'] ?? $tag->getCouleur());
+            $tag->setDescription($data['description'] ?? null);
+            $tag->setActif($data['actif'] ?? $tag->isActif());
+            $tag->setAssignationAutomatique($data['assignation_automatique'] ?? $tag->isAssignationAutomatique());
+
+            $entityManager->flush();
+
+            // Réorganiser les ordres si nécessaire
+            if (isset($data['ordre']) && $data['ordre'] != $tag->getOrdre()) {
+                $entityManager->getRepository(Tag::class)->reorganizeOrdres();
+            }
+
+            return $this->json(['success' => true, 'message' => 'Tag mis à jour avec succès']);
+        } catch (Exception $e) {
+            return $this->json(['success' => false, 'message' => 'Erreur lors de la mise à jour: ' . $e->getMessage()], 400);
+        }
+    }
+
+    #[Route('/tags/{id}/delete', name: 'app_admin_tags_delete', methods: ['DELETE'])]
+    public function deleteTag(Tag $tag, EntityManagerInterface $entityManager): JsonResponse
+    {
+        try {
+            $entityManager->remove($tag);
+            $entityManager->flush();
+
+            return $this->json(['success' => true, 'message' => 'Tag supprimé avec succès']);
+        } catch (Exception $e) {
+            return $this->json(['success' => false, 'message' => 'Erreur lors de la suppression: ' . $e->getMessage()], 400);
+        }
+    }
+
+    // ================================
+    // GESTION DES TAUX DE TVA
+    // ================================
+
+    #[Route('/taux-tva', name: 'app_admin_taux_tva', methods: ['GET'])]
+    public function tauxTva(EntityManagerInterface $entityManager): Response
+    {
+        $tauxTva = $entityManager->getRepository(TauxTVA::class)->findAllOrdered();
+        
+        return $this->render('admin/taux_tva.html.twig', [
+            'taux_tva' => $tauxTva,
+        ]);
+    }
+
+    #[Route('/taux-tva/create', name: 'app_admin_taux_tva_create', methods: ['POST'])]
+    public function createTauxTva(Request $request, EntityManagerInterface $entityManager): JsonResponse
+    {
+        try {
+            $data = json_decode($request->getContent(), true);
+            
+            $tauxTva = new TauxTVA();
+            $tauxTva->setNom($data['nom']);
+            $tauxTva->setTaux($data['taux']);
+            $tauxTva->setActif($data['actif'] ?? true);
+            $tauxTva->setOrdre($data['ordre'] ?? 1);
+            
+            // Comptes de vente
+            if (isset($data['vente_compte_debits'])) $tauxTva->setVenteCompteDebits($data['vente_compte_debits']);
+            if (isset($data['vente_compte_encaissements'])) $tauxTva->setVenteCompteEncaissements($data['vente_compte_encaissements']);
+            if (isset($data['vente_compte_biens'])) $tauxTva->setVenteCompteBiens($data['vente_compte_biens']);
+            if (isset($data['vente_compte_services'])) $tauxTva->setVenteCompteServices($data['vente_compte_services']);
+            if (isset($data['vente_compte_ports'])) $tauxTva->setVenteComptePorts($data['vente_compte_ports']);
+            if (isset($data['vente_compte_eco_contribution'])) $tauxTva->setVenteCompteEcoContribution($data['vente_compte_eco_contribution']);
+            if (isset($data['vente_compte_eco_contribution_mobilier'])) $tauxTva->setVenteCompteEcoContributionMobilier($data['vente_compte_eco_contribution_mobilier']);
+            
+            // Comptes d'achat
+            if (isset($data['achat_compte_debits'])) $tauxTva->setAchatCompteDebits($data['achat_compte_debits']);
+            if (isset($data['achat_compte_encaissements'])) $tauxTva->setAchatCompteEncaissements($data['achat_compte_encaissements']);
+            if (isset($data['achat_compte_autoliquidation_biens'])) $tauxTva->setAchatCompteAutoliquidationBiens($data['achat_compte_autoliquidation_biens']);
+            if (isset($data['achat_compte_autoliquidation_services'])) $tauxTva->setAchatCompteAutoliquidationServices($data['achat_compte_autoliquidation_services']);
+            if (isset($data['achat_compte_biens'])) $tauxTva->setAchatCompteBiens($data['achat_compte_biens']);
+            if (isset($data['achat_compte_services'])) $tauxTva->setAchatCompteServices($data['achat_compte_services']);
+            if (isset($data['achat_compte_ports'])) $tauxTva->setAchatComptePorts($data['achat_compte_ports']);
+            if (isset($data['achat_compte_eco_contribution'])) $tauxTva->setAchatCompteEcoContribution($data['achat_compte_eco_contribution']);
+            if (isset($data['achat_compte_eco_contribution_mobilier'])) $tauxTva->setAchatCompteEcoContributionMobilier($data['achat_compte_eco_contribution_mobilier']);
+
+            $entityManager->persist($tauxTva);
+
+            // Gestion du taux par défaut
+            if ($data['par_defaut'] ?? false) {
+                $entityManager->getRepository(TauxTVA::class)->setAsDefault($tauxTva);
+            } else {
+                // Réorganisation des ordres si nécessaire
+                if (isset($data['ordre'])) {
+                    $entityManager->getRepository(TauxTVA::class)->reorganizeOrdres($tauxTva, (int)$data['ordre']);
+                } else {
+                    $entityManager->flush();
+                }
+            }
+
+            return $this->json(['success' => true, 'message' => 'Taux de TVA créé avec succès', 'id' => $tauxTva->getId()]);
+        } catch (Exception $e) {
+            return $this->json(['success' => false, 'message' => 'Erreur lors de la création: ' . $e->getMessage()], 400);
+        }
+    }
+
+    #[Route('/taux-tva/{id}/update', name: 'app_admin_taux_tva_update', methods: ['PUT'])]
+    public function updateTauxTva(TauxTVA $tauxTva, Request $request, EntityManagerInterface $entityManager): JsonResponse
+    {
+        try {
+            $data = json_decode($request->getContent(), true);
+
+            if (isset($data['nom'])) $tauxTva->setNom($data['nom']);
+            if (isset($data['taux'])) $tauxTva->setTaux($data['taux']);
+            if (isset($data['actif'])) $tauxTva->setActif($data['actif']);
+
+            // Comptes de vente
+            if (isset($data['vente_compte_debits'])) $tauxTva->setVenteCompteDebits($data['vente_compte_debits'] ?: null);
+            if (isset($data['vente_compte_encaissements'])) $tauxTva->setVenteCompteEncaissements($data['vente_compte_encaissements'] ?: null);
+            if (isset($data['vente_compte_biens'])) $tauxTva->setVenteCompteBiens($data['vente_compte_biens'] ?: null);
+            if (isset($data['vente_compte_services'])) $tauxTva->setVenteCompteServices($data['vente_compte_services'] ?: null);
+            if (isset($data['vente_compte_ports'])) $tauxTva->setVenteComptePorts($data['vente_compte_ports'] ?: null);
+            if (isset($data['vente_compte_eco_contribution'])) $tauxTva->setVenteCompteEcoContribution($data['vente_compte_eco_contribution'] ?: null);
+            if (isset($data['vente_compte_eco_contribution_mobilier'])) $tauxTva->setVenteCompteEcoContributionMobilier($data['vente_compte_eco_contribution_mobilier'] ?: null);
+            
+            // Comptes d'achat
+            if (isset($data['achat_compte_debits'])) $tauxTva->setAchatCompteDebits($data['achat_compte_debits'] ?: null);
+            if (isset($data['achat_compte_encaissements'])) $tauxTva->setAchatCompteEncaissements($data['achat_compte_encaissements'] ?: null);
+            if (isset($data['achat_compte_autoliquidation_biens'])) $tauxTva->setAchatCompteAutoliquidationBiens($data['achat_compte_autoliquidation_biens'] ?: null);
+            if (isset($data['achat_compte_autoliquidation_services'])) $tauxTva->setAchatCompteAutoliquidationServices($data['achat_compte_autoliquidation_services'] ?: null);
+            if (isset($data['achat_compte_biens'])) $tauxTva->setAchatCompteBiens($data['achat_compte_biens'] ?: null);
+            if (isset($data['achat_compte_services'])) $tauxTva->setAchatCompteServices($data['achat_compte_services'] ?: null);
+            if (isset($data['achat_compte_ports'])) $tauxTva->setAchatComptePorts($data['achat_compte_ports'] ?: null);
+            if (isset($data['achat_compte_eco_contribution'])) $tauxTva->setAchatCompteEcoContribution($data['achat_compte_eco_contribution'] ?: null);
+            if (isset($data['achat_compte_eco_contribution_mobilier'])) $tauxTva->setAchatCompteEcoContributionMobilier($data['achat_compte_eco_contribution_mobilier'] ?: null);
+
+            // Gestion du taux par défaut
+            if (isset($data['par_defaut']) && $data['par_defaut']) {
+                $entityManager->getRepository(TauxTVA::class)->setAsDefault($tauxTva);
+            } else {
+                // Réorganisation des ordres si nécessaire
+                if (isset($data['ordre']) && $data['ordre'] != $tauxTva->getOrdre()) {
+                    $entityManager->getRepository(TauxTVA::class)->reorganizeOrdres($tauxTva, (int)$data['ordre']);
+                } else {
+                    $entityManager->flush();
+                }
+            }
+
+            return $this->json(['success' => true, 'message' => 'Taux de TVA mis à jour avec succès']);
+        } catch (Exception $e) {
+            return $this->json(['success' => false, 'message' => 'Erreur lors de la mise à jour: ' . $e->getMessage()], 400);
+        }
+    }
+
+    #[Route('/taux-tva/{id}/delete', name: 'app_admin_taux_tva_delete', methods: ['DELETE'])]
+    public function deleteTauxTva(TauxTVA $tauxTva, EntityManagerInterface $entityManager): JsonResponse
+    {
+        try {
+            // Vérifier que ce n'est pas le taux par défaut
+            if ($tauxTva->isParDefaut()) {
+                return $this->json(['success' => false, 'message' => 'Impossible de supprimer le taux de TVA par défaut'], 400);
+            }
+
+            $entityManager->remove($tauxTva);
+            $entityManager->flush();
+
+            return $this->json(['success' => true, 'message' => 'Taux de TVA supprimé avec succès']);
+        } catch (Exception $e) {
+            return $this->json(['success' => false, 'message' => 'Erreur lors de la suppression: ' . $e->getMessage()], 400);
+        }
+    }
+
+    #[Route('/taux-tva/get', name: 'app_admin_taux_tva_get', methods: ['GET'])]
+    public function getTauxTva(Request $request, EntityManagerInterface $entityManager): JsonResponse
+    {
+        $id = $request->query->get('id');
+        if (!$id) {
+            return $this->json(['error' => 'ID requis'], 400);
+        }
+
+        $tauxTva = $entityManager->getRepository(TauxTVA::class)->find($id);
+        if (!$tauxTva) {
+            return $this->json(['error' => 'Taux TVA non trouvé'], 404);
+        }
+
+        return $this->json([
+            'id' => $tauxTva->getId(),
+            'nom' => $tauxTva->getNom(),
+            'taux' => $tauxTva->getTaux(),
+            'actif' => $tauxTva->isActif(),
+            'parDefaut' => $tauxTva->isParDefaut(),
+            'ordre' => $tauxTva->getOrdre(),
+            // Comptes vente
+            'venteCompteDebits' => $tauxTva->getVenteCompteDebits(),
+            'venteCompteEncaissements' => $tauxTva->getVenteCompteEncaissements(),
+            'venteCompteBiens' => $tauxTva->getVenteCompteBiens(),
+            'venteCompteServices' => $tauxTva->getVenteCompteServices(),
+            'venteComptePorts' => $tauxTva->getVenteComptePorts(),
+            'venteCompteEcoContribution' => $tauxTva->getVenteCompteEcoContribution(),
+            'venteCompteEcoContributionMobilier' => $tauxTva->getVenteCompteEcoContributionMobilier(),
+            // Comptes achat
+            'achatCompteDebits' => $tauxTva->getAchatCompteDebits(),
+            'achatCompteEncaissements' => $tauxTva->getAchatCompteEncaissements(),
+            'achatCompteAutoliquidationBiens' => $tauxTva->getAchatCompteAutoliquidationBiens(),
+            'achatCompteAutoliquidationServices' => $tauxTva->getAchatCompteAutoliquidationServices(),
+            'achatCompteBiens' => $tauxTva->getAchatCompteBiens(),
+            'achatCompteServices' => $tauxTva->getAchatCompteServices(),
+            'achatComptePorts' => $tauxTva->getAchatComptePorts(),
+            'achatCompteEcoContribution' => $tauxTva->getAchatCompteEcoContribution(),
+            'achatCompteEcoContributionMobilier' => $tauxTva->getAchatCompteEcoContributionMobilier(),
+        ]);
     }
 }

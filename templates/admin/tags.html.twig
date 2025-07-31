@@ -1,0 +1,397 @@
+{# Template pour le chargement AJAX - pas d'extension de base #}
+<div class="admin-section">
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <h3 class="section-title mb-0">
+            <i class="fas fa-tags me-2"></i>Gestion des Tags Clients
+        </h3>
+        <button class="btn btn-primary" data-bs-toggle="modal" data-bs-target="#tagModal">
+            <i class="fas fa-plus me-2"></i>Nouveau Tag
+        </button>
+    </div>
+
+    <div class="alert alert-info">
+        <i class="fas fa-info-circle me-2"></i>
+        <strong>Système de Tags Intelligents :</strong> Les tags peuvent être assignés automatiquement aux clients selon les produits qu'ils achètent. 
+        Utilisez cette fonctionnalité pour segmenter automatiquement votre clientèle.
+    </div>
+
+    <div class="table-responsive">
+        <table class="table table-hover" id="tagsTable">
+            <thead class="table-dark">
+                <tr>
+                    <th>Ordre</th>
+                    <th>Nom</th>
+                    <th>Couleur</th>
+                    <th>Description</th>
+                    <th>Clients</th>
+                    <th>Auto-assign</th>
+                    <th>Statut</th>
+                    <th>Actions</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% if error is defined %}
+                    <tr>
+                        <td colspan="8" class="text-center text-danger">
+                            <i class="fas fa-exclamation-triangle fa-2x mb-2"></i><br>
+                            Erreur: {{ error }}
+                        </td>
+                    </tr>
+                {% elseif tags is defined and tags is not empty %}
+                    {% for tag in tags %}
+                    <tr data-id="{{ tag.id }}">
+                    <td>
+                        <span class="badge bg-secondary">{{ tag.ordre }}</span>
+                    </td>
+                    <td>
+                        <span class="badge" style="background-color: {{ tag.couleur ?? '#3498db' }}; color: white;">
+                            {{ tag.nom }}
+                        </span>
+                    </td>
+                    <td>
+                        <div class="d-flex align-items-center">
+                            <div class="color-preview me-2" 
+                                 style="width: 20px; height: 20px; border-radius: 3px; background-color: {{ tag.couleur ?? '#3498db' }}; border: 1px solid #ddd;"></div>
+                            <code class="small">{{ tag.couleur ?? '#3498db' }}</code>
+                        </div>
+                    </td>
+                    <td>
+                        {% if tag.description %}
+                            <span class="text-truncate" style="max-width: 200px;" title="{{ tag.description }}">
+                                {{ tag.description }}
+                            </span>
+                        {% else %}
+                            <span class="text-muted">-</span>
+                        {% endif %}
+                    </td>
+                    <td class="text-center">
+                        <span class="badge bg-info">{{ tag.clients|length }}</span>
+                        <div class="small text-muted">clients</div>
+                    </td>
+                    <td class="text-center">
+                        {% if tag.assignationAutomatique %}
+                            <i class="fas fa-magic text-success" title="Assignation automatique activée"></i>
+                            <div class="small text-success">Auto</div>
+                        {% else %}
+                            <i class="fas fa-hand-paper text-muted" title="Assignation manuelle uniquement"></i>
+                            <div class="small text-muted">Manuel</div>
+                        {% endif %}
+                    </td>
+                    <td>
+                        <div class="form-check form-switch">
+                            <input class="form-check-input status-toggle" type="checkbox" 
+                                   data-id="{{ tag.id }}" {{ tag.actif ? 'checked' : '' }}>
+                            <label class="form-check-label">
+                                {{ tag.actif ? 'Actif' : 'Inactif' }}
+                            </label>
+                        </div>
+                    </td>
+                    <td>
+                        <div class="btn-group btn-group-sm">
+                            <button class="btn btn-outline-primary edit-btn" 
+                                    data-id="{{ tag.id }}"
+                                    data-nom="{{ tag.nom }}"
+                                    data-couleur="{{ tag.couleur ?? '#3498db' }}"
+                                    data-description="{{ tag.description ?? '' }}"
+                                    data-actif="{{ tag.actif ? 'true' : 'false' }}"
+                                    data-assignation-automatique="{{ tag.assignationAutomatique ? 'true' : 'false' }}"
+                                    data-ordre="{{ tag.ordre }}">
+                                <i class="fas fa-edit"></i>
+                            </button>
+                            <button class="btn btn-outline-danger delete-btn" 
+                                    data-id="{{ tag.id }}"
+                                    data-nom="{{ tag.nom }}">
+                                <i class="fas fa-trash"></i>
+                            </button>
+                        </div>
+                    </td>
+                </tr>
+                    {% endfor %}
+                {% else %}
+                    <tr>
+                        <td colspan="8" class="text-center text-muted">
+                            <i class="fas fa-tags fa-2x mb-2"></i><br>
+                            Aucun tag trouvé ou erreur de chargement
+                        </td>
+                    </tr>
+                {% endif %}
+            </tbody>
+        </table>
+    </div>
+</div>
+
+<!-- Modal Tag -->
+<div class="modal fade" id="tagModal" tabindex="-1">
+    <div class="modal-dialog modal-lg">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">
+                    <i class="fas fa-tags me-2"></i>
+                    <span id="modal-title">Nouveau Tag</span>
+                </h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <form id="tagForm">
+                    <input type="hidden" id="tag-id">
+                    
+                    <!-- Informations générales -->
+                    <div class="row">
+                        <div class="col-md-8">
+                            <div class="mb-3">
+                                <label for="tag-nom" class="form-label">Nom du tag *</label>
+                                <input type="text" class="form-control" id="tag-nom" required
+                                       maxlength="50" placeholder="Nom du tag (ex: PME, Grands Comptes)">
+                            </div>
+                        </div>
+                        <div class="col-md-4">
+                            <div class="mb-3">
+                                <label for="tag-couleur" class="form-label">Couleur</label>
+                                <div class="d-flex align-items-center">
+                                    <input type="color" class="form-control form-control-color me-2" 
+                                           id="tag-couleur" value="#3498db" title="Choisir une couleur">
+                                    <input type="text" class="form-control font-monospace" 
+                                           id="tag-couleur-text" value="#3498db" maxlength="7" 
+                                           placeholder="#3498db" style="width: 100px;">
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="row">
+                        <div class="col-md-12">
+                            <div class="mb-3">
+                                <label for="tag-description" class="form-label">Description</label>
+                                <textarea class="form-control" id="tag-description" rows="3"
+                                          placeholder="Description optionnelle du tag..."></textarea>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Options avancées -->
+                    <div class="row">
+                        <div class="col-md-6">
+                            <div class="mb-3">
+                                <label for="tag-ordre" class="form-label">Ordre d'affichage</label>
+                                <input type="number" class="form-control" id="tag-ordre" 
+                                       min="1" value="1" step="1" required>
+                            </div>
+                        </div>
+                        <div class="col-md-6">
+                            <div class="mb-3">
+                                <div class="form-check form-switch mt-4">
+                                    <input class="form-check-input" type="checkbox" id="tag-assignation-automatique" checked>
+                                    <label class="form-check-label" for="tag-assignation-automatique">
+                                        <strong>Assignation automatique</strong>
+                                    </label>
+                                    <div class="form-text">
+                                        Si activé, ce tag sera automatiquement assigné aux clients qui achètent des produits associés à ce tag.
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="row">
+                        <div class="col-md-12">
+                            <div class="mb-3">
+                                <div class="form-check form-switch">
+                                    <input class="form-check-input" type="checkbox" id="tag-actif" checked>
+                                    <label class="form-check-label" for="tag-actif">
+                                        Tag actif
+                                    </label>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Aperçu -->
+                    <div class="row">
+                        <div class="col-md-12">
+                            <div class="alert alert-light border">
+                                <strong>Aperçu :</strong>
+                                <span class="badge ms-2" id="tag-preview" style="background-color: #3498db; color: white;">
+                                    Nouveau Tag
+                                </span>
+                            </div>
+                        </div>
+                    </div>
+                </form>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Annuler</button>
+                <button type="button" class="btn btn-primary" id="save-tag">
+                    <i class="fas fa-save me-2"></i>Enregistrer
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+function initTagsClientsEvents() {
+    // Synchronisation couleur picker et texte
+    const colorPicker = document.getElementById('tag-couleur');
+    const colorText = document.getElementById('tag-couleur-text');
+    const tagNom = document.getElementById('tag-nom');
+    const tagPreview = document.getElementById('tag-preview');
+
+    function updatePreview() {
+        const nom = tagNom.value || 'Nouveau Tag';
+        const couleur = colorPicker.value;
+        tagPreview.textContent = nom;
+        tagPreview.style.backgroundColor = couleur;
+        tagPreview.style.color = 'white';
+    }
+
+    if (colorPicker && colorText) {
+        colorPicker.addEventListener('input', function() {
+            colorText.value = this.value.toUpperCase();
+            updatePreview();
+        });
+
+        colorText.addEventListener('input', function() {
+            if (/^#[0-9A-F]{6}$/i.test(this.value)) {
+                colorPicker.value = this.value;
+                updatePreview();
+            }
+        });
+    }
+
+    if (tagNom) {
+        tagNom.addEventListener('input', updatePreview);
+    }
+
+    // Gestion des boutons d'édition
+    document.querySelectorAll('.edit-btn').forEach(btn => {
+        btn.addEventListener('click', function() {
+            const id = this.dataset.id;
+            document.getElementById('tag-id').value = id;
+            document.getElementById('tag-nom').value = this.dataset.nom;
+            document.getElementById('tag-couleur').value = this.dataset.couleur;
+            document.getElementById('tag-couleur-text').value = this.dataset.couleur.toUpperCase();
+            document.getElementById('tag-description').value = this.dataset.description;
+            document.getElementById('tag-ordre').value = this.dataset.ordre;
+            document.getElementById('tag-actif').checked = this.dataset.actif === 'true';
+            document.getElementById('tag-assignation-automatique').checked = this.dataset.assignationAutomatique === 'true';
+            
+            document.getElementById('modal-title').textContent = 'Modifier le Tag';
+            updatePreview();
+            
+            // Nettoyer les backdrops existants avant d'ouvrir le modal
+            const existingBackdrops = document.querySelectorAll('.modal-backdrop');
+            existingBackdrops.forEach(backdrop => backdrop.remove());
+            document.body.classList.remove('modal-open');
+            
+            new bootstrap.Modal(document.getElementById('tagModal')).show();
+        });
+    });
+
+    // Sauvegarde
+    document.getElementById('save-tag').addEventListener('click', function() {
+        const id = document.getElementById('tag-id').value;
+        const data = {
+            nom: document.getElementById('tag-nom').value,
+            couleur: document.getElementById('tag-couleur').value,
+            description: document.getElementById('tag-description').value,
+            ordre: parseInt(document.getElementById('tag-ordre').value),
+            actif: document.getElementById('tag-actif').checked,
+            assignation_automatique: document.getElementById('tag-assignation-automatique').checked
+        };
+
+        const url = id ? `/admin/tags/${id}/update` : '/admin/tags/create';
+        const method = id ? 'PUT' : 'POST';
+
+        fetch(url, {
+            method: method,
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(data)
+        })
+        .then(response => response.json())
+        .then(result => {
+            if (result.success) {
+                location.reload();
+            } else {
+                alert('Erreur : ' + result.message);
+            }
+        });
+    });
+
+    // Suppression
+    document.querySelectorAll('.delete-btn').forEach(btn => {
+        btn.addEventListener('click', function() {
+            if (confirm(`Êtes-vous sûr de vouloir supprimer le tag "${this.dataset.nom}" ?`)) {
+                fetch(`/admin/tags/${this.dataset.id}/delete`, { method: 'DELETE' })
+                .then(response => response.json())
+                .then(result => {
+                    if (result.success) {
+                        location.reload();
+                    } else {
+                        alert('Erreur : ' + result.message);
+                    }
+                });
+            }
+        });
+    });
+
+    // Toggle statut
+    document.querySelectorAll('.status-toggle').forEach(toggle => {
+        toggle.addEventListener('change', function() {
+            const id = this.dataset.id;
+            const actif = this.checked;
+            
+            fetch(`/admin/tags/${id}/update`, {
+                method: 'PUT',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ actif: actif })
+            })
+            .then(response => response.json())
+            .then(result => {
+                if (!result.success) {
+                    this.checked = !actif; // Revert
+                    alert('Erreur : ' + result.message);
+                }
+            });
+        });
+    });
+
+    // Reset du modal
+    document.getElementById('tagModal').addEventListener('hidden.bs.modal', function() {
+        document.getElementById('tagForm').reset();
+        document.getElementById('tag-id').value = '';
+        document.getElementById('modal-title').textContent = 'Nouveau Tag';
+        document.getElementById('tag-couleur').value = '#3498db';
+        document.getElementById('tag-couleur-text').value = '#3498db';
+        updatePreview();
+        
+        // Nettoyer manuellement le backdrop qui pourrait rester
+        const backdrops = document.querySelectorAll('.modal-backdrop');
+        backdrops.forEach(backdrop => backdrop.remove());
+        
+        // S'assurer que body n'a plus les classes de modal
+        document.body.classList.remove('modal-open');
+        document.body.style.overflow = '';
+        document.body.style.paddingRight = '';
+    });
+}
+
+// Appel initial de la fonction avec vérification DOM
+document.addEventListener('DOMContentLoaded', function() {
+    initTagsClientsEvents();
+});
+
+// Si le DOM est déjà chargé (cas AJAX), appeler immédiatement
+if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', initTagsClientsEvents);
+} else {
+    // DOM déjà chargé, appeler directement
+    setTimeout(initTagsClientsEvents, 50);
+}
+
+// Redéfinition de la fonction globale pour l'appeler depuis le dashboard
+window.initTagsClients = function() {
+    setTimeout(initTagsClientsEvents, 100);
+};
+</script>
+
+{# Fin du template AJAX #}

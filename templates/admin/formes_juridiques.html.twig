@@ -13,6 +13,7 @@
         <table class="table table-hover" id="formesJuridiquesTable">
             <thead class="table-dark">
                 <tr>
+                    <th>Ordre</th>
                     <th>Nom</th>
                     <th>Template</th>
                     <th>Type</th>
@@ -24,6 +25,9 @@
             <tbody>
                 {% for forme in formes_juridiques %}
                 <tr data-id="{{ forme.id }}">
+                    <td>
+                        <span class="badge bg-secondary">{{ forme.ordre }}</span>
+                    </td>
                     <td>
                         <strong>{{ forme.nom }}</strong>
                     </td>
@@ -61,7 +65,8 @@
                                     data-id="{{ forme.id }}"
                                     data-nom="{{ forme.nom }}"
                                     data-template="{{ forme.templateFormulaire }}"
-                                    data-actif="{{ forme.actif ? 'true' : 'false' }}">
+                                    data-actif="{{ forme.actif ? 'true' : 'false' }}"
+                                    data-ordre="{{ forme.ordre }}">
                                 <i class="fas fa-edit"></i>
                             </button>
                             <button class="btn btn-outline-danger delete-btn" 
@@ -112,6 +117,13 @@
                     </div>
                     
                     <div class="mb-3">
+                        <label for="forme-ordre" class="form-label">Ordre d'affichage</label>
+                        <input type="number" class="form-control" id="forme-ordre" 
+                               min="1" value="1" step="1" required>
+                        <div class="form-text">Position dans les menus déroulants</div>
+                    </div>
+                    
+                    <div class="mb-3">
                         <div class="form-check form-switch">
                             <input class="form-check-input" type="checkbox" id="forme-actif" checked>
                             <label class="form-check-label" for="forme-actif">
@@ -132,13 +144,18 @@
 </div>
 
 <script>
-document.addEventListener('DOMContentLoaded', function() {
+function initFormesJuridiquesEvents() {
     const modal = new bootstrap.Modal(document.getElementById('formeJuridiqueModal'));
     const form = document.getElementById('formeJuridiqueForm');
     let isEditing = false;
 
     // Bouton nouvelle forme juridique
     document.querySelector('[data-bs-target="#formeJuridiqueModal"]').addEventListener('click', function() {
+        // Nettoyer les backdrops existants avant d'ouvrir le modal
+        const existingBackdrops = document.querySelectorAll('.modal-backdrop');
+        existingBackdrops.forEach(backdrop => backdrop.remove());
+        document.body.classList.remove('modal-open');
+        
         resetForm();
         document.getElementById('modal-title').textContent = 'Nouvelle Forme Juridique';
         isEditing = false;
@@ -151,12 +168,19 @@ document.addEventListener('DOMContentLoaded', function() {
             const nom = this.dataset.nom;
             const template = this.dataset.template;
             const actif = this.dataset.actif === 'true';
+            const ordre = this.dataset.ordre;
 
             document.getElementById('forme-id').value = id;
             document.getElementById('forme-nom').value = nom;
             document.getElementById('forme-template').value = template;
+            document.getElementById('forme-ordre').value = ordre;
             document.getElementById('forme-actif').checked = actif;
             document.getElementById('modal-title').textContent = 'Modifier ' + nom;
+            
+            // Nettoyer les backdrops existants avant d'ouvrir le modal
+            const existingBackdrops = document.querySelectorAll('.modal-backdrop');
+            existingBackdrops.forEach(backdrop => backdrop.remove());
+            document.body.classList.remove('modal-open');
             
             isEditing = true;
             modal.show();
@@ -189,6 +213,7 @@ document.addEventListener('DOMContentLoaded', function() {
         const formData = {
             nom: document.getElementById('forme-nom').value,
             templateFormulaire: document.getElementById('forme-template').value,
+            ordre: parseInt(document.getElementById('forme-ordre').value),
             actif: document.getElementById('forme-actif').checked
         };
 
@@ -285,8 +310,33 @@ document.addEventListener('DOMContentLoaded', function() {
     function resetForm() {
         form.reset();
         document.getElementById('forme-id').value = '';
+        document.getElementById('forme-ordre').value = '1';
         document.getElementById('forme-actif').checked = true;
     }
-});
+    
+    // Nettoyage du backdrop à la fermeture du modal
+    document.getElementById('formeJuridiqueModal').addEventListener('hidden.bs.modal', function() {
+        // Nettoyer manuellement le backdrop qui pourrait rester
+        const backdrops = document.querySelectorAll('.modal-backdrop');
+        backdrops.forEach(backdrop => backdrop.remove());
+        
+        // S'assurer que body n'a plus les classes de modal
+        document.body.classList.remove('modal-open');
+        document.body.style.overflow = '';
+        document.body.style.paddingRight = '';
+    });
+}
+
+// Initialisation pour AJAX loading
+if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', initFormesJuridiquesEvents);
+} else {
+    setTimeout(initFormesJuridiquesEvents, 50);
+}
+
+// Fonction globale pour appel depuis dashboard
+window.initFormesJuridiques = function() {
+    setTimeout(initFormesJuridiquesEvents, 100);
+};
 </script>
 {# Fin du template AJAX #}
