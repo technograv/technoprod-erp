@@ -243,8 +243,8 @@ class Client
     public function getAdresseFacturation(): ?Adresse
     {
         $contact = $this->contactFacturationDefault;
-        if ($contact && $contact->getAdresses()->count() > 0) {
-            return $contact->getAdresses()->first();
+        if ($contact) {
+            return $contact->getAdresse();
         }
         return null;
     }
@@ -255,8 +255,8 @@ class Client
     public function getAdresseLivraison(): ?Adresse
     {
         $contact = $this->contactLivraisonDefault;
-        if ($contact && $contact->getAdresses()->count() > 0) {
-            return $contact->getAdresses()->first();
+        if ($contact) {
+            return $contact->getAdresse();
         }
         return null;
     }

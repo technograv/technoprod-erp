@@ -40,9 +40,8 @@ class AdresseRepository extends ServiceEntityRepository
             return null;
         }
         
-        // Retourne la première adresse du contact de facturation par défaut
-        $adresses = $contactFacturation->getAdresses();
-        return $adresses->isEmpty() ? null : $adresses->first();
+        // Retourne l'adresse du contact de facturation par défaut
+        return $contactFacturation->getAdresse();
     }
 
     /**
@@ -55,9 +54,8 @@ class AdresseRepository extends ServiceEntityRepository
             return null;
         }
         
-        // Retourne la première adresse du contact de livraison par défaut
-        $adresses = $contactLivraison->getAdresses();
-        return $adresses->isEmpty() ? null : $adresses->first();
+        // Retourne l'adresse du contact de livraison par défaut
+        return $contactLivraison->getAdresse();
     }
 
     /**
