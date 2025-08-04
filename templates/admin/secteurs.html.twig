@@ -31,7 +31,8 @@
     }
     
     #secteurs-map {
-        height: 400px;
+        min-height: 400px;
+        height: auto;
         border-radius: 10px;
         box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
     }
@@ -86,8 +87,8 @@
             <button class="btn btn-outline-danger btn-sm btn-map-control" onclick="masquerTousLesSecteurs()">
                 <i class="fas fa-eye-slash me-1"></i>Tout masquer
             </button>
-            <button class="btn btn-outline-info btn-sm btn-map-control" onclick="centrerSurTousLesSecteurs()">
-                <i class="fas fa-search-location me-1"></i>Tout voir
+            <button class="btn btn-outline-info btn-sm btn-map-control" onclick="centrerSurTousLesSecteursIntelligent()">
+                <i class="fas fa-search-location me-1"></i>Centrer & Zoomer
             </button>
         </div>
     </div>
@@ -226,14 +227,299 @@
 </div>
 
 <!-- Scripts Google Maps -->
+<style>
+/* ================================
+   STYLES INFOWINDOWS SECTEURS OPTIMISÉS
+   ================================ */
+
+/* Container principal des InfoWindows */
+.infowindow-container {
+    width: 100%;
+    min-width: 240px;
+    max-width: 320px;
+    padding: 0;
+    margin: 0;
+    box-sizing: border-box;
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+    border-radius: 8px;
+    overflow: hidden;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+}
+
+/* En-tête avec couleur dynamique du secteur */
+.infowindow-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    height: 48px;
+    padding: 0 16px;
+    margin: -8px -8px 0 -8px;
+    color: white;
+    position: relative;
+    box-sizing: border-box;
+}
+
+/* Titre du secteur */
+.infowindow-title {
+    font-size: 16px;
+    font-weight: 600;
+    flex: 1;
+    padding-right: 12px;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    line-height: 1.2;
+}
+
+/* Bouton de fermeture */
+.infowindow-close {
+    background: none;
+    border: none;
+    color: white;
+    font-size: 20px;
+    font-weight: bold;
+    cursor: pointer;
+    width: 28px;
+    height: 28px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border-radius: 50%;
+    opacity: 0.9;
+    transition: all 0.2s ease;
+    flex-shrink: 0;
+}
+
+.infowindow-close:hover {
+    opacity: 1;
+    background: rgba(255, 255, 255, 0.2);
+    transform: scale(1.1);
+}
+
+/* Zone de contenu principal */
+.infowindow-content {
+    padding: 16px;
+    max-height: 180px;
+    overflow-y: auto;
+    background: white;
+    box-sizing: border-box;
+}
+
+/* Styles pour le scroll personnalisé */
+.infowindow-content::-webkit-scrollbar {
+    width: 6px;
+}
+
+.infowindow-content::-webkit-scrollbar-track {
+    background: #f1f1f1;
+    border-radius: 3px;
+}
+
+.infowindow-content::-webkit-scrollbar-thumb {
+    background: #c1c1c1;
+    border-radius: 3px;
+}
+
+.infowindow-content::-webkit-scrollbar-thumb:hover {
+    background: #a8a8a8;
+}
+
+/* Informations commercial */
+.infowindow-commercial {
+    color: #495057;
+    margin-bottom: 12px;
+    font-size: 14px;
+    font-weight: 500;
+    display: flex;
+    align-items: center;
+    line-height: 1.4;
+}
+
+/* Description du secteur */
+.infowindow-description {
+    color: #6c757d;
+    margin-bottom: 16px;
+    font-size: 13px;
+    font-style: italic;
+    line-height: 1.4;
+    max-height: 60px;
+    overflow-y: auto;
+    display: flex;
+    align-items: flex-start;
+    padding-right: 4px;
+}
+
+.infowindow-description i {
+    margin-top: 2px;
+    flex-shrink: 0;
+}
+
+/* Zone des actions/boutons */
+.infowindow-actions {
+    display: flex;
+    justify-content: center;
+    margin-top: 16px;
+}
+
+/* Bouton d'action optimisé */
+.infowindow-btn {
+    font-size: 13px;
+    padding: 8px 16px;
+    border-radius: 6px;
+    font-weight: 500;
+    transition: all 0.2s ease;
+    border: none;
+    display: flex;
+    align-items: center;
+    gap: 6px;
+}
+
+.infowindow-btn:hover {
+    transform: translateY(-1px);
+    box-shadow: 0 4px 8px rgba(0, 123, 255, 0.3);
+}
+
+/* Responsive design pour mobile */
+@media (max-width: 768px) {
+    .infowindow-container {
+        min-width: 220px;
+        max-width: 280px;
+    }
+    
+    .infowindow-header {
+        height: 44px;
+        padding: 0 12px;
+    }
+    
+    .infowindow-title {
+        font-size: 15px;
+    }
+    
+    .infowindow-content {
+        padding: 12px;
+        max-height: 160px;
+    }
+    
+    .infowindow-commercial {
+        font-size: 13px;
+    }
+    
+    .infowindow-description {
+        font-size: 12px;
+    }
+}
+
+/* Animation d'apparition */
+.infowindow-container {
+    animation: infowindowFadeIn 0.3s ease-out;
+}
+
+@keyframes infowindowFadeIn {
+    from {
+        opacity: 0;
+        transform: translateY(-10px);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+</style>
+
 <script>
     let map;
     let secteursData = {};
     let secteurPolygons = {};
     let secteurMarkers = {};
+    let currentInfoWindow = null; // Pour gérer la fermeture automatique des InfoWindows
 
     // Variable globale pour la clé API - injectée par l'admin controller
     window.googleMapsApiKey = '{{ google_maps_api_key }}';
+
+    function ajusterHauteurCarte() {
+        const mapElement = document.getElementById('secteurs-map');
+        const tableElement = document.querySelector('.secteurs-table');
+        const statsElement = document.querySelector('.secteur-stats');
+        
+        if (!mapElement || !tableElement) return;
+        
+        // Calculer la hauteur du tableau
+        const tableHeight = tableElement.offsetHeight;
+        
+        // Calculer la hauteur des statistiques (avec marge)
+        let statsHeight = 0;
+        if (statsElement) {
+            const statsComputedStyle = window.getComputedStyle(statsElement);
+            statsHeight = statsElement.offsetHeight + 
+                         parseInt(statsComputedStyle.marginBottom) + 
+                         parseInt(statsComputedStyle.marginTop);
+        }
+        
+        // Hauteur combinée des deux éléments
+        const combinedHeight = tableHeight + statsHeight;
+        const minHeight = 400; // Hauteur minimale définie dans le CSS
+        
+        // Ajuster la hauteur de la carte (minimum 400px, sinon hauteur combinée)
+        const newHeight = Math.max(minHeight, combinedHeight);
+        mapElement.style.height = newHeight + 'px';
+        
+        console.log(`📐 Hauteur carte ajustée: ${newHeight}px (stats: ${statsHeight}px + tableau: ${tableHeight}px = ${combinedHeight}px)`);
+        
+        // Redéclencher le resize de la carte si elle existe déjà
+        if (window.map) {
+            setTimeout(() => {
+                google.maps.event.trigger(map, 'resize');
+            }, 100);
+        }
+    }
+
+    function centrerSurTousLesSecteursIntelligent() {
+        if (!map) return;
+        
+        const bounds = new google.maps.LatLngBounds();
+        let hasCoordinates = false;
+        let secteursCounts = 0;
+
+        // Compter les secteurs visibles et étendre les bounds
+        Object.values(secteursData).forEach(secteur => {
+            const checkbox = document.getElementById(`secteur-${secteur.id}`);
+            if (checkbox && checkbox.checked && secteur.hasCoordinates) {
+                bounds.extend(new google.maps.LatLng(secteur.center.lat, secteur.center.lng));
+                hasCoordinates = true;
+                secteursCounts++;
+            }
+        });
+
+        if (hasCoordinates) {
+            // Si on a des secteurs visibles, centrer sur eux
+            map.fitBounds(bounds);
+            
+            // Ajuster le zoom selon le nombre de secteurs
+            setTimeout(() => {
+                const currentZoom = map.getZoom();
+                let targetZoom = currentZoom;
+                
+                if (secteursCounts === 1) {
+                    targetZoom = Math.min(currentZoom, 10); // Zoom plus proche pour 1 secteur
+                } else if (secteursCounts <= 3) {
+                    targetZoom = Math.min(currentZoom, 8); // Zoom moyen pour 2-3 secteurs
+                } else {
+                    targetZoom = Math.max(6, Math.min(currentZoom, 7)); // Vue d'ensemble pour plus de secteurs
+                }
+                
+                if (targetZoom !== currentZoom) {
+                    map.setZoom(targetZoom);
+                }
+                
+                console.log(`🎯 Centrage intelligent: ${secteursCounts} secteurs, zoom ${targetZoom}`);
+            }, 100);
+        } else {
+            // Aucun secteur visible, vue par défaut sur la France
+            map.setCenter({ lat: 46.603354, lng: 1.888334 });
+            map.setZoom(6);
+            console.log('🎯 Aucun secteur visible, retour vue France');
+        }
+    }
 
     function initSecteursMap() {
         console.log('🗺️ Initialisation de la carte générale des secteurs');
@@ -245,25 +531,42 @@
             return;
         }
         
+        // Ajuster la hauteur de la carte en fonction du tableau
+        ajusterHauteurCarte();
+        
         try {
-            // Carte centrée sur l'Occitanie avec mapId pour les marqueurs avancés
+            // Carte centrée sur la France pour une meilleure vue d'ensemble
             map = new google.maps.Map(mapElement, {
-                center: { lat: 43.6047, lng: 1.4442 }, // Toulouse
-                zoom: 8,
+                center: { lat: 46.603354, lng: 1.888334 }, // Centre de la France
+                zoom: 6, // Zoom réduit pour voir plus de territoire
                 mapTypeId: 'roadmap',
                 mapTypeControl: true,
                 streetViewControl: false,
                 fullscreenControl: true,
                 zoomControl: true,
+                gestureHandling: 'greedy', // Permet zoom avec molette seule
+                scrollwheel: true, // Active explicitement le zoom molette
                 mapId: 'secteurs-map-technoprod' // Requis pour AdvancedMarkerElement
             });
 
             console.log('✅ Carte initialisée avec mapId:', map.getMapId() || 'non défini');
             
+            // Fermer les InfoWindows quand on clique sur la carte
+            map.addListener('click', () => {
+                if (currentInfoWindow) {
+                    currentInfoWindow.close();
+                    currentInfoWindow = null;
+                }
+            });
+            
             // Attendre que la carte soit entièrement chargée
             google.maps.event.addListenerOnce(map, 'idle', () => {
                 console.log('✅ Carte prête, chargement des secteurs...');
                 chargerTousLesSecteurs();
+                // Auto-centrer sur tous les secteurs après chargement
+                setTimeout(() => {
+                    centrerSurTousLesSecteursIntelligent();
+                }, 1000);
             });
             
         } catch (error) {
@@ -279,6 +582,12 @@
             .then(data => {
                 console.log('🔍 DEBUG: Données de tous les secteurs reçues:', data);
                 if (data.success) {
+                    // Nettoyer tous les secteurs existants sur la carte avant de recharger
+                    console.log('🧹 Nettoyage des secteurs existants sur la carte...');
+                    Object.keys(secteurPolygons).forEach(secteurId => {
+                        masquerSecteur(secteurId);
+                    });
+                    
                     secteursData = {};
                     data.secteurs.forEach(secteur => {
                         secteursData[secteur.id] = secteur;
@@ -351,27 +660,52 @@
                 if (!secteurMarkers[secteur.id]) secteurMarkers[secteur.id] = [];
                 secteurMarkers[secteur.id].push(marker);
 
-                // InfoWindow pour les marqueurs avancés
+                // InfoWindow pour les marqueurs avancés - Version optimisée
                 const infoContent = `
-                    <div style="max-width: 300px;">
-                        <h6 style="color: ${secteur.couleur}; margin-bottom: 10px;">
-                            <i class="fas fa-map-marked-alt"></i> ${secteur.nom}
-                        </h6>
-                        ${secteur.commercial ? `<p><strong>Commercial:</strong> ${secteur.commercial}</p>` : ''}
-                        <p><strong>Attributions:</strong> ${secteur.attributions.length}</p>
-                        <small class="text-info">✨ Marqueur moderne</small>
-                        <div class="mt-2">
-                            <button onclick="voirSecteurModal(${secteur.id})" class="btn btn-sm btn-primary">Voir détails</button>
+                    <div class="infowindow-container">
+                        <div class="infowindow-header" style="background: ${secteur.couleur};">
+                            <div class="infowindow-title">${secteur.nom}</div>
+                            <button class="infowindow-close" onclick="if(currentInfoWindow) currentInfoWindow.close();">×</button>
+                        </div>
+                        <div class="infowindow-content">
+                            <div class="infowindow-commercial">
+                                <i class="fas fa-user" style="color: #6c757d; margin-right: 6px;"></i>
+                                ${secteur.commercial || 'Aucun commercial assigné'}
+                            </div>
+                            ${secteur.description ? `
+                                <div class="infowindow-description">
+                                    <i class="fas fa-info-circle" style="color: #6c757d; margin-right: 6px;"></i>
+                                    ${secteur.description}
+                                </div>
+                            ` : ''}
+                            <div class="infowindow-actions">
+                                <button onclick="voirSecteurModal(${secteur.id})" class="btn btn-sm btn-primary infowindow-btn">
+                                    <i class="fas fa-eye me-1"></i>Voir détails
+                                </button>
+                            </div>
                         </div>
                     </div>
                 `;
 
-                const infoWindow = new google.maps.InfoWindow({ content: infoContent });
+                const infoWindow = new google.maps.InfoWindow({ 
+                    content: infoContent,
+                    ariaLabel: secteur.nom,
+                    disableAutoPan: false,
+                    headerDisabled: true,
+                    maxWidth: 260
+                });
                 marker.addListener('click', () => {
+                    // Fermer l'InfoWindow précédente si elle existe
+                    if (currentInfoWindow) {
+                        currentInfoWindow.close();
+                    }
+                    // Ouvrir la nouvelle InfoWindow
                     infoWindow.open({
                         anchor: marker,
                         map: map
                     });
+                    // Stocker la référence pour fermeture future
+                    currentInfoWindow = infoWindow;
                 });
                 
             } else {
@@ -398,22 +732,41 @@
                 secteurMarkers[secteur.id].push(marker);
 
                 const infoContent = `
-                    <div style="max-width: 300px;">
-                        <h6 style="color: ${secteur.couleur}; margin-bottom: 10px;">
-                            <i class="fas fa-map-marked-alt"></i> ${secteur.nom}
-                        </h6>
-                        ${secteur.commercial ? `<p><strong>Commercial:</strong> ${secteur.commercial}</p>` : ''}
-                        <p><strong>Attributions:</strong> ${secteur.attributions.length}</p>
-                        <small class="text-warning">⚠️ Marqueur classique</small>
-                        <div class="mt-2">
-                            <button onclick="voirSecteurModal(${secteur.id})" class="btn btn-sm btn-primary">Voir détails</button>
+                    <div style="width: 260px; padding: 0; margin: 0; box-sizing: border-box;">
+                        <div style="background: ${secteur.couleur}; color: white; margin: -15px -15px 0 -15px; height: 40px; position: relative; display: table; width: calc(100% + 30px); box-sizing: border-box;">
+                            <div style="display: table-cell; vertical-align: middle; padding-left: 15px; padding-right: 45px; font-size: 16px; font-weight: 700; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">
+                                ${secteur.nom}
+                            </div>
+                            <button onclick="if(currentInfoWindow) currentInfoWindow.close();" style="position: absolute; right: 12px; top: 50%; transform: translateY(-50%); background: none; border: none; color: white; font-size: 18px; font-weight: bold; cursor: pointer; width: 20px; height: 20px; display: flex; align-items: center; justify-content: center; opacity: 0.9;" onmouseover="this.style.opacity='1'" onmouseout="this.style.opacity='0.9'">×</button>
+                        </div>
+                        <div style="padding: 12px 0; box-sizing: border-box;">
+                            <div style="color: #555; margin: 0 0 8px 0; font-size: 14px; font-weight: 500;">
+                                ${secteur.commercial || 'Aucun commercial assigné'}
+                            </div>
+                            ${secteur.description ? `<div style="margin: 0 0 10px 0; font-style: italic; color: #777; font-size: 12px; line-height: 1.3;">${secteur.description.length > 50 ? secteur.description.substring(0, 50) + '...' : secteur.description}</div>` : ''}
+                            <div style="margin-top: 10px;">
+                                <button onclick="voirSecteurModal(${secteur.id})" class="btn btn-sm btn-primary" style="font-size: 12px; padding: 4px 8px;">Voir détails</button>
+                            </div>
                         </div>
                     </div>
                 `;
 
-                const infoWindow = new google.maps.InfoWindow({ content: infoContent });
+                const infoWindow = new google.maps.InfoWindow({ 
+                    content: infoContent,
+                    ariaLabel: secteur.nom,
+                    disableAutoPan: false,
+                    headerDisabled: true,
+                    maxWidth: 260
+                });
                 marker.addListener('click', () => {
+                    // Fermer l'InfoWindow précédente si elle existe
+                    if (currentInfoWindow) {
+                        currentInfoWindow.close();
+                    }
+                    // Ouvrir la nouvelle InfoWindow
                     infoWindow.open(map, marker);
+                    // Stocker la référence pour fermeture future
+                    currentInfoWindow = infoWindow;
                 });
             }
         } catch (error) {
@@ -484,8 +837,14 @@
                 
                 const infoWindow = new google.maps.InfoWindow({ content: infoContent });
                 info.polygon.addListener('click', (event) => {
+                    // Fermer l'InfoWindow précédente si elle existe
+                    if (currentInfoWindow) {
+                        currentInfoWindow.close();
+                    }
                     infoWindow.setPosition(event.latLng);
                     infoWindow.open(map);
+                    // Stocker la référence pour fermeture future
+                    currentInfoWindow = infoWindow;
                 });
             });
 
@@ -532,8 +891,14 @@
             
             const infoWindow = new google.maps.InfoWindow({ content: infoContent });
             polygon.addListener('click', (event) => {
+                // Fermer l'InfoWindow précédente si elle existe
+                if (currentInfoWindow) {
+                    currentInfoWindow.close();
+                }
                 infoWindow.setPosition(event.latLng);
                 infoWindow.open(map);
+                // Stocker la référence pour fermeture future
+                currentInfoWindow = infoWindow;
             });
 
             if (!secteurPolygons[secteur.id]) secteurPolygons[secteur.id] = [];
@@ -623,8 +988,14 @@
                     
                     const infoWindow = new google.maps.InfoWindow({ content: infoContent });
                     polygon.addListener('click', (event) => {
+                        // Fermer l'InfoWindow précédente si elle existe
+                        if (currentInfoWindow) {
+                            currentInfoWindow.close();
+                        }
                         infoWindow.setPosition(event.latLng);
                         infoWindow.open(map);
+                        // Stocker la référence pour fermeture future
+                        currentInfoWindow = infoWindow;
                     });
 
                     if (!secteurPolygons[secteur.id]) secteurPolygons[secteur.id] = [];
@@ -806,19 +1177,8 @@
     }
 
     function centrerSurTousLesSecteurs() {
-        const bounds = new google.maps.LatLngBounds();
-        let hasCoordinates = false;
-
-        Object.values(secteursData).forEach(secteur => {
-            if (secteur.hasCoordinates) {
-                bounds.extend(new google.maps.LatLng(secteur.center.lat, secteur.center.lng));
-                hasCoordinates = true;
-            }
-        });
-
-        if (hasCoordinates) {
-            map.fitBounds(bounds);
-        }
+        // Utiliser la fonction de centrage intelligent
+        centrerSurTousLesSecteursIntelligent();
     }
 
     function centrerSurSecteur(secteurId) {
@@ -1299,12 +1659,19 @@
                     modal.hide();
                 }
                 
-                // Recharger la liste des secteurs
+                // Recharger le contenu de l'onglet secteurs actuel
                 if (typeof rechargerListeSecteurs === 'function') {
                     rechargerListeSecteurs();
                 } else {
-                    // Recharger la page si pas de fonction de rechargement
-                    location.reload();
+                    // En dernier recours, recharger seulement le contenu de l'onglet
+                    console.log('⚠️ Fonction rechargerListeSecteurs non trouvée, rechargement onglet...');
+                    // Simuler un clic sur l'onglet secteurs pour le recharger
+                    const secteurTab = document.querySelector('a[href="#secteurs"], button[data-bs-target="#secteurs"]');
+                    if (secteurTab) {
+                        secteurTab.click();
+                    } else {
+                        location.reload();
+                    }
                 }
                 
             } else {
@@ -1578,38 +1945,111 @@
         }
     }
 
-    // Fonction pour recharger la liste des secteurs sans recharger la page
+    // Fonction pour recharger la liste des secteurs
     function rechargerListeSecteurs() {
         console.log('🔄 Rechargement de la liste des secteurs...');
         
-        // Recharger le contenu du tableau
-        fetch(window.location.href)
-            .then(response => response.text())
-            .then(html => {
-                // Créer un document temporaire pour parser le HTML
-                const parser = new DOMParser();
-                const doc = parser.parseFromString(html, 'text/html');
+        // Méthode 1: Essayer de recharger directement le contenu du tableau
+        console.log('📋 Tentative rechargement direct du tableau...');
+        
+        fetch('/admin/secteurs', {
+            headers: {
+                'X-Requested-With': 'XMLHttpRequest',
+                'Accept': 'text/html'
+            }
+        })
+        .then(response => {
+            console.log('📡 Réponse secteurs reçue:', response.status, response.ok);
+            if (!response.ok) {
+                throw new Error(`HTTP ${response.status}`);
+            }
+            return response.text();
+        })
+        .then(html => {
+            console.log('🔍 HTML reçu, longueur:', html.length);
+            
+            // Parser le HTML reçu
+            const parser = new DOMParser();
+            const doc = parser.parseFromString(html, 'text/html');
+            
+            // Chercher le tableau dans le contenu reçu
+            const nouveauTableau = doc.querySelector('.secteurs-table tbody, table tbody, tbody');
+            const tableauActuel = document.querySelector('.secteurs-table tbody, table tbody');
+            
+            console.log('🔍 Nouveau tableau trouvé:', !!nouveauTableau, nouveauTableau?.children?.length || 0, 'lignes');
+            console.log('🔍 Tableau actuel trouvé:', !!tableauActuel);
+            
+            // Debug: lister tous les tableaux trouvés
+            if (!nouveauTableau) {
+                const tousTableaux = doc.querySelectorAll('table, tbody, .table');
+                console.log('🔍 Debug - Tableaux trouvés dans la réponse:', tousTableaux.length);
+                tousTableaux.forEach((t, i) => console.log(`  ${i}: ${t.tagName}.${t.className}`));
+            }
+            
+            if (!tableauActuel) {
+                const tableauxActuels = document.querySelectorAll('table, tbody, .table');
+                console.log('🔍 Debug - Tableaux actuels dans la page:', tableauxActuels.length);
+                tableauxActuels.forEach((t, i) => console.log(`  ${i}: ${t.tagName}.${t.className}`));
+            }
+            
+            if (nouveauTableau && tableauActuel) {
+                // Remplacer le contenu du tableau
+                tableauActuel.innerHTML = nouveauTableau.innerHTML;
+                console.log('✅ Tableau mis à jour avec', nouveauTableau.children.length, 'lignes');
                 
-                // Extraire le nouveau tableau
-                const nouveauTableau = doc.querySelector('.secteurs-table tbody');
-                const tableauActuel = document.querySelector('.secteurs-table tbody');
+                // Ajuster la hauteur de la carte après la mise à jour du tableau
+                setTimeout(() => {
+                    ajusterHauteurCarte();
+                }, 100);
                 
-                if (nouveauTableau && tableauActuel) {
-                    // Remplacer le contenu du tableau
-                    tableauActuel.innerHTML = nouveauTableau.innerHTML;
-                    console.log('✅ Tableau des secteurs mis à jour');
-                }
+                // Forcer le rechargement de la carte après un délai
+                setTimeout(() => {
+                    console.log('🗺️ Rechargement de la carte...');
+                    if (typeof chargerTousLesSecteurs === 'function') {
+                        chargerTousLesSecteurs();
+                        console.log('✅ Fonction chargerTousLesSecteurs() appelée');
+                    } else {
+                        console.warn('⚠️ Fonction chargerTousLesSecteurs non disponible');
+                    }
+                }, 200);
                 
-                // Mettre à jour les checkboxes et la carte si nécessaire
+                return;
+            }
+            
+            // Si le tableau n'est pas trouvé, essayer de recharger l'onglet complet
+            console.warn('⚠️ Tableau non trouvé dans la réponse, rechargement onglet...');
+            rechargerOngletComplet();
+            
+        })
+        .catch(error => {
+            console.error('❌ Erreur rechargement tableau:', error);
+            // En cas d'erreur, essayer le rechargement d'onglet
+            rechargerOngletComplet();
+        });
+    }
+    
+    // Fonction pour recharger l'onglet complet en cas de problème
+    function rechargerOngletComplet() {
+        console.log('🔄 Rechargement onglet complet...');
+        
+        // Chercher l'onglet secteurs et simuler un clic
+        const ongletSecteurs = document.querySelector('a[href="#secteurs"], button[data-bs-target="#secteurs"], [data-bs-toggle="tab"][href="#secteurs"]');
+        
+        if (ongletSecteurs) {
+            console.log('🎯 Onglet secteurs trouvé, simulation clic...');
+            ongletSecteurs.click();
+            
+            // Attendre que l'onglet soit rechargé puis recharger la carte
+            setTimeout(() => {
                 if (typeof chargerTousLesSecteurs === 'function') {
+                    console.log('🗺️ Rechargement carte après clic onglet...');
                     chargerTousLesSecteurs();
                 }
-            })
-            .catch(error => {
-                console.error('❌ Erreur lors du rechargement:', error);
-                // En cas d'erreur, recharger la page complète
-                location.reload();
-            });
+            }, 500);
+        } else {
+            console.error('❌ Onglet secteurs non trouvé, rechargement page...');
+            location.reload();
+        }
     }
 
     function supprimerSecteur() {
@@ -1626,7 +2066,7 @@
                     const modal = bootstrap.Modal.getInstance(document.getElementById('voirSecteurModal'));
                     modal.hide();
                     
-                    // Recharger seulement la liste des secteurs
+                    // Recharger le contenu de l'onglet secteurs actuel
                     rechargerListeSecteurs();
                 } else {
                     alert('Erreur lors de la suppression : ' + (data.error || 'Erreur inconnue'));
@@ -1638,6 +2078,24 @@
             });
         }
     }
+
+    // Ajuster la hauteur de la carte lors du redimensionnement de la fenêtre
+    window.addEventListener('resize', () => {
+        if (typeof ajusterHauteurCarte === 'function') {
+            setTimeout(() => {
+                ajusterHauteurCarte();
+            }, 100);
+        }
+    });
+
+    // Ajuster la hauteur de la carte après le chargement complet de la page
+    document.addEventListener('DOMContentLoaded', () => {
+        setTimeout(() => {
+            if (typeof ajusterHauteurCarte === 'function') {
+                ajusterHauteurCarte();
+            }
+        }, 500);
+    });
 </script>
 
 <!-- Modales -->
@@ -1673,8 +2131,8 @@
 
 <!-- Modal Formulaire Secteur (Nouveau/Édition) -->
 <div class="modal fade" id="formSecteurModal" tabindex="-1" aria-labelledby="formSecteurModalLabel" aria-hidden="true">
-    <div class="modal-dialog modal-xl" style="max-height: 90vh; margin-top: 2vh;">
-        <div class="modal-content" style="height: 86vh; max-height: 86vh;">
+    <div class="modal-dialog modal-xl" style="max-height: 95vh; margin-top: 1vh;">
+        <div class="modal-content" style="height: 93vh; max-height: 93vh; display: flex; flex-direction: column;">
             <div class="modal-header flex-shrink-0">
                 <h5 class="modal-title" id="formSecteurModalLabel">
                     <i class="fas fa-edit text-primary me-2"></i>Secteur
