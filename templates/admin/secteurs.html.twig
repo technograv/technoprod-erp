@@ -1299,16 +1299,13 @@
                     modal.hide();
                 }
                 
-                // Recharger la liste des secteurs ou afficher un message de succès
+                // Recharger la liste des secteurs
                 if (typeof rechargerListeSecteurs === 'function') {
                     rechargerListeSecteurs();
                 } else {
                     // Recharger la page si pas de fonction de rechargement
                     location.reload();
                 }
-                
-                // Afficher un message de succès
-                alert('Secteur enregistré avec succès !');
                 
             } else {
                 console.error('❌ Erreur lors de la sauvegarde:', data.errors || data.error);
@@ -1631,8 +1628,6 @@
                     
                     // Recharger seulement la liste des secteurs
                     rechargerListeSecteurs();
-                    
-                    alert('Secteur supprimé avec succès !');
                 } else {
                     alert('Erreur lors de la suppression : ' + (data.error || 'Erreur inconnue'));
                 }
@@ -1678,22 +1673,22 @@
 
 <!-- Modal Formulaire Secteur (Nouveau/Édition) -->
 <div class="modal fade" id="formSecteurModal" tabindex="-1" aria-labelledby="formSecteurModalLabel" aria-hidden="true">
-    <div class="modal-dialog modal-xl">
-        <div class="modal-content">
-            <div class="modal-header">
+    <div class="modal-dialog modal-xl" style="max-height: 90vh; margin-top: 2vh;">
+        <div class="modal-content" style="height: 86vh; max-height: 86vh;">
+            <div class="modal-header flex-shrink-0">
                 <h5 class="modal-title" id="formSecteurModalLabel">
                     <i class="fas fa-edit text-primary me-2"></i>Secteur
                 </h5>
                 <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
             </div>
-            <div class="modal-body" id="formSecteurModalBody">
+            <div class="modal-body overflow-auto flex-grow-1" id="formSecteurModalBody">
                 <div class="text-center">
                     <div class="spinner-border text-primary" role="status">
                         <span class="visually-hidden">Chargement...</span>
                     </div>
                 </div>
             </div>
-            <div class="modal-footer">
+            <div class="modal-footer flex-shrink-0">
                 <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Annuler</button>
                 <button type="submit" form="secteur-modal-form" class="btn btn-primary">
                     <i class="fas fa-save me-1"></i>Enregistrer
