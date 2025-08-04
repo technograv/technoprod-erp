@@ -164,11 +164,6 @@
                 </a>
             </li>
             <li class="nav-item">
-                <a class="nav-link" data-bs-toggle="tab" href="#zones" role="tab">
-                    <i class="fas fa-location-arrow me-2"></i>Zones
-                </a>
-            </li>
-            <li class="nav-item">
                 <a class="nav-link" data-bs-toggle="tab" href="#produits" role="tab">
                     <i class="fas fa-box me-2"></i>Produits
                 </a>
@@ -196,6 +191,26 @@
             <li class="nav-item">
                 <a class="nav-link" data-bs-toggle="tab" href="#taux-tva" role="tab">
                     <i class="fas fa-percent me-2"></i>Taux TVA
+                </a>
+            </li>
+            <li class="nav-item">
+                <a class="nav-link" data-bs-toggle="tab" href="#unites" role="tab">
+                    <i class="fas fa-ruler me-2"></i>Unités
+                </a>
+            </li>
+            <li class="nav-item">
+                <a class="nav-link" data-bs-toggle="tab" href="#civilites" role="tab">
+                    <i class="fas fa-user me-2"></i>Civilités
+                </a>
+            </li>
+            <li class="nav-item">
+                <a class="nav-link" data-bs-toggle="tab" href="#transporteurs" role="tab">
+                    <i class="fas fa-truck me-2"></i>Transporteurs
+                </a>
+            </li>
+            <li class="nav-item">
+                <a class="nav-link" data-bs-toggle="tab" href="#frais-port" role="tab">
+                    <i class="fas fa-shipping-fast me-2"></i>Frais de Port
                 </a>
             </li>
             <li class="nav-item">
@@ -245,12 +260,6 @@
                 </div>
                 <div class="col-md-4 mb-3">
                     <div class="stats-card">
-                        <div class="stats-number">{{ stats.zones }}</div>
-                        <div class="stats-label">Zones</div>
-                    </div>
-                </div>
-                <div class="col-md-4 mb-3">
-                    <div class="stats-card">
                         <div class="stats-number">{{ stats.produits }}</div>
                         <div class="stats-label">Produits</div>
                     </div>
@@ -289,6 +298,32 @@
                         <div class="stats-label">Taux TVA</div>
                     </div>
                 </div>
+                <div class="col-md-3 mb-3">
+                    <div class="stats-card">
+                        <div class="stats-number">{{ stats.unites }}</div>
+                        <div class="stats-label">Unités</div>
+                    </div>
+                </div>
+                <div class="col-md-3 mb-3">
+                    <div class="stats-card">
+                        <div class="stats-number">{{ stats.civilites }}</div>
+                        <div class="stats-label">Civilités</div>
+                    </div>
+                </div>
+            </div>
+            <div class="row mb-4">
+                <div class="col-md-6 mb-3">
+                    <div class="stats-card">
+                        <div class="stats-number">{{ stats.transporteurs }}</div>
+                        <div class="stats-label">Transporteurs</div>
+                    </div>
+                </div>
+                <div class="col-md-6 mb-3">
+                    <div class="stats-card">
+                        <div class="stats-number">{{ stats.frais_port }}</div>
+                        <div class="stats-label">Frais de Port</div>
+                    </div>
+                </div>
             </div>
 
             <!-- Actions rapides -->
@@ -313,9 +348,6 @@
                         </a>
                         <a href="#secteurs" class="quick-action-btn" data-bs-toggle="tab">
                             <i class="fas fa-map me-2"></i>Secteurs
-                        </a>
-                        <a href="#zones" class="quick-action-btn" data-bs-toggle="tab">
-                            <i class="fas fa-location-arrow me-2"></i>Zones
                         </a>
                         <a href="#produits" class="quick-action-btn" data-bs-toggle="tab">
                             <i class="fas fa-box me-2"></i>Produits
@@ -377,32 +409,9 @@
         </div>
 
         <div class="tab-pane fade" id="secteurs" role="tabpanel">
-            <div class="admin-section">
-                <h3 class="section-title">
-                    <i class="fas fa-map me-2"></i>Gestion des Secteurs
-                </h3>
-                <p class="text-muted">Chargement en cours...</p>
-                <div class="text-center">
-                    <div class="spinner-border text-primary" role="status">
-                        <span class="visually-hidden">Chargement...</span>
-                    </div>
-                </div>
-            </div>
+            {% include 'admin/secteurs.html.twig' %}
         </div>
 
-        <div class="tab-pane fade" id="zones" role="tabpanel">
-            <div class="admin-section">
-                <h3 class="section-title">
-                    <i class="fas fa-location-arrow me-2"></i>Gestion des Zones
-                </h3>
-                <p class="text-muted">Chargement en cours...</p>
-                <div class="text-center">
-                    <div class="spinner-border text-primary" role="status">
-                        <span class="visually-hidden">Chargement...</span>
-                    </div>
-                </div>
-            </div>
-        </div>
 
         <div class="tab-pane fade" id="produits" role="tabpanel">
             <div class="admin-section">
@@ -493,6 +502,66 @@
             </div>
         </div>
 
+        <!-- Unités -->
+        <div class="tab-pane fade" id="unites" role="tabpanel">
+            <div class="admin-section">
+                <h3 class="section-title">
+                    <i class="fas fa-ruler me-2"></i>Gestion des Unités
+                </h3>
+                <p class="text-muted">Chargement en cours...</p>
+                <div class="text-center">
+                    <div class="spinner-border text-primary" role="status">
+                        <span class="visually-hidden">Chargement...</span>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Civilités -->
+        <div class="tab-pane fade" id="civilites" role="tabpanel">
+            <div class="admin-section">
+                <h3 class="section-title">
+                    <i class="fas fa-user me-2"></i>Gestion des Civilités
+                </h3>
+                <p class="text-muted">Chargement en cours...</p>
+                <div class="text-center">
+                    <div class="spinner-border text-primary" role="status">
+                        <span class="visually-hidden">Chargement...</span>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Transporteurs -->
+        <div class="tab-pane fade" id="transporteurs" role="tabpanel">
+            <div class="admin-section">
+                <h3 class="section-title">
+                    <i class="fas fa-truck me-2"></i>Gestion des Transporteurs
+                </h3>
+                <p class="text-muted">Chargement en cours...</p>
+                <div class="text-center">
+                    <div class="spinner-border text-primary" role="status">
+                        <span class="visually-hidden">Chargement...</span>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Frais de Port -->
+        <div class="tab-pane fade" id="frais-port" role="tabpanel">
+            <div class="admin-section">
+                <h3 class="section-title">
+                    <i class="fas fa-shipping-fast me-2"></i>Gestion des Frais de Port
+                </h3>
+                <p class="text-muted">Chargement en cours...</p>
+                <div class="text-center">
+                    <div class="spinner-border text-primary" role="status">
+                        <span class="visually-hidden">Chargement...</span>
+                    </div>
+                </div>
+            </div>
+        </div>
+
         <div class="tab-pane fade" id="settings" role="tabpanel">
             <div class="admin-section">
                 <h3 class="section-title">
@@ -524,8 +593,21 @@
         });
         
         function loadTabContent(tabId) {
+            console.log('🔍 DEBUG: loadTabContent called for:', tabId);
+            
             const tabContent = document.querySelector(tabId + ' .admin-section');
-            if (!tabContent || tabContent.dataset.loaded) return;
+            console.log('🔍 DEBUG: tabContent found:', !!tabContent);
+            console.log('🔍 DEBUG: tabContent.dataset.loaded:', tabContent?.dataset?.loaded);
+            
+            if (!tabContent) {
+                console.log('🔍 DEBUG: No tabContent found for selector:', tabId + ' .admin-section');
+                return;
+            }
+            
+            if (tabContent.dataset.loaded) {
+                console.log('🔍 DEBUG: Tab already loaded, skipping:', tabId);
+                return;
+            }
             
             let url = '';
             switch(tabId) {
@@ -536,10 +618,8 @@
                     url = '{{ path("app_admin_users") }}';
                     break;
                 case '#secteurs':
-                    url = '{{ path("app_admin_secteurs") }}';
-                    break;
-                case '#zones':
-                    url = '{{ path("app_admin_zones") }}';
+                    // Chargement direct du contenu dans l'onglet (pas de route AJAX)
+                    url = null;
                     break;
                 case '#produits':
                     url = '{{ path("app_admin_produits") }}';
@@ -558,6 +638,18 @@
                     break;
                 case '#taux-tva':
                     url = '{{ path("app_admin_taux_tva") }}';
+                    break;
+                case '#unites':
+                    url = '{{ path("app_admin_unites") }}';
+                    break;
+                case '#civilites':
+                    url = '{{ path("app_admin_civilites") }}';
+                    break;
+                case '#transporteurs':
+                    url = '{{ path("app_admin_transporteurs") }}';
+                    break;
+                case '#frais-port':
+                    url = '{{ path("app_admin_frais_port") }}';
                     break;
                 case '#settings':
                     url = '{{ path("app_admin_settings") }}';
@@ -608,7 +700,8 @@
                         // Initialiser les fonctions JavaScript spécifiques à chaque onglet
                         // Attendre que les scripts soient exécutés
                         setTimeout(() => {
-                            console.log('Initializing tab:', tabId);
+                            console.log('🔍 DEBUG: Initializing tab:', tabId);
+                            console.log('🔍 DEBUG: Available window functions:', Object.keys(window).filter(k => k.startsWith('init')));
                             
                             let functionName = '';
                             let initFunction = null;
@@ -638,13 +731,40 @@
                                     functionName = 'initTauxTva';
                                     initFunction = window.initTauxTva;
                                     break;
+                                case '#unites':
+                                    functionName = 'initUnites';
+                                    initFunction = window.initUnites;
+                                    break;
+                                case '#civilites':
+                                    functionName = 'initCivilites';
+                                    initFunction = window.initCivilites;
+                                    break;
+                                case '#transporteurs':
+                                    functionName = 'initTransporteurs';
+                                    initFunction = window.initTransporteurs;
+                                    break;
+                                case '#frais-port':
+                                    functionName = 'initFraisPort';
+                                    initFunction = window.initFraisPort;
+                                    break;
+                                case '#secteurs':
+                                    functionName = 'initSecteurs';
+                                    initFunction = window.initSecteurs;
+                                    break;
                             }
                             
                             if (typeof initFunction === 'function') {
-                                console.log(`Successfully calling ${functionName}`);
-                                initFunction();
+                                console.log(`✅ Successfully calling ${functionName}`);
+                                try {
+                                    initFunction();
+                                    console.log(`✅ ${functionName} executed successfully`);
+                                } catch (error) {
+                                    console.error(`❌ Error executing ${functionName}:`, error);
+                                }
                             } else {
-                                console.error(`${functionName} not found - script may not have executed properly`);
+                                console.warn(`⚠️ ${functionName} not found for tab ${tabId} - this might be normal for some tabs`);
+                                // Ne pas traiter comme une erreur si la fonction n'existe pas
+                                // certains onglets peuvent ne pas avoir de fonction d'initialisation
                             }
                         }, 100);
                     })
@@ -678,6 +798,22 @@
                         
                         tabContent.innerHTML = errorHtml;
                     });
+            } else {
+                // Gestion des onglets sans URL AJAX (contenu inclus directement)
+                console.log('Tab without AJAX URL:', tabId);
+                
+                // Attendre que le contenu soit disponible puis initialiser
+                setTimeout(() => {
+                    if (tabId === '#secteurs' && typeof window.initSecteurs === 'function') {
+                        console.log('🚀 Initialisation onglet secteurs (contenu direct)');
+                        try {
+                            window.initSecteurs();
+                            console.log('✅ initSecteurs executed successfully');
+                        } catch (error) {
+                            console.error('❌ Error executing initSecteurs:', error);
+                        }
+                    }
+                }, 200);
             }
         }
         

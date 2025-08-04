@@ -5,16 +5,25 @@ namespace App\Controller;
 use App\Entity\User;
 use App\Entity\FormeJuridique;
 use App\Entity\Secteur;
-use App\Entity\Zone;
 use App\Entity\Produit;
 use App\Entity\ModeReglement;
 use App\Entity\ModePaiement;
 use App\Entity\Banque;
 use App\Entity\Tag;
 use App\Entity\TauxTVA;
+use App\Entity\Unite;
+use App\Entity\Civilite;
+use App\Entity\FraisPort;
+use App\Entity\PalierFraisPort;
+use App\Entity\Transporteur;
 use App\Entity\MethodeExpedition;
 use App\Entity\ModeleDocument;
+use App\Entity\DivisionAdministrative;
+use App\Entity\TypeSecteur;
+use App\Entity\AttributionSecteur;
 use App\Service\DocumentNumerotationService;
+use App\Service\EpciBoundariesService;
+use App\Service\CommuneGeometryService;
 use Doctrine\ORM\EntityManagerInterface;
 use Symfony\Bundle\FrameworkBundle\Controller\AbstractController;
 use Symfony\Component\HttpFoundation\Request;
@@ -22,6 +31,7 @@ use Symfony\Component\HttpFoundation\Response;
 use Symfony\Component\HttpFoundation\JsonResponse;
 use Symfony\Component\Routing\Attribute\Route;
 use Symfony\Component\Security\Http\Attribute\IsGranted;
+use Symfony\Component\Cache\Adapter\FilesystemAdapter;
 
 #[Route('/admin')]
 #[IsGranted('ROLE_ADMIN')]
@@ -40,19 +50,29 @@ final class AdminController extends AbstractController
                 ['%ROLE_ADMIN%']
             ),
             'secteurs' => $entityManager->getRepository(Secteur::class)->count([]),
-            'zones' => $entityManager->getRepository(Zone::class)->count([]),
+            'zones' => 0, // Zones obsolètes supprimées
             'produits' => $entityManager->getRepository(Produit::class)->count([]),
             'modes_reglement' => $entityManager->getRepository(ModeReglement::class)->count([]),
             'modes_paiement' => $entityManager->getRepository(ModePaiement::class)->count([]),
             'banques' => $entityManager->getRepository(Banque::class)->count([]),
             'tags' => $entityManager->getRepository(Tag::class)->count([]),
             'taux_tva' => $entityManager->getRepository(TauxTVA::class)->count([]),
+            'unites' => $entityManager->getRepository(Unite::class)->count([]),
+            'civilites' => $entityManager->getRepository(Civilite::class)->count([]),
+            'frais_port' => $entityManager->getRepository(FraisPort::class)->count([]),
+            'transporteurs' => $entityManager->getRepository(Transporteur::class)->count([]),
             'methodes_expedition' => $entityManager->getRepository(MethodeExpedition::class)->count([]),
-            'modeles_document' => $entityManager->getRepository(ModeleDocument::class)->count([])
+            'modeles_document' => $entityManager->getRepository(ModeleDocument::class)->count([]),
+            // Nouvelles entités système secteurs
+            'divisions_administratives' => $entityManager->getRepository(DivisionAdministrative::class)->count(['actif' => true]),
+            'types_secteur' => $entityManager->getRepository(TypeSecteur::class)->count(['actif' => true]),
+            'attributions_secteur' => $entityManager->getRepository(AttributionSecteur::class)->count([])
         ];
 
         return $this->render('admin/dashboard.html.twig', [
             'stats' => $stats,
+            'google_maps_api_key' => $this->getParameter('google.maps.api.key'),
+            'secteurs' => $entityManager->getRepository(Secteur::class)->findBy([], ['nomSecteur' => 'ASC']),
         ]);
     }
 
@@ -266,25 +286,8 @@ www.technoprod.com';
         return $this->json(['success' => true]);
     }
 
-    #[Route('/secteurs', name: 'app_admin_secteurs', methods: ['GET'])]
-    public function secteurs(EntityManagerInterface $entityManager): Response
-    {
-        $secteurs = $entityManager->getRepository(Secteur::class)->findBy([], ['nomSecteur' => 'ASC']);
+    // Route /secteurs supprimée - utiliser l'onglet Secteurs du panneau d'administration
 
-        return $this->render('admin/secteurs.html.twig', [
-            'secteurs' => $secteurs,
-        ]);
-    }
-
-    #[Route('/zones', name: 'app_admin_zones', methods: ['GET'])]
-    public function zones(EntityManagerInterface $entityManager): Response
-    {
-        $zones = $entityManager->getRepository(Zone::class)->findBy([], ['ville' => 'ASC']);
-
-        return $this->render('admin/zones.html.twig', [
-            'zones' => $zones,
-        ]);
-    }
 
     #[Route('/produits', name: 'app_admin_produits', methods: ['GET'])]
     public function produits(): Response
@@ -1374,4 +1377,1674 @@ www.technoprod.com';
             'achatCompteEcoContributionMobilier' => $tauxTva->getAchatCompteEcoContributionMobilier(),
         ]);
     }
+
+    // ================================
+    // GESTION DES UNITÉS
+    // ================================
+
+    #[Route('/unites', name: 'app_admin_unites', methods: ['GET'])]
+    public function unites(EntityManagerInterface $entityManager): Response
+    {
+        $unites = $entityManager->getRepository(Unite::class)->findAllOrdered();
+        
+        return $this->render('admin/unites.html.twig', [
+            'unites' => $unites,
+        ]);
+    }
+
+    #[Route('/unites/get', name: 'app_admin_unites_get', methods: ['GET'])]
+    public function getUnite(Request $request, EntityManagerInterface $entityManager): JsonResponse
+    {
+        $id = $request->query->get('id');
+        if (!$id) {
+            return $this->json(['error' => 'ID requis'], 400);
+        }
+
+        $unite = $entityManager->getRepository(Unite::class)->find($id);
+        if (!$unite) {
+            return $this->json(['error' => 'Unité non trouvée'], 404);
+        }
+
+        return $this->json([
+            'id' => $unite->getId(),
+            'code' => $unite->getCode(),
+            'nom' => $unite->getNom(),
+            'type' => $unite->getType(),
+            'decimalesPrix' => $unite->getDecimalesPrix(),
+            'coefficientConversion' => $unite->getCoefficientConversion(),
+            'notes' => $unite->getNotes(),
+            'actif' => $unite->isActif(),
+            'ordre' => $unite->getOrdre(),
+        ]);
+    }
+
+    #[Route('/unites/create', name: 'app_admin_unites_create', methods: ['POST'])]
+    public function createUnite(Request $request, EntityManagerInterface $entityManager): JsonResponse
+    {
+        try {
+            $data = json_decode($request->getContent(), true);
+            
+            // Validation des données requises
+            if (empty($data['code']) || empty($data['nom'])) {
+                return $this->json(['success' => false, 'message' => 'Code et nom sont requis'], 400);
+            }
+
+            // Vérifier l'unicité du code
+            if ($entityManager->getRepository(Unite::class)->codeExists($data['code'])) {
+                return $this->json(['success' => false, 'message' => 'Ce code d\'unité existe déjà'], 400);
+            }
+            
+            $unite = new Unite();
+            $unite->setCode($data['code']);
+            $unite->setNom($data['nom']);
+            $unite->setType($data['type'] ?? null);
+            $unite->setDecimalesPrix($data['decimales_prix'] ?? 2);
+            $unite->setCoefficientConversion($data['coefficient_conversion'] ?? null);
+            $unite->setNotes($data['notes'] ?? null);
+            $unite->setActif($data['actif'] ?? true);
+            $unite->setOrdre($data['ordre'] ?? 1);
+
+            $entityManager->persist($unite);
+
+            // Réorganisation des ordres si nécessaire
+            if (isset($data['ordre'])) {
+                $entityManager->getRepository(Unite::class)->reorganizeOrdres($unite, (int)$data['ordre']);
+            } else {
+                $entityManager->flush();
+            }
+
+            return $this->json(['success' => true, 'message' => 'Unité créée avec succès', 'id' => $unite->getId()]);
+        } catch (\Exception $e) {
+            return $this->json(['success' => false, 'message' => 'Erreur lors de la création: ' . $e->getMessage()], 400);
+        }
+    }
+
+    #[Route('/unites/{id}/update', name: 'app_admin_unites_update', methods: ['PUT'])]
+    public function updateUnite(Unite $unite, Request $request, EntityManagerInterface $entityManager): JsonResponse
+    {
+        try {
+            $data = json_decode($request->getContent(), true);
+
+            if (isset($data['code'])) {
+                // Vérifier l'unicité du code (exclure l'unité actuelle)
+                if ($entityManager->getRepository(Unite::class)->codeExists($data['code'], $unite->getId())) {
+                    return $this->json(['success' => false, 'message' => 'Ce code d\'unité existe déjà'], 400);
+                }
+                $unite->setCode($data['code']);
+            }
+            
+            if (isset($data['nom'])) $unite->setNom($data['nom']);
+            if (isset($data['type'])) $unite->setType($data['type'] ?: null);
+            if (isset($data['decimales_prix'])) $unite->setDecimalesPrix($data['decimales_prix']);
+            if (isset($data['coefficient_conversion'])) $unite->setCoefficientConversion($data['coefficient_conversion'] ?: null);
+            if (isset($data['notes'])) $unite->setNotes($data['notes'] ?: null);
+            if (isset($data['actif'])) $unite->setActif($data['actif']);
+
+            // Réorganisation des ordres si nécessaire
+            if (isset($data['ordre']) && $data['ordre'] != $unite->getOrdre()) {
+                $entityManager->getRepository(Unite::class)->reorganizeOrdres($unite, (int)$data['ordre']);
+            } else {
+                $entityManager->flush();
+            }
+
+            return $this->json(['success' => true, 'message' => 'Unité mise à jour avec succès']);
+        } catch (\Exception $e) {
+            return $this->json(['success' => false, 'message' => 'Erreur lors de la mise à jour: ' . $e->getMessage()], 400);
+        }
+    }
+
+    #[Route('/unites/{id}/delete', name: 'app_admin_unites_delete', methods: ['DELETE'])]
+    public function deleteUnite(Unite $unite, EntityManagerInterface $entityManager): JsonResponse
+    {
+        try {
+            // TODO: Vérifier que l'unité n'est pas utilisée dans des produits/devis/factures
+            // Pour l'instant, on autorise la suppression
+            
+            $entityManager->remove($unite);
+            $entityManager->flush();
+
+            return $this->json(['success' => true, 'message' => 'Unité supprimée avec succès']);
+        } catch (\Exception $e) {
+            return $this->json(['success' => false, 'message' => 'Erreur lors de la suppression: ' . $e->getMessage()], 400);
+        }
+    }
+
+    #[Route('/unites/types', name: 'app_admin_unites_types', methods: ['GET'])]
+    public function getUniteTypes(EntityManagerInterface $entityManager): JsonResponse
+    {
+        $types = $entityManager->getRepository(Unite::class)->findAllTypes();
+        return $this->json($types);
+    }
+
+    // ================================
+    // GESTION DES CIVILITÉS
+    // ================================
+
+    #[Route('/civilites', name: 'app_admin_civilites', methods: ['GET'])]
+    public function civilites(EntityManagerInterface $entityManager): Response
+    {
+        $civilites = $entityManager->getRepository(Civilite::class)->findAllOrdered();
+        
+        return $this->render('admin/civilites.html.twig', [
+            'civilites' => $civilites,
+        ]);
+    }
+
+    #[Route('/civilites/get', name: 'app_admin_civilites_get', methods: ['GET'])]
+    public function getCivilite(Request $request, EntityManagerInterface $entityManager): JsonResponse
+    {
+        $id = $request->query->get('id');
+        if (!$id) {
+            return $this->json(['error' => 'ID requis'], 400);
+        }
+
+        $civilite = $entityManager->getRepository(Civilite::class)->find($id);
+        if (!$civilite) {
+            return $this->json(['error' => 'Civilité non trouvée'], 404);
+        }
+
+        return $this->json([
+            'id' => $civilite->getId(),
+            'code' => $civilite->getCode(),
+            'nom' => $civilite->getNom(),
+            'abrege' => $civilite->getAbrege(),
+            'notes' => $civilite->getNotes(),
+            'actif' => $civilite->isActif(),
+            'ordre' => $civilite->getOrdre(),
+        ]);
+    }
+
+    #[Route('/civilites/create', name: 'app_admin_civilites_create', methods: ['POST'])]
+    public function createCivilite(Request $request, EntityManagerInterface $entityManager): JsonResponse
+    {
+        try {
+            $data = json_decode($request->getContent(), true);
+            
+            // Validation des données requises
+            if (empty($data['code']) || empty($data['nom'])) {
+                return $this->json(['success' => false, 'message' => 'Code et nom sont requis'], 400);
+            }
+
+            // Vérifier l'unicité du code
+            if ($entityManager->getRepository(Civilite::class)->codeExists($data['code'])) {
+                return $this->json(['success' => false, 'message' => 'Ce code de civilité existe déjà'], 400);
+            }
+            
+            $civilite = new Civilite();
+            $civilite->setCode($data['code']);
+            $civilite->setNom($data['nom']);
+            $civilite->setAbrege($data['abrege'] ?? null);
+            $civilite->setNotes($data['notes'] ?? null);
+            $civilite->setActif($data['actif'] ?? true);
+            $civilite->setOrdre($data['ordre'] ?? 1);
+
+            $entityManager->persist($civilite);
+
+            // Réorganisation des ordres si nécessaire
+            if (isset($data['ordre'])) {
+                $entityManager->getRepository(Civilite::class)->reorganizeOrdres($civilite, (int)$data['ordre']);
+            } else {
+                $entityManager->flush();
+            }
+
+            return $this->json(['success' => true, 'message' => 'Civilité créée avec succès', 'id' => $civilite->getId()]);
+        } catch (\Exception $e) {
+            return $this->json(['success' => false, 'message' => 'Erreur lors de la création: ' . $e->getMessage()], 400);
+        }
+    }
+
+    #[Route('/civilites/{id}/update', name: 'app_admin_civilites_update', methods: ['PUT'])]
+    public function updateCivilite(Civilite $civilite, Request $request, EntityManagerInterface $entityManager): JsonResponse
+    {
+        try {
+            $data = json_decode($request->getContent(), true);
+
+            if (isset($data['code'])) {
+                // Vérifier l'unicité du code (exclure la civilité actuelle)
+                if ($entityManager->getRepository(Civilite::class)->codeExists($data['code'], $civilite->getId())) {
+                    return $this->json(['success' => false, 'message' => 'Ce code de civilité existe déjà'], 400);
+                }
+                $civilite->setCode($data['code']);
+            }
+            
+            if (isset($data['nom'])) $civilite->setNom($data['nom']);
+            if (isset($data['abrege'])) $civilite->setAbrege($data['abrege'] ?: null);
+            if (isset($data['notes'])) $civilite->setNotes($data['notes'] ?: null);
+            if (isset($data['actif'])) $civilite->setActif($data['actif']);
+
+            // Réorganisation des ordres si nécessaire
+            if (isset($data['ordre']) && $data['ordre'] != $civilite->getOrdre()) {
+                $entityManager->getRepository(Civilite::class)->reorganizeOrdres($civilite, (int)$data['ordre']);
+            } else {
+                $entityManager->flush();
+            }
+
+            return $this->json(['success' => true, 'message' => 'Civilité mise à jour avec succès']);
+        } catch (\Exception $e) {
+            return $this->json(['success' => false, 'message' => 'Erreur lors de la mise à jour: ' . $e->getMessage()], 400);
+        }
+    }
+
+    #[Route('/civilites/{id}/delete', name: 'app_admin_civilites_delete', methods: ['DELETE'])]
+    public function deleteCivilite(Civilite $civilite, EntityManagerInterface $entityManager): JsonResponse
+    {
+        try {
+            // TODO: Vérifier que la civilité n'est pas utilisée par des clients/contacts
+            // Pour l'instant, on autorise la suppression
+            
+            $entityManager->remove($civilite);
+            $entityManager->flush();
+
+            return $this->json(['success' => true, 'message' => 'Civilité supprimée avec succès']);
+        } catch (\Exception $e) {
+            return $this->json(['success' => false, 'message' => 'Erreur lors de la suppression: ' . $e->getMessage()], 400);
+        }
+    }
+
+    // ===== GESTION DES TRANSPORTEURS =====
+
+    #[Route('/transporteurs', name: 'app_admin_transporteurs', methods: ['GET'])]
+    public function transporteurs(EntityManagerInterface $entityManager): Response
+    {
+        $transporteurs = $entityManager->getRepository(Transporteur::class)->findAllOrdered();
+
+        return $this->render('admin/transporteurs.html.twig', [
+            'transporteurs' => $transporteurs,
+        ]);
+    }
+
+    #[Route('/transporteurs/get', name: 'app_admin_transporteurs_get', methods: ['GET'])]
+    public function getTransporteur(Request $request, EntityManagerInterface $entityManager): JsonResponse
+    {
+        $id = $request->query->get('id');
+        if (!$id) {
+            return $this->json(['error' => 'ID requis'], 400);
+        }
+
+        $transporteur = $entityManager->getRepository(Transporteur::class)->find($id);
+        if (!$transporteur) {
+            return $this->json(['error' => 'Transporteur non trouvé'], 404);
+        }
+
+        return $this->json([
+            'id' => $transporteur->getId(),
+            'code' => $transporteur->getCode(),
+            'nom' => $transporteur->getNom(),
+            'contact' => $transporteur->getContact(),
+            'adresse' => $transporteur->getAdresse(),
+            'codePostal' => $transporteur->getCodePostal(),
+            'ville' => $transporteur->getVille(),
+            'pays' => $transporteur->getPays(),
+            'telephone' => $transporteur->getTelephone(),
+            'fax' => $transporteur->getFax(),
+            'email' => $transporteur->getEmail(),
+            'siteWeb' => $transporteur->getSiteWeb(),
+            'numeroCompte' => $transporteur->getNumeroCompte(),
+            'apiUrl' => $transporteur->getApiUrl(),
+            'apiKey' => $transporteur->getApiKey(),
+            'actif' => $transporteur->isActif(),
+            'ordre' => $transporteur->getOrdre(),
+            'notes' => $transporteur->getNotes(),
+        ]);
+    }
+
+    #[Route('/transporteurs/create', name: 'app_admin_transporteurs_create', methods: ['POST'])]
+    public function createTransporteur(Request $request, EntityManagerInterface $entityManager): JsonResponse
+    {
+        try {
+            $data = json_decode($request->getContent(), true);
+
+            // Validation des champs obligatoires
+            if (empty($data['code']) || empty($data['nom'])) {
+                return $this->json(['success' => false, 'message' => 'Code et nom sont obligatoires'], 400);
+            }
+
+            // Vérifier l'unicité du code
+            if ($entityManager->getRepository(Transporteur::class)->codeExists($data['code'])) {
+                return $this->json(['success' => false, 'message' => 'Ce code de transporteur existe déjà'], 400);
+            }
+
+            $transporteur = new Transporteur();
+            $transporteur->setCode($data['code']);
+            $transporteur->setNom($data['nom']);
+            $transporteur->setContact($data['contact'] ?? null);
+            $transporteur->setAdresse($data['adresse'] ?? null);
+            $transporteur->setCodePostal($data['codePostal'] ?? null);
+            $transporteur->setVille($data['ville'] ?? null);
+            $transporteur->setPays($data['pays'] ?? null);
+            $transporteur->setTelephone($data['telephone'] ?? null);
+            $transporteur->setFax($data['fax'] ?? null);
+            $transporteur->setEmail($data['email'] ?? null);
+            $transporteur->setSiteWeb($data['siteWeb'] ?? null);
+            $transporteur->setNumeroCompte($data['numeroCompte'] ?? null);
+            $transporteur->setApiUrl($data['apiUrl'] ?? null);
+            $transporteur->setApiKey($data['apiKey'] ?? null);
+            $transporteur->setActif($data['actif'] ?? true);
+            $transporteur->setNotes($data['notes'] ?? null);
+
+            // Gestion intelligente de l'ordre
+            if (isset($data['ordre'])) {
+                $entityManager->persist($transporteur);
+                $entityManager->flush(); // Pour obtenir l'ID
+                $entityManager->getRepository(Transporteur::class)->reorganizeOrdres($transporteur, (int)$data['ordre']);
+            } else {
+                $entityManager->persist($transporteur);
+                $entityManager->flush();
+            }
+
+            return $this->json(['success' => true, 'message' => 'Transporteur créé avec succès']);
+        } catch (\Exception $e) {
+            return $this->json(['success' => false, 'message' => 'Erreur lors de la création: ' . $e->getMessage()], 400);
+        }
+    }
+
+    #[Route('/transporteurs/{id}/update', name: 'app_admin_transporteurs_update', methods: ['PUT'])]
+    public function updateTransporteur(Transporteur $transporteur, Request $request, EntityManagerInterface $entityManager): JsonResponse
+    {
+        try {
+            $data = json_decode($request->getContent(), true);
+
+            if (isset($data['code'])) {
+                // Vérifier l'unicité du code (exclure le transporteur actuel)
+                if ($entityManager->getRepository(Transporteur::class)->codeExists($data['code'], $transporteur->getId())) {
+                    return $this->json(['success' => false, 'message' => 'Ce code de transporteur existe déjà'], 400);
+                }
+                $transporteur->setCode($data['code']);
+            }
+
+            if (isset($data['nom'])) $transporteur->setNom($data['nom']);
+            if (isset($data['contact'])) $transporteur->setContact($data['contact'] ?: null);
+            if (isset($data['adresse'])) $transporteur->setAdresse($data['adresse'] ?: null);
+            if (isset($data['codePostal'])) $transporteur->setCodePostal($data['codePostal'] ?: null);
+            if (isset($data['ville'])) $transporteur->setVille($data['ville'] ?: null);
+            if (isset($data['pays'])) $transporteur->setPays($data['pays'] ?: null);
+            if (isset($data['telephone'])) $transporteur->setTelephone($data['telephone'] ?: null);
+            if (isset($data['fax'])) $transporteur->setFax($data['fax'] ?: null);
+            if (isset($data['email'])) $transporteur->setEmail($data['email'] ?: null);
+            if (isset($data['siteWeb'])) $transporteur->setSiteWeb($data['siteWeb'] ?: null);
+            if (isset($data['numeroCompte'])) $transporteur->setNumeroCompte($data['numeroCompte'] ?: null);
+            if (isset($data['apiUrl'])) $transporteur->setApiUrl($data['apiUrl'] ?: null);
+            if (isset($data['apiKey'])) $transporteur->setApiKey($data['apiKey'] ?: null);
+            if (isset($data['actif'])) $transporteur->setActif($data['actif']);
+            if (isset($data['notes'])) $transporteur->setNotes($data['notes'] ?: null);
+
+            // Réorganisation des ordres si nécessaire
+            if (isset($data['ordre']) && $data['ordre'] != $transporteur->getOrdre()) {
+                $entityManager->getRepository(Transporteur::class)->reorganizeOrdres($transporteur, (int)$data['ordre']);
+            } else {
+                $entityManager->flush();
+            }
+
+            return $this->json(['success' => true, 'message' => 'Transporteur mis à jour avec succès']);
+        } catch (\Exception $e) {
+            return $this->json(['success' => false, 'message' => 'Erreur lors de la mise à jour: ' . $e->getMessage()], 400);
+        }
+    }
+
+    #[Route('/transporteurs/{id}/delete', name: 'app_admin_transporteurs_delete', methods: ['DELETE'])]
+    public function deleteTransporteur(Transporteur $transporteur, EntityManagerInterface $entityManager): JsonResponse
+    {
+        try {
+            // Vérifier que le transporteur n'est pas utilisé par des frais de port
+            $fraisPortUtilisant = $entityManager->getRepository(FraisPort::class)->findBy(['transporteur' => $transporteur]);
+            if (!empty($fraisPortUtilisant)) {
+                return $this->json([
+                    'success' => false, 
+                    'message' => 'Impossible de supprimer ce transporteur car il est utilisé par ' . count($fraisPortUtilisant) . ' frais de port'
+                ], 400);
+            }
+
+            $entityManager->remove($transporteur);
+            $entityManager->flush();
+
+            return $this->json(['success' => true, 'message' => 'Transporteur supprimé avec succès']);
+        } catch (\Exception $e) {
+            return $this->json(['success' => false, 'message' => 'Erreur lors de la suppression: ' . $e->getMessage()], 400);
+        }
+    }
+
+    // ===== GESTION DES FRAIS DE PORT =====
+
+    #[Route('/frais-port', name: 'app_admin_frais_port', methods: ['GET'])]
+    public function fraisPort(EntityManagerInterface $entityManager): Response
+    {
+        $fraisPort = $entityManager->getRepository(FraisPort::class)->findAllOrdered();
+        $tauxTva = $entityManager->getRepository(TauxTVA::class)->findAllOrdered();
+        $transporteurs = $entityManager->getRepository(Transporteur::class)->findAllActiveOrdered();
+
+        return $this->render('admin/frais_port.html.twig', [
+            'frais_port' => $fraisPort,
+            'taux_tva' => $tauxTva,
+            'transporteurs' => $transporteurs,
+        ]);
+    }
+
+    #[Route('/frais-port/get', name: 'app_admin_frais_port_get', methods: ['GET'])]
+    public function getFraisPort(Request $request, EntityManagerInterface $entityManager): JsonResponse
+    {
+        $id = $request->query->get('id');
+        if (!$id) {
+            return $this->json(['error' => 'ID requis'], 400);
+        }
+
+        $fraisPort = $entityManager->getRepository(FraisPort::class)->findWithPaliers($id);
+        if (!$fraisPort) {
+            return $this->json(['error' => 'Frais de port non trouvé'], 404);
+        }
+
+        $paliers = [];
+        foreach ($fraisPort->getPaliers() as $palier) {
+            $paliers[] = [
+                'id' => $palier->getId(),
+                'limiteJusqua' => $palier->getLimiteJusqua(),
+                'valeur' => $palier->getValeur(),
+                'description' => $palier->getDescription(),
+            ];
+        }
+
+        return $this->json([
+            'id' => $fraisPort->getId(),
+            'code' => $fraisPort->getCode(),
+            'nom' => $fraisPort->getNom(),
+            'modeCalcul' => $fraisPort->getModeCalcul(),
+            'valeur' => $fraisPort->getValeur(),
+            'tauxTvaId' => $fraisPort->getTauxTva()->getId(),
+            'transporteurId' => $fraisPort->getTransporteur()?->getId(),
+            'actif' => $fraisPort->isActif(),
+            'ordre' => $fraisPort->getOrdre(),
+            'notes' => $fraisPort->getNotes(),
+            'paliers' => $paliers,
+        ]);
+    }
+
+    #[Route('/frais-port/create', name: 'app_admin_frais_port_create', methods: ['POST'])]
+    public function createFraisPort(Request $request, EntityManagerInterface $entityManager): JsonResponse
+    {
+        try {
+            $data = json_decode($request->getContent(), true);
+
+            // Validation des champs obligatoires
+            if (empty($data['code']) || empty($data['nom']) || empty($data['tauxTvaId'])) {
+                return $this->json(['success' => false, 'message' => 'Code, nom et taux TVA sont obligatoires'], 400);
+            }
+
+            // Vérifier l'unicité du code
+            if ($entityManager->getRepository(FraisPort::class)->codeExists($data['code'])) {
+                return $this->json(['success' => false, 'message' => 'Ce code de frais de port existe déjà'], 400);
+            }
+
+            // Récuper les entités liées
+            $tauxTva = $entityManager->getRepository(TauxTVA::class)->find($data['tauxTvaId']);
+            if (!$tauxTva) {
+                return $this->json(['success' => false, 'message' => 'Taux TVA non trouvé'], 400);
+            }
+
+            $transporteur = null;
+            if (!empty($data['transporteurId'])) {
+                $transporteur = $entityManager->getRepository(Transporteur::class)->find($data['transporteurId']);
+                if (!$transporteur) {
+                    return $this->json(['success' => false, 'message' => 'Transporteur non trouvé'], 400);
+                }
+            }
+
+            $fraisPort = new FraisPort();
+            $fraisPort->setCode($data['code']);
+            $fraisPort->setNom($data['nom']);
+            $fraisPort->setModeCalcul($data['modeCalcul'] ?? FraisPort::MODE_MONTANT_FIXE);
+            $fraisPort->setValeur($data['valeur'] ?? null);
+            $fraisPort->setTauxTva($tauxTva);
+            $fraisPort->setTransporteur($transporteur);
+            $fraisPort->setActif($data['actif'] ?? true);
+            $fraisPort->setNotes($data['notes'] ?? null);
+
+            // Gestion des paliers si nécessaire
+            if (!empty($data['paliers']) && $fraisPort->utiliserPaliers()) {
+                foreach ($data['paliers'] as $palierData) {
+                    if (!empty($palierData['limiteJusqua']) && !empty($palierData['valeur'])) {
+                        $palier = new PalierFraisPort();
+                        $palier->setLimiteJusqua($palierData['limiteJusqua']);
+                        $palier->setValeur($palierData['valeur']);
+                        $palier->setDescription($palierData['description'] ?? null);
+                        $fraisPort->addPalier($palier);
+                    }
+                }
+            }
+
+            // Gestion intelligente de l'ordre
+            if (isset($data['ordre'])) {
+                $entityManager->persist($fraisPort);
+                $entityManager->flush(); // Pour obtenir l'ID
+                $entityManager->getRepository(FraisPort::class)->reorganizeOrdres($fraisPort, (int)$data['ordre']);
+            } else {
+                $entityManager->persist($fraisPort);
+                $entityManager->flush();
+            }
+
+            return $this->json(['success' => true, 'message' => 'Frais de port créé avec succès']);
+        } catch (\Exception $e) {
+            return $this->json(['success' => false, 'message' => 'Erreur lors de la création: ' . $e->getMessage()], 400);
+        }
+    }
+
+    #[Route('/frais-port/{id}/update', name: 'app_admin_frais_port_update', methods: ['PUT'])]
+    public function updateFraisPort(FraisPort $fraisPort, Request $request, EntityManagerInterface $entityManager): JsonResponse
+    {
+        try {
+            $data = json_decode($request->getContent(), true);
+
+            if (isset($data['code'])) {
+                // Vérifier l'unicité du code (exclure le frais de port actuel)
+                if ($entityManager->getRepository(FraisPort::class)->codeExists($data['code'], $fraisPort->getId())) {
+                    return $this->json(['success' => false, 'message' => 'Ce code de frais de port existe déjà'], 400);
+                }
+                $fraisPort->setCode($data['code']);
+            }
+
+            if (isset($data['nom'])) $fraisPort->setNom($data['nom']);
+            if (isset($data['modeCalcul'])) $fraisPort->setModeCalcul($data['modeCalcul']);
+            if (isset($data['valeur'])) $fraisPort->setValeur($data['valeur'] ?: null);
+            if (isset($data['actif'])) $fraisPort->setActif($data['actif']);
+            if (isset($data['notes'])) $fraisPort->setNotes($data['notes'] ?: null);
+
+            // Mise à jour du taux TVA
+            if (isset($data['tauxTvaId'])) {
+                $tauxTva = $entityManager->getRepository(TauxTVA::class)->find($data['tauxTvaId']);
+                if (!$tauxTva) {
+                    return $this->json(['success' => false, 'message' => 'Taux TVA non trouvé'], 400);
+                }
+                $fraisPort->setTauxTva($tauxTva);
+            }
+
+            // Mise à jour du transporteur
+            if (isset($data['transporteurId'])) {
+                $transporteur = null;
+                if ($data['transporteurId']) {
+                    $transporteur = $entityManager->getRepository(Transporteur::class)->find($data['transporteurId']);
+                    if (!$transporteur) {
+                        return $this->json(['success' => false, 'message' => 'Transporteur non trouvé'], 400);
+                    }
+                }
+                $fraisPort->setTransporteur($transporteur);
+            }
+
+            // Gestion des paliers
+            if (isset($data['paliers'])) {
+                // Supprimer les anciens paliers
+                foreach ($fraisPort->getPaliers() as $palier) {
+                    $fraisPort->removePalier($palier);
+                    $entityManager->remove($palier);
+                }
+
+                // Ajouter les nouveaux paliers si mode palier
+                if ($fraisPort->utiliserPaliers()) {
+                    foreach ($data['paliers'] as $palierData) {
+                        if (!empty($palierData['limiteJusqua']) && !empty($palierData['valeur'])) {
+                            $palier = new PalierFraisPort();
+                            $palier->setLimiteJusqua($palierData['limiteJusqua']);
+                            $palier->setValeur($palierData['valeur']);
+                            $palier->setDescription($palierData['description'] ?? null);
+                            $fraisPort->addPalier($palier);
+                        }
+                    }
+                }
+            }
+
+            // Réorganisation des ordres si nécessaire
+            if (isset($data['ordre']) && $data['ordre'] != $fraisPort->getOrdre()) {
+                $entityManager->getRepository(FraisPort::class)->reorganizeOrdres($fraisPort, (int)$data['ordre']);
+            } else {
+                $entityManager->flush();
+            }
+
+            return $this->json(['success' => true, 'message' => 'Frais de port mis à jour avec succès']);
+        } catch (\Exception $e) {
+            return $this->json(['success' => false, 'message' => 'Erreur lors de la mise à jour: ' . $e->getMessage()], 400);
+        }
+    }
+
+    #[Route('/frais-port/{id}/delete', name: 'app_admin_frais_port_delete', methods: ['DELETE'])]
+    public function deleteFraisPort(FraisPort $fraisPort, EntityManagerInterface $entityManager): JsonResponse
+    {
+        try {
+            // TODO: Vérifier que le frais de port n'est pas utilisé par des documents
+            // Pour l'instant, on autorise la suppression
+
+            $entityManager->remove($fraisPort);
+            $entityManager->flush();
+
+            return $this->json(['success' => true, 'message' => 'Frais de port supprimé avec succès']);
+        } catch (\Exception $e) {
+            return $this->json(['success' => false, 'message' => 'Erreur lors de la suppression: ' . $e->getMessage()], 400);
+        }
+    }
+
+    // ===== GESTION SECTEURS MODERNISÉE =====
+
+    #[Route('/secteurs-admin', name: 'app_admin_secteurs_moderne', methods: ['GET'])]
+    public function secteursModerne(EntityManagerInterface $entityManager): Response
+    {
+        error_log("🔍 DEBUG: secteursModerne() appelée");
+        
+        try {
+            // Test 1: Récupération des secteurs de base
+            error_log("🔍 DEBUG: Récupération des secteurs...");
+            $secteurs = $entityManager->getRepository(Secteur::class)->findBy([], ['nomSecteur' => 'ASC']);
+            error_log("🔍 DEBUG: Secteurs trouvés: " . count($secteurs));
+            
+            // Test 2: Récupération des types de secteurs
+            error_log("🔍 DEBUG: Récupération des types de secteurs...");
+            $typesSecteursDisponibles = $entityManager->getRepository(TypeSecteur::class)->findBy(['actif' => true], ['nom' => 'ASC']);
+            error_log("🔍 DEBUG: Types secteurs trouvés: " . count($typesSecteursDisponibles));
+            
+            // Test 3: Récupération des commerciaux
+            error_log("🔍 DEBUG: Récupération des commerciaux...");
+            $commerciaux = $entityManager->getRepository(User::class)->findBy(['isActive' => true], ['nom' => 'ASC']);
+            error_log("🔍 DEBUG: Commerciaux trouvés: " . count($commerciaux));
+            
+            // Test 4: Récupération des divisions administratives
+            error_log("🔍 DEBUG: Récupération des divisions administratives...");
+            $divisions = $entityManager->getRepository(DivisionAdministrative::class)->findBy(['actif' => true], ['nomCommune' => 'ASC'], 50);
+            error_log("🔍 DEBUG: Divisions trouvées: " . count($divisions));
+            
+            // Test 5: Statistiques
+            error_log("🔍 DEBUG: Calcul des statistiques...");
+            $stats = [
+                'divisions_administratives' => $entityManager->getRepository(DivisionAdministrative::class)->count(['actif' => true]),
+                'types_secteur' => $entityManager->getRepository(TypeSecteur::class)->count(['actif' => true]),
+                'attributions_secteur' => $entityManager->getRepository(AttributionSecteur::class)->count([]),
+                'secteurs' => count($secteurs)
+            ];
+            error_log("🔍 DEBUG: Stats calculées: " . json_encode($stats));
+            
+            // Test 6: Rendu du template
+            error_log("🔍 DEBUG: Rendu du template secteurs_moderne.html.twig...");
+            
+            return $this->render('admin/secteurs_moderne.html.twig', [
+                'secteurs' => $secteurs,
+                'types_secteurs' => $typesSecteursDisponibles,
+                'commerciaux' => $commerciaux,  
+                'divisions' => $divisions,
+                'stats' => $stats,
+            ]);
+            
+        } catch (\Exception $e) {
+            error_log("❌ ERREUR dans secteursModerne: " . $e->getMessage());
+            error_log("❌ Stack trace: " . $e->getTraceAsString());
+            
+            return new Response('
+                <div class="alert alert-danger">
+                    <h4>Erreur de chargement des secteurs</h4>
+                    <p><strong>Message:</strong> ' . htmlspecialchars($e->getMessage()) . '</p>
+                    <p><strong>Fichier:</strong> ' . htmlspecialchars($e->getFile()) . ':' . $e->getLine() . '</p>
+                </div>
+            ', 500);
+        }
+    }
+
+    // ===== API POUR GESTION DES ATTRIBUTIONS SECTEURS =====
+    
+    #[Route('/secteur/{id}/attributions', name: 'app_admin_secteur_attributions', methods: ['GET'])]
+    public function getSecteurAttributions(int $id, EntityManagerInterface $entityManager): JsonResponse
+    {
+        try {
+            $secteur = $entityManager->getRepository(Secteur::class)->find($id);
+            if (!$secteur) {
+                return new JsonResponse(['success' => false, 'message' => 'Secteur non trouvé'], 404);
+            }
+            
+            $attributions = $entityManager->getRepository(AttributionSecteur::class)
+                ->createQueryBuilder('a')
+                ->leftJoin('a.divisionAdministrative', 'd')
+                ->where('a.secteur = :secteur')
+                ->setParameter('secteur', $secteur)
+                ->orderBy('a.typeCritere', 'ASC')
+                ->addOrderBy('d.nomCommune', 'ASC')
+                ->getQuery()
+                ->getResult();
+            
+            $data = [];
+            foreach ($attributions as $attribution) {
+                $data[] = [
+                    'id' => $attribution->getId(),
+                    'typeCritere' => $attribution->getTypeCritere(),
+                    'valeurCritere' => $attribution->getValeurCritere(),
+                    'notes' => $attribution->getNotes(),
+                    'divisionAdministrative' => [
+                        'id' => $attribution->getDivisionAdministrative()->getId(),
+                        'nom' => $this->getDivisionNom($attribution->getDivisionAdministrative(), $attribution->getTypeCritere()),
+                        'details' => $this->getDivisionDetails($attribution->getDivisionAdministrative(), $attribution->getTypeCritere())
+                    ]
+                ];
+            }
+            
+            return new JsonResponse(['success' => true, 'attributions' => $data]);
+            
+        } catch (\Exception $e) {
+            error_log("❌ Erreur getSecteurAttributions: " . $e->getMessage());
+            return new JsonResponse(['success' => false, 'message' => 'Erreur serveur'], 500);
+        }
+    }
+    
+    #[Route('/secteur/attribution/create', name: 'app_admin_secteur_attribution_create', methods: ['POST'])]
+    public function createSecteurAttribution(Request $request, EntityManagerInterface $entityManager): JsonResponse
+    {
+        try {
+            $data = json_decode($request->getContent(), true);
+            
+            // Validation des données
+            if (!isset($data['secteurId'], $data['divisionId'], $data['typeCritere'], $data['valeurCritere'])) {
+                return new JsonResponse(['success' => false, 'message' => 'Données manquantes'], 400);
+            }
+            
+            $secteur = $entityManager->getRepository(Secteur::class)->find($data['secteurId']);
+            $division = $entityManager->getRepository(DivisionAdministrative::class)->find($data['divisionId']);
+            
+            if (!$secteur || !$division) {
+                return new JsonResponse(['success' => false, 'message' => 'Secteur ou division non trouvé'], 404);
+            }
+            
+            // Vérifier si l'attribution existe déjà
+            $existingAttribution = $entityManager->getRepository(AttributionSecteur::class)
+                ->findOneBy([
+                    'secteur' => $secteur,
+                    'divisionAdministrative' => $division,
+                    'typeCritere' => $data['typeCritere']
+                ]);
+                
+            if ($existingAttribution) {
+                return new JsonResponse(['success' => false, 'message' => 'Cette attribution existe déjà'], 409);
+            }
+            
+            // Créer l'attribution
+            $attribution = new AttributionSecteur();
+            $attribution->setSecteur($secteur);
+            $attribution->setDivisionAdministrative($division);
+            $attribution->setTypeCritere($data['typeCritere']);
+            $attribution->setValeurCritere($data['valeurCritere']);
+            
+            if (!empty($data['notes'])) {
+                $attribution->setNotes($data['notes']);
+            }
+            
+            $entityManager->persist($attribution);
+            $entityManager->flush();
+            
+            return new JsonResponse(['success' => true, 'message' => 'Attribution créée avec succès', 'id' => $attribution->getId()]);
+            
+        } catch (\Exception $e) {
+            error_log("❌ Erreur createSecteurAttribution: " . $e->getMessage());
+            return new JsonResponse(['success' => false, 'message' => 'Erreur serveur'], 500);
+        }
+    }
+    
+    #[Route('/secteur/attribution/{id}', name: 'app_admin_secteur_attribution_delete', methods: ['DELETE'])]
+    public function deleteSecteurAttribution(int $id, EntityManagerInterface $entityManager): JsonResponse
+    {
+        try {
+            $attribution = $entityManager->getRepository(AttributionSecteur::class)->find($id);
+            
+            if (!$attribution) {
+                return new JsonResponse(['success' => false, 'message' => 'Attribution non trouvée'], 404);
+            }
+            
+            $entityManager->remove($attribution);
+            $entityManager->flush();
+            
+            return new JsonResponse(['success' => true, 'message' => 'Attribution supprimée avec succès']);
+            
+        } catch (\Exception $e) {
+            error_log("❌ Erreur deleteSecteurAttribution: " . $e->getMessage());
+            return new JsonResponse(['success' => false, 'message' => 'Erreur serveur'], 500);
+        }
+    }
+    
+    #[Route('/divisions-administratives/recherche', name: 'app_admin_divisions_recherche', methods: ['GET'])]
+    public function rechercheDivisions(Request $request, EntityManagerInterface $entityManager): JsonResponse
+    {
+        try {
+            $type = $request->query->get('type');
+            $terme = $request->query->get('terme');
+            
+            if (!$type || !$terme || strlen($terme) < 2) {
+                return new JsonResponse(['success' => false, 'message' => 'Paramètres manquants'], 400);
+            }
+            
+            $qb = $entityManager->getRepository(DivisionAdministrative::class)->createQueryBuilder('d');
+            $qb->select('d')->where('d.actif = true');
+            
+            // Recherche selon le type de division administrative
+            switch ($type) {
+                case 'code_postal':
+                    $qb->andWhere('d.codePostal LIKE :terme')
+                       ->setParameter('terme', $terme . '%')
+                       ->orderBy('d.codePostal', 'ASC');
+                    break;
+                    
+                case 'commune':
+                    $qb->andWhere('LOWER(d.nomCommune) LIKE LOWER(:terme)')
+                       ->setParameter('terme', '%' . $terme . '%')
+                       ->orderBy('d.nomCommune', 'ASC')
+                       ->addOrderBy('d.codePostal', 'ASC');
+                    break;
+                    
+                case 'canton':
+                    // Pour les cantons, on sélectionne un seul résultat par canton
+                    $qb->select('MIN(d.id) as min_id')
+                       ->addSelect('d.codeCanton')
+                       ->addSelect('d.nomCanton')
+                       ->addSelect('d.nomDepartement')
+                       ->addSelect('d.codeDepartement')
+                       ->andWhere('LOWER(d.nomCanton) LIKE LOWER(:terme)')
+                       ->andWhere('d.nomCanton IS NOT NULL')
+                       ->andWhere('d.codeCanton IS NOT NULL')
+                       ->setParameter('terme', '%' . $terme . '%')
+                       ->groupBy('d.codeCanton, d.nomCanton, d.nomDepartement, d.codeDepartement')
+                       ->orderBy('d.nomCanton', 'ASC');
+                    break;
+                    
+                case 'epci':
+                    // Pour les EPCI, on sélectionne un seul résultat par EPCI
+                    $qb->select('MIN(d.id) as min_id')
+                       ->addSelect('d.codeEpci')
+                       ->addSelect('d.nomEpci')
+                       ->addSelect('d.typeEpci')
+                       ->addSelect('d.nomDepartement')
+                       ->addSelect('d.codeDepartement')
+                       ->andWhere('LOWER(d.nomEpci) LIKE LOWER(:terme)')
+                       ->andWhere('d.nomEpci IS NOT NULL')
+                       ->andWhere('d.codeEpci IS NOT NULL')
+                       ->setParameter('terme', '%' . $terme . '%')
+                       ->groupBy('d.codeEpci, d.nomEpci, d.typeEpci, d.nomDepartement, d.codeDepartement')
+                       ->orderBy('d.nomEpci', 'ASC');
+                    break;
+                    
+                case 'departement':
+                    // Pour les départements, on sélectionne une division par département
+                    $qb->select('MIN(d.id) as min_id')
+                       ->addSelect('d.codeDepartement')
+                       ->addSelect('d.nomDepartement')
+                       ->addSelect('d.nomRegion')
+                       ->andWhere('LOWER(d.nomDepartement) LIKE LOWER(:terme)')
+                       ->andWhere('d.nomDepartement IS NOT NULL')
+                       ->andWhere('d.codeDepartement IS NOT NULL')
+                       ->setParameter('terme', '%' . $terme . '%')
+                       ->groupBy('d.codeDepartement, d.nomDepartement, d.nomRegion')
+                       ->orderBy('d.nomDepartement', 'ASC');
+                    break;
+                    
+                case 'region':
+                    // Pour les régions, on sélectionne une division par région
+                    $qb->select('MIN(d.id) as min_id')
+                       ->addSelect('d.codeRegion')
+                       ->addSelect('d.nomRegion')
+                       ->andWhere('LOWER(d.nomRegion) LIKE LOWER(:terme)')
+                       ->andWhere('d.nomRegion IS NOT NULL')
+                       ->andWhere('d.codeRegion IS NOT NULL')
+                       ->setParameter('terme', '%' . $terme . '%')
+                       ->groupBy('d.codeRegion, d.nomRegion')
+                       ->orderBy('d.nomRegion', 'ASC');
+                    break;
+                    
+                default:
+                    return new JsonResponse(['success' => false, 'message' => 'Type de recherche non supporté'], 400);
+            }
+            
+            $results = $qb->setMaxResults(20)->getQuery()->getResult();
+            
+            $data = [];
+            
+            // Traitement spécial pour types qui utilisent des requêtes groupées (départements, régions, cantons, EPCI)
+            if ($type === 'departement') {
+                foreach ($results as $result) {
+                    $data[] = [
+                        'id' => $result['min_id'],
+                        'nom' => $result['nomDepartement'] ?? 'Département non défini',
+                        'valeur' => $result['codeDepartement'] ?? '',
+                        'details' => 'Code: ' . ($result['codeDepartement'] ?? '') . ' - ' . ($result['nomRegion'] ?? 'Région inconnue')
+                    ];
+                }
+            } elseif ($type === 'region') {
+                foreach ($results as $result) {
+                    $data[] = [
+                        'id' => $result['min_id'],
+                        'nom' => $result['nomRegion'] ?? 'Région non définie',
+                        'valeur' => $result['codeRegion'] ?? '',
+                        'details' => 'Code: ' . ($result['codeRegion'] ?? '')
+                    ];
+                }
+            } elseif ($type === 'canton') {
+                foreach ($results as $result) {
+                    $data[] = [
+                        'id' => $result['min_id'],
+                        'nom' => $result['nomCanton'] ?? 'Canton non défini',
+                        'valeur' => $result['codeCanton'] ?? '',
+                        'details' => ($result['nomDepartement'] ?? '') . ' (' . ($result['codeDepartement'] ?? '') . ')'
+                    ];
+                }
+            } elseif ($type === 'epci') {
+                foreach ($results as $result) {
+                    $data[] = [
+                        'id' => $result['min_id'],
+                        'nom' => $result['nomEpci'] ?? 'EPCI non défini',
+                        'valeur' => $result['codeEpci'] ?? '',
+                        'details' => ($result['typeEpci'] ?? 'Type inconnu') . ' - ' . ($result['nomDepartement'] ?? 'Département inconnu')
+                    ];
+                }
+            } else {
+                // Traitement standard pour les autres types
+                foreach ($results as $division) {
+                    $data[] = [
+                        'id' => $division->getId(),
+                        'nom' => $this->getDivisionNom($division, $type),
+                        'valeur' => $this->getDivisionValeur($division, $type),
+                        'details' => $this->getDivisionDetails($division, $type)
+                    ];
+                }
+            }
+            
+            return new JsonResponse(['success' => true, 'results' => $data]);
+            
+        } catch (\Exception $e) {
+            error_log("❌ Erreur rechercheDivisions: " . $e->getMessage());
+            return new JsonResponse(['success' => false, 'message' => 'Erreur serveur'], 500);
+        }
+    }
+    
+    // Méthodes utilitaires pour formater les divisions administratives
+    private function getDivisionNom(DivisionAdministrative $division, string $type): string
+    {
+        switch ($type) {
+            case 'code_postal':
+                return $division->getCodePostal() . ' - ' . $division->getNomCommune();
+            case 'commune':
+                return $division->getNomCommune() . ' (' . $division->getCodePostal() . ')';
+            case 'canton':
+                return $division->getNomCanton() ?: 'Canton non défini';
+            case 'epci':
+                return $division->getNomEpci() ?: 'EPCI non défini';
+            case 'departement':
+                return $division->getNomDepartement() ?: 'Département non défini';
+            case 'region':
+                return $division->getNomRegion() ?: 'Région non définie';
+            default:
+                return $division->getNomCommune();
+        }
+    }
+    
+    private function getDivisionValeur(DivisionAdministrative $division, string $type): string
+    {
+        switch ($type) {
+            case 'code_postal':
+                return $division->getCodePostal();
+            case 'commune':
+                return $division->getCodeInseeCommune();
+            case 'canton':
+                return $division->getCodeCanton() ?: '';
+            case 'epci':
+                return $division->getCodeEpci() ?: '';
+            case 'departement':
+                return $division->getCodeDepartement() ?: '';
+            case 'region':
+                return $division->getCodeRegion() ?: '';
+            default:
+                return $division->getCodeInseeCommune();
+        }
+    }
+    
+    private function getDivisionDetails(DivisionAdministrative $division, string $type): string
+    {
+        switch ($type) {
+            case 'code_postal':
+                return $division->getNomDepartement() . ' (' . $division->getCodeDepartement() . ')';
+            case 'commune':
+                return $division->getCodePostal() . ' - ' . $division->getNomDepartement();
+            case 'canton':
+                return $division->getNomDepartement() . ' (' . $division->getCodeDepartement() . ')';
+            case 'epci':
+                return $division->getTypeEpci() . ' - ' . $division->getNomDepartement();
+            case 'departement':
+                return 'Code: ' . $division->getCodeDepartement() . ' - ' . $division->getNomRegion();
+            case 'region':
+                return 'Code: ' . $division->getCodeRegion();
+            default:
+                return $division->getNomDepartement();
+        }
+    }
+
+    #[Route('/divisions-administratives', name: 'app_admin_divisions_administratives', methods: ['GET'])]
+    public function divisionsAdministratives(EntityManagerInterface $entityManager): Response
+    {
+        $divisions = $entityManager->getRepository(DivisionAdministrative::class)
+            ->rechercheAvancee(['limit' => 100]);
+
+        $statistiques = $entityManager->getRepository(DivisionAdministrative::class)
+            ->getStatistiquesCouverture();
+
+        return $this->render('admin/divisions_administratives.html.twig', [
+            'divisions' => $divisions,
+            'statistiques' => $statistiques,
+        ]);
+    }
+
+    #[Route('/divisions-administratives/search', name: 'app_admin_divisions_search', methods: ['GET'])]
+    public function searchDivisions(Request $request, EntityManagerInterface $entityManager): JsonResponse
+    {
+        $terme = $request->query->get('terme', '');
+        $type = $request->query->get('type');
+        $limit = (int) $request->query->get('limit', 50);
+
+        $divisions = $entityManager->getRepository(DivisionAdministrative::class)
+            ->search($terme, $type, $limit);
+
+        $results = [];
+        foreach ($divisions as $division) {
+            $results[] = [
+                'id' => $division->getId(),
+                'code_postal' => $division->getCodePostal(),
+                'nom_commune' => $division->getNomCommune(),
+                'nom_departement' => $division->getNomDepartement(),
+                'nom_region' => $division->getNomRegion(),
+                'affichage_complet' => $division->getAffichageComplet()
+            ];
+        }
+
+        return $this->json($results);
+    }
+
+    #[Route('/types-secteur', name: 'app_admin_types_secteur', methods: ['GET'])]
+    public function typesSecteur(EntityManagerInterface $entityManager): Response
+    {
+        $types = $entityManager->getRepository(TypeSecteur::class)->findAllOrdered();
+        $statistiques = $entityManager->getRepository(TypeSecteur::class)->getStatistiquesUtilisation();
+
+        return $this->render('admin/types_secteur.html.twig', [
+            'types_secteur' => $types,
+            'statistiques' => $statistiques,
+        ]);
+    }
+
+    #[Route('/types-secteur/create', name: 'app_admin_types_secteur_create', methods: ['POST'])]
+    public function createTypeSecteur(Request $request, EntityManagerInterface $entityManager): JsonResponse
+    {
+        $data = json_decode($request->getContent(), true);
+        
+        if (empty($data['nom']) || empty($data['type'])) {
+            return $this->json(['error' => 'Nom et type requis'], 400);
+        }
+
+        $typeSecteur = new TypeSecteur();
+        $typeSecteur->setNom($data['nom'])
+                   ->setType($data['type'])
+                   ->setDescription($data['description'] ?? null)
+                   ->setActif($data['actif'] ?? true);
+
+        // Générer un code unique automatiquement
+        $code = $entityManager->getRepository(TypeSecteur::class)->genererCodeUnique($data['nom']);
+        $typeSecteur->setCode($code);
+
+        // Assigner l'ordre
+        if (!empty($data['ordre'])) {
+            $entityManager->getRepository(TypeSecteur::class)->insererAOrdre($typeSecteur, (int) $data['ordre']);
+        } else {
+            $ordre = $entityManager->getRepository(TypeSecteur::class)->getProchainOrdre();
+            $typeSecteur->setOrdre($ordre);
+            $entityManager->persist($typeSecteur);
+            $entityManager->flush();
+        }
+
+        return $this->json([
+            'success' => true,
+            'message' => 'Type de secteur créé avec succès',
+            'data' => [
+                'id' => $typeSecteur->getId(),
+                'code' => $typeSecteur->getCode(),
+                'nom' => $typeSecteur->getNom(),
+                'type' => $typeSecteur->getType(),
+                'ordre' => $typeSecteur->getOrdre()
+            ]
+        ]);
+    }
+
+    #[Route('/types-secteur/{id}', name: 'app_admin_types_secteur_update', methods: ['PUT'])]
+    public function updateTypeSecteur(int $id, Request $request, EntityManagerInterface $entityManager): JsonResponse
+    {
+        $typeSecteur = $entityManager->getRepository(TypeSecteur::class)->find($id);
+        if (!$typeSecteur) {
+            return $this->json(['error' => 'Type de secteur non trouvé'], 404);
+        }
+
+        $data = json_decode($request->getContent(), true);
+
+        // Valider les données
+        $erreurs = $entityManager->getRepository(TypeSecteur::class)->validerDonnees($typeSecteur);
+        if (!empty($erreurs)) {
+            return $this->json(['error' => implode(', ', $erreurs)], 400);
+        }
+
+        if (isset($data['nom'])) $typeSecteur->setNom($data['nom']);
+        if (isset($data['description'])) $typeSecteur->setDescription($data['description']);
+        if (isset($data['actif'])) $typeSecteur->setActif($data['actif']);
+        
+        if (isset($data['ordre']) && $data['ordre'] != $typeSecteur->getOrdre()) {
+            $entityManager->getRepository(TypeSecteur::class)->insererAOrdre($typeSecteur, (int) $data['ordre']);
+        } else {
+            $entityManager->flush();
+        }
+
+        return $this->json(['success' => true, 'message' => 'Type de secteur mis à jour avec succès']);
+    }
+
+    #[Route('/types-secteur/{id}', name: 'app_admin_types_secteur_delete', methods: ['DELETE'])]
+    public function deleteTypeSecteur(int $id, EntityManagerInterface $entityManager): JsonResponse
+    {
+        $typeSecteur = $entityManager->getRepository(TypeSecteur::class)->find($id);
+        if (!$typeSecteur) {
+            return $this->json(['error' => 'Type de secteur non trouvé'], 404);
+        }
+
+        // Vérifier qu'aucun secteur n'utilise ce type
+        $nbSecteurs = $entityManager->getRepository(TypeSecteur::class)->countSecteursUtilisant($typeSecteur);
+        if ($nbSecteurs > 0) {
+            return $this->json([
+                'error' => "Impossible de supprimer : {$nbSecteurs} secteur(s) utilisent ce type"
+            ], 400);
+        }
+
+        try {
+            $entityManager->remove($typeSecteur);
+            $entityManager->flush();
+            
+            // Réorganiser les ordres
+            $entityManager->getRepository(TypeSecteur::class)->reorganizeOrdres();
+
+            return $this->json(['success' => true, 'message' => 'Type de secteur supprimé avec succès']);
+        } catch (\Exception $e) {
+            return $this->json(['success' => false, 'message' => 'Erreur lors de la suppression: ' . $e->getMessage()], 400);
+        }
+    }
+
+    /**
+     * API pour récupérer les données géographiques d'un secteur pour la cartographie
+     */
+    #[Route('/secteur/{id}/geo-data', name: 'app_admin_secteur_geo_data', methods: ['GET'])]
+    public function getSecteurGeoData(int $id, EntityManagerInterface $entityManager): JsonResponse
+    {
+        try {
+            $secteur = $entityManager->getRepository(Secteur::class)->find($id);
+            
+            if (!$secteur) {
+                return $this->json(['error' => 'Secteur non trouvé'], 404);
+            }
+
+            $geoData = [
+                'secteur' => [
+                    'id' => $secteur->getId(),
+                    'nom' => $secteur->getNomSecteur(),
+                    'couleur' => $secteur->getCouleurHex() ?: '#3498db', // Couleur par défaut bleue
+                    'commercial' => $secteur->getCommercial()?->getNom()
+                ],
+                'attributions' => [],
+                'bounds' => null // Sera calculé
+            ];
+
+            $minLat = $minLng = PHP_FLOAT_MAX;
+            $maxLat = $maxLng = PHP_FLOAT_MIN;
+            $hasCoordinates = false;
+
+            foreach ($secteur->getAttributions() as $attribution) {
+                $division = $attribution->getDivisionAdministrative();
+                if (!$division) continue;
+
+                $attributionData = [
+                    'id' => $attribution->getId(),
+                    'type' => $attribution->getTypeCritere(),
+                    'valeur' => $attribution->getValeurCritere(),
+                    'nom' => (string) $attribution,
+                    'notes' => $attribution->getNotes(),
+                    'coordinates' => []
+                ];
+
+                // Pour les EPCI, récupérer toutes les communes de cet EPCI
+                if ($attribution->getTypeCritere() === 'epci') {
+                    $communesEpci = $entityManager->getRepository(DivisionAdministrative::class)
+                        ->createQueryBuilder('d')
+                        ->where('d.codeEpci = :codeEpci')
+                        ->andWhere('d.actif = true')
+                        ->andWhere('d.latitude IS NOT NULL')
+                        ->andWhere('d.longitude IS NOT NULL')
+                        ->setParameter('codeEpci', $division->getCodeEpci())
+                        ->getQuery()
+                        ->getResult();
+
+                    foreach ($communesEpci as $commune) {
+                        $lat = (float) $commune->getLatitude();
+                        $lng = (float) $commune->getLongitude();
+                        
+                        $attributionData['coordinates'][] = [
+                            'lat' => $lat,
+                            'lng' => $lng,
+                            'commune' => $commune->getNomCommune(),
+                            'codePostal' => $commune->getCodePostal()
+                        ];
+
+                        // Mettre à jour les bounds
+                        $minLat = min($minLat, $lat);
+                        $maxLat = max($maxLat, $lat);
+                        $minLng = min($minLng, $lng);
+                        $maxLng = max($maxLng, $lng);
+                        $hasCoordinates = true;
+                    }
+                } else {
+                    // Pour les autres types, garder le comportement actuel (un seul point)
+                    if ($division->getLatitude() && $division->getLongitude()) {
+                        $lat = (float) $division->getLatitude();
+                        $lng = (float) $division->getLongitude();
+                        
+                        $attributionData['coordinates'][] = [
+                            'lat' => $lat,
+                            'lng' => $lng,
+                            'commune' => $division->getNomCommune(),
+                            'codePostal' => $division->getCodePostal()
+                        ];
+
+                        // Mettre à jour les bounds
+                        $minLat = min($minLat, $lat);
+                        $maxLat = max($maxLat, $lat);
+                        $minLng = min($minLng, $lng);
+                        $maxLng = max($maxLng, $lng);
+                        $hasCoordinates = true;
+                    }
+                }
+
+                // Ajouter des informations spécifiques selon le type
+                switch ($attribution->getTypeCritere()) {
+                    case 'code_postal':
+                        $attributionData['codePostal'] = $division->getCodePostal();
+                        $attributionData['commune'] = $division->getNomCommune();
+                        $attributionData['departement'] = $division->getNomDepartement();
+                        break;
+                    case 'commune':
+                        $attributionData['commune'] = $division->getNomCommune();
+                        $attributionData['codePostal'] = $division->getCodePostal();
+                        $attributionData['codeInsee'] = $division->getCodeInseeCommune(); // Ajout code INSEE pour géométries
+                        $attributionData['departement'] = $division->getNomDepartement();
+                        error_log("🔍 DEBUG: COMMUNE - nom=" . $division->getNomCommune() . " codeInsee=" . $division->getCodeInseeCommune());
+                        break;
+                    case 'epci':
+                        $attributionData['epci'] = $division->getNomEpci();
+                        $attributionData['codeEpci'] = $division->getCodeEpci();
+                        $attributionData['typeEpci'] = $division->getTypeEpci();
+                        $attributionData['departement'] = $division->getNomDepartement();
+                        break;
+                    case 'departement':
+                        $attributionData['departement'] = $division->getNomDepartement();
+                        $attributionData['codeDepartement'] = $division->getCodeDepartement();
+                        $attributionData['region'] = $division->getNomRegion();
+                        break;
+                    case 'region':
+                        $attributionData['region'] = $division->getNomRegion();
+                        $attributionData['codeRegion'] = $division->getCodeRegion();
+                        break;
+                }
+
+                $geoData['attributions'][] = $attributionData;
+            }
+
+            // Calculer les bounds si on a des coordonnées
+            if ($hasCoordinates) {
+                // Ajouter une marge de 10% pour un meilleur affichage
+                $latMargin = ($maxLat - $minLat) * 0.1;
+                $lngMargin = ($maxLng - $minLng) * 0.1;
+                
+                $geoData['bounds'] = [
+                    'southwest' => [
+                        'lat' => $minLat - $latMargin,
+                        'lng' => $minLng - $lngMargin
+                    ],
+                    'northeast' => [
+                        'lat' => $maxLat + $latMargin,
+                        'lng' => $maxLng + $lngMargin
+                    ]
+                ];
+
+                // Centre de la carte
+                $geoData['center'] = [
+                    'lat' => ($minLat + $maxLat) / 2,
+                    'lng' => ($minLng + $maxLng) / 2
+                ];
+            }
+
+            return $this->json($geoData);
+
+        } catch (\Exception $e) {
+            return $this->json(['error' => 'Erreur lors de la récupération des données: ' . $e->getMessage()], 500);
+        }
+    }
+
+    /**
+     * API pour récupérer tous les secteurs avec leurs données géographiques pour la carte générale
+     */
+    #[Route('/secteurs/all-geo-data', name: 'app_admin_secteurs_all_geo_data', methods: ['GET'])]
+    public function getAllSecteursGeoData(EntityManagerInterface $entityManager, EpciBoundariesService $epciBoundariesService, CommuneGeometryService $communeGeometryService, \App\Service\CommuneGeometryCacheService $cacheService): JsonResponse
+    {
+        error_log("🔍 DEBUG: getAllSecteursGeoData appelée");
+        try {
+            $secteurs = $entityManager->getRepository(Secteur::class)
+                ->createQueryBuilder('s')
+                ->where('s.isActive = true')
+                ->orderBy('s.nomSecteur', 'ASC')
+                ->getQuery()
+                ->getResult();
+
+            $secteursData = [];
+
+            error_log("🔍 DEBUG: " . count($secteurs) . " secteurs trouvés");
+            foreach ($secteurs as $secteur) {
+                error_log("🔍 DEBUG: Traitement secteur " . $secteur->getNomSecteur());
+                $secteurInfo = [
+                    'id' => $secteur->getId(),
+                    'nom' => $secteur->getNomSecteur(),
+                    'couleur' => $secteur->getCouleurHex() ?: '#3498db',
+                    'commercial' => $secteur->getCommercial() ? 
+                        trim(($secteur->getCommercial()->getPrenom() ?: '') . ' ' . ($secteur->getCommercial()->getNom() ?: '')) : 
+                        null,
+                    'description' => $secteur->getDescription(),
+                    'isActive' => $secteur->getIsActive(),
+                    'attributions' => [],
+                    'bounds' => null,
+                    'center' => null,
+                    'hasCoordinates' => false
+                ];
+
+                $minLat = $minLng = PHP_FLOAT_MAX;
+                $maxLat = $maxLng = PHP_FLOAT_MIN;
+                $hasCoordinates = false;
+
+                error_log("🔍 DEBUG: Secteur " . $secteur->getNomSecteur() . " a " . count($secteur->getAttributions()) . " attributions");
+                foreach ($secteur->getAttributions() as $attribution) {
+                    $division = $attribution->getDivisionAdministrative();
+                    if (!$division) continue;
+                    error_log("🔍 DEBUG: Attribution type=" . $attribution->getTypeCritere() . " valeur=" . $attribution->getValeurCritere());
+
+                    $attributionData = [
+                        'id' => $attribution->getId(),
+                        'type' => $attribution->getTypeCritere(),
+                        'valeur' => $attribution->getValeurCritere(),
+                        'nom' => (string) $attribution,
+                        'coordinates' => []
+                    ];
+
+                    // Pour les EPCI, récupérer les communes directement
+                    if ($attribution->getTypeCritere() === 'epci') {
+                        error_log("🏢 Récupération communes pour EPCI: " . $division->getCodeEpci());
+                        
+                        // Récupérer toutes les communes de cet EPCI
+                        $communes = $entityManager->createQuery('
+                            SELECT d FROM App\Entity\DivisionAdministrative d 
+                            WHERE d.codeEpci = :codeEpci 
+                            AND d.codeInseeCommune IS NOT NULL
+                            ORDER BY d.nomCommune
+                        ')
+                        ->setParameter('codeEpci', $division->getCodeEpci())
+                        ->getResult();
+
+                        // Préparer les données des communes pour le service de cache
+                        $communesInput = [];
+                        foreach ($communes as $commune) {
+                            $communesInput[] = [
+                                'codeInseeCommune' => $commune->getCodeInseeCommune(),
+                                'nomCommune' => $commune->getNomCommune()
+                            ];
+                        }
+
+                        // Utiliser le service de cache pour récupérer TOUTES les géométries (plus de limite !)
+                        error_log("🚀 Utilisation du service de cache pour " . count($communesInput) . " communes");
+                        $communesData = $cacheService->getMultipleCommunesGeometry($communesInput);
+
+                        // Mettre à jour les bounds avec toutes les communes récupérées
+                        foreach ($communesData as $commune) {
+                            if (isset($commune['coordinates']) && is_array($commune['coordinates'])) {
+                                // Calculer les limites pour l'ensemble
+                                foreach ($commune['coordinates'] as $coord) {
+                                    if (isset($coord['lat']) && isset($coord['lng'])) {
+                                        $minLat = min($minLat, $coord['lat']);
+                                        $maxLat = max($maxLat, $coord['lat']);
+                                        $minLng = min($minLng, $coord['lng']);
+                                        $maxLng = max($maxLng, $coord['lng']);
+                                        $hasCoordinates = true;
+                                    }
+                                }
+                                error_log("✅ Géométrie récupérée pour " . $commune['nom'] . " (" . count($commune['coordinates']) . " points) - Source: " . ($commune['source'] ?? 'unknown'));
+                            }
+                        }
+
+                        if (!empty($communesData)) {
+                            $attributionData['communes'] = $communesData; // Inclure les communes dans les données
+                            $attributionData['boundary_type'] = 'communes_reelles'; // Nouveau type pour différencier
+                            $attributionData['center'] = [
+                                'lat' => ($minLat + $maxLat) / 2,
+                                'lng' => ($minLng + $maxLng) / 2
+                            ];
+                            error_log("🎯 EPCI " . $division->getNomEpci() . " - " . count($communesData) . " communes avec vraies géométries");
+                        } else {
+                            // Fallback sur l'ancienne méthode si pas de frontières en cache
+                            $communesEpci = $entityManager->getRepository(DivisionAdministrative::class)
+                                ->createQueryBuilder('d')
+                                ->where('d.codeEpci = :codeEpci')
+                                ->andWhere('d.actif = true')
+                                ->andWhere('d.latitude IS NOT NULL')
+                                ->andWhere('d.longitude IS NOT NULL')
+                                ->setParameter('codeEpci', $division->getCodeEpci())
+                                ->getQuery()
+                                ->getResult();
+
+                            foreach ($communesEpci as $commune) {
+                                $lat = (float) $commune->getLatitude();
+                                $lng = (float) $commune->getLongitude();
+                                
+                                $attributionData['coordinates'][] = [
+                                    'lat' => $lat,
+                                    'lng' => $lng
+                                ];
+
+                                $minLat = min($minLat, $lat);
+                                $maxLat = max($maxLat, $lat);
+                                $minLng = min($minLng, $lng);
+                                $maxLng = max($maxLng, $lng);
+                                $hasCoordinates = true;
+                            }
+                            $attributionData['boundary_type'] = 'convex_hull'; // Indiquer qu'on utilise l'enveloppe convexe
+                        }
+                    } else {
+                        // Pour les autres types, un seul point
+                        if ($division->getLatitude() && $division->getLongitude()) {
+                            $lat = (float) $division->getLatitude();
+                            $lng = (float) $division->getLongitude();
+                            
+                            $attributionData['coordinates'][] = [
+                                'lat' => $lat,
+                                'lng' => $lng
+                            ];
+
+                            $minLat = min($minLat, $lat);
+                            $maxLat = max($maxLat, $lat);
+                            $minLng = min($minLng, $lng);
+                            $maxLng = max($maxLng, $lng);
+                            $hasCoordinates = true;
+                        }
+                    }
+
+                    $secteurInfo['attributions'][] = $attributionData;
+                }
+
+                // Calculer les bounds et centre pour ce secteur
+                if ($hasCoordinates) {
+                    $latMargin = ($maxLat - $minLat) * 0.1;
+                    $lngMargin = ($maxLng - $minLng) * 0.1;
+                    
+                    $secteurInfo['bounds'] = [
+                        'southwest' => [
+                            'lat' => $minLat - $latMargin,
+                            'lng' => $minLng - $lngMargin
+                        ],
+                        'northeast' => [
+                            'lat' => $maxLat + $latMargin,
+                            'lng' => $maxLng + $lngMargin
+                        ]
+                    ];
+
+                    $secteurInfo['center'] = [
+                        'lat' => ($minLat + $maxLat) / 2,
+                        'lng' => ($minLng + $maxLng) / 2
+                    ];
+
+                    $secteurInfo['hasCoordinates'] = true;
+                }
+
+                $secteursData[] = $secteurInfo;
+            }
+
+            return $this->json([
+                'success' => true,
+                'secteurs' => $secteursData,
+                'total' => count($secteursData)
+            ]);
+
+        } catch (\Exception $e) {
+            error_log("❌ Erreur getAllSecteursGeoData: " . $e->getMessage());
+            return $this->json(['error' => 'Erreur lors de la récupération des secteurs'], 500);
+        }
+    }
+
+    #[Route('/commune/{codeInsee}/geometry', name: 'app_admin_commune_geometry', methods: ['GET'])]
+    public function getCommuneGeometry(string $codeInsee, CommuneGeometryService $communeGeometryService, EntityManagerInterface $entityManager): JsonResponse
+    {
+        try {
+            // Récupérer les infos de la commune depuis la base
+            $commune = $entityManager->getRepository(DivisionAdministrative::class)
+                ->findOneBy(['codeInseeCommune' => $codeInsee]);
+            
+            if (!$commune) {
+                return $this->json(['error' => 'Commune non trouvée'], 404);
+            }
+
+            // Récupérer la géométrie réelle
+            $geometry = $communeGeometryService->getCommuneGeometry($codeInsee, $commune->getNomCommune());
+            
+            if (!$geometry) {
+                return $this->json(['error' => 'Géométrie non disponible pour cette commune'], 404);
+            }
+
+            return $this->json([
+                'success' => true,
+                'commune' => [
+                    'codeInsee' => $codeInsee,
+                    'nom' => $commune->getNomCommune(),
+                    'codePostal' => $commune->getCodePostal(),
+                    'geometry' => $geometry
+                ]
+            ]);
+
+        } catch (\Exception $e) {
+            error_log("❌ Erreur getCommuneGeometry: " . $e->getMessage());
+            return $this->json(['error' => 'Erreur lors de la récupération de la géométrie'], 500);
+        }
+    }
+
+    #[Route('/debug/secteurs', name: 'app_admin_debug_secteurs', methods: ['GET'])]
+    public function debugSecteurs(): Response
+    {
+        return $this->render('admin/debug_secteurs.html.twig');
+    }
+
+    /**
+     * Récupère la géométrie d'une commune directement depuis l'API officielle
+     */
+    private function fetchCommuneGeometryDirect(string $codeInsee, string $nomCommune): ?array
+    {
+        try {
+            $url = "https://geo.api.gouv.fr/communes/{$codeInsee}?geometry=contour&format=geojson";
+            $context = stream_context_create([
+                'http' => [
+                    'timeout' => 5, // Réduire timeout pour éviter blocage
+                    'method' => 'GET'
+                ]
+            ]);
+            
+            $response = file_get_contents($url, false, $context);
+            
+            if ($response === false) {
+                error_log("❌ Erreur API pour commune $nomCommune ($codeInsee)");
+                return null;
+            }
+            
+            $data = json_decode($response, true);
+            
+            if (!isset($data['geometry'])) {
+                error_log("❌ Pas de géométrie pour commune $nomCommune ($codeInsee)");
+                return null;
+            }
+            
+            // Convertir la géométrie GeoJSON en format compatible
+            $boundaries = $this->extractBoundariesFromGeoJSON($data['geometry']);
+            
+            if (empty($boundaries)) {
+                error_log("❌ Conversion géométrie échouée pour $nomCommune ($codeInsee)");
+                return null;
+            }
+            
+            error_log("✅ Géométrie récupérée pour $nomCommune: " . count($boundaries) . " points");
+            
+            return [
+                'geometry' => [
+                    'boundaries' => $boundaries,
+                    'source' => 'api_officielle_directe'
+                ]
+            ];
+            
+        } catch (\Exception $e) {
+            error_log("❌ Exception géométrie $nomCommune ($codeInsee): " . $e->getMessage());
+            return null;
+        }
+    }
+
+    /**
+     * Extrait les coordonnées d'une géométrie GeoJSON
+     */
+    private function extractBoundariesFromGeoJSON(array $geometry): array
+    {
+        $boundaries = [];
+        
+        if ($geometry['type'] === 'Polygon') {
+            // Polygon simple - prendre le contour extérieur
+            foreach ($geometry['coordinates'][0] as $coord) {
+                $boundaries[] = [
+                    'lat' => $coord[1],
+                    'lng' => $coord[0]
+                ];
+            }
+        } elseif ($geometry['type'] === 'MultiPolygon') {
+            // MultiPolygon - prendre le plus grand polygone
+            $largestPolygon = [];
+            $maxPoints = 0;
+            
+            foreach ($geometry['coordinates'] as $polygon) {
+                $pointCount = count($polygon[0]);
+                if ($pointCount > $maxPoints) {
+                    $maxPoints = $pointCount;
+                    $largestPolygon = $polygon[0];
+                }
+            }
+            
+            foreach ($largestPolygon as $coord) {
+                $boundaries[] = [
+                    'lat' => $coord[1],
+                    'lng' => $coord[0]
+                ];
+            }
+        }
+        
+        return $boundaries;
+    }
+
 }
