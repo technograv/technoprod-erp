@@ -1,0 +1,102 @@
+{#
+    Template partiel pour la barre d'actions flottante
+    
+    Parameters:
+    - left_buttons: Array of {url, icon, text} for left buttons
+    - center_text: Text to display in center
+    - center_icon: Icon for center text
+    - right_buttons: Array of {type, form_id, icon, text, class} for right buttons
+    - bar_color: Color theme (blue, green, red, etc.)
+#}
+
+{% set bar_colors = {
+    'blue': 'linear-gradient(135deg, #007bff 0%, #0056b3 100%)',
+    'green': 'linear-gradient(135deg, #28a745 0%, #20c997 100%)',
+    'red': 'linear-gradient(135deg, #dc3545 0%, #c82333 100%)',
+    'orange': 'linear-gradient(135deg, #fd7e14 0%, #e55a00 100%)'
+} %}
+
+<style>
+.floating-action-bar {
+    position: fixed;
+    bottom: 0;
+    left: 0;
+    right: 0;
+    z-index: 1000;
+    background: {{ bar_colors[bar_color|default('blue')] }};
+    box-shadow: 0 -4px 20px rgba(0, 0, 0, 0.3);
+    border-top: 1px solid rgba(255, 255, 255, 0.2);
+    backdrop-filter: blur(10px);
+}
+
+.floating-action-content {
+    max-width: 1200px;
+    margin: 0 auto;
+    padding: 12px 20px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+}
+
+.action-left, .action-right {
+    display: flex;
+    align-items: center;
+}
+
+.action-center {
+    flex: 1;
+    text-align: center;
+    margin: 0 20px;
+}
+
+.floating-info {
+    font-weight: 600;
+    font-size: 1rem;
+    text-shadow: 0 1px 2px rgba(0, 0, 0, 0.2);
+}
+
+.floating-action-bar .btn {
+    backdrop-filter: blur(5px);
+    border: 1px solid rgba(255, 255, 255, 0.3);
+    transition: all 0.3s ease;
+}
+
+.floating-action-bar .btn:hover {
+    transform: translateY(-1px);
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2);
+}
+
+body {
+    padding-bottom: 80px;
+}
+</style>
+
+<div class="floating-action-bar">
+    <div class="floating-action-content">
+        <div class="action-left">
+            {% for button in left_buttons|default([]) %}
+                <a href="{{ button.url }}" class="btn btn-outline-light btn-sm {{ loop.first ? '' : 'ms-2' }}">
+                    <i class="{{ button.icon }} me-1"></i>{{ button.text }}
+                </a>
+            {% endfor %}
+        </div>
+        <div class="action-center">
+            <span class="floating-info text-white">
+                {% if center_icon %}<i class="{{ center_icon }} me-1"></i>{% endif %}{{ center_text|default('') }}
+            </span>
+        </div>
+        <div class="action-right">
+            {% for button in right_buttons|default([]) %}
+                {% if button.type == 'submit' %}
+                    <button type="submit" form="{{ button.form_id }}" class="btn {{ button.class|default('btn-success') }} btn-sm {{ loop.first ? '' : 'ms-2' }}">
+                        <i class="{{ button.icon }} me-1"></i>{{ button.text }}
+                    </button>
+                {% else %}
+                    <a href="{{ button.url }}" class="btn {{ button.class|default('btn-outline-light') }} btn-sm {{ loop.first ? '' : 'ms-2' }}">
+                        <i class="{{ button.icon }} me-1"></i>{{ button.text }}
+                    </a>
+                {% endif %}
+            {% endfor %}
+        </div>
+    </div>
+</div>

@@ -1,0 +1,444 @@
+{% extends 'base.html.twig' %}
+
+{% block title %}Gestion des Consentements - TechnoProd{% endblock %}
+
+{% block stylesheets %}
+    {{ parent() }}
+    <style>
+        .consent-header {
+            background: linear-gradient(135deg, #28a745 0%, #20c997 100%);
+            color: white;
+            padding: 3rem 0;
+            margin-bottom: 2rem;
+        }
+        
+        .consent-card {
+            border: 1px solid #dee2e6;
+            border-radius: 12px;
+            padding: 1.5rem;
+            margin-bottom: 1.5rem;
+            transition: all 0.3s ease;
+            background: white;
+        }
+        
+        .consent-card:hover {
+            box-shadow: 0 4px 12px rgba(0, 123, 255, 0.15);
+            transform: translateY(-2px);
+        }
+        
+        .consent-card.required {
+            border-left: 4px solid #dc3545;
+            background: #fff5f5;
+        }
+        
+        .consent-card.optional {
+            border-left: 4px solid #28a745;
+        }
+        
+        .consent-switch {
+            transform: scale(1.2);
+        }
+        
+        .consent-description {
+            color: #6c757d;
+            font-size: 0.9rem;
+            margin: 0.5rem 0;
+        }
+        
+        .legal-basis {
+            font-size: 0.8rem;
+            background: #e3f2fd;
+            color: #1976d2;
+            padding: 0.25rem 0.5rem;
+            border-radius: 4px;
+            display: inline-block;
+            margin-top: 0.5rem;
+        }
+        
+        .category-badge {
+            font-size: 0.75rem;
+            padding: 0.25rem 0.5rem;
+            border-radius: 12px;
+            font-weight: 600;
+            text-transform: uppercase;
+        }
+        
+        .category-obligatoire {
+            background-color: #dc3545;
+            color: white;
+        }
+        
+        .category-marketing {
+            background-color: #fd7e14;
+            color: white;
+        }
+        
+        .category-fonctionnel {
+            background-color: #20c997;
+            color: white;
+        }
+        
+        .consent-stats {
+            background: #f8f9fa;
+            border-radius: 8px;
+            padding: 1rem;
+            margin-bottom: 2rem;
+        }
+        
+        .stats-number {
+            font-size: 2rem;
+            font-weight: bold;
+            color: #28a745;
+        }
+        
+        .quick-actions {
+            background: white;
+            border-radius: 12px;
+            padding: 1.5rem;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+            margin-bottom: 2rem;
+        }
+        
+        .consent-history {
+            max-height: 300px;
+            overflow-y: auto;
+            border: 1px solid #dee2e6;
+            border-radius: 8px;
+            padding: 1rem;
+        }
+        
+        .history-item {
+            padding: 0.5rem 0;
+            border-bottom: 1px solid #eee;
+            font-size: 0.9rem;
+        }
+        
+        .history-item:last-child {
+            border-bottom: none;
+        }
+        
+        .consent-timestamp {
+            color: #6c757d;
+            font-size: 0.8rem;
+        }
+        
+        .loading-spinner {
+            display: none;
+        }
+        
+        .toast-container {
+            position: fixed;
+            top: 20px;
+            right: 20px;
+            z-index: 9999;
+        }
+    </style>
+{% endblock %}
+
+{% block body %}
+<div class="consent-header">
+    <div class="container">
+        <h1><i class="fas fa-user-shield me-3"></i>Gestion des Consentements</h1>
+        <p class="lead">Contrôlez l'utilisation de vos données personnelles</p>
+    </div>
+</div>
+
+<div class="container">
+    <!-- Statistiques rapides -->
+    <div class="consent-stats">
+        <div class="row text-center">
+            <div class="col-md-3">
+                <div class="stats-number">{{ total_consents }}</div>
+                <div class="text-muted">Consentements actifs</div>
+            </div>
+            <div class="col-md-3">
+                <div class="stats-number" id="optional-consents">0</div>
+                <div class="text-muted">Consentements optionnels</div>
+            </div>
+            <div class="col-md-3">
+                <div class="stats-number" id="required-consents">0</div>
+                <div class="text-muted">Traitements obligatoires</div>
+            </div>
+            <div class="col-md-3">
+                <div class="stats-number">RGPD</div>
+                <div class="text-muted">Conformité</div>
+            </div>
+        </div>
+    </div>
+
+    <div class="row">
+        <div class="col-lg-8">
+            <h3><i class="fas fa-list-check me-2"></i>Vos Consentements</h3>
+            <p class="text-muted mb-4">
+                Gérez vos préférences de confidentialité. Les traitements marqués comme "obligatoires" 
+                sont nécessaires au fonctionnement du service.
+            </p>
+
+            <div id="consent-list">
+                {% for purpose, config in purpose_descriptions %}
+                    {% set current_consent = user_consents[purpose] ?? null %}
+                    <div class="consent-card {{ config.required ? 'required' : 'optional' }}" data-purpose="{{ purpose }}">
+                        <div class="d-flex justify-content-between align-items-start">
+                            <div class="flex-grow-1">
+                                <div class="d-flex align-items-center mb-2">
+                                    <h5 class="mb-0 me-2">{{ config.title }}</h5>
+                                    <span class="category-badge category-{{ config.category|lower|replace({' ': '-'}) }}">
+                                        {{ config.category }}
+                                    </span>
+                                </div>
+                                
+                                <p class="consent-description">{{ config.description }}</p>
+                                
+                                <div class="legal-basis">
+                                    <i class="fas fa-gavel me-1"></i>{{ config.legal_basis }}
+                                </div>
+                                
+                                {% if current_consent %}
+                                    <div class="consent-timestamp mt-2">
+                                        <i class="fas fa-clock me-1"></i>
+                                        Accordé le {{ current_consent.grantedAt.format('d/m/Y à H:i') }}
+                                    </div>
+                                {% endif %}
+                            </div>
+                            
+                            <div class="ms-3">
+                                {% if config.required %}
+                                    <div class="form-check form-switch">
+                                        <input class="form-check-input consent-switch" type="checkbox" 
+                                               checked disabled>
+                                        <label class="form-check-label text-muted">
+                                            Obligatoire
+                                        </label>
+                                    </div>
+                                {% else %}
+                                    <div class="form-check form-switch">
+                                        <input class="form-check-input consent-switch" type="checkbox" 
+                                               id="consent-{{ purpose }}" 
+                                               data-purpose="{{ purpose }}"
+                                               {{ current_consent and current_consent.isActive ? 'checked' : '' }}>
+                                        <label class="form-check-label" for="consent-{{ purpose }}">
+                                            <span class="consent-status">
+                                                {{ current_consent and current_consent.isActive ? 'Accordé' : 'Refusé' }}
+                                            </span>
+                                        </label>
+                                    </div>
+                                {% endif %}
+                            </div>
+                        </div>
+                    </div>
+                {% endfor %}
+            </div>
+        </div>
+
+        <div class="col-lg-4">
+            <!-- Actions rapides -->
+            <div class="quick-actions">
+                <h4><i class="fas fa-bolt me-2"></i>Actions Rapides</h4>
+                
+                <div class="d-grid gap-2">
+                    <button type="button" class="btn btn-outline-success" id="accept-all-optional">
+                        <i class="fas fa-check-double me-2"></i>Tout Accepter (Optionnel)
+                    </button>
+                    
+                    <button type="button" class="btn btn-outline-warning" id="refuse-all-optional">
+                        <i class="fas fa-times-circle me-2"></i>Tout Refuser (Optionnel)
+                    </button>
+                    
+                    <hr>
+                    
+                    <a href="{{ path('app_gdpr_data_export') }}" class="btn btn-outline-info">
+                        <i class="fas fa-download me-2"></i>Exporter mes Données
+                    </a>
+                    
+                    <a href="{{ path('app_gdpr_privacy_policy') }}" class="btn btn-outline-primary">
+                        <i class="fas fa-shield-alt me-2"></i>Politique de Confidentialité
+                    </a>
+                    
+                    <a href="{{ path('app_gdpr_dpo_contact') }}" class="btn btn-outline-secondary">
+                        <i class="fas fa-envelope me-2"></i>Contacter le DPO
+                    </a>
+                </div>
+            </div>
+
+            <!-- Informations RGPD -->
+            <div class="card">
+                <div class="card-header bg-primary text-white">
+                    <h5 class="mb-0"><i class="fas fa-info-circle me-2"></i>Vos Droits RGPD</h5>
+                </div>
+                <div class="card-body">
+                    <ul class="list-unstyled">
+                        <li class="mb-2">
+                            <i class="fas fa-eye text-info me-2"></i>
+                            <strong>Droit d'accès</strong><br>
+                            <small class="text-muted">Consulter vos données</small>
+                        </li>
+                        <li class="mb-2">
+                            <i class="fas fa-edit text-warning me-2"></i>
+                            <strong>Droit de rectification</strong><br>
+                            <small class="text-muted">Corriger vos données</small>
+                        </li>
+                        <li class="mb-2">
+                            <i class="fas fa-trash text-danger me-2"></i>
+                            <strong>Droit à l'oubli</strong><br>
+                            <small class="text-muted">Supprimer vos données</small>
+                        </li>
+                        <li class="mb-2">
+                            <i class="fas fa-download text-success me-2"></i>
+                            <strong>Droit de portabilité</strong><br>
+                            <small class="text-muted">Récupérer vos données</small>
+                        </li>
+                    </ul>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Toast container -->
+<div class="toast-container"></div>
+
+<!-- Spinner de chargement -->
+<div id="loading-overlay" class="position-fixed top-0 start-0 w-100 h-100 d-none" 
+     style="background: rgba(0,0,0,0.5); z-index: 9999;">
+    <div class="d-flex justify-content-center align-items-center h-100">
+        <div class="spinner-border text-primary" role="status">
+            <span class="visually-hidden">Traitement en cours...</span>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block javascripts %}
+    {{ parent() }}
+    <script>
+    document.addEventListener('DOMContentLoaded', function() {
+        // Mettre à jour les statistiques
+        updateConsentStats();
+        
+        // Gérer les changements de consentement
+        document.querySelectorAll('.consent-switch:not([disabled])').forEach(function(toggle) {
+            toggle.addEventListener('change', function() {
+                const purpose = this.dataset.purpose;
+                const granted = this.checked;
+                
+                updateConsent(purpose, granted, this);
+            });
+        });
+        
+        // Actions rapides
+        document.getElementById('accept-all-optional')?.addEventListener('click', function() {
+            setAllOptionalConsents(true);
+        });
+        
+        document.getElementById('refuse-all-optional')?.addEventListener('click', function() {
+            setAllOptionalConsents(false);
+        });
+        
+        function updateConsent(purpose, granted, toggleElement) {
+            const loadingOverlay = document.getElementById('loading-overlay');
+            loadingOverlay.classList.remove('d-none');
+            
+            const url = granted ? '{{ path("app_gdpr_consent_grant") }}' : '{{ path("app_gdpr_consent_withdraw") }}';
+            
+            fetch(url, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify({ purpose: purpose })
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.success) {
+                    // Mettre à jour l'interface
+                    const card = toggleElement.closest('.consent-card');
+                    const statusLabel = card.querySelector('.consent-status');
+                    const timestampDiv = card.querySelector('.consent-timestamp');
+                    
+                    statusLabel.textContent = granted ? 'Accordé' : 'Refusé';
+                    
+                    if (granted) {
+                        const now = new Date();
+                        const timestamp = now.toLocaleDateString('fr-FR') + ' à ' + now.toLocaleTimeString('fr-FR', {hour: '2-digit', minute: '2-digit'});
+                        
+                        if (timestampDiv) {
+                            timestampDiv.innerHTML = '<i class="fas fa-clock me-1"></i>Accordé le ' + timestamp;
+                        } else {
+                            const newTimestamp = document.createElement('div');
+                            newTimestamp.className = 'consent-timestamp mt-2';
+                            newTimestamp.innerHTML = '<i class="fas fa-clock me-1"></i>Accordé le ' + timestamp;
+                            card.querySelector('.legal-basis').parentNode.appendChild(newTimestamp);
+                        }
+                    } else if (timestampDiv) {
+                        timestampDiv.remove();
+                    }
+                    
+                    updateConsentStats();
+                    showToast(data.message, 'success');
+                } else {
+                    // Remettre le toggle dans son état précédent
+                    toggleElement.checked = !granted;
+                    showToast(data.error || 'Erreur lors de la mise à jour', 'error');
+                }
+            })
+            .catch(error => {
+                console.error('Erreur:', error);
+                toggleElement.checked = !granted;
+                showToast('Erreur de connexion', 'error');
+            })
+            .finally(() => {
+                loadingOverlay.classList.add('d-none');
+            });
+        }
+        
+        function setAllOptionalConsents(granted) {
+            const optionalToggles = document.querySelectorAll('.consent-switch:not([disabled])');
+            
+            optionalToggles.forEach(function(toggle) {
+                if (toggle.checked !== granted) {
+                    toggle.checked = granted;
+                    updateConsent(toggle.dataset.purpose, granted, toggle);
+                }
+            });
+        }
+        
+        function updateConsentStats() {
+            const requiredCount = document.querySelectorAll('.consent-card.required').length;
+            const optionalCount = document.querySelectorAll('.consent-card.optional').length;
+            const optionalGranted = document.querySelectorAll('.consent-switch:not([disabled]):checked').length;
+            
+            document.getElementById('required-consents').textContent = requiredCount;
+            document.getElementById('optional-consents').textContent = optionalGranted + '/' + optionalCount;
+        }
+        
+        function showToast(message, type) {
+            const toastContainer = document.querySelector('.toast-container');
+            const toastId = 'toast-' + Date.now();
+            
+            const toastHtml = `
+                <div class="toast" id="${toastId}" role="alert" aria-live="assertive" aria-atomic="true">
+                    <div class="toast-header">
+                        <i class="fas fa-${type === 'success' ? 'check-circle text-success' : 'exclamation-triangle text-danger'} me-2"></i>
+                        <strong class="me-auto">Consentements</strong>
+                        <button type="button" class="btn-close" data-bs-dismiss="toast"></button>
+                    </div>
+                    <div class="toast-body">
+                        ${message}
+                    </div>
+                </div>
+            `;
+            
+            toastContainer.insertAdjacentHTML('beforeend', toastHtml);
+            
+            const toastElement = document.getElementById(toastId);
+            const toast = new bootstrap.Toast(toastElement);
+            toast.show();
+            
+            // Supprimer le toast après fermeture
+            toastElement.addEventListener('hidden.bs.toast', function() {
+                this.remove();
+            });
+        }
+    });
+    </script>
+{% endblock %}

@@ -1,0 +1,337 @@
+<h3 class="section-title">
+    <i class="fas fa-user me-2"></i>Gestion des Civilités
+</h3>
+
+<div class="row mb-3">
+    <div class="col-md-6">
+        <button type="button" class="btn btn-success" data-bs-toggle="modal" data-bs-target="#modalCivilite">
+            <i class="fas fa-plus me-2"></i>Nouvelle Civilité
+        </button>
+    </div>
+    <div class="col-md-6 text-end">
+        <span class="badge bg-info">{{ civilites|length }} civilités configurées</span>
+    </div>
+</div>
+
+<div class="table-responsive">
+    <table class="table table-hover">
+        <thead class="table-light">
+            <tr>
+                <th>Ordre</th>
+                <th>Code</th>
+                <th>Nom</th>
+                <th>Abrégé</th>
+                <th>Affichage</th>
+                <th>Statut</th>
+                <th>Actions</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for civilite in civilites %}
+            <tr>
+                <td>
+                    <span class="badge bg-secondary">{{ civilite.ordre }}</span>
+                </td>
+                <td>
+                    <code class="bg-light px-2 py-1">{{ civilite.code }}</code>
+                </td>
+                <td>
+                    <strong>{{ civilite.nom }}</strong>
+                </td>
+                <td>
+                    {% if civilite.abrege %}
+                        <span class="badge bg-primary">{{ civilite.abrege }}</span>
+                    {% else %}
+                        <span class="text-muted">-</span>
+                    {% endif %}
+                </td>
+                <td>
+                    <span class="text-success fw-bold">{{ civilite.displayName }}</span>
+                </td>
+                <td>
+                    <span class="badge {{ civilite.actif ? 'bg-success' : 'bg-danger' }}">
+                        {{ civilite.actif ? 'Actif' : 'Inactif' }}
+                    </span>
+                </td>
+                <td>
+                    <div class="btn-group btn-group-sm">
+                        <button type="button" class="btn btn-outline-primary btn-edit-civilite" 
+                                data-id="{{ civilite.id }}"
+                                data-bs-toggle="modal" 
+                                data-bs-target="#modalCivilite">
+                            <i class="fas fa-edit"></i>
+                        </button>
+                        <button type="button" class="btn btn-outline-danger btn-delete-civilite" 
+                                data-id="{{ civilite.id }}"
+                                data-nom="{{ civilite.nom }}">
+                            <i class="fas fa-trash"></i>
+                        </button>
+                    </div>
+                </td>
+            </tr>
+            {% else %}
+            <tr>
+                <td colspan="7" class="text-center text-muted py-4">
+                    <i class="fas fa-user fa-3x mb-3"></i>
+                    <p>Aucune civilité configurée.</p>
+                    <button type="button" class="btn btn-success" data-bs-toggle="modal" data-bs-target="#modalCivilite">
+                        <i class="fas fa-plus me-2"></i>Créer la première civilité
+                    </button>
+                </td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+</div>
+
+<!-- Modal Civilité -->
+<div class="modal fade" id="modalCivilite" tabindex="-1" aria-labelledby="modalCiviliteLabel" aria-hidden="true">
+    <div class="modal-dialog modal-lg">
+        <div class="modal-content">
+            <div class="modal-header bg-primary text-white">
+                <h5 class="modal-title" id="modalCiviliteLabel">
+                    <i class="fas fa-user me-2"></i>
+                    <span id="modal-title-text">Nouvelle Civilité</span>
+                </h5>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body">
+                <form id="formCivilite">
+                    <input type="hidden" id="civilite-id" name="id">
+                    
+                    <!-- Informations générales -->
+                    <div class="row mb-4">
+                        <div class="col-12">
+                            <h6 class="text-primary border-bottom pb-2">
+                                <i class="fas fa-info-circle me-2"></i>Informations générales
+                            </h6>
+                        </div>
+                        <div class="col-md-3">
+                            <label for="civilite-code" class="form-label">Code <span class="text-danger">*</span></label>
+                            <input type="text" class="form-control" id="civilite-code" name="code" required maxlength="10" 
+                                   placeholder="Ex: M, MME, MLLE">
+                        </div>
+                        <div class="col-md-5">
+                            <label for="civilite-nom" class="form-label">Nom complet <span class="text-danger">*</span></label>
+                            <input type="text" class="form-control" id="civilite-nom" name="nom" required maxlength="50" 
+                                   placeholder="Ex: Monsieur, Madame, Mademoiselle">
+                        </div>
+                        <div class="col-md-2">
+                            <label for="civilite-abrege" class="form-label">Abrégé</label>
+                            <input type="text" class="form-control" id="civilite-abrege" name="abrege" maxlength="20" 
+                                   placeholder="Ex: M., Mme, Mlle">
+                        </div>
+                        <div class="col-md-2">
+                            <label for="civilite-ordre" class="form-label">Ordre</label>
+                            <input type="number" class="form-control" id="civilite-ordre" name="ordre" min="1" placeholder="1">
+                        </div>
+                    </div>
+
+                    <!-- Notes -->
+                    <div class="row mb-4">
+                        <div class="col-12">
+                            <label for="civilite-notes" class="form-label">Notes</label>
+                            <textarea class="form-control" id="civilite-notes" name="notes" rows="3" 
+                                      placeholder="Notes ou commentaires sur cette civilité..."></textarea>
+                        </div>
+                    </div>
+
+                    <!-- Statut -->
+                    <div class="row mb-3">
+                        <div class="col-md-6">
+                            <div class="form-check form-switch">
+                                <input class="form-check-input" type="checkbox" id="civilite-actif" name="actif" checked>
+                                <label class="form-check-label" for="civilite-actif">
+                                    Civilité active
+                                </label>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Aperçu -->
+                    <div class="row">
+                        <div class="col-12">
+                            <div class="alert alert-light border">
+                                <strong>Aperçu d'affichage :</strong>
+                                <span id="civilite-preview">
+                                    <code class="bg-primary text-white px-2 py-1">CODE</code> 
+                                    - <strong>Nom complet</strong>
+                                    → Affichage: <span class="text-success fw-bold">Abrégé ou Nom</span>
+                                </span>
+                            </div>
+                        </div>
+                    </div>
+                </form>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">
+                    <i class="fas fa-times me-2"></i>Annuler
+                </button>
+                <button type="button" class="btn btn-primary" id="btn-save-civilite">
+                    <i class="fas fa-save me-2"></i>Enregistrer
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+function initCivilites() {
+    console.log('Initialisation du module Civilités...');
+    
+    // Fonction de mise à jour de l'aperçu
+    function updatePreview() {
+        const code = document.getElementById('civilite-code').value || 'CODE';
+        const nom = document.getElementById('civilite-nom').value || 'Nom complet';
+        const abrege = document.getElementById('civilite-abrege').value;
+        
+        const affichage = abrege || nom;
+        
+        let preview = `<code class="bg-primary text-white px-2 py-1">${code}</code> - <strong>${nom}</strong>`;
+        preview += ` → Affichage: <span class="text-success fw-bold">${affichage}</span>`;
+        
+        document.getElementById('civilite-preview').innerHTML = preview;
+    }
+
+    // Event listeners pour l'aperçu en temps réel
+    document.getElementById('civilite-code').addEventListener('input', updatePreview);
+    document.getElementById('civilite-nom').addEventListener('input', updatePreview);
+    document.getElementById('civilite-abrege').addEventListener('input', updatePreview);
+    
+    // Boutons d'édition
+    document.querySelectorAll('.btn-edit-civilite').forEach(btn => {
+        btn.addEventListener('click', function() {
+            const id = this.dataset.id;
+            console.log('Édition civilité ID:', id);
+            
+            fetch(`{{ path('app_admin_civilites_get') }}?id=${id}`)
+                .then(response => response.json())
+                .then(data => {
+                    console.log('Données civilité reçues:', data);
+                    
+                    // Remplir le formulaire
+                    document.getElementById('civilite-id').value = data.id;
+                    document.getElementById('civilite-code').value = data.code;
+                    document.getElementById('civilite-nom').value = data.nom;
+                    document.getElementById('civilite-abrege').value = data.abrege || '';
+                    document.getElementById('civilite-notes').value = data.notes || '';
+                    document.getElementById('civilite-ordre').value = data.ordre;
+                    document.getElementById('civilite-actif').checked = data.actif;
+                    
+                    // Changer le titre et mettre à jour l'aperçu
+                    document.getElementById('modal-title-text').textContent = 'Modifier Civilité';
+                    updatePreview();
+                })
+                .catch(error => {
+                    console.error('Erreur lors du chargement de la civilité:', error);
+                    alert('Erreur lors du chargement de la civilité');
+                });
+        });
+    });
+    
+    // Reset du modal à la fermeture
+    document.getElementById('modalCivilite').addEventListener('hidden.bs.modal', function() {
+        document.getElementById('formCivilite').reset();
+        document.getElementById('civilite-id').value = '';
+        document.getElementById('civilite-actif').checked = true;
+        document.getElementById('modal-title-text').textContent = 'Nouvelle Civilité';
+        updatePreview();
+    });
+    
+    // Bouton d'enregistrement
+    document.getElementById('btn-save-civilite').addEventListener('click', function() {
+        const formData = new FormData(document.getElementById('formCivilite'));
+        const id = document.getElementById('civilite-id').value;
+        const url = id ? `{{ path('app_admin_civilites_update', {'id': '__ID__'}) }}`.replace('__ID__', id) : `{{ path('app_admin_civilites_create') }}`;
+        
+        // Préparer les données JSON
+        const data = {
+            code: formData.get('code'),
+            nom: formData.get('nom'),
+            abrege: formData.get('abrege'),
+            notes: formData.get('notes'),
+            ordre: parseInt(formData.get('ordre')) || 1,
+            actif: document.getElementById('civilite-actif').checked
+        };
+        
+        console.log('Sauvegarde civilité...', data);
+        
+        fetch(url, {
+            method: id ? 'PUT' : 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'X-Requested-With': 'XMLHttpRequest'
+            },
+            body: JSON.stringify(data)
+        })
+        .then(response => response.json())
+        .then(data => {
+            if (data.success) {
+                bootstrap.Modal.getInstance(document.getElementById('modalCivilite')).hide();
+                
+                // Recharger l'onglet
+                const tabContent = document.querySelector('#civilites .admin-section');
+                tabContent.dataset.loaded = 'false';
+                
+                fetch('{{ path("app_admin_civilites") }}')
+                    .then(response => response.text())
+                    .then(html => {
+                        tabContent.innerHTML = html;
+                        initCivilites();
+                    });
+            } else {
+                alert('Erreur: ' + (data.message || 'Erreur inconnue'));
+            }
+        })
+        .catch(error => {
+            console.error('Erreur lors de la sauvegarde:', error);
+            alert('Erreur lors de la sauvegarde');
+        });
+    });
+    
+    // Boutons de suppression
+    document.querySelectorAll('.btn-delete-civilite').forEach(btn => {
+        btn.addEventListener('click', function() {
+            const id = this.dataset.id;
+            const nom = this.dataset.nom;
+            
+            if (confirm(`Êtes-vous sûr de vouloir supprimer la civilité "${nom}" ?`)) {
+                fetch(`{{ path('app_admin_civilites_delete', {'id': '__ID__'}) }}`.replace('__ID__', id), {
+                    method: 'DELETE',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'X-Requested-With': 'XMLHttpRequest'
+                    }
+                })
+                .then(response => response.json())
+                .then(data => {
+                    if (data.success) {
+                        // Recharger l'onglet
+                        const tabContent = document.querySelector('#civilites .admin-section');
+                        tabContent.dataset.loaded = 'false';
+                        
+                        fetch('{{ path("app_admin_civilites") }}')
+                            .then(response => response.text())
+                            .then(html => {
+                                tabContent.innerHTML = html;
+                                initCivilites();
+                            });
+                    } else {
+                        alert('Erreur: ' + (data.message || 'Erreur inconnue'));
+                    }
+                })
+                .catch(error => {
+                    console.error('Erreur lors de la suppression:', error);
+                    alert('Erreur lors de la suppression');
+                });
+            }
+        });
+    });
+
+    // Initialiser l'aperçu
+    updatePreview();
+}
+
+// Rendre la fonction globale
+window.initCivilites = initCivilites;
+</script>

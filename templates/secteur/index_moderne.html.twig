@@ -1,0 +1,519 @@
+{% extends 'base.html.twig' %}
+
+{% block title %}Secteurs Commerciaux{% endblock %}
+
+{% block stylesheets %}
+    {{ parent() }}
+    <style>
+        .secteur-controls {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            border-radius: 10px;
+            padding: 20px;
+            margin-bottom: 20px;
+        }
+        
+        .secteurs-table {
+            background: white;
+            border-radius: 10px;
+            overflow: hidden;
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+        }
+        
+        .secteur-checkbox {
+            width: 18px;
+            height: 18px;
+            margin-right: 10px;
+        }
+        
+        .secteur-color-indicator {
+            width: 20px;
+            height: 20px;
+            border-radius: 50%;
+            display: inline-block;
+            border: 2px solid white;
+            box-shadow: 0 1px 3px rgba(0,0,0,0.3);
+        }
+        
+        #secteurs-map {
+            height: 500px;
+            border-radius: 10px;
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+        }
+        
+        .map-controls {
+            background: white;
+            border-radius: 8px;
+            padding: 15px;
+            margin-bottom: 15px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        }
+        
+        .btn-map-control {
+            margin-right: 10px;
+            margin-bottom: 5px;
+        }
+        
+        .secteur-stats {
+            background: linear-gradient(135deg, #4CAF50, #45a049);
+            color: white;
+            border-radius: 8px;
+            padding: 15px;
+            text-align: center;
+        }
+    </style>
+{% endblock %}
+
+{% block body %}
+<div class="container-fluid mt-4">
+    <!-- En-tête -->
+    <div class="secteur-controls">
+        <div class="row align-items-center">
+            <div class="col-md-8">
+                <h1 class="mb-0">
+                    <i class="fas fa-map-marked-alt me-3"></i>
+                    Secteurs Commerciaux
+                </h1>
+                <p class="mb-0 mt-2 opacity-75">Gestion et visualisation des territoires commerciaux</p>
+            </div>
+            <div class="col-md-4 text-end">
+                <a href="{{ path('app_secteur_new') }}" class="btn btn-light btn-lg">
+                    <i class="fas fa-plus me-2"></i>Nouveau Secteur
+                </a>
+            </div>
+        </div>
+    </div>
+
+    <div class="row">
+        <!-- Colonne gauche - Liste des secteurs -->
+        <div class="col-md-5">
+            <!-- Contrôles de carte -->
+            <div class="map-controls">
+                <h6 class="mb-3"><i class="fas fa-sliders-h me-2"></i>Contrôles de la carte</h6>
+                <div class="d-flex flex-wrap">
+                    <button class="btn btn-outline-success btn-sm btn-map-control" onclick="afficherTousLesSecteurs()">
+                        <i class="fas fa-eye me-1"></i>Tout afficher
+                    </button>
+                    <button class="btn btn-outline-danger btn-sm btn-map-control" onclick="masquerTousLesSecteurs()">
+                        <i class="fas fa-eye-slash me-1"></i>Tout masquer
+                    </button>
+                    <button class="btn btn-outline-info btn-sm btn-map-control" onclick="centrerSurTousLesSecteurs()">
+                        <i class="fas fa-search-location me-1"></i>Tout voir
+                    </button>
+                    <button class="btn btn-outline-warning btn-sm btn-map-control" onclick="toggleLegende()">
+                        <i class="fas fa-info-circle me-1"></i>Légende
+                    </button>
+                </div>
+            </div>
+
+            <!-- Statistiques -->
+            <div class="secteur-stats">
+                <div class="row text-center">
+                    <div class="col-4">
+                        <h4 id="stats-total">{{ secteurs|length }}</h4>
+                        <small>Secteurs</small>
+                    </div>
+                    <div class="col-4">
+                        <h4 id="stats-visibles">0</h4>
+                        <small>Visibles</small>
+                    </div>
+                    <div class="col-4">
+                        <h4 id="stats-actifs">{{ secteurs|filter(s => s.isActive)|length }}</h4>
+                        <small>Actifs</small>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Liste des secteurs -->
+            <div class="secteurs-table mt-3">
+                <div class="table-responsive">
+                    <table class="table table-hover mb-0">
+                        <thead class="table-dark">
+                            <tr>
+                                <th width="50px">
+                                    <input type="checkbox" class="secteur-checkbox" id="selectAll" 
+                                           onchange="toggleAllSecteurs(this.checked)">
+                                </th>
+                                <th>Secteur</th>
+                                <th width="100px">Actions</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for secteur in secteurs %}
+                            <tr id="secteur-row-{{ secteur.id }}" class="{{ not secteur.isActive ? 'table-warning' : '' }}">
+                                <td>
+                                    <input type="checkbox" 
+                                           class="secteur-checkbox secteur-toggle" 
+                                           id="secteur-{{ secteur.id }}"
+                                           data-secteur-id="{{ secteur.id }}"
+                                           onchange="toggleSecteurVisibility({{ secteur.id }}, this.checked)"
+                                           {% if secteur.isActive %}checked{% endif %}>
+                                </td>
+                                <td>
+                                    <div class="d-flex align-items-center">
+                                        <span class="secteur-color-indicator me-3" 
+                                              style="background-color: {{ secteur.couleurHex ?: '#3498db' }}"></span>
+                                        <div>
+                                            <strong>{{ secteur.nomSecteur }}</strong>
+                                            {% if secteur.commercial %}
+                                                <br><small class="text-muted">
+                                                    <i class="fas fa-user me-1"></i>{{ secteur.commercial.nom }}
+                                                </small>
+                                            {% endif %}
+                                            {% if not secteur.isActive %}
+                                                <br><small class="text-warning">
+                                                    <i class="fas fa-pause me-1"></i>Inactif
+                                                </small>
+                                            {% endif %}
+                                        </div>
+                                    </div>
+                                </td>
+                                <td>
+                                    <div class="btn-group btn-group-sm">
+                                        <a href="{{ path('app_secteur_show', {'id': secteur.id}) }}" 
+                                           class="btn btn-outline-info" title="Voir">
+                                            <i class="fas fa-eye"></i>
+                                        </a>
+                                        <a href="{{ path('app_secteur_edit', {'id': secteur.id}) }}" 
+                                           class="btn btn-outline-primary" title="Modifier">
+                                            <i class="fas fa-edit"></i>
+                                        </a>
+                                        <button class="btn btn-outline-success" 
+                                                onclick="centrerSurSecteur({{ secteur.id }})" title="Centrer">
+                                            <i class="fas fa-crosshairs"></i>
+                                        </button>
+                                    </div>
+                                </td>
+                            </tr>
+                            {% else %}
+                            <tr>
+                                <td colspan="3" class="text-center py-4">
+                                    <i class="fas fa-map-marked-alt fa-3x text-muted mb-3"></i>
+                                    <br>Aucun secteur configuré
+                                    <br><a href="{{ path('app_secteur_new') }}" class="btn btn-primary mt-2">
+                                        Créer le premier secteur
+                                    </a>
+                                </td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+
+        <!-- Colonne droite - Carte -->
+        <div class="col-md-7">
+            <div id="secteurs-map"></div>
+            
+            <!-- Légende (cachée par défaut) -->
+            <div id="legende-carte" class="mt-3" style="display: none;">
+                <div class="card">
+                    <div class="card-header">
+                        <h6 class="mb-0"><i class="fas fa-info-circle me-2"></i>Légende</h6>
+                    </div>
+                    <div class="card-body">
+                        <div class="row">
+                            {% for secteur in secteurs %}
+                            <div class="col-md-6 mb-2">
+                                <span class="secteur-color-indicator me-2" 
+                                      style="background-color: {{ secteur.couleurHex ?: '#3498db' }}"></span>
+                                <small>{{ secteur.nomSecteur }}</small>
+                            </div>
+                            {% endfor %}
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Scripts Google Maps -->
+<script src="https://maps.googleapis.com/maps/api/js?key={{ google_maps_api_key }}&callback=initSecteursMap&libraries=geometry"></script>
+
+<script>
+    let map;
+    let secteursData = {};
+    let secteurPolygons = {};
+    let secteurMarkers = {};
+
+    function initSecteursMap() {
+        console.log('🗺️ Initialisation de la carte générale des secteurs');
+        
+        // Carte centrée sur l'Occitanie
+        map = new google.maps.Map(document.getElementById("secteurs-map"), {
+            center: { lat: 43.6047, lng: 1.4442 }, // Toulouse
+            zoom: 8,
+            mapTypeId: 'roadmap',
+            mapTypeControl: true,
+            streetViewControl: false,
+            fullscreenControl: true,
+            zoomControl: true
+        });
+
+        // Charger tous les secteurs
+        chargerTousLesSecteurs();
+    }
+
+    function chargerTousLesSecteurs() {
+        fetch('/admin/secteurs/all-geo-data')
+            .then(response => response.json())
+            .then(data => {
+                console.log('📍 Données de tous les secteurs reçues:', data);
+                if (data.success) {
+                    secteursData = {};
+                    data.secteurs.forEach(secteur => {
+                        secteursData[secteur.id] = secteur;
+                        // Afficher le secteur si la checkbox est cochée
+                        if (document.getElementById(`secteur-${secteur.id}`)?.checked) {
+                            afficherSecteurSurCarte(secteur);
+                        }
+                    });
+                    mettreAJourStatistiques();
+                }
+            })
+            .catch(error => {
+                console.error('❌ Erreur chargement secteurs:', error);
+            });
+    }
+
+    function afficherSecteurSurCarte(secteur) {
+        if (!secteur.hasCoordinates) return;
+
+        secteur.attributions.forEach(attribution => {
+            if (attribution.coordinates && attribution.coordinates.length > 0) {
+                if (attribution.type === 'epci' && attribution.coordinates.length > 1) {
+                    afficherEpciSurCarte(attribution, secteur);
+                } else {
+                    afficherAttributionStandard(attribution, secteur);
+                }
+            }
+        });
+
+        // Créer un marqueur central pour le secteur
+        if (secteur.center) {
+            const marker = new google.maps.Marker({
+                position: new google.maps.LatLng(secteur.center.lat, secteur.center.lng),
+                map: map,
+                title: secteur.nom,
+                icon: {
+                    url: 'data:image/svg+xml;charset=UTF-8,' + encodeURIComponent(`
+                        <svg width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                            <circle cx="12" cy="12" r="10" fill="${secteur.couleur}" stroke="white" stroke-width="2"/>
+                            <text x="12" y="16" text-anchor="middle" fill="white" font-size="10" font-weight="bold">${secteur.nom.substring(0, 2)}</text>
+                        </svg>
+                    `),
+                    scaledSize: new google.maps.Size(24, 24),
+                    anchor: new google.maps.Point(12, 12)
+                }
+            });
+
+            if (!secteurMarkers[secteur.id]) secteurMarkers[secteur.id] = [];
+            secteurMarkers[secteur.id].push(marker);
+
+            // InfoWindow
+            const infoContent = `
+                <div style="max-width: 300px;">
+                    <h6 style="color: ${secteur.couleur}; margin-bottom: 10px;">
+                        <i class="fas fa-map-marked-alt"></i> ${secteur.nom}
+                    </h6>
+                    ${secteur.commercial ? `<p><strong>Commercial:</strong> ${secteur.commercial}</p>` : ''}
+                    <p><strong>Attributions:</strong> ${secteur.attributions.length}</p>
+                    <div class="mt-2">
+                        <a href="/secteur/${secteur.id}" class="btn btn-sm btn-primary">Voir détails</a>
+                    </div>
+                </div>
+            `;
+
+            const infoWindow = new google.maps.InfoWindow({ content: infoContent });
+            marker.addListener('click', () => {
+                infoWindow.open(map, marker);
+            });
+        }
+    }
+
+    function afficherEpciSurCarte(attribution, secteur) {
+        const positions = attribution.coordinates.map(coord => 
+            new google.maps.LatLng(coord.lat, coord.lng)
+        );
+
+        if (positions.length >= 3) {
+            const enveloppeConvexe = calculerEnveloppeConvexe(positions);
+            
+            const polygon = new google.maps.Polygon({
+                paths: enveloppeConvexe,
+                strokeColor: secteur.couleur,
+                strokeOpacity: 0.8,
+                strokeWeight: 2,
+                fillColor: secteur.couleur,
+                fillOpacity: 0.2,
+                map: map
+            });
+
+            if (!secteurPolygons[secteur.id]) secteurPolygons[secteur.id] = [];
+            secteurPolygons[secteur.id].push(polygon);
+        }
+    }
+
+    function afficherAttributionStandard(attribution, secteur) {
+        const coordonnee = attribution.coordinates[0];
+        const position = new google.maps.LatLng(coordonnee.lat, coordonnee.lng);
+
+        const circle = new google.maps.Circle({
+            strokeColor: secteur.couleur,
+            strokeOpacity: 0.8,
+            strokeWeight: 2,
+            fillColor: secteur.couleur,
+            fillOpacity: 0.15,
+            map: map,
+            center: position,
+            radius: attribution.type === 'commune' ? 5000 : 
+                   attribution.type === 'code_postal' ? 3000 : 
+                   attribution.type === 'departement' ? 50000 : 10000
+        });
+
+        if (!secteurPolygons[secteur.id]) secteurPolygons[secteur.id] = [];
+        secteurPolygons[secteur.id].push(circle);
+    }
+
+    // Réutiliser la fonction d'enveloppe convexe
+    function calculerEnveloppeConvexe(points) {
+        if (points.length < 3) return points;
+        
+        const coords = points.map(p => ({
+            x: p.lng(),
+            y: p.lat(),
+            original: p
+        }));
+        
+        let bottom = coords[0];
+        for (let i = 1; i < coords.length; i++) {
+            if (coords[i].y < bottom.y || (coords[i].y === bottom.y && coords[i].x < bottom.x)) {
+                bottom = coords[i];
+            }
+        }
+        
+        const sortedCoords = coords.filter(p => p !== bottom).sort((a, b) => {
+            const angleA = Math.atan2(a.y - bottom.y, a.x - bottom.x);
+            const angleB = Math.atan2(b.y - bottom.y, b.x - bottom.x);
+            return angleA - angleB;
+        });
+        
+        const hull = [bottom];
+        
+        for (let coord of sortedCoords) {
+            while (hull.length > 1) {
+                const p1 = hull[hull.length - 2];
+                const p2 = hull[hull.length - 1];
+                const cross = (p2.x - p1.x) * (coord.y - p1.y) - (p2.y - p1.y) * (coord.x - p1.x);
+                if (cross <= 0) {
+                    hull.pop();
+                } else {
+                    break;
+                }
+            }
+            hull.push(coord);
+        }
+        
+        return hull.map(h => h.original);
+    }
+
+    function toggleSecteurVisibility(secteurId, visible) {
+        if (visible) {
+            const secteur = secteursData[secteurId];
+            if (secteur) {
+                afficherSecteurSurCarte(secteur);
+            }
+        } else {
+            masquerSecteur(secteurId);
+        }
+        mettreAJourStatistiques();
+    }
+
+    function masquerSecteur(secteurId) {
+        // Supprimer les polygones
+        if (secteurPolygons[secteurId]) {
+            secteurPolygons[secteurId].forEach(polygon => polygon.setMap(null));
+            delete secteurPolygons[secteurId];
+        }
+        
+        // Supprimer les marqueurs
+        if (secteurMarkers[secteurId]) {
+            secteurMarkers[secteurId].forEach(marker => marker.setMap(null));
+            delete secteurMarkers[secteurId];
+        }
+    }
+
+    function afficherTousLesSecteurs() {
+        document.querySelectorAll('.secteur-toggle').forEach(checkbox => {
+            checkbox.checked = true;
+            toggleSecteurVisibility(parseInt(checkbox.dataset.secteurId), true);
+        });
+        document.getElementById('selectAll').checked = true;
+    }
+
+    function masquerTousLesSecteurs() {
+        document.querySelectorAll('.secteur-toggle').forEach(checkbox => {
+            checkbox.checked = false;
+            toggleSecteurVisibility(parseInt(checkbox.dataset.secteurId), false);
+        });
+        document.getElementById('selectAll').checked = false;
+    }
+
+    function toggleAllSecteurs(checked) {
+        if (checked) {
+            afficherTousLesSecteurs();
+        } else {
+            masquerTousLesSecteurs();
+        }
+    }
+
+    function centrerSurTousLesSecteurs() {
+        const bounds = new google.maps.LatLngBounds();
+        let hasCoordinates = false;
+
+        Object.values(secteursData).forEach(secteur => {
+            if (secteur.hasCoordinates) {
+                bounds.extend(new google.maps.LatLng(secteur.center.lat, secteur.center.lng));
+                hasCoordinates = true;
+            }
+        });
+
+        if (hasCoordinates) {
+            map.fitBounds(bounds);
+        }
+    }
+
+    function centrerSurSecteur(secteurId) {
+        const secteur = secteursData[secteurId];
+        if (secteur && secteur.hasCoordinates) {
+            map.setCenter(new google.maps.LatLng(secteur.center.lat, secteur.center.lng));
+            map.setZoom(secteur.bounds ? 10 : 12);
+            
+            // Cocher la checkbox si pas déjà fait
+            const checkbox = document.getElementById(`secteur-${secteurId}`);
+            if (!checkbox.checked) {
+                checkbox.checked = true;
+                toggleSecteurVisibility(secteurId, true);
+            }
+        }
+    }
+
+    function toggleLegende() {
+        const legende = document.getElementById('legende-carte');
+        legende.style.display = legende.style.display === 'none' ? 'block' : 'none';
+    }
+
+    function mettreAJourStatistiques() {
+        const visibles = document.querySelectorAll('.secteur-toggle:checked').length;
+        document.getElementById('stats-visibles').textContent = visibles;
+    }
+
+    // Initialiser au chargement de la page
+    window.onload = function() {
+        // Les secteurs actifs sont déjà cochés dans le template
+        mettreAJourStatistiques();
+    };
+</script>
+{% endblock %}

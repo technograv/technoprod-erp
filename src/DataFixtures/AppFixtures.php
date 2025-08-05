@@ -4,7 +4,6 @@ namespace App\DataFixtures;
 
 use App\Entity\Client;
 use App\Entity\Secteur;
-use App\Entity\SecteurZone;
 use App\Entity\Adresse;
 use App\Entity\Contact;
 use App\Entity\User;

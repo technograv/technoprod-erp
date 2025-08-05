@@ -13,6 +13,7 @@ parameters:
     app.company.phone: '+33 1 23 45 67 89'
     app.company.email: 'contact@technoprod.fr'
     app.company.vat_number: 'FR12345678901'
+    google.maps.api.key: '%env(GOOGLE_MAPS_API_KEY)%'
 
 services:
     # default configuration for services in *this* file

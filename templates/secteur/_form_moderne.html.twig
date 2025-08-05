@@ -1,0 +1,415 @@
+{{ form_start(form) }}
+
+<div class="row">
+    <div class="col-md-8">
+        <div class="card">
+            <div class="card-header">
+                <h5><i class="fas fa-edit me-2"></i>Informations du secteur</h5>
+            </div>
+            <div class="card-body">
+                <div class="row">
+                    <div class="col-md-6">
+                        {{ form_row(form.nomSecteur) }}
+                    </div>
+                    <div class="col-md-6">
+                        {{ form_row(form.commercial) }}
+                    </div>
+                </div>
+                
+                <div class="row">
+                    <div class="col-md-6">
+                        {{ form_row(form.typeSecteur) }}
+                    </div>
+                    <div class="col-md-6">
+                        {{ form_row(form.couleurHex) }}
+                    </div>
+                </div>
+                
+                {{ form_row(form.description) }}
+                
+                <div class="form-check">
+                    {{ form_widget(form.isActive) }}
+                    {{ form_label(form.isActive) }}
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <div class="col-md-4">
+        <div class="card">
+            <div class="card-header">
+                <h5><i class="fas fa-map-marked-alt me-2"></i>Couverture Géographique</h5>
+            </div>
+            <div class="card-body">
+                {% if secteur is defined and secteur.id %}
+                    <!-- Secteur existant : affichage + gestion des attributions -->
+                    <div id="attributions-existantes" class="mb-3">
+                        <div class="text-center text-muted py-2">
+                            <div class="spinner-border spinner-border-sm" role="status"></div>
+                            <p class="mt-2 mb-0 small">Chargement...</p>
+                        </div>
+                    </div>
+                    
+                    <!-- Ajouter une nouvelle attribution -->
+                    <div class="border-top pt-3">
+                        <h6 class="mb-3"><i class="fas fa-plus-circle me-1"></i>Ajouter une attribution</h6>
+                        
+                        <!-- Sélection du type -->
+                        <div class="mb-3">
+                            <label class="form-label small">Type de division administrative</label>
+                            <select class="form-select form-select-sm" id="type-attribution" onchange="changerTypeAttribution()">
+                                <option value="">-- Choisir un type --</option>
+                                <option value="code_postal">📮 Code postal</option>
+                                <option value="commune">🏘️ Commune</option>
+                                <option value="canton">🗺️ Canton</option>
+                                <option value="epci">🏛️ Intercommunalité (EPCI)</option>
+                                <option value="departement">🏞️ Département</option>
+                                <option value="region">🌍 Région</option>
+                            </select>
+                        </div>
+                        
+                        <!-- Zone de recherche -->
+                        <div id="zone-recherche-attribution" style="display: none;">
+                            <div class="mb-3">
+                                <label class="form-label small">Rechercher</label>
+                                <div class="input-group input-group-sm">
+                                    <input type="text" class="form-control" id="recherche-attribution" 
+                                           placeholder="Tapez pour rechercher..." onkeyup="rechercherDivisionAttribution()">
+                                    <button class="btn btn-outline-secondary" type="button" onclick="rechercherDivisionAttribution()">
+                                        <i class="fas fa-search"></i>
+                                    </button>
+                                </div>
+                            </div>
+                            
+                            <!-- Résultats de recherche -->
+                            <div id="resultats-attribution" class="mb-3" style="max-height: 150px; overflow-y: auto;">
+                                <!-- Résultats apparaîtront ici -->
+                            </div>
+                            
+                            <!-- Division sélectionnée -->
+                            <div id="division-selectionnee" style="display: none;" class="alert alert-success p-2 mb-3">
+                                <small><strong>Sélectionné :</strong> <span id="division-selectionnee-nom"></span></small>
+                                <button type="button" class="btn btn-sm btn-outline-danger float-end" onclick="deselectionnerDivisionAttribution()">
+                                    <i class="fas fa-times"></i>
+                                </button>
+                            </div>
+                            
+                            <!-- Notes -->
+                            <div class="mb-3">
+                                <label class="form-label small">Notes (optionnel)</label>
+                                <textarea class="form-control form-control-sm" id="notes-attribution" rows="2" 
+                                          placeholder="Notes sur cette attribution..."></textarea>
+                            </div>
+                            
+                            <!-- Bouton d'ajout -->
+                            <button type="button" class="btn btn-success btn-sm w-100" onclick="ajouterAttributionForm()" 
+                                    id="btn-ajouter-attribution-form" disabled>
+                                <i class="fas fa-plus me-1"></i>Ajouter cette attribution
+                            </button>
+                        </div>
+                    </div>
+                {% else %}
+                    <div class="alert alert-info">
+                        <i class="fas fa-info-circle me-1"></i>
+                        <small>La couverture géographique pourra être définie après la création du secteur.</small>
+                    </div>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="mt-4">
+    <div class="d-flex justify-content-between">
+        <a href="{{ path('app_secteur_index') }}" class="btn btn-outline-secondary">
+            <i class="fas fa-arrow-left me-1"></i>Retour à la liste
+        </a>
+        <button class="btn btn-primary" type="submit">
+            <i class="fas fa-save me-1"></i>{{ button_label|default('Enregistrer') }}
+        </button>
+    </div>
+</div>
+
+{{ form_end(form) }}
+
+<style>
+.suggestions-item {
+    cursor: pointer;
+    padding: 0.5rem;
+    border-bottom: 1px solid #dee2e6;
+}
+
+.suggestions-item:hover {
+    background-color: #f8f9fa;
+}
+
+.attribution-item {
+    padding: 0.5rem;
+    border: 1px solid #dee2e6;
+    border-radius: 6px;
+    margin-bottom: 0.5rem;
+    background: #f8f9fa;
+}
+
+.attribution-item:hover {
+    background: #e9ecef;
+}
+</style>
+
+<script>
+// Variables globales pour le formulaire intégré d'attributions
+let currentSecteurId = null;
+let divisionSelectionneeForm = null;
+
+// Initialisation au chargement de la page
+document.addEventListener('DOMContentLoaded', function() {
+    // Récupérer l'ID du secteur depuis l'URL ou un attribut
+    const urlParts = window.location.pathname.split('/');
+    const secteurIdFromUrl = urlParts[urlParts.indexOf('secteur') + 1];
+    
+    if (secteurIdFromUrl && secteurIdFromUrl !== 'new' && !isNaN(secteurIdFromUrl)) {
+        currentSecteurId = parseInt(secteurIdFromUrl);
+        chargerAttributionsExistantesForm(currentSecteurId);
+    }
+});
+
+// Charger les attributions existantes dans le formulaire
+function chargerAttributionsExistantesForm(secteurId) {
+    const container = document.getElementById('attributions-existantes');
+    if (!container) return;
+    
+    container.innerHTML = '<div class="text-center text-muted py-2"><div class="spinner-border spinner-border-sm"></div><p class="mt-2 mb-0 small">Chargement...</p></div>';
+    
+    fetch(`/admin/secteur/${secteurId}/attributions`)
+        .then(response => response.json())
+        .then(data => {
+            if (data.success && data.attributions.length > 0) {
+                let html = '';
+                data.attributions.forEach(attribution => {
+                    const typeIcon = getTypeIconForm(attribution.typeCritere);
+                    html += `
+                        <div class="d-flex justify-content-between align-items-center p-2 border rounded mb-2 bg-light">
+                            <div class="flex-grow-1">
+                                <small class="fw-bold">${typeIcon} ${attribution.divisionAdministrative.nom}</small>
+                                ${attribution.notes ? `<br><small class="text-muted">${attribution.notes}</small>` : ''}
+                            </div>
+                            <button type="button" class="btn btn-outline-danger btn-sm" onclick="supprimerAttributionForm(${attribution.id})" title="Supprimer">
+                                <i class="fas fa-times"></i>
+                            </button>
+                        </div>
+                    `;
+                });
+                container.innerHTML = html;
+            } else {
+                container.innerHTML = `
+                    <div class="text-center text-muted py-3">
+                        <i class="fas fa-map-pin mb-2"></i>
+                        <p class="small mb-0">Aucune attribution configurée</p>
+                    </div>
+                `;
+            }
+        })
+        .catch(error => {
+            console.error('Erreur:', error);
+            container.innerHTML = '<div class="alert alert-danger small">Erreur de chargement</div>';
+        });
+}
+
+// Changer le type d'attribution
+function changerTypeAttribution() {
+    const typeSelect = document.getElementById('type-attribution');
+    const zoneRecherche = document.getElementById('zone-recherche-attribution');
+    const rechercheInput = document.getElementById('recherche-attribution');
+    
+    if (typeSelect.value) {
+        zoneRecherche.style.display = 'block';
+        rechercheInput.placeholder = getPlaceholderForTypeForm(typeSelect.value);
+        rechercheInput.focus();
+        
+        // Réinitialiser
+        document.getElementById('resultats-attribution').innerHTML = '';
+        deselectionnerDivisionAttribution();
+    } else {
+        zoneRecherche.style.display = 'none';
+    }
+}
+
+// Rechercher une division administrative
+function rechercherDivisionAttribution() {
+    const type = document.getElementById('type-attribution').value;
+    const terme = document.getElementById('recherche-attribution').value.trim();
+    const resultsContainer = document.getElementById('resultats-attribution');
+    
+    if (!type || terme.length < 2) {
+        resultsContainer.innerHTML = '';
+        return;
+    }
+    
+    resultsContainer.innerHTML = '<div class="text-center small text-muted"><i class="fas fa-spinner fa-spin"></i> Recherche...</div>';
+    
+    fetch(`/admin/divisions-administratives/recherche?type=${type}&terme=${encodeURIComponent(terme)}`)
+        .then(response => response.json())
+        .then(data => {
+            if (data.success && data.results.length > 0) {
+                let html = '<div class="list-group">';
+                data.results.forEach(result => {
+                    const icon = getTypeIconForm(type);
+                    html += `
+                        <button type="button" class="list-group-item list-group-item-action p-2" 
+                                onclick="selectionnerDivisionAttribution('${result.id}', '${result.nom}', '${result.valeur}', '${type}')">
+                            <div class="d-flex justify-content-between">
+                                <div>
+                                    <small class="fw-bold">${icon} ${result.nom}</small>
+                                    <br><small class="text-muted">${result.details || result.valeur}</small>
+                                </div>
+                                <i class="fas fa-chevron-right small text-muted"></i>
+                            </div>
+                        </button>
+                    `;
+                });
+                html += '</div>';
+                resultsContainer.innerHTML = html;
+            } else {
+                resultsContainer.innerHTML = '<div class="text-muted text-center small">Aucun résultat trouvé</div>';
+            }
+        })
+        .catch(error => {
+            console.error('Erreur:', error);
+            resultsContainer.innerHTML = '<div class="alert alert-danger small">Erreur de recherche</div>';
+        });
+}
+
+// Sélectionner une division
+function selectionnerDivisionAttribution(id, nom, valeur, type) {
+    divisionSelectionneeForm = { id, nom, valeur, type };
+    
+    document.getElementById('division-selectionnee').style.display = 'block';
+    document.getElementById('division-selectionnee-nom').textContent = `${getTypeIconForm(type)} ${nom}`;
+    document.getElementById('resultats-attribution').innerHTML = '';
+    document.getElementById('btn-ajouter-attribution-form').disabled = false;
+}
+
+// Désélectionner la division
+function deselectionnerDivisionAttribution() {
+    divisionSelectionneeForm = null;
+    document.getElementById('division-selectionnee').style.display = 'none';
+    document.getElementById('btn-ajouter-attribution-form').disabled = true;
+}
+
+// Ajouter une attribution
+function ajouterAttributionForm() {
+    if (!divisionSelectionneeForm || !currentSecteurId) {
+        showToastForm('Erreur : données manquantes', 'error');
+        return;
+    }
+    
+    const notes = document.getElementById('notes-attribution').value.trim();
+    
+    const data = {
+        secteurId: currentSecteurId,
+        divisionId: divisionSelectionneeForm.id,
+        typeCritere: divisionSelectionneeForm.type,
+        valeurCritere: divisionSelectionneeForm.valeur,
+        notes: notes
+    };
+    
+    fetch('/admin/secteur/attribution/create', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(data)
+    })
+    .then(response => response.json())
+    .then(result => {
+        if (result.success) {
+            showToastForm('Attribution ajoutée avec succès !', 'success');
+            chargerAttributionsExistantesForm(currentSecteurId);
+            reinitialiserFormulaireAttribution();
+        } else {
+            showToastForm(result.message || 'Erreur lors de l\'ajout', 'error');
+        }
+    })
+    .catch(error => {
+        console.error('Erreur:', error);
+        showToastForm('Erreur de communication', 'error');
+    });
+}
+
+// Supprimer une attribution
+function supprimerAttributionForm(attributionId) {
+    if (!confirm('Êtes-vous sûr de vouloir supprimer cette attribution ?')) {
+        return;
+    }
+    
+    fetch(`/admin/secteur/attribution/${attributionId}`, {
+        method: 'DELETE'
+    })
+    .then(response => response.json())
+    .then(result => {
+        if (result.success) {
+            showToastForm('Attribution supprimée avec succès !', 'success');
+            chargerAttributionsExistantesForm(currentSecteurId);
+        } else {
+            showToastForm(result.message || 'Erreur lors de la suppression', 'error');
+        }
+    })
+    .catch(error => {
+        console.error('Erreur:', error);
+        showToastForm('Erreur de communication', 'error');
+    });
+}
+
+// Réinitialiser le formulaire d'attribution
+function reinitialiserFormulaireAttribution() {
+    document.getElementById('type-attribution').value = '';
+    document.getElementById('zone-recherche-attribution').style.display = 'none';
+    document.getElementById('recherche-attribution').value = '';
+    document.getElementById('notes-attribution').value = '';
+    deselectionnerDivisionAttribution();
+}
+
+// Fonctions globales nécessaires
+window.changerTypeAttribution = changerTypeAttribution;
+window.rechercherDivisionAttribution = rechercherDivisionAttribution;
+window.selectionnerDivisionAttribution = selectionnerDivisionAttribution;
+window.deselectionnerDivisionAttribution = deselectionnerDivisionAttribution;
+window.ajouterAttributionForm = ajouterAttributionForm;
+window.supprimerAttributionForm = supprimerAttributionForm;
+
+// Fonctions utilitaires
+function getTypeIconForm(type) {
+    const icons = {
+        'code_postal': '📮',
+        'commune': '🏘️',
+        'canton': '🗺️',
+        'epci': '🏛️',
+        'departement': '🏞️',
+        'region': '🌍'
+    };
+    return icons[type] || '📍';
+}
+
+function getPlaceholderForTypeForm(type) {
+    const placeholders = {
+        'code_postal': 'Ex: 31000, 65370...',
+        'commune': 'Ex: Toulouse, Tournay...',
+        'canton': 'Ex: Canton de Toulouse...',
+        'epci': 'Ex: Pyrénées haut Garonnaises...',
+        'departement': 'Ex: Haute-Garonne, Hautes-Pyrénées...',
+        'region': 'Ex: Occitanie...'
+    };
+    return placeholders[type] || 'Tapez pour rechercher...';
+}
+
+function showToastForm(message, type = 'info') {
+    const alertClass = type === 'success' ? 'alert-success' : type === 'error' ? 'alert-danger' : 'alert-info';
+    const toast = document.createElement('div');
+    toast.className = `alert ${alertClass} alert-dismissible position-fixed`;
+    toast.style.cssText = 'top: 20px; right: 20px; z-index: 9999; min-width: 300px;';
+    toast.innerHTML = `
+        ${message}
+        <button type="button" class="btn-close" onclick="this.parentElement.remove()"></button>
+    `;
+    document.body.appendChild(toast);
+    setTimeout(() => toast.remove(), 5000);
+}
+</script>

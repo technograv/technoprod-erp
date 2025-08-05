@@ -3,7 +3,6 @@
 namespace App\Controller;
 
 use App\Entity\CommuneFrancaise;
-use App\Repository\ZoneRepository;
 use App\Repository\ProduitRepository;
 use Doctrine\ORM\EntityManagerInterface;
 use Symfony\Bundle\FrameworkBundle\Controller\AbstractController;
@@ -14,23 +13,6 @@ use Symfony\Component\Routing\Attribute\Route;
 #[Route('/api')]
 class ApiController extends AbstractController
 {
-    #[Route('/zones', name: 'api_zones', methods: ['GET'])]
-    public function getZones(ZoneRepository $zoneRepository): JsonResponse
-    {
-        $zones = $zoneRepository->findBy([], ['codePostal' => 'ASC']);
-        
-        $data = array_map(function($zone) {
-            return [
-                'id' => $zone->getId(),
-                'codePostal' => $zone->getCodePostal(),
-                'ville' => $zone->getVille(),
-                'departement' => $zone->getDepartement(),
-                'region' => $zone->getRegion()
-            ];
-        }, $zones);
-        
-        return $this->json($data);
-    }
 
     #[Route('/produits', name: 'api_produits', methods: ['GET'])]
     public function getProduits(ProduitRepository $produitRepository): JsonResponse

@@ -1,0 +1,445 @@
+<h3 class="section-title">
+    <i class="fas fa-truck me-2"></i>Gestion des Transporteurs
+</h3>
+
+<div class="row mb-3">
+    <div class="col-md-6">
+        <button type="button" class="btn btn-success" data-bs-toggle="modal" data-bs-target="#modalTransporteur">
+            <i class="fas fa-plus me-2"></i>Nouveau Transporteur
+        </button>
+    </div>
+    <div class="col-md-6 text-end">
+        <span class="badge bg-info">{{ transporteurs|length }} transporteurs configurés</span>
+    </div>
+</div>
+
+<div class="table-responsive">
+    <table class="table table-hover">
+        <thead class="table-light">
+            <tr>
+                <th>Ordre</th>
+                <th>Code</th>
+                <th>Nom</th>
+                <th>Contact</th>
+                <th>Ville</th>
+                <th>Téléphone</th>
+                <th>Email</th>
+                <th>Statut</th>
+                <th>Actions</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for transporteur in transporteurs %}
+            <tr>
+                <td>
+                    <span class="badge bg-secondary">{{ transporteur.ordre }}</span>
+                </td>
+                <td>
+                    <code class="bg-light px-2 py-1">{{ transporteur.code }}</code>
+                </td>
+                <td>
+                    <strong>{{ transporteur.nom }}</strong>
+                </td>
+                <td>
+                    {% if transporteur.contact %}
+                        {{ transporteur.contact }}
+                    {% else %}
+                        <span class="text-muted">-</span>
+                    {% endif %}
+                </td>
+                <td>
+                    {% if transporteur.ville %}
+                        {{ transporteur.codePostal }} {{ transporteur.ville }}
+                    {% else %}
+                        <span class="text-muted">-</span>
+                    {% endif %}
+                </td>
+                <td>
+                    {% if transporteur.telephone %}
+                        <a href="tel:{{ transporteur.telephone }}" class="text-decoration-none">
+                            <i class="fas fa-phone text-success me-1"></i>{{ transporteur.telephone }}
+                        </a>
+                    {% else %}
+                        <span class="text-muted">-</span>
+                    {% endif %}
+                </td>
+                <td>
+                    {% if transporteur.email %}
+                        <a href="mailto:{{ transporteur.email }}" class="text-decoration-none">
+                            <i class="fas fa-envelope text-primary me-1"></i>{{ transporteur.email }}
+                        </a>
+                    {% else %}
+                        <span class="text-muted">-</span>
+                    {% endif %}
+                </td>
+                <td>
+                    <span class="badge {{ transporteur.actif ? 'bg-success' : 'bg-danger' }}">
+                        {{ transporteur.actif ? 'Actif' : 'Inactif' }}
+                    </span>
+                </td>
+                <td>
+                    <div class="btn-group btn-group-sm">
+                        <button type="button" class="btn btn-outline-primary btn-edit-transporteur" 
+                                data-id="{{ transporteur.id }}"
+                                data-bs-toggle="modal" 
+                                data-bs-target="#modalTransporteur">
+                            <i class="fas fa-edit"></i>
+                        </button>
+                        <button type="button" class="btn btn-outline-danger btn-delete-transporteur" 
+                                data-id="{{ transporteur.id }}"
+                                data-nom="{{ transporteur.nom }}">
+                            <i class="fas fa-trash"></i>
+                        </button>
+                    </div>
+                </td>
+            </tr>
+            {% else %}
+            <tr>
+                <td colspan="9" class="text-center text-muted py-4">
+                    <i class="fas fa-truck fa-3x mb-3"></i>
+                    <p>Aucun transporteur configuré.</p>
+                    <button type="button" class="btn btn-success" data-bs-toggle="modal" data-bs-target="#modalTransporteur">
+                        <i class="fas fa-plus me-2"></i>Créer le premier transporteur
+                    </button>
+                </td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+</div>
+
+<!-- Modal Transporteur -->
+<div class="modal fade" id="modalTransporteur" tabindex="-1" aria-labelledby="modalTransporteurLabel" aria-hidden="true">
+    <div class="modal-dialog modal-xl">
+        <div class="modal-content">
+            <div class="modal-header bg-primary text-white">
+                <h5 class="modal-title" id="modalTransporteurLabel">
+                    <i class="fas fa-truck me-2"></i>
+                    <span id="modal-title-text">Nouveau Transporteur</span>
+                </h5>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body">
+                <form id="formTransporteur">
+                    <input type="hidden" id="transporteur-id" name="id">
+                    
+                    <!-- Informations générales -->
+                    <div class="row mb-4">
+                        <div class="col-12">
+                            <h6 class="text-primary border-bottom pb-2">
+                                <i class="fas fa-info-circle me-2"></i>Informations générales
+                            </h6>
+                        </div>
+                        <div class="col-md-3">
+                            <label for="transporteur-code" class="form-label">Code <span class="text-danger">*</span></label>
+                            <input type="text" class="form-control" id="transporteur-code" name="code" required maxlength="20" 
+                                   placeholder="Ex: CHRO, DPD, UPS">
+                        </div>
+                        <div class="col-md-6">
+                            <label for="transporteur-nom" class="form-label">Nom <span class="text-danger">*</span></label>
+                            <input type="text" class="form-control" id="transporteur-nom" name="nom" required maxlength="100" 
+                                   placeholder="Ex: Chronopost, DPD France">
+                        </div>
+                        <div class="col-md-3">
+                            <label for="transporteur-ordre" class="form-label">Ordre</label>
+                            <input type="number" class="form-control" id="transporteur-ordre" name="ordre" min="1" placeholder="1">
+                        </div>
+                    </div>
+
+                    <!-- Contact -->
+                    <div class="row mb-4">
+                        <div class="col-12">
+                            <h6 class="text-success border-bottom pb-2">
+                                <i class="fas fa-user me-2"></i>Contact principal
+                            </h6>
+                        </div>
+                        <div class="col-md-6">
+                            <label for="transporteur-contact" class="form-label">Nom du contact</label>
+                            <input type="text" class="form-control" id="transporteur-contact" name="contact" maxlength="100" 
+                                   placeholder="Nom du responsable commercial">
+                        </div>
+                        <div class="col-md-3">
+                            <label for="transporteur-telephone" class="form-label">Téléphone</label>
+                            <input type="tel" class="form-control" id="transporteur-telephone" name="telephone" maxlength="25" 
+                                   placeholder="01 23 45 67 89">
+                        </div>
+                        <div class="col-md-3">
+                            <label for="transporteur-fax" class="form-label">Fax</label>
+                            <input type="tel" class="form-control" id="transporteur-fax" name="fax" maxlength="25" 
+                                   placeholder="01 23 45 67 90">
+                        </div>
+                    </div>
+
+                    <!-- Adresse -->
+                    <div class="row mb-4">
+                        <div class="col-12">
+                            <h6 class="text-info border-bottom pb-2">
+                                <i class="fas fa-map-marker-alt me-2"></i>Adresse
+                            </h6>
+                        </div>
+                        <div class="col-md-8">
+                            <label for="transporteur-adresse" class="form-label">Adresse</label>
+                            <input type="text" class="form-control" id="transporteur-adresse" name="adresse" maxlength="255" 
+                                   placeholder="Numéro et nom de rue">
+                        </div>
+                        <div class="col-md-2">
+                            <label for="transporteur-code-postal" class="form-label">Code postal</label>
+                            <input type="text" class="form-control" id="transporteur-code-postal" name="codePostal" maxlength="10" 
+                                   placeholder="75001">
+                        </div>
+                        <div class="col-md-2">
+                            <label for="transporteur-pays" class="form-label">Pays</label>
+                            <select class="form-select" id="transporteur-pays" name="pays">
+                                <option value="">Sélectionner</option>
+                                <option value="France" selected>France</option>
+                                <option value="Belgique">Belgique</option>
+                                <option value="Suisse">Suisse</option>
+                                <option value="Luxembourg">Luxembourg</option>
+                                <option value="Allemagne">Allemagne</option>
+                                <option value="Espagne">Espagne</option>
+                                <option value="Italie">Italie</option>
+                            </select>
+                        </div>
+                        <div class="col-md-12 mt-2">
+                            <label for="transporteur-ville" class="form-label">Ville</label>
+                            <input type="text" class="form-control" id="transporteur-ville" name="ville" maxlength="100" 
+                                   placeholder="Nom de la ville">
+                        </div>
+                    </div>
+
+                    <!-- Web et communication -->
+                    <div class="row mb-4">
+                        <div class="col-12">
+                            <h6 class="text-warning border-bottom pb-2">
+                                <i class="fas fa-globe me-2"></i>Web et communication
+                            </h6>
+                        </div>
+                        <div class="col-md-6">
+                            <label for="transporteur-email" class="form-label">Email</label>
+                            <input type="email" class="form-control" id="transporteur-email" name="email" maxlength="150" 
+                                   placeholder="contact@transporteur.com">
+                        </div>
+                        <div class="col-md-6">
+                            <label for="transporteur-site-web" class="form-label">Site web</label>
+                            <input type="url" class="form-control" id="transporteur-site-web" name="siteWeb" maxlength="255" 
+                                   placeholder="https://www.transporteur.com">
+                        </div>
+                    </div>
+
+                    <!-- Données techniques -->
+                    <div class="row mb-4">
+                        <div class="col-12">
+                            <h6 class="text-secondary border-bottom pb-2">
+                                <i class="fas fa-cog me-2"></i>Données techniques
+                            </h6>
+                        </div>
+                        <div class="col-md-4">
+                            <label for="transporteur-numero-compte" class="form-label">N° compte client</label>
+                            <input type="text" class="form-control" id="transporteur-numero-compte" name="numeroCompte" maxlength="50" 
+                                   placeholder="Votre numéro de compte">
+                        </div>
+                        <div class="col-md-4">
+                            <label for="transporteur-api-url" class="form-label">URL API</label>
+                            <input type="url" class="form-control" id="transporteur-api-url" name="apiUrl" maxlength="100" 
+                                   placeholder="https://api.transporteur.com">
+                        </div>
+                        <div class="col-md-4">
+                            <label for="transporteur-api-key" class="form-label">Clé API</label>
+                            <input type="text" class="form-control" id="transporteur-api-key" name="apiKey" maxlength="100" 
+                                   placeholder="Clé d'authentification API">
+                        </div>
+                    </div>
+
+                    <!-- Notes -->
+                    <div class="row mb-4">
+                        <div class="col-12">
+                            <label for="transporteur-notes" class="form-label">Notes</label>
+                            <textarea class="form-control" id="transporteur-notes" name="notes" rows="3" 
+                                      placeholder="Notes et remarques sur ce transporteur..."></textarea>
+                        </div>
+                    </div>
+
+                    <!-- Statut -->
+                    <div class="row mb-3">
+                        <div class="col-md-6">
+                            <div class="form-check form-switch">
+                                <input class="form-check-input" type="checkbox" id="transporteur-actif" name="actif" checked>
+                                <label class="form-check-label" for="transporteur-actif">
+                                    Transporteur actif
+                                </label>
+                            </div>
+                        </div>
+                    </div>
+                </form>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">
+                    <i class="fas fa-times me-2"></i>Annuler
+                </button>
+                <button type="button" class="btn btn-primary" id="btn-save-transporteur">
+                    <i class="fas fa-save me-2"></i>Enregistrer
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+function initTransporteurs() {
+    console.log('Initialisation du module Transporteurs...');
+    
+    // Boutons d'édition
+    document.querySelectorAll('.btn-edit-transporteur').forEach(btn => {
+        btn.addEventListener('click', function() {
+            const id = this.dataset.id;
+            console.log('Édition transporteur ID:', id);
+            
+            fetch(`{{ path('app_admin_transporteurs_get') }}?id=${id}`)
+                .then(response => response.json())
+                .then(data => {
+                    console.log('Données transporteur reçues:', data);
+                    
+                    // Remplir le formulaire
+                    document.getElementById('transporteur-id').value = data.id;
+                    document.getElementById('transporteur-code').value = data.code;
+                    document.getElementById('transporteur-nom').value = data.nom;
+                    document.getElementById('transporteur-contact').value = data.contact || '';
+                    document.getElementById('transporteur-adresse').value = data.adresse || '';
+                    document.getElementById('transporteur-code-postal').value = data.codePostal || '';
+                    document.getElementById('transporteur-ville').value = data.ville || '';
+                    document.getElementById('transporteur-pays').value = data.pays || '';
+                    document.getElementById('transporteur-telephone').value = data.telephone || '';
+                    document.getElementById('transporteur-fax').value = data.fax || '';
+                    document.getElementById('transporteur-email').value = data.email || '';
+                    document.getElementById('transporteur-site-web').value = data.siteWeb || '';
+                    document.getElementById('transporteur-numero-compte').value = data.numeroCompte || '';
+                    document.getElementById('transporteur-api-url').value = data.apiUrl || '';
+                    document.getElementById('transporteur-api-key').value = data.apiKey || '';
+                    document.getElementById('transporteur-notes').value = data.notes || '';
+                    document.getElementById('transporteur-ordre').value = data.ordre;
+                    document.getElementById('transporteur-actif').checked = data.actif;
+                    
+                    // Changer le titre
+                    document.getElementById('modal-title-text').textContent = 'Modifier Transporteur';
+                })
+                .catch(error => {
+                    console.error('Erreur lors du chargement du transporteur:', error);
+                    alert('Erreur lors du chargement du transporteur');
+                });
+        });
+    });
+    
+    // Reset du modal à la fermeture
+    document.getElementById('modalTransporteur').addEventListener('hidden.bs.modal', function() {
+        document.getElementById('formTransporteur').reset();
+        document.getElementById('transporteur-id').value = '';
+        document.getElementById('transporteur-actif').checked = true;
+        document.getElementById('transporteur-pays').value = 'France';
+        document.getElementById('modal-title-text').textContent = 'Nouveau Transporteur';
+    });
+    
+    // Bouton d'enregistrement
+    document.getElementById('btn-save-transporteur').addEventListener('click', function() {
+        const formData = new FormData(document.getElementById('formTransporteur'));
+        const id = document.getElementById('transporteur-id').value;
+        const url = id ? `{{ path('app_admin_transporteurs_update', {'id': '__ID__'}) }}`.replace('__ID__', id) : `{{ path('app_admin_transporteurs_create') }}`;
+        
+        // Préparer les données JSON
+        const data = {
+            code: formData.get('code'),
+            nom: formData.get('nom'),
+            contact: formData.get('contact'),
+            adresse: formData.get('adresse'),
+            codePostal: formData.get('codePostal'),
+            ville: formData.get('ville'),
+            pays: formData.get('pays'),
+            telephone: formData.get('telephone'),
+            fax: formData.get('fax'),
+            email: formData.get('email'),
+            siteWeb: formData.get('siteWeb'),
+            numeroCompte: formData.get('numeroCompte'),
+            apiUrl: formData.get('apiUrl'),
+            apiKey: formData.get('apiKey'),
+            notes: formData.get('notes'),
+            ordre: parseInt(formData.get('ordre')) || 1,
+            actif: document.getElementById('transporteur-actif').checked
+        };
+        
+        console.log('Sauvegarde transporteur...', data);
+        
+        fetch(url, {
+            method: id ? 'PUT' : 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'X-Requested-With': 'XMLHttpRequest'
+            },
+            body: JSON.stringify(data)
+        })
+        .then(response => response.json())
+        .then(data => {
+            if (data.success) {
+                bootstrap.Modal.getInstance(document.getElementById('modalTransporteur')).hide();
+                
+                // Recharger l'onglet
+                const tabContent = document.querySelector('#transporteurs .admin-section');
+                tabContent.dataset.loaded = 'false';
+                
+                fetch('{{ path("app_admin_transporteurs") }}')
+                    .then(response => response.text())
+                    .then(html => {
+                        tabContent.innerHTML = html;
+                        initTransporteurs();
+                    });
+            } else {
+                alert('Erreur: ' + (data.message || 'Erreur inconnue'));
+            }
+        })
+        .catch(error => {
+            console.error('Erreur lors de la sauvegarde:', error);
+            alert('Erreur lors de la sauvegarde');
+        });
+    });
+    
+    // Boutons de suppression
+    document.querySelectorAll('.btn-delete-transporteur').forEach(btn => {
+        btn.addEventListener('click', function() {
+            const id = this.dataset.id;
+            const nom = this.dataset.nom;
+            
+            if (confirm(`Êtes-vous sûr de vouloir supprimer le transporteur "${nom}" ?`)) {
+                fetch(`{{ path('app_admin_transporteurs_delete', {'id': '__ID__'}) }}`.replace('__ID__', id), {
+                    method: 'DELETE',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'X-Requested-With': 'XMLHttpRequest'
+                    }
+                })
+                .then(response => response.json())
+                .then(data => {
+                    if (data.success) {
+                        // Recharger l'onglet
+                        const tabContent = document.querySelector('#transporteurs .admin-section');
+                        tabContent.dataset.loaded = 'false';
+                        
+                        fetch('{{ path("app_admin_transporteurs") }}')
+                            .then(response => response.text())
+                            .then(html => {
+                                tabContent.innerHTML = html;
+                                initTransporteurs();
+                            });
+                    } else {
+                        alert('Erreur: ' + (data.message || 'Erreur inconnue'));
+                    }
+                })
+                .catch(error => {
+                    console.error('Erreur lors de la suppression:', error);
+                    alert('Erreur lors de la suppression');
+                });
+            }
+        });
+    });
+}
+
+// Rendre la fonction globale
+window.initTransporteurs = initTransporteurs;
+</script>

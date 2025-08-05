@@ -1,0 +1,404 @@
+{% extends 'base.html.twig' %}
+
+{% block title %}Contact DPO - TechnoProd{% endblock %}
+
+{% block stylesheets %}
+    {{ parent() }}
+    <style>
+        .dpo-header {
+            background: linear-gradient(135deg, #6f42c1 0%, #5a189a 100%);
+            color: white;
+            padding: 3rem 0;
+            margin-bottom: 2rem;
+        }
+        
+        .contact-card {
+            border-radius: 12px;
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+            border: none;
+        }
+        
+        .dpo-info {
+            background: linear-gradient(135deg, #e3f2fd 0%, #f3e5f5 100%);
+            border-radius: 8px;
+            padding: 2rem;
+            margin-bottom: 2rem;
+        }
+        
+        .rights-card {
+            background: #f8f9fa;
+            border-left: 4px solid #6f42c1;
+            padding: 1.5rem;
+            margin: 1rem 0;
+            border-radius: 0 8px 8px 0;
+        }
+        
+        .form-floating label {
+            color: #6c757d;
+        }
+        
+        .form-control:focus,
+        .form-select:focus {
+            border-color: #6f42c1;
+            box-shadow: 0 0 0 0.2rem rgba(111, 66, 193, 0.25);
+        }
+        
+        .btn-dpo {
+            background: linear-gradient(135deg, #6f42c1 0%, #5a189a 100%);
+            border: none;
+            color: white;
+            transition: all 0.3s ease;
+        }
+        
+        .btn-dpo:hover {
+            background: linear-gradient(135deg, #5a189a 0%, #4c1a95 100%);
+            color: white;
+            transform: translateY(-2px);
+        }
+        
+        .response-time {
+            background: rgba(111, 66, 193, 0.1);
+            border: 1px solid rgba(111, 66, 193, 0.3);
+            border-radius: 8px;
+            padding: 1rem;
+            margin: 1rem 0;
+        }
+    </style>
+{% endblock %}
+
+{% block body %}
+<div class="dpo-header">
+    <div class="container">
+        <h1><i class="fas fa-user-shield me-3"></i>Contact DPO</h1>
+        <p class="lead">Délégué à la Protection des Données Personnelles</p>
+    </div>
+</div>
+
+<div class="container">
+    <div class="row">
+        <div class="col-lg-8">
+            
+            <!-- Informations DPO -->
+            <div class="dpo-info">
+                <h3><i class="fas fa-info-circle me-2"></i>À propos du DPO</h3>
+                <p>
+                    Le Délégué à la Protection des Données (DPO) est chargé de veiller à la conformité 
+                    au Règlement Général sur la Protection des Données (RGPD) au sein de TechnoProd.
+                </p>
+                <div class="row">
+                    <div class="col-md-6">
+                        <p><strong><i class="fas fa-user me-2"></i>{{ dpo_name }}</strong></p>
+                        <p><strong><i class="fas fa-envelope me-2"></i>{{ dpo_email }}</strong></p>
+                    </div>
+                    <div class="col-md-6">
+                        <p><strong><i class="fas fa-clock me-2"></i>Délai de réponse :</strong> {{ response_delay }}</p>
+                        <p><strong><i class="fas fa-language me-2"></i>Langues :</strong> Français, Anglais</p>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- Formulaire de contact -->
+            <div class="card contact-card">
+                <div class="card-header bg-primary text-white">
+                    <h4 class="mb-0"><i class="fas fa-paper-plane me-2"></i>Contactez le DPO</h4>
+                </div>
+                <div class="card-body">
+                    
+                    <form method="post" id="dpo-contact-form" role="form" aria-label="Formulaire de contact DPO">
+                        
+                        <!-- Type de demande -->
+                        <div class="form-floating mb-3">
+                            <select class="form-select" id="request-type" name="request_type" required 
+                                    aria-describedby="request-type-help">
+                                <option value="">Sélectionnez le type de demande</option>
+                                <option value="access">Droit d'accès (Art. 15 RGPD)</option>
+                                <option value="rectification">Droit de rectification (Art. 16 RGPD)</option>
+                                <option value="erasure">Droit à l'effacement (Art. 17 RGPD)</option>
+                                <option value="portability">Droit de portabilité (Art. 20 RGPD)</option>
+                                <option value="opposition">Droit d'opposition (Art. 21 RGPD)</option>
+                                <option value="limitation">Droit de limitation (Art. 18 RGPD)</option>
+                                <option value="complaint">Réclamation</option>
+                                <option value="question">Question générale</option>
+                                <option value="other">Autre</option>
+                            </select>
+                            <label for="request-type">Type de demande <span class="text-danger">*</span></label>
+                            <div id="request-type-help" class="form-text">
+                                Sélectionnez le type de demande pour un traitement plus rapide
+                            </div>
+                        </div>
+                        
+                        <!-- Informations personnelles -->
+                        <div class="row">
+                            <div class="col-md-6">
+                                <div class="form-floating mb-3">
+                                    <input type="text" class="form-control" id="first-name" name="first_name" 
+                                           value="{{ app.user ? app.user.prenom : '' }}" required>
+                                    <label for="first-name">Prénom <span class="text-danger">*</span></label>
+                                </div>
+                            </div>
+                            <div class="col-md-6">
+                                <div class="form-floating mb-3">
+                                    <input type="text" class="form-control" id="last-name" name="last_name" 
+                                           value="{{ app.user ? app.user.nom : '' }}" required>
+                                    <label for="last-name">Nom <span class="text-danger">*</span></label>
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <div class="form-floating mb-3">
+                            <input type="email" class="form-control" id="email" name="email" 
+                                   value="{{ app.user ? app.user.email : '' }}" required>
+                            <label for="email">Adresse email <span class="text-danger">*</span></label>
+                        </div>
+                        
+                        <!-- Objet -->
+                        <div class="form-floating mb-3">
+                            <input type="text" class="form-control" id="subject" name="subject" required 
+                                   maxlength="200" aria-describedby="subject-help">
+                            <label for="subject">Objet de votre demande <span class="text-danger">*</span></label>
+                            <div id="subject-help" class="form-text">
+                                Résumez brièvement votre demande (200 caractères maximum)
+                            </div>
+                        </div>
+                        
+                        <!-- Message -->
+                        <div class="form-floating mb-3">
+                            <textarea class="form-control" id="message" name="message" style="height: 120px" 
+                                      required maxlength="2000" aria-describedby="message-help"></textarea>
+                            <label for="message">Votre message <span class="text-danger">*</span></label>
+                            <div id="message-help" class="form-text">
+                                Décrivez précisément votre demande (2000 caractères maximum)
+                            </div>
+                        </div>
+                        
+                        <!-- Pièces jointes -->
+                        <div class="mb-3">
+                            <label for="attachments" class="form-label">Pièces jointes (optionnel)</label>
+                            <input type="file" class="form-control" id="attachments" name="attachments[]" 
+                                   multiple accept=".pdf,.jpg,.jpeg,.png,.doc,.docx,.txt"
+                                   aria-describedby="attachments-help">
+                            <div id="attachments-help" class="form-text">
+                                Formats acceptés : PDF, images, documents texte. Taille max : 10MB par fichier.
+                            </div>
+                        </div>
+                        
+                        <!-- RGPD Notice -->
+                        <div class="alert alert-info">
+                            <h6><i class="fas fa-shield-alt me-2"></i>Protection de vos Données</h6>
+                            <p class="mb-0">
+                                Vos données personnelles sont traitées uniquement pour répondre à votre demande 
+                                et sont conservées pendant 3 ans. Vous disposez des droits d'accès, de rectification 
+                                et de suppression sur ces données.
+                            </p>
+                        </div>
+                        
+                        <!-- Consentement -->
+                        <div class="form-check mb-4">
+                            <input type="checkbox" class="form-check-input" id="consent" name="consent" required>
+                            <label class="form-check-label" for="consent">
+                                J'accepte que mes données personnelles soient traitées pour répondre à ma demande <span class="text-danger">*</span>
+                            </label>
+                        </div>
+                        
+                        <!-- Bouton d'envoi -->
+                        <div class="text-center">
+                            <button type="submit" class="btn btn-dpo btn-lg" id="submit-btn">
+                                <i class="fas fa-paper-plane me-2"></i>
+                                Envoyer ma Demande
+                                <div class="spinner-border spinner-border-sm ms-2 d-none" role="status" id="submit-spinner">
+                                    <span class="visually-hidden">Envoi en cours...</span>
+                                </div>
+                            </button>
+                        </div>
+                        
+                    </form>
+                    
+                </div>
+            </div>
+            
+        </div>
+        
+        <div class="col-lg-4">
+            
+            <!-- Délai de réponse -->
+            <div class="response-time">
+                <h5><i class="fas fa-hourglass-half me-2"></i>Délai de Réponse</h5>
+                <p class="mb-0">
+                    <strong>{{ response_delay }}</strong><br>
+                    <small class="text-muted">
+                        Conformément à l'Article 12 du RGPD, nous nous engageons à répondre 
+                        dans les meilleurs délais et au maximum sous 30 jours ouvrés.
+                    </small>
+                </p>
+            </div>
+            
+            <!-- Vos droits -->
+            <div class="rights-card">
+                <h5><i class="fas fa-balance-scale me-2"></i>Vos Droits RGPD</h5>
+                <ul class="list-unstyled">
+                    <li class="mb-2">
+                        <i class="fas fa-eye text-info me-2"></i>
+                        <strong>Droit d'accès</strong><br>
+                        <small>Connaître les données traitées</small>
+                    </li>
+                    <li class="mb-2">
+                        <i class="fas fa-edit text-warning me-2"></i>
+                        <strong>Droit de rectification</strong><br>
+                        <small>Corriger les données inexactes</small>
+                    </li>
+                    <li class="mb-2">
+                        <i class="fas fa-trash text-danger me-2"></i>
+                        <strong>Droit à l'effacement</strong><br>
+                        <small>Demander la suppression</small>
+                    </li>
+                    <li class="mb-2">
+                        <i class="fas fa-download text-success me-2"></i>
+                        <strong>Droit de portabilité</strong><br>
+                        <small>Récupérer vos données</small>
+                    </li>
+                </ul>
+            </div>
+            
+            <!-- Actions rapides -->
+            <div class="card">
+                <div class="card-header">
+                    <h6><i class="fas fa-bolt me-2"></i>Actions Rapides</h6>
+                </div>
+                <div class="card-body">
+                    <div class="d-grid gap-2">
+                        <a href="{{ path('app_gdpr_data_export') }}" class="btn btn-outline-info btn-sm">
+                            <i class="fas fa-download me-1"></i>Exporter mes Données
+                        </a>
+                        <a href="{{ path('app_gdpr_consent') }}" class="btn btn-outline-success btn-sm">
+                            <i class="fas fa-cog me-1"></i>Gérer mes Consentements
+                        </a>
+                        <a href="{{ path('app_gdpr_privacy_policy') }}" class="btn btn-outline-primary btn-sm">
+                            <i class="fas fa-shield-alt me-1"></i>Politique de Confidentialité
+                        </a>
+                    </div>
+                </div>
+            </div>
+            
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block javascripts %}
+    {{ parent() }}
+    <script>
+    document.addEventListener('DOMContentLoaded', function() {
+        const form = document.getElementById('dpo-contact-form');
+        const submitBtn = document.getElementById('submit-btn');
+        const submitSpinner = document.getElementById('submit-spinner');
+        const messageField = document.getElementById('message');
+        const subjectField = document.getElementById('subject');
+        
+        // Compteur de caractères
+        function updateCharCount(field, maxLength) {
+            const remaining = maxLength - field.value.length;
+            const helpText = field.parentNode.querySelector('.form-text');
+            if (helpText) {
+                const originalText = helpType.textContent.split('(')[0];
+                helpText.textContent = `${originalText}(${remaining} caractères restants)`;
+                
+                if (remaining < 50) {
+                    helpText.classList.add('text-warning');
+                } else {
+                    helpText.classList.remove('text-warning');
+                }
+            }
+        }
+        
+        // Mise à jour du placeholder selon le type de demande
+        const requestType = document.getElementById('request-type');
+        requestType.addEventListener('change', function() {
+            const placeholders = {
+                'access': 'Je souhaite connaître quelles données personnelles vous détenez à mon sujet...',
+                'rectification': 'Je souhaite corriger les informations suivantes dans mon compte...',
+                'erasure': 'Je souhaite supprimer définitivement mon compte et toutes mes données...',
+                'portability': 'Je souhaite récupérer mes données dans un format lisible...',
+                'opposition': 'Je souhaite m\'opposer au traitement de mes données pour...',
+                'limitation': 'Je souhaite limiter le traitement de mes données concernant...',
+                'complaint': 'Je souhaite signaler un problème concernant...',
+                'question': 'J\'ai une question concernant...',
+                'other': 'Ma demande concerne...'
+            };
+            
+            if (placeholders[this.value]) {
+                messageField.placeholder = placeholders[this.value];
+            }
+        });
+        
+        // Validation en temps réel
+        form.addEventListener('submit', function(e) {
+            e.preventDefault();
+            
+            // Vérifications basiques
+            const requiredFields = form.querySelectorAll('[required]');
+            let allValid = true;
+            
+            requiredFields.forEach(field => {
+                if (!field.value.trim()) {
+                    field.classList.add('is-invalid');
+                    allValid = false;
+                } else {
+                    field.classList.remove('is-invalid');
+                    field.classList.add('is-valid');
+                }
+            });
+            
+            if (!allValid) {
+                alert('Veuillez remplir tous les champs obligatoires.');
+                return;
+            }
+            
+            // Afficher le spinner
+            submitBtn.disabled = true;
+            submitSpinner.classList.remove('d-none');
+            
+            // Simuler l'envoi (remplacer par vraie soumission)
+            setTimeout(() => {
+                submitBtn.disabled = false;
+                submitSpinner.classList.add('d-none');
+                
+                // Afficher message de succès
+                const alert = document.createElement('div');
+                alert.className = 'alert alert-success alert-dismissible fade show';
+                alert.innerHTML = `
+                    <i class="fas fa-check-circle me-2"></i>
+                    Votre message a été envoyé au Délégué à la Protection des Données. 
+                    Vous recevrez une réponse sous ${response_delay}.
+                    <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+                `;
+                
+                form.parentNode.insertBefore(alert, form);
+                form.reset();
+                
+                // Scroll vers le haut
+                window.scrollTo({ top: 0, behavior: 'smooth' });
+            }, 2000);
+        });
+        
+        // Validation fichiers
+        const attachments = document.getElementById('attachments');
+        attachments.addEventListener('change', function() {
+            const maxSize = 10 * 1024 * 1024; // 10MB
+            const allowedTypes = ['.pdf', '.jpg', '.jpeg', '.png', '.doc', '.docx', '.txt'];
+            
+            Array.from(this.files).forEach(file => {
+                if (file.size > maxSize) {
+                    alert(`Le fichier ${file.name} est trop volumineux (max: 10MB)`);
+                    this.value = '';
+                }
+                
+                const extension = '.' + file.name.split('.').pop().toLowerCase();
+                if (!allowedTypes.includes(extension)) {
+                    alert(`Le format du fichier ${file.name} n'est pas accepté`);
+                    this.value = '';
+                }
+            });
+        });
+    });
+    </script>
+{% endblock %}

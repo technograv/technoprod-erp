@@ -1,0 +1,315 @@
+{% extends 'base.html.twig' %}
+
+{% block title %}Mentions Légales - TechnoProd{% endblock %}
+
+{% block stylesheets %}
+    {{ parent() }}
+    <style>
+        .legal-header {
+            background: linear-gradient(135deg, #495057 0%, #343a40 100%);
+            color: white;
+            padding: 3rem 0;
+            margin-bottom: 2rem;
+        }
+        
+        .legal-section {
+            background: white;
+            border-radius: 8px;
+            padding: 2rem;
+            margin-bottom: 2rem;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+            border-left: 4px solid #495057;
+        }
+        
+        .legal-section h3 {
+            color: #495057;
+            border-bottom: 2px solid #e9ecef;
+            padding-bottom: 0.5rem;
+            margin-bottom: 1.5rem;
+        }
+        
+        .company-info {
+            background: #f8f9fa;
+            border: 1px solid #dee2e6;
+            border-radius: 8px;
+            padding: 1.5rem;
+            margin: 1rem 0;
+        }
+        
+        .toc {
+            background: #e9ecef;
+            border-radius: 8px;
+            padding: 1.5rem;
+            margin-bottom: 2rem;
+        }
+        
+        .toc ul {
+            list-style: none;
+            padding-left: 0;
+        }
+        
+        .toc li {
+            margin: 0.5rem 0;
+        }
+        
+        .toc a {
+            color: #495057;
+            text-decoration: none;
+        }
+        
+        .toc a:hover {
+            color: #007bff;
+            text-decoration: underline;
+        }
+    </style>
+{% endblock %}
+
+{% block body %}
+<div class="legal-header">
+    <div class="container">
+        <h1><i class="fas fa-gavel me-3"></i>Mentions Légales</h1>
+        <p class="lead">Informations légales et réglementaires</p>
+    </div>
+</div>
+
+<div class="container">
+    <div class="row justify-content-center">
+        <div class="col-lg-10">
+            
+            <!-- Table des matières -->
+            <div class="toc">
+                <h4><i class="fas fa-list me-2"></i>Sommaire</h4>
+                <ul>
+                    <li><a href="#editeur">1. Éditeur du site</a></li>
+                    <li><a href="#directeur">2. Directeur de publication</a></li>
+                    <li><a href="#hebergeur">3. Hébergement</a></li>
+                    <li><a href="#propriete">4. Propriété intellectuelle</a></li>
+                    <li><a href="#donnees">5. Données personnelles</a></li>
+                    <li><a href="#cookies">6. Cookies</a></li>
+                    <li><a href="#responsabilite">7. Limitation de responsabilité</a></li>
+                    <li><a href="#droit">8. Droit applicable</a></li>
+                </ul>
+            </div>
+            
+            <!-- 1. Éditeur du site -->
+            <div class="legal-section" id="editeur">
+                <h3>1. Éditeur du Site</h3>
+                
+                <div class="company-info">
+                    <p><strong>Dénomination sociale :</strong> TechnoProd</p>
+                    <p><strong>Forme juridique :</strong> [Forme juridique de l'entreprise]</p>
+                    <p><strong>Capital social :</strong> [Montant du capital] €</p>
+                    <p><strong>Siège social :</strong><br>
+                       [Adresse complète]<br>
+                       [Code postal] [Ville]<br>
+                       France
+                    </p>
+                    <p><strong>SIRET :</strong> [Numéro SIRET]</p>
+                    <p><strong>Code APE :</strong> [Code APE/NAF]</p>
+                    <p><strong>TVA Intracommunautaire :</strong> [Numéro TVA]</p>
+                    <p><strong>RCS :</strong> [Ville] [Numéro RCS]</p>
+                </div>
+                
+                <p><strong>Contact :</strong></p>
+                <ul>
+                    <li><strong>Téléphone :</strong> [Numéro de téléphone]</li>
+                    <li><strong>Email :</strong> <a href="mailto:contact@technoprod.fr">contact@technoprod.fr</a></li>
+                    <li><strong>Site web :</strong> <a href="https://technoprod.fr">https://technoprod.fr</a></li>
+                </ul>
+            </div>
+            
+            <!-- 2. Directeur de publication -->
+            <div class="legal-section" id="directeur">
+                <h3>2. Directeur de Publication</h3>
+                <p><strong>Nom :</strong> [Nom du directeur de publication]</p>
+                <p><strong>Qualité :</strong> [Fonction dans l'entreprise]</p>
+                <p><strong>Contact :</strong> <a href="mailto:direction@technoprod.fr">direction@technoprod.fr</a></p>
+            </div>
+            
+            <!-- 3. Hébergement -->
+            <div class="legal-section" id="hebergeur">
+                <h3>3. Hébergement</h3>
+                <p>Le site web TechnoProd est hébergé par :</p>
+                <div class="company-info">
+                    <p><strong>Nom de l'entreprise :</strong> [Nom hébergeur]</p>
+                    <p><strong>Adresse :</strong><br>
+                       [Adresse hébergeur]<br>
+                       [Code postal] [Ville]<br>
+                       [Pays]
+                    </p>
+                    <p><strong>Site web :</strong> <a href="#" target="_blank">[Site hébergeur]</a></p>
+                </div>
+            </div>
+            
+            <!-- 4. Propriété intellectuelle -->
+            <div class="legal-section" id="propriete">
+                <h3>4. Propriété Intellectuelle</h3>
+                
+                <h5>4.1 Contenus protégés</h5>
+                <p>
+                    L'ensemble des contenus présents sur le site TechnoProd (textes, images, graphismes, logo, 
+                    icônes, sons, logiciels) constituent une œuvre de création, propriété exclusive de TechnoProd, 
+                    et sont protégés par les dispositions du Code de la Propriété Intellectuelle.
+                </p>
+                
+                <h5>4.2 Utilisation</h5>
+                <p>
+                    Toute représentation, reproduction, adaptation ou exploitation partielle ou totale des contenus, 
+                    marques déposées et services proposés par le site est interdite sans autorisation expresse et 
+                    écrite de TechnoProd sous peine de poursuites judiciaires.
+                </p>
+                
+                <h5>4.3 Liens hypertextes</h5>
+                <p>
+                    Les liens hypertextes présents sur le site orientant les utilisateurs vers d'autres sites 
+                    Internet n'engagent pas la responsabilité de TechnoProd quant au contenu de ces sites.
+                </p>
+            </div>
+            
+            <!-- 5. Données personnelles -->
+            <div class="legal-section" id="donnees">
+                <h3>5. Données Personnelles</h3>
+                
+                <p>
+                    TechnoProd s'engage à protéger la vie privée de ses utilisateurs et à respecter 
+                    la réglementation en vigueur, notamment le Règlement Général sur la Protection des 
+                    Données (RGPD).
+                </p>
+                
+                <div class="alert alert-info">
+                    <h6><i class="fas fa-shield-alt me-2"></i>Protection des Données</h6>
+                    <p class="mb-0">
+                        Pour plus d'informations sur notre traitement des données personnelles, 
+                        consultez notre <a href="{{ path('app_gdpr_privacy_policy') }}">Politique de Confidentialité</a>.
+                    </p>
+                </div>
+                
+                <h5>5.1 Responsable du traitement</h5>
+                <p>TechnoProd, en sa qualité de responsable du traitement des données personnelles.</p>
+                
+                <h5>5.2 Délégué à la Protection des Données</h5>
+                <p>
+                    <strong>Contact DPO :</strong> <a href="mailto:dpo@technoprod.fr">dpo@technoprod.fr</a><br>
+                    <a href="{{ path('app_gdpr_dpo_contact') }}" class="btn btn-outline-primary btn-sm mt-2">
+                        <i class="fas fa-envelope me-1"></i>Contacter le DPO
+                    </a>
+                </p>
+                
+                <h5>5.3 Vos droits</h5>
+                <p>
+                    Vous disposez d'un droit d'accès, de rectification, d'effacement, de portabilité, 
+                    de limitation et d'opposition au traitement de vos données personnelles.
+                </p>
+                <a href="{{ path('app_gdpr_consent') }}" class="btn btn-outline-success btn-sm">
+                    <i class="fas fa-cog me-1"></i>Gérer mes consentements
+                </a>
+            </div>
+            
+            <!-- 6. Cookies -->
+            <div class="legal-section" id="cookies">
+                <h3>6. Cookies et Traceurs</h3>
+                
+                <p>
+                    Le site TechnoProd utilise des cookies pour améliorer l'expérience utilisateur 
+                    et analyser l'utilisation du site.
+                </p>
+                
+                <h5>6.1 Types de cookies utilisés</h5>
+                <ul>
+                    <li><strong>Cookies techniques :</strong> Nécessaires au fonctionnement du site</li>
+                    <li><strong>Cookies de préférences :</strong> Mémorisation de vos choix</li>
+                    <li><strong>Cookies d'analyse :</strong> Amélioration de nos services (avec votre consentement)</li>
+                </ul>
+                
+                <h5>6.2 Gestion des cookies</h5>
+                <p>
+                    Vous pouvez gérer vos préférences de cookies dans votre espace de consentement 
+                    ou via les paramètres de votre navigateur.
+                </p>
+                <a href="{{ path('app_gdpr_consent') }}" class="btn btn-outline-info btn-sm">
+                    <i class="fas fa-cookie-bite me-1"></i>Gérer les cookies
+                </a>
+            </div>
+            
+            <!-- 7. Limitation de responsabilité -->
+            <div class="legal-section" id="responsabilite">
+                <h3>7. Limitation de Responsabilité</h3>
+                
+                <h5>7.1 Disponibilité du service</h5>
+                <p>
+                    TechnoProd s'efforce d'assurer au mieux la disponibilité du service, cependant 
+                    il ne peut être tenu responsable en cas d'indisponibilité temporaire liée à 
+                    des opérations de maintenance ou à des causes indépendantes de sa volonté.
+                </p>
+                
+                <h5>7.2 Exactitude des informations</h5>
+                <p>
+                    Les informations fournies sur le site le sont à titre indicatif. TechnoProd 
+                    s'efforce de fournir des informations exactes mais ne peut garantir l'exactitude, 
+                    la complétude et l'actualité de toutes les informations présentes sur le site.
+                </p>
+                
+                <h5>7.3 Utilisation du service</h5>
+                <p>
+                    L'utilisateur s'engage à utiliser le service de manière conforme aux lois 
+                    en vigueur et aux présentes mentions légales.
+                </p>
+            </div>
+            
+            <!-- 8. Droit applicable -->
+            <div class="legal-section" id="droit">
+                <h3>8. Droit Applicable et Juridiction</h3>
+                
+                <p>
+                    Les présentes mentions légales sont soumises au droit français. 
+                    En cas de litige, et après tentative de résolution amiable, 
+                    les tribunaux français seront seuls compétents.
+                </p>
+                
+                <h5>8.1 Médiation</h5>
+                <p>
+                    Conformément aux dispositions du Code de la consommation concernant 
+                    le règlement amiable des litiges, TechnoProd adhère au service du 
+                    médiateur [Nom du médiateur] dont les coordonnées sont les suivantes :
+                </p>
+                <ul>
+                    <li><strong>Adresse :</strong> [Adresse du médiateur]</li>
+                    <li><strong>Site web :</strong> <a href="#" target="_blank">[Site du médiateur]</a></li>
+                </ul>
+                
+                <h5>8.2 Modification des mentions légales</h5>
+                <p>
+                    TechnoProd se réserve le droit de modifier les présentes mentions légales 
+                    à tout moment. L'utilisateur sera informé de ces modifications par 
+                    tout moyen utile.
+                </p>
+            </div>
+            
+            <!-- Informations de mise à jour -->
+            <div class="alert alert-secondary">
+                <h6><i class="fas fa-calendar-alt me-2"></i>Dernière mise à jour</h6>
+                <p class="mb-0">
+                    Ces mentions légales ont été mises à jour le <strong>{{ "now"|date("d/m/Y") }}</strong>.
+                </p>
+            </div>
+            
+            <!-- Liens utiles -->
+            <div class="text-center mt-4">
+                <h5>Liens utiles</h5>
+                <div class="btn-group" role="group" aria-label="Liens légaux">
+                    <a href="{{ path('app_gdpr_privacy_policy') }}" class="btn btn-outline-primary">
+                        <i class="fas fa-shield-alt me-1"></i>Politique de Confidentialité
+                    </a>
+                    <a href="#" class="btn btn-outline-secondary">
+                        <i class="fas fa-handshake me-1"></i>CGV
+                    </a>
+                    <a href="{{ path('app_gdpr_dpo_contact') }}" class="btn btn-outline-info">
+                        <i class="fas fa-envelope me-1"></i>Contact DPO
+                    </a>
+                </div>
+            </div>
+            
+        </div>
+    </div>
+</div>
+{% endblock %}
