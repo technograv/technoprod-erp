@@ -1,0 +1,386 @@
+<h3 class="section-title">
+    <i class="fas fa-ruler me-2"></i>Gestion des Unités
+</h3>
+
+<div class="row mb-3">
+    <div class="col-md-6">
+        <button type="button" class="btn btn-success" data-bs-toggle="modal" data-bs-target="#modalUnite">
+            <i class="fas fa-plus me-2"></i>Nouvelle Unité
+        </button>
+    </div>
+    <div class="col-md-6 text-end">
+        <span class="badge bg-info">{{ unites|length }} unités configurées</span>
+    </div>
+</div>
+
+<div class="table-responsive">
+    <table class="table table-hover">
+        <thead class="table-light">
+            <tr>
+                <th>Ordre</th>
+                <th>Code</th>
+                <th>Nom</th>
+                <th>Type</th>
+                <th>Décimales Prix</th>
+                <th>Coefficient</th>
+                <th>Statut</th>
+                <th>Actions</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for unite in unites %}
+            <tr>
+                <td>
+                    <span class="badge bg-secondary">{{ unite.ordre }}</span>
+                </td>
+                <td>
+                    <code class="bg-light px-2 py-1">{{ unite.code }}</code>
+                </td>
+                <td>
+                    <strong>{{ unite.nom }}</strong>
+                </td>
+                <td>
+                    {% if unite.type %}
+                        <span class="badge bg-primary">{{ unite.type }}</span>
+                    {% else %}
+                        <span class="text-muted">-</span>
+                    {% endif %}
+                </td>
+                <td>
+                    <span class="badge bg-info">{{ unite.decimalesPrix }} déc.</span>
+                </td>
+                <td>
+                    {% if unite.coefficientConversion %}
+                        <span class="text-success">{{ unite.coefficientConversion }}</span>
+                    {% else %}
+                        <span class="text-muted">-</span>
+                    {% endif %}
+                </td>
+                <td>
+                    <span class="badge {{ unite.actif ? 'bg-success' : 'bg-danger' }}">
+                        {{ unite.actif ? 'Actif' : 'Inactif' }}
+                    </span>
+                </td>
+                <td>
+                    <div class="btn-group btn-group-sm">
+                        <button type="button" class="btn btn-outline-primary btn-edit-unite" 
+                                data-id="{{ unite.id }}"
+                                data-bs-toggle="modal" 
+                                data-bs-target="#modalUnite">
+                            <i class="fas fa-edit"></i>
+                        </button>
+                        <button type="button" class="btn btn-outline-danger btn-delete-unite" 
+                                data-id="{{ unite.id }}"
+                                data-nom="{{ unite.nom }}">
+                            <i class="fas fa-trash"></i>
+                        </button>
+                    </div>
+                </td>
+            </tr>
+            {% else %}
+            <tr>
+                <td colspan="8" class="text-center text-muted py-4">
+                    <i class="fas fa-ruler fa-3x mb-3"></i>
+                    <p>Aucune unité configurée.</p>
+                    <button type="button" class="btn btn-success" data-bs-toggle="modal" data-bs-target="#modalUnite">
+                        <i class="fas fa-plus me-2"></i>Créer la première unité
+                    </button>
+                </td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+</div>
+
+<!-- Modal Unité -->
+<div class="modal fade" id="modalUnite" tabindex="-1" aria-labelledby="modalUniteLabel" aria-hidden="true">
+    <div class="modal-dialog modal-lg">
+        <div class="modal-content">
+            <div class="modal-header bg-primary text-white">
+                <h5 class="modal-title" id="modalUniteLabel">
+                    <i class="fas fa-ruler me-2"></i>
+                    <span id="modal-title-text">Nouvelle Unité</span>
+                </h5>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body">
+                <form id="formUnite">
+                    <input type="hidden" id="unite-id" name="id">
+                    
+                    <!-- Informations générales -->
+                    <div class="row mb-4">
+                        <div class="col-12">
+                            <h6 class="text-primary border-bottom pb-2">
+                                <i class="fas fa-info-circle me-2"></i>Informations générales
+                            </h6>
+                        </div>
+                        <div class="col-md-4">
+                            <label for="unite-code" class="form-label">Code <span class="text-danger">*</span></label>
+                            <input type="text" class="form-control" id="unite-code" name="code" required maxlength="10" 
+                                   placeholder="Ex: M2, ML, U, KG">
+                        </div>
+                        <div class="col-md-8">
+                            <label for="unite-nom" class="form-label">Nom <span class="text-danger">*</span></label>
+                            <input type="text" class="form-control" id="unite-nom" name="nom" required maxlength="100" 
+                                   placeholder="Ex: Mètre carré, Mètre linéaire, Unité, Kilogramme">
+                        </div>
+                    </div>
+
+                    <div class="row mb-4">
+                        <div class="col-md-6">
+                            <label for="unite-type" class="form-label">Type d'unité</label>
+                            <input type="text" class="form-control" id="unite-type" name="type" maxlength="50" 
+                                   placeholder="Ex: surface, longueur, quantité, poids">
+                            <div class="form-text">
+                                Catégorie de l'unité pour regroupement (optionnel)
+                            </div>
+                        </div>
+                        <div class="col-md-3">
+                            <label for="unite-decimales-prix" class="form-label">Décimales Prix</label>
+                            <select class="form-select" id="unite-decimales-prix" name="decimales_prix">
+                                <option value="0">0 décimale</option>
+                                <option value="1">1 décimale</option>
+                                <option value="2" selected>2 décimales</option>
+                                <option value="3">3 décimales</option>
+                                <option value="4">4 décimales</option>
+                            </select>
+                        </div>
+                        <div class="col-md-3">
+                            <label for="unite-ordre" class="form-label">Ordre</label>
+                            <input type="number" class="form-control" id="unite-ordre" name="ordre" min="1" placeholder="1">
+                        </div>
+                    </div>
+
+                    <!-- Coefficient de conversion -->
+                    <div class="row mb-4">
+                        <div class="col-12">
+                            <h6 class="text-success border-bottom pb-2">
+                                <i class="fas fa-calculator me-2"></i>Conversion
+                            </h6>
+                        </div>
+                        <div class="col-md-12">
+                            <label for="unite-coefficient-conversion" class="form-label">Coefficient de conversion</label>
+                            <input type="number" class="form-control" id="unite-coefficient-conversion" name="coefficient_conversion" 
+                                   step="0.000001" placeholder="1.000000">
+                            <div class="form-text">
+                                Coefficient pour convertir cette unité vers une unité de base (optionnel).
+                                Ex: 1 m² = 10.76391 sq.ft, donc coefficient = 10.76391
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Notes -->
+                    <div class="row mb-4">
+                        <div class="col-12">
+                            <label for="unite-notes" class="form-label">Notes</label>
+                            <textarea class="form-control" id="unite-notes" name="notes" rows="3" 
+                                      placeholder="Notes ou commentaires sur cette unité..."></textarea>
+                        </div>
+                    </div>
+
+                    <!-- Statut -->
+                    <div class="row mb-3">
+                        <div class="col-md-6">
+                            <div class="form-check form-switch">
+                                <input class="form-check-input" type="checkbox" id="unite-actif" name="actif" checked>
+                                <label class="form-check-label" for="unite-actif">
+                                    Unité active
+                                </label>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Aperçu -->
+                    <div class="row">
+                        <div class="col-12">
+                            <div class="alert alert-light border">
+                                <strong>Aperçu :</strong>
+                                <span id="unite-preview">
+                                    <code class="bg-primary text-white px-2 py-1">CODE</code> 
+                                    - <strong>Nom de l'unité</strong>
+                                    {% if false %}
+                                        (<span class="badge bg-primary">type</span>)
+                                    {% endif %}
+                                </span>
+                            </div>
+                        </div>
+                    </div>
+                </form>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">
+                    <i class="fas fa-times me-2"></i>Annuler
+                </button>
+                <button type="button" class="btn btn-primary" id="btn-save-unite">
+                    <i class="fas fa-save me-2"></i>Enregistrer
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+function initUnites() {
+    console.log('Initialisation du module Unités...');
+    
+    // Fonction de mise à jour de l'aperçu
+    function updatePreview() {
+        const code = document.getElementById('unite-code').value || 'CODE';
+        const nom = document.getElementById('unite-nom').value || 'Nom de l\'unité';
+        const type = document.getElementById('unite-type').value;
+        
+        let preview = `<code class="bg-primary text-white px-2 py-1">${code}</code> - <strong>${nom}</strong>`;
+        if (type) {
+            preview += ` (<span class="badge bg-primary">${type}</span>)`;
+        }
+        
+        document.getElementById('unite-preview').innerHTML = preview;
+    }
+
+    // Event listeners pour l'aperçu en temps réel
+    document.getElementById('unite-code').addEventListener('input', updatePreview);
+    document.getElementById('unite-nom').addEventListener('input', updatePreview);
+    document.getElementById('unite-type').addEventListener('input', updatePreview);
+    
+    // Boutons d'édition
+    document.querySelectorAll('.btn-edit-unite').forEach(btn => {
+        btn.addEventListener('click', function() {
+            const id = this.dataset.id;
+            console.log('Édition unité ID:', id);
+            
+            fetch(`{{ path('app_admin_unites_get') }}?id=${id}`)
+                .then(response => response.json())
+                .then(data => {
+                    console.log('Données unité reçues:', data);
+                    
+                    // Remplir le formulaire
+                    document.getElementById('unite-id').value = data.id;
+                    document.getElementById('unite-code').value = data.code;
+                    document.getElementById('unite-nom').value = data.nom;
+                    document.getElementById('unite-type').value = data.type || '';
+                    document.getElementById('unite-decimales-prix').value = data.decimalesPrix;
+                    document.getElementById('unite-coefficient-conversion').value = data.coefficientConversion || '';
+                    document.getElementById('unite-notes').value = data.notes || '';
+                    document.getElementById('unite-ordre').value = data.ordre;
+                    document.getElementById('unite-actif').checked = data.actif;
+                    
+                    // Changer le titre et mettre à jour l'aperçu
+                    document.getElementById('modal-title-text').textContent = 'Modifier Unité';
+                    updatePreview();
+                })
+                .catch(error => {
+                    console.error('Erreur lors du chargement de l\'unité:', error);
+                    alert('Erreur lors du chargement de l\'unité');
+                });
+        });
+    });
+    
+    // Reset du modal à la fermeture
+    document.getElementById('modalUnite').addEventListener('hidden.bs.modal', function() {
+        document.getElementById('formUnite').reset();
+        document.getElementById('unite-id').value = '';
+        document.getElementById('unite-decimales-prix').value = '2';
+        document.getElementById('unite-actif').checked = true;
+        document.getElementById('modal-title-text').textContent = 'Nouvelle Unité';
+        updatePreview();
+    });
+    
+    // Bouton d'enregistrement
+    document.getElementById('btn-save-unite').addEventListener('click', function() {
+        const formData = new FormData(document.getElementById('formUnite'));
+        const id = document.getElementById('unite-id').value;
+        const url = id ? `{{ path('app_admin_unites_update', {'id': '__ID__'}) }}`.replace('__ID__', id) : `{{ path('app_admin_unites_create') }}`;
+        
+        // Préparer les données JSON
+        const data = {
+            code: formData.get('code'),
+            nom: formData.get('nom'),
+            type: formData.get('type'),
+            decimales_prix: parseInt(formData.get('decimales_prix')),
+            coefficient_conversion: formData.get('coefficient_conversion'),
+            notes: formData.get('notes'),
+            ordre: parseInt(formData.get('ordre')) || 1,
+            actif: document.getElementById('unite-actif').checked
+        };
+        
+        console.log('Sauvegarde unité...', data);
+        
+        fetch(url, {
+            method: id ? 'PUT' : 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'X-Requested-With': 'XMLHttpRequest'
+            },
+            body: JSON.stringify(data)
+        })
+        .then(response => response.json())
+        .then(data => {
+            if (data.success) {
+                bootstrap.Modal.getInstance(document.getElementById('modalUnite')).hide();
+                
+                // Recharger l'onglet
+                const tabContent = document.querySelector('#unites .admin-section');
+                tabContent.dataset.loaded = 'false';
+                
+                fetch('{{ path("app_admin_unites") }}')
+                    .then(response => response.text())
+                    .then(html => {
+                        tabContent.innerHTML = html;
+                        initUnites();
+                    });
+            } else {
+                alert('Erreur: ' + (data.message || 'Erreur inconnue'));
+            }
+        })
+        .catch(error => {
+            console.error('Erreur lors de la sauvegarde:', error);
+            alert('Erreur lors de la sauvegarde');
+        });
+    });
+    
+    // Boutons de suppression
+    document.querySelectorAll('.btn-delete-unite').forEach(btn => {
+        btn.addEventListener('click', function() {
+            const id = this.dataset.id;
+            const nom = this.dataset.nom;
+            
+            if (confirm(`Êtes-vous sûr de vouloir supprimer l'unité "${nom}" ?`)) {
+                fetch(`{{ path('app_admin_unites_delete', {'id': '__ID__'}) }}`.replace('__ID__', id), {
+                    method: 'DELETE',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'X-Requested-With': 'XMLHttpRequest'
+                    }
+                })
+                .then(response => response.json())
+                .then(data => {
+                    if (data.success) {
+                        // Recharger l'onglet
+                        const tabContent = document.querySelector('#unites .admin-section');
+                        tabContent.dataset.loaded = 'false';
+                        
+                        fetch('{{ path("app_admin_unites") }}')
+                            .then(response => response.text())
+                            .then(html => {
+                                tabContent.innerHTML = html;
+                                initUnites();
+                            });
+                    } else {
+                        alert('Erreur: ' + (data.message || 'Erreur inconnue'));
+                    }
+                })
+                .catch(error => {
+                    console.error('Erreur lors de la suppression:', error);
+                    alert('Erreur lors de la suppression');
+                });
+            }
+        });
+    });
+
+    // Initialiser l'aperçu
+    updatePreview();
+}
+
+// Rendre la fonction globale
+window.initUnites = initUnites;
+</script>

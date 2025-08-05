@@ -26,6 +26,9 @@ class FormeJuridique
     #[ORM\Column]
     private int $ordre = 0;
 
+    #[ORM\Column]
+    private bool $formeParDefaut = false;
+
     #[ORM\Column(type: Types::DATETIME_IMMUTABLE)]
     private ?\DateTimeImmutable $createdAt = null;
 
@@ -87,6 +90,18 @@ class FormeJuridique
     public function setOrdre(int $ordre): static
     {
         $this->ordre = $ordre;
+        $this->updatedAt = new \DateTimeImmutable();
+        return $this;
+    }
+
+    public function isFormeParDefaut(): bool
+    {
+        return $this->formeParDefaut;
+    }
+
+    public function setFormeParDefaut(bool $formeParDefaut): static
+    {
+        $this->formeParDefaut = $formeParDefaut;
         $this->updatedAt = new \DateTimeImmutable();
         return $this;
     }

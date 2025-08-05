@@ -1,0 +1,455 @@
+{{ form_start(form, {'attr': {'id': 'secteur-modal-form'}}) }}
+
+<div class="row">
+    <div class="col-md-7">
+        <!-- Informations principales -->
+        <div class="card">
+            <div class="card-header">
+                <h6 class="mb-0"><i class="fas fa-info-circle me-2"></i>Informations du secteur</h6>
+            </div>
+            <div class="card-body">
+                <div class="row">
+                    <div class="col-md-6">
+                        {{ form_row(form.nomSecteur) }}
+                    </div>
+                    <div class="col-md-6">
+                        {{ form_row(form.commercial) }}
+                    </div>
+                </div>
+                
+                <div class="row">
+                    <div class="col-md-6">
+                        {{ form_row(form.couleurHex) }}
+                    </div>
+                    <div class="col-md-6">
+                        <div class="form-check mt-4">
+                            {{ form_widget(form.isActive) }}
+                            {{ form_label(form.isActive) }}
+                        </div>
+                    </div>
+                </div>
+                
+                {{ form_row(form.description) }}
+                
+                {% if is_edit and secteur.id %}
+                    <!-- Statistiques -->
+                    <div class="row mt-3">
+                        <div class="col-6">
+                            <div class="text-center p-2 border rounded bg-light">
+                                <div class="fw-bold text-primary">{{ secteur.clients|length }}</div>
+                                <small class="text-muted">Clients</small>
+                            </div>
+                        </div>
+                        <div class="col-6">
+                            <div class="text-center p-2 border rounded bg-light">
+                                <div class="fw-bold text-info" id="stats-attributions">{{ secteur.attributions|length }}</div>
+                                <small class="text-muted">Zones</small>
+                            </div>
+                        </div>
+                    </div>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+    
+    <div class="col-md-5">
+        <!-- Gestion des attributions -->
+        <div class="card">
+            <div class="card-header d-flex justify-content-between align-items-center">
+                <h6 class="mb-0"><i class="fas fa-map-marked-alt me-2"></i>Zones géographiques</h6>
+                {% if is_edit and secteur.id %}
+                    <button type="button" class="btn btn-sm btn-outline-success" id="btn-toggle-ajout">
+                        <i class="fas fa-plus me-1"></i>Ajouter
+                    </button>
+                {% endif %}
+            </div>
+            <div class="card-body" style="max-height: 300px; overflow-y: auto;">
+                {% if is_edit and secteur.id %}
+                    <!-- Liste des attributions existantes -->
+                    <div id="attributions-liste-modal">
+                        <!-- Liste sera chargée dynamiquement -->
+                    </div>
+                    
+                    <!-- Interface d'ajout (cachée par défaut) -->
+                    <div id="ajout-attribution-modal" class="border-top pt-3 mt-3" style="display: none;">
+                        <div class="mb-2">
+                            <select class="form-select form-select-sm" id="type-attribution-modal">
+                                <option value="">-- Choisir un type --</option>
+                                <option value="code_postal">📮 Code postal</option>
+                                <option value="commune">🏘️ Commune</option>
+                                <option value="canton">🗺️ Canton</option>
+                                <option value="epci">🏛️ EPCI</option>
+                                <option value="departement">🏞️ Département</option>
+                                <option value="region">🌍 Région</option>
+                            </select>
+                        </div>
+                        
+                        <div id="zone-recherche-modal" style="display: none;">
+                            <div class="mb-2">
+                                <input type="text" class="form-control form-control-sm" 
+                                       id="recherche-attribution-modal" 
+                                       placeholder="Tapez pour rechercher...">
+                            </div>
+                            
+                            <div id="resultats-attribution-modal" class="mb-2" style="max-height: 120px; overflow-y: auto;">
+                                <!-- Résultats de recherche -->
+                            </div>
+                            
+                            <div id="division-selectionnee-modal" style="display: none;" class="alert alert-success p-2 mb-2">
+                                <small><strong>Sélectionné :</strong> <span id="division-selectionnee-nom-modal"></span></small>
+                                <button type="button" class="btn btn-sm btn-outline-danger float-end" id="btn-deselectionner">
+                                    <i class="fas fa-times"></i>
+                                </button>
+                            </div>
+                            
+                            <div class="mb-2">
+                                <textarea class="form-control form-control-sm" id="notes-attribution-modal" 
+                                          rows="2" placeholder="Notes (optionnel)"></textarea>
+                            </div>
+                            
+                            <div class="d-grid gap-2 d-md-flex">
+                                <button type="button" class="btn btn-sm btn-secondary" id="btn-annuler-ajout">
+                                    Annuler
+                                </button>
+                                <button type="button" class="btn btn-sm btn-success" 
+                                        id="btn-ajouter-attribution-modal" disabled>
+                                    <i class="fas fa-plus me-1"></i>Ajouter
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                {% else %}
+                    <div class="alert alert-info">
+                        <i class="fas fa-info-circle me-1"></i>
+                        <small>Les zones géographiques pourront être définies après la création du secteur.</small>
+                    </div>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+</div>
+
+{{ form_end(form, {'render_rest': false}) }}
+
+<!-- JavaScript géré par le template admin principal -->
+
+// Fonction d'initialisation appelée après chargement de la modal
+function initModalSecteurEvents() {
+    console.log('🚀 Initialisation modal secteur events, secteurId:', secteurIdModal);
+    
+    if (secteurIdModal) {
+        chargerAttributionsListeModal();
+    }
+    
+    // Utilisation de la délégation d'événements pour plus de robustesse
+    const modalElement = document.getElementById('formSecteurModal');
+    if (!modalElement) {
+        console.error('❌ Modal formSecteurModal non trouvée');
+        return;
+    }
+    
+    // Délégation d'événements sur la modal entière
+    modalElement.addEventListener('click', function(e) {
+        if (e.target.matches('#btn-toggle-ajout') || e.target.closest('#btn-toggle-ajout')) {
+            e.preventDefault();
+            console.log('🔘 Clic bouton toggle ajout');
+            toggleAjoutAttribution();
+        }
+        
+        if (e.target.matches('#btn-annuler-ajout') || e.target.closest('#btn-annuler-ajout')) {
+            e.preventDefault();
+            console.log('🔘 Clic bouton annuler ajout');
+            toggleAjoutAttribution();
+        }
+        
+        if (e.target.matches('#btn-ajouter-attribution-modal') || e.target.closest('#btn-ajouter-attribution-modal')) {
+            e.preventDefault();
+            console.log('🔘 Clic bouton ajouter attribution');
+            ajouterAttributionModal();
+        }
+        
+        if (e.target.matches('#btn-deselectionner') || e.target.closest('#btn-deselectionner')) {
+            e.preventDefault();
+            console.log('🔘 Clic bouton déselectionner');
+            deselectionnerDivisionModal();
+        }
+        
+        if (e.target.matches('.btn-supprimer-attribution') || e.target.closest('.btn-supprimer-attribution')) {
+            e.preventDefault();
+            const btn = e.target.matches('.btn-supprimer-attribution') ? e.target : e.target.closest('.btn-supprimer-attribution');
+            const attributionId = btn.getAttribute('data-attribution-id');
+            console.log('🔘 Clic bouton supprimer attribution:', attributionId);
+            supprimerAttributionModal(attributionId);
+        }
+        
+        if (e.target.matches('.btn-selectionner-division') || e.target.closest('.btn-selectionner-division')) {
+            e.preventDefault();
+            const btn = e.target.matches('.btn-selectionner-division') ? e.target : e.target.closest('.btn-selectionner-division');
+            const id = btn.getAttribute('data-division-id');
+            const nom = btn.getAttribute('data-division-nom');
+            const valeur = btn.getAttribute('data-division-valeur');
+            const type = btn.getAttribute('data-division-type');
+            console.log('🔘 Clic sélectionner division:', nom);
+            selectionnerDivisionModal(id, nom, valeur, type);
+        }
+    });
+    
+    // Event listeners directs pour les champs
+    modalElement.addEventListener('change', function(e) {
+        if (e.target.matches('#type-attribution-modal')) {
+            console.log('🔘 Changement type attribution:', e.target.value);
+            changerTypeAttributionModal();
+        }
+    });
+    
+    modalElement.addEventListener('keyup', function(e) {
+        if (e.target.matches('#recherche-attribution-modal')) {
+            console.log('🔘 Recherche division:', e.target.value);
+            rechercherDivisionModal();
+        }
+    });
+    
+    console.log('✅ Event listeners attachés avec succès');
+}
+
+// L'initialisation sera appelée depuis la page admin après ouverture de la modal
+
+function chargerAttributionsListeModal() {
+    console.log('📋 Chargement attributions pour secteur:', secteurIdModal);
+    if (!secteurIdModal) {
+        console.warn('⚠️ Aucun secteurId défini');
+        return;
+    }
+    
+    const listeContainer = document.getElementById('attributions-liste-modal');
+    if (!listeContainer) {
+        console.error('❌ Container attributions-liste-modal non trouvé');
+        return;
+    }
+    
+    listeContainer.innerHTML = '<div class="text-center text-muted py-2"><div class="spinner-border spinner-border-sm" role="status"></div><p class="mt-2 mb-0 small">Chargement...</p></div>';
+    
+    const url = `/secteur/ajax/${secteurIdModal}/attributions`;
+    console.log('🔗 Appel API:', url);
+    
+    fetch(url)
+        .then(response => {
+            console.log('📡 Réponse API:', response.status);
+            return response.json();
+        })
+        .then(data => {
+            console.log('📊 Données reçues:', data);
+            if (data.success) {
+                if (data.attributions.length === 0) {
+                    listeContainer.innerHTML = '<div class="alert alert-info"><small><i class="fas fa-info-circle me-1"></i>Aucune zone géographique définie</small></div>';
+                } else {
+                    let html = '<div class="list-group list-group-flush">';
+                    data.attributions.forEach(attribution => {
+                        const icon = getTypeIconModal(attribution.typeCritere);
+                        html += `
+                            <div class="list-group-item d-flex justify-content-between align-items-center p-2">
+                                <div>
+                                    <small class="fw-bold">${icon} ${attribution.division.nom}</small>
+                                    <br><small class="text-muted">${attribution.typeCritere} - ${attribution.valeurCritere}</small>
+                                    ${attribution.notes ? '<br><small class="text-muted fst-italic">' + attribution.notes + '</small>' : ''}
+                                </div>
+                                <button type="button" class="btn btn-sm btn-outline-danger btn-supprimer-attribution" 
+                                        data-attribution-id="${attribution.id}"
+                                        title="Supprimer cette attribution">
+                                    <i class="fas fa-trash"></i>
+                                </button>
+                            </div>
+                        `;
+                    });
+                    html += '</div>';
+                    listeContainer.innerHTML = html;
+                }
+                // Mettre à jour le compteur de zones
+                const statsElement = document.getElementById('stats-attributions');
+                if (statsElement) {
+                    statsElement.textContent = data.attributions.length;
+                }
+                
+                // Les event listeners sont maintenant gérés par délégation
+            } else {
+                listeContainer.innerHTML = '<div class="alert alert-danger small">Erreur lors du chargement</div>';
+            }
+        })
+        .catch(error => {
+            console.error('❌ Erreur API:', error);
+            listeContainer.innerHTML = '<div class="alert alert-danger small">Erreur de communication</div>';
+        });
+}
+
+function toggleAjoutAttribution() {
+    console.log('🔄 Toggle ajout attribution');
+    const ajoutSection = document.getElementById('ajout-attribution-modal');
+    if (!ajoutSection) {
+        console.error('❌ Section ajout-attribution-modal non trouvée');
+        return;
+    }
+    
+    if (ajoutSection.style.display === 'none' || ajoutSection.style.display === '') {
+        console.log('👁️ Affichage section ajout');
+        ajoutSection.style.display = 'block';
+    } else {
+        console.log('🔒 Masquage section ajout');
+        ajoutSection.style.display = 'none';
+        reinitialiserFormulaireModal();
+    }
+}
+
+function changerTypeAttributionModal() {
+    const typeSelect = document.getElementById('type-attribution-modal');
+    const zoneRecherche = document.getElementById('zone-recherche-modal');
+    
+    if (typeSelect.value) {
+        zoneRecherche.style.display = 'block';
+        document.getElementById('recherche-attribution-modal').focus();
+        reinitialiserRechercheModal();
+    } else {
+        zoneRecherche.style.display = 'none';
+    }
+}
+
+function rechercherDivisionModal() {
+    const type = document.getElementById('type-attribution-modal').value;
+    const terme = document.getElementById('recherche-attribution-modal').value.trim();
+    const resultsContainer = document.getElementById('resultats-attribution-modal');
+    
+    if (!type || terme.length < 2) {
+        resultsContainer.innerHTML = '';
+        return;
+    }
+    
+    resultsContainer.innerHTML = '<div class="text-center small text-muted"><i class="fas fa-spinner fa-spin"></i> Recherche...</div>';
+    
+    fetch(`/admin/divisions-administratives/recherche?type=${type}&terme=${encodeURIComponent(terme)}`)
+        .then(response => response.json())
+        .then(data => {
+            if (data.success && data.results.length > 0) {
+                let html = '<div class="list-group list-group-flush">';
+                data.results.forEach(result => {
+                    const icon = getTypeIconModal(type);
+                    html += `
+                        <button type="button" class="list-group-item list-group-item-action p-2 btn-selectionner-division" 
+                                data-division-id="${result.id}" data-division-nom="${result.nom}" 
+                                data-division-valeur="${result.valeur}" data-division-type="${type}">
+                            <div class="d-flex justify-content-between">
+                                <div>
+                                    <small class="fw-bold">${icon} ${result.nom}</small>
+                                    <br><small class="text-muted">${result.details || result.valeur}</small>
+                                </div>
+                                <i class="fas fa-chevron-right small text-muted"></i>
+                            </div>
+                        </button>
+                    `;
+                });
+                html += '</div>';
+                resultsContainer.innerHTML = html;
+                
+                // Les event listeners sont maintenant gérés par délégation
+            } else {
+                resultsContainer.innerHTML = '<div class="text-muted text-center small">Aucun résultat trouvé</div>';
+            }
+        })
+        .catch(error => {
+            console.error('Erreur:', error);
+            resultsContainer.innerHTML = '<div class="alert alert-danger small">Erreur de recherche</div>';
+        });
+}
+
+function selectionnerDivisionModal(id, nom, valeur, type) {
+    divisionSelectionneeModal = { id, nom, valeur, type };
+    
+    document.getElementById('division-selectionnee-modal').style.display = 'block';
+    document.getElementById('division-selectionnee-nom-modal').textContent = `${getTypeIconModal(type)} ${nom}`;
+    document.getElementById('resultats-attribution-modal').innerHTML = '';
+    document.getElementById('btn-ajouter-attribution-modal').disabled = false;
+}
+
+function deselectionnerDivisionModal() {
+    divisionSelectionneeModal = null;
+    document.getElementById('division-selectionnee-modal').style.display = 'none';
+    document.getElementById('btn-ajouter-attribution-modal').disabled = true;
+}
+
+function ajouterAttributionModal() {
+    if (!divisionSelectionneeModal || !secteurIdModal) return;
+    
+    const notes = document.getElementById('notes-attribution-modal').value.trim();
+    
+    const data = {
+        secteurId: secteurIdModal,
+        divisionId: divisionSelectionneeModal.id,
+        typeCritere: divisionSelectionneeModal.type,
+        valeurCritere: divisionSelectionneeModal.valeur,
+        notes: notes
+    };
+    
+    fetch('/admin/secteur/attribution/create', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(data)
+    })
+    .then(response => response.json())
+    .then(result => {
+        if (result.success) {
+            chargerAttributionsListeModal();
+            reinitialiserFormulaireModal();
+            toggleAjoutAttribution();
+        } else {
+            alert(result.message || 'Erreur lors de l\'ajout');
+        }
+    })
+    .catch(error => {
+        console.error('Erreur:', error);
+        alert('Erreur de communication');
+    });
+}
+
+function supprimerAttributionModal(attributionId) {
+    if (!confirm('Êtes-vous sûr de vouloir supprimer cette attribution ?')) return;
+    
+    fetch(`/admin/secteur/attribution/${attributionId}`, {
+        method: 'DELETE'
+    })
+    .then(response => response.json())
+    .then(result => {
+        if (result.success) {
+            chargerAttributionsListeModal();
+        } else {
+            alert(result.message || 'Erreur lors de la suppression');
+        }
+    })
+    .catch(error => {
+        console.error('Erreur:', error);
+        alert('Erreur de communication');
+    });
+}
+
+function reinitialiserFormulaireModal() {
+    document.getElementById('type-attribution-modal').value = '';
+    document.getElementById('zone-recherche-modal').style.display = 'none';
+    reinitialiserRechercheModal();
+}
+
+function reinitialiserRechercheModal() {
+    document.getElementById('recherche-attribution-modal').value = '';
+    document.getElementById('notes-attribution-modal').value = '';
+    document.getElementById('resultats-attribution-modal').innerHTML = '';
+    deselectionnerDivisionModal();
+}
+
+function getTypeIconModal(type) {
+    const icons = {
+        'code_postal': '📮',
+        'commune': '🏘️',
+        'canton': '🗺️',
+        'epci': '🏛️',
+        'departement': '🏞️',
+        'region': '🌍'
+    };
+    return icons[type] || '📍';
+}
+</script>
