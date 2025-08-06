@@ -159,6 +159,21 @@
                 </a>
             </li>
             <li class="nav-item">
+                <a class="nav-link" data-bs-toggle="tab" href="#secteurs" role="tab">
+                    <i class="fas fa-map me-2"></i>Secteurs
+                </a>
+            </li>
+            <li class="nav-item">
+                <a class="nav-link" data-bs-toggle="tab" href="#transporteurs" role="tab">
+                    <i class="fas fa-truck me-2"></i>Transporteurs
+                </a>
+            </li>
+            <li class="nav-item">
+                <a class="nav-link" data-bs-toggle="tab" href="#frais-port" role="tab">
+                    <i class="fas fa-shipping-fast me-2"></i>Frais de Port
+                </a>
+            </li>
+            <li class="nav-item">
                 <a class="nav-link" data-bs-toggle="tab" href="#produits" role="tab">
                     <i class="fas fa-box me-2"></i>Produits
                 </a>
@@ -439,23 +454,13 @@
                                 </a>
                             </li>
                             <li class="nav-item">
-                                <a class="nav-link" data-bs-toggle="tab" href="#secteurs-content" role="tab">
-                                    <i class="fas fa-map me-2"></i>Secteurs
-                                </a>
-                            </li>
-                            <li class="nav-item">
                                 <a class="nav-link" data-bs-toggle="tab" href="#unites-content" role="tab">
                                     <i class="fas fa-ruler me-2"></i>Unités
                                 </a>
                             </li>
                             <li class="nav-item">
-                                <a class="nav-link" data-bs-toggle="tab" href="#transporteurs-content" role="tab">
-                                    <i class="fas fa-truck me-2"></i>Transporteurs
-                                </a>
-                            </li>
-                            <li class="nav-item">
-                                <a class="nav-link" data-bs-toggle="tab" href="#frais-port-content" role="tab">
-                                    <i class="fas fa-shipping-fast me-2"></i>Frais de Port
+                                <a class="nav-link" data-bs-toggle="tab" href="#groupes-users-content" role="tab">
+                                    <i class="fas fa-users-cog me-2"></i>Groupes Utilisateurs
                                 </a>
                             </li>
                         </ul>
@@ -478,14 +483,6 @@
                                     <p class="text-muted mt-2">Chargement des utilisateurs...</p>
                                 </div>
                             </div>
-                            <div class="tab-pane fade" id="secteurs-content" role="tabpanel">
-                                <div class="text-center">
-                                    <div class="spinner-border text-primary" role="status">
-                                        <span class="visually-hidden">Chargement...</span>
-                                    </div>
-                                    <p class="text-muted mt-2">Chargement des secteurs...</p>
-                                </div>
-                            </div>
                             <div class="tab-pane fade" id="unites-content" role="tabpanel">
                                 <div class="text-center">
                                     <div class="spinner-border text-primary" role="status">
@@ -494,23 +491,65 @@
                                     <p class="text-muted mt-2">Chargement des unités...</p>
                                 </div>
                             </div>
-                            <div class="tab-pane fade" id="transporteurs-content" role="tabpanel">
+                            <div class="tab-pane fade" id="groupes-users-content" role="tabpanel">
                                 <div class="text-center">
                                     <div class="spinner-border text-primary" role="status">
                                         <span class="visually-hidden">Chargement...</span>
                                     </div>
-                                    <p class="text-muted mt-2">Chargement des transporteurs...</p>
-                                </div>
-                            </div>
-                            <div class="tab-pane fade" id="frais-port-content" role="tabpanel">
-                                <div class="text-center">
-                                    <div class="spinner-border text-primary" role="status">
-                                        <span class="visually-hidden">Chargement...</span>
-                                    </div>
-                                    <p class="text-muted mt-2">Chargement des frais de port...</p>
+                                    <p class="text-muted mt-2">Chargement des groupes d'utilisateurs...</p>
                                 </div>
                             </div>
                         </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Secteurs -->
+        <div class="tab-pane fade" id="secteurs" role="tabpanel">
+            <div class="admin-section">
+                <h3 class="section-title">
+                    <i class="fas fa-map me-2"></i>Gestion des Secteurs Commerciaux
+                </h3>
+                <p class="text-muted mb-4">Configuration des territoires commerciaux et zones géographiques</p>
+                
+                <div class="alert alert-info">
+                    <i class="fas fa-info-circle me-2"></i>
+                    Les secteurs commerciaux sont gérés via l'interface dédiée avec cartographie interactive.
+                    <div class="mt-2">
+                        <a href="{{ path('app_secteur_index_moderne') }}" class="btn btn-primary btn-sm" target="_blank">
+                            <i class="fas fa-external-link-alt me-2"></i>Ouvrir l'interface secteurs
+                        </a>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Transporteurs -->
+        <div class="tab-pane fade" id="transporteurs" role="tabpanel">
+            <div class="admin-section">
+                <h3 class="section-title">
+                    <i class="fas fa-truck me-2"></i>Gestion des Transporteurs
+                </h3>
+                <p class="text-muted">Chargement en cours...</p>
+                <div class="text-center">
+                    <div class="spinner-border text-primary" role="status">
+                        <span class="visually-hidden">Chargement...</span>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Frais de Port -->
+        <div class="tab-pane fade" id="frais-port" role="tabpanel">
+            <div class="admin-section">
+                <h3 class="section-title">
+                    <i class="fas fa-shipping-fast me-2"></i>Gestion des Frais de Port
+                </h3>
+                <p class="text-muted">Chargement en cours...</p>
+                <div class="text-center">
+                    <div class="spinner-border text-primary" role="status">
+                        <span class="visually-hidden">Chargement...</span>
                     </div>
                 </div>
             </div>
@@ -761,6 +800,16 @@
             
             let url = '';
             switch(tabId) {
+                case '#secteurs':
+                    // Secteurs utilise une interface dédiée - pas de chargement AJAX
+                    tabContent.dataset.loaded = 'true';
+                    return;
+                case '#transporteurs':
+                    url = '{{ path("app_admin_transporteurs") }}';
+                    break;
+                case '#frais-port':
+                    url = '{{ path("app_admin_frais_port") }}';
+                    break;
                 case '#produits':
                     url = '{{ path("app_admin_produits") }}';
                     break;
@@ -835,6 +884,14 @@
                             let initFunction = null;
                             
                             switch(tabId) {
+                                case '#transporteurs':
+                                    functionName = 'initTransporteurs';
+                                    initFunction = window.initTransporteurs;
+                                    break;
+                                case '#frais-port':
+                                    functionName = 'initFraisPort';
+                                    initFunction = window.initFraisPort;
+                                    break;
                                 case '#formes-juridiques':
                                     functionName = 'initFormesJuridiques';
                                     initFunction = window.initFormesJuridiques;
@@ -1035,22 +1092,14 @@
                     url = '{{ path("app_admin_users") }}';
                     targetContentId = '#users-content';
                     break;
-                case '#secteurs-content':
-                    // Secteurs utilise une logique spéciale
-                    targetContentId = '#secteurs-content';
-                    document.querySelector(targetContentId).innerHTML = '<div class="alert alert-info"><i class="fas fa-info-circle me-2"></i>Les secteurs sont gérés via <a href="{{ path("app_secteur_index_moderne") }}" target="_blank">l\'interface dédiée</a></div>';
-                    break;
                 case '#unites-content':
                     url = '{{ path("app_admin_unites") }}';
                     targetContentId = '#unites-content';
                     break;
-                case '#transporteurs-content':
-                    url = '{{ path("app_admin_transporteurs") }}';
-                    targetContentId = '#transporteurs-content';
-                    break;
-                case '#frais-port-content':
-                    url = '{{ path("app_admin_frais_port") }}';
-                    targetContentId = '#frais-port-content';
+                case '#groupes-users-content':
+                    // TODO: À implémenter
+                    targetContentId = '#groupes-users-content';
+                    document.querySelector(targetContentId).innerHTML = '<div class="alert alert-info"><i class="fas fa-info-circle me-2"></i>Section "Groupes Utilisateurs" à implémenter</div>';
                     break;
             }
             
@@ -1116,14 +1165,6 @@
                             case '#unites-content':
                                 functionName = 'initUnites';
                                 initFunction = window.initUnites;
-                                break;
-                            case '#transporteurs-content':
-                                functionName = 'initTransporteurs';
-                                initFunction = window.initTransporteurs;
-                                break;
-                            case '#frais-port-content':
-                                functionName = 'initFraisPort';
-                                initFunction = window.initFraisPort;
                                 break;
                         }
                         
