@@ -105,4 +105,16 @@ class DocumentNumerotationService
         $annee = date('Y');
         return sprintf('%s-%s-%04d', $prefixeUtilise, $annee, $compteur);
     }
+
+    /**
+     * Alias pour genererProchainNumero() pour compatibilité
+     * 
+     * @param string $typeDocument Type du document
+     * @param string $prefixe Préfixe à utiliser
+     * @return string Le numéro complet généré
+     */
+    public function getProchainNumero(string $typeDocument, string $prefixe = null): string
+    {
+        return $this->genererProchainNumero($typeDocument, $prefixe);
+    }
 }
