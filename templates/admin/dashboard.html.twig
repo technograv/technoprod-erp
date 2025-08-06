@@ -149,18 +149,13 @@
                 </a>
             </li>
             <li class="nav-item">
-                <a class="nav-link" data-bs-toggle="tab" href="#formes-juridiques" role="tab">
-                    <i class="fas fa-building me-2"></i>Formes Juridiques
+                <a class="nav-link" data-bs-toggle="tab" href="#juridique-comptable" role="tab">
+                    <i class="fas fa-balance-scale me-2"></i>Juridique & Comptable
                 </a>
             </li>
             <li class="nav-item">
-                <a class="nav-link" data-bs-toggle="tab" href="#users" role="tab">
-                    <i class="fas fa-users me-2"></i>Utilisateurs
-                </a>
-            </li>
-            <li class="nav-item">
-                <a class="nav-link" data-bs-toggle="tab" href="#secteurs" role="tab">
-                    <i class="fas fa-map me-2"></i>Secteurs
+                <a class="nav-link" data-bs-toggle="tab" href="#parametrage" role="tab">
+                    <i class="fas fa-cogs me-2"></i>Paramétrage
                 </a>
             </li>
             <li class="nav-item">
@@ -171,51 +166,6 @@
             <li class="nav-item">
                 <a class="nav-link" data-bs-toggle="tab" href="#tags-clients" role="tab">
                     <i class="fas fa-tags me-2"></i>Tags Clients
-                </a>
-            </li>
-            <li class="nav-item">
-                <a class="nav-link" data-bs-toggle="tab" href="#moyens-paiement" role="tab">
-                    <i class="fas fa-money-check-alt me-2"></i>Moyens de Paiement
-                </a>
-            </li>
-            <li class="nav-item">
-                <a class="nav-link" data-bs-toggle="tab" href="#modes-reglement" role="tab">
-                    <i class="fas fa-credit-card me-2"></i>Modes de Règlement
-                </a>
-            </li>
-            <li class="nav-item">
-                <a class="nav-link" data-bs-toggle="tab" href="#banques" role="tab">
-                    <i class="fas fa-university me-2"></i>Banques
-                </a>
-            </li>
-            <li class="nav-item">
-                <a class="nav-link" data-bs-toggle="tab" href="#taux-tva" role="tab">
-                    <i class="fas fa-percent me-2"></i>Taux TVA
-                </a>
-            </li>
-            <li class="nav-item">
-                <a class="nav-link" data-bs-toggle="tab" href="#unites" role="tab">
-                    <i class="fas fa-ruler me-2"></i>Unités
-                </a>
-            </li>
-            <li class="nav-item">
-                <a class="nav-link" data-bs-toggle="tab" href="#civilites" role="tab">
-                    <i class="fas fa-user me-2"></i>Civilités
-                </a>
-            </li>
-            <li class="nav-item">
-                <a class="nav-link" data-bs-toggle="tab" href="#transporteurs" role="tab">
-                    <i class="fas fa-truck me-2"></i>Transporteurs
-                </a>
-            </li>
-            <li class="nav-item">
-                <a class="nav-link" data-bs-toggle="tab" href="#frais-port" role="tab">
-                    <i class="fas fa-shipping-fast me-2"></i>Frais de Port
-                </a>
-            </li>
-            <li class="nav-item">
-                <a class="nav-link" data-bs-toggle="tab" href="#settings" role="tab">
-                    <i class="fas fa-cogs me-2"></i>Paramètres
                 </a>
             </li>
         </ul>
@@ -374,6 +324,193 @@
                         <p><strong>Debug :</strong> {{ app.debug ? 'Activé' : 'Désactivé' }}</p>
                         <p><strong>Utilisateur connecté :</strong> {{ app.user.fullName }}</p>
                         <p><strong>Rôles :</strong> {{ app.user.roles|join(', ') }}</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Juridique & Comptable -->
+        <div class="tab-pane fade" id="juridique-comptable" role="tabpanel">
+            <div class="admin-section">
+                <h3 class="section-title">
+                    <i class="fas fa-balance-scale me-2"></i>Juridique & Comptable
+                </h3>
+                <p class="text-muted mb-4">Gestion des aspects juridiques et comptables de l'entreprise</p>
+                
+                <!-- Sous-navigation pour Juridique & Comptable -->
+                <div class="row">
+                    <div class="col-12">
+                        <ul class="nav nav-pills mb-4 justify-content-center" role="tablist">
+                            <li class="nav-item">
+                                <a class="nav-link active" data-bs-toggle="tab" href="#formes-juridiques-content" role="tab">
+                                    <i class="fas fa-building me-2"></i>Formes Juridiques
+                                </a>
+                            </li>
+                            <li class="nav-item">
+                                <a class="nav-link" data-bs-toggle="tab" href="#moyens-paiement-content" role="tab">
+                                    <i class="fas fa-money-check-alt me-2"></i>Moyens de Paiement
+                                </a>
+                            </li>
+                            <li class="nav-item">
+                                <a class="nav-link" data-bs-toggle="tab" href="#modes-reglement-content" role="tab">
+                                    <i class="fas fa-credit-card me-2"></i>Modes de Règlement
+                                </a>
+                            </li>
+                            <li class="nav-item">
+                                <a class="nav-link" data-bs-toggle="tab" href="#banques-content" role="tab">
+                                    <i class="fas fa-university me-2"></i>Banques
+                                </a>
+                            </li>
+                            <li class="nav-item">
+                                <a class="nav-link" data-bs-toggle="tab" href="#taux-tva-content" role="tab">
+                                    <i class="fas fa-percent me-2"></i>Taux TVA
+                                </a>
+                            </li>
+                        </ul>
+                        
+                        <!-- Contenu des sous-onglets juridique-comptable -->
+                        <div class="tab-content">
+                            <div class="tab-pane fade show active" id="formes-juridiques-content" role="tabpanel">
+                                <div class="text-center">
+                                    <div class="spinner-border text-primary" role="status">
+                                        <span class="visually-hidden">Chargement...</span>
+                                    </div>
+                                    <p class="text-muted mt-2">Chargement des formes juridiques...</p>
+                                </div>
+                            </div>
+                            <div class="tab-pane fade" id="moyens-paiement-content" role="tabpanel">
+                                <div class="text-center">
+                                    <div class="spinner-border text-primary" role="status">
+                                        <span class="visually-hidden">Chargement...</span>
+                                    </div>
+                                    <p class="text-muted mt-2">Chargement des moyens de paiement...</p>
+                                </div>
+                            </div>
+                            <div class="tab-pane fade" id="modes-reglement-content" role="tabpanel">
+                                <div class="text-center">
+                                    <div class="spinner-border text-primary" role="status">
+                                        <span class="visually-hidden">Chargement...</span>
+                                    </div>
+                                    <p class="text-muted mt-2">Chargement des modes de règlement...</p>
+                                </div>
+                            </div>
+                            <div class="tab-pane fade" id="banques-content" role="tabpanel">
+                                <div class="text-center">
+                                    <div class="spinner-border text-primary" role="status">
+                                        <span class="visually-hidden">Chargement...</span>
+                                    </div>
+                                    <p class="text-muted mt-2">Chargement des banques...</p>
+                                </div>
+                            </div>
+                            <div class="tab-pane fade" id="taux-tva-content" role="tabpanel">
+                                <div class="text-center">
+                                    <div class="spinner-border text-primary" role="status">
+                                        <span class="visually-hidden">Chargement...</span>
+                                    </div>
+                                    <p class="text-muted mt-2">Chargement des taux TVA...</p>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Paramétrage -->
+        <div class="tab-pane fade" id="parametrage" role="tabpanel">
+            <div class="admin-section">
+                <h3 class="section-title">
+                    <i class="fas fa-cogs me-2"></i>Paramétrage
+                </h3>
+                <p class="text-muted mb-4">Configuration générale de l'application et des données de référence</p>
+                
+                <!-- Sous-navigation pour Paramétrage -->
+                <div class="row">
+                    <div class="col-12">
+                        <ul class="nav nav-pills mb-4 justify-content-center" role="tablist">
+                            <li class="nav-item">
+                                <a class="nav-link active" data-bs-toggle="tab" href="#societe-content" role="tab">
+                                    <i class="fas fa-building me-2"></i>Société
+                                </a>
+                            </li>
+                            <li class="nav-item">
+                                <a class="nav-link" data-bs-toggle="tab" href="#users-content" role="tab">
+                                    <i class="fas fa-users me-2"></i>Utilisateurs
+                                </a>
+                            </li>
+                            <li class="nav-item">
+                                <a class="nav-link" data-bs-toggle="tab" href="#secteurs-content" role="tab">
+                                    <i class="fas fa-map me-2"></i>Secteurs
+                                </a>
+                            </li>
+                            <li class="nav-item">
+                                <a class="nav-link" data-bs-toggle="tab" href="#unites-content" role="tab">
+                                    <i class="fas fa-ruler me-2"></i>Unités
+                                </a>
+                            </li>
+                            <li class="nav-item">
+                                <a class="nav-link" data-bs-toggle="tab" href="#transporteurs-content" role="tab">
+                                    <i class="fas fa-truck me-2"></i>Transporteurs
+                                </a>
+                            </li>
+                            <li class="nav-item">
+                                <a class="nav-link" data-bs-toggle="tab" href="#frais-port-content" role="tab">
+                                    <i class="fas fa-shipping-fast me-2"></i>Frais de Port
+                                </a>
+                            </li>
+                        </ul>
+                        
+                        <!-- Contenu des sous-onglets paramétrage -->
+                        <div class="tab-content">
+                            <div class="tab-pane fade show active" id="societe-content" role="tabpanel">
+                                <div class="text-center">
+                                    <div class="spinner-border text-primary" role="status">
+                                        <span class="visually-hidden">Chargement...</span>
+                                    </div>
+                                    <p class="text-muted mt-2">Chargement des informations société...</p>
+                                </div>
+                            </div>
+                            <div class="tab-pane fade" id="users-content" role="tabpanel">
+                                <div class="text-center">
+                                    <div class="spinner-border text-primary" role="status">
+                                        <span class="visually-hidden">Chargement...</span>
+                                    </div>
+                                    <p class="text-muted mt-2">Chargement des utilisateurs...</p>
+                                </div>
+                            </div>
+                            <div class="tab-pane fade" id="secteurs-content" role="tabpanel">
+                                <div class="text-center">
+                                    <div class="spinner-border text-primary" role="status">
+                                        <span class="visually-hidden">Chargement...</span>
+                                    </div>
+                                    <p class="text-muted mt-2">Chargement des secteurs...</p>
+                                </div>
+                            </div>
+                            <div class="tab-pane fade" id="unites-content" role="tabpanel">
+                                <div class="text-center">
+                                    <div class="spinner-border text-primary" role="status">
+                                        <span class="visually-hidden">Chargement...</span>
+                                    </div>
+                                    <p class="text-muted mt-2">Chargement des unités...</p>
+                                </div>
+                            </div>
+                            <div class="tab-pane fade" id="transporteurs-content" role="tabpanel">
+                                <div class="text-center">
+                                    <div class="spinner-border text-primary" role="status">
+                                        <span class="visually-hidden">Chargement...</span>
+                                    </div>
+                                    <p class="text-muted mt-2">Chargement des transporteurs...</p>
+                                </div>
+                            </div>
+                            <div class="tab-pane fade" id="frais-port-content" role="tabpanel">
+                                <div class="text-center">
+                                    <div class="spinner-border text-primary" role="status">
+                                        <span class="visually-hidden">Chargement...</span>
+                                    </div>
+                                    <p class="text-muted mt-2">Chargement des frais de port...</p>
+                                </div>
+                            </div>
+                        </div>
                     </div>
                 </div>
             </div>
@@ -609,35 +746,26 @@
                 return;
             }
             
+            // Gérer les nouveaux onglets principaux avec sous-onglets
+            if (tabId === '#juridique-comptable') {
+                setupJuridiqueComptableTab();
+                tabContent.dataset.loaded = 'true';
+                return;
+            }
+            
+            if (tabId === '#parametrage') {
+                setupParametrageTab();
+                tabContent.dataset.loaded = 'true';
+                return;
+            }
+            
             let url = '';
             switch(tabId) {
-                case '#formes-juridiques':
-                    url = '{{ path("app_admin_formes_juridiques") }}';
-                    break;
-                case '#users':
-                    url = '{{ path("app_admin_users") }}';
-                    break;
-                case '#secteurs':
-                    // Chargement direct du contenu dans l'onglet (pas de route AJAX)
-                    url = null;
-                    break;
                 case '#produits':
                     url = '{{ path("app_admin_produits") }}';
                     break;
                 case '#tags-clients':
                     url = '{{ path("app_admin_tags") }}';
-                    break;
-                case '#moyens-paiement':
-                    url = '{{ path("app_admin_modes_paiement") }}';
-                    break;
-                case '#modes-reglement':
-                    url = '{{ path("app_admin_modes_reglement") }}';
-                    break;
-                case '#banques':
-                    url = '{{ path("app_admin_banques") }}';
-                    break;
-                case '#taux-tva':
-                    url = '{{ path("app_admin_taux_tva") }}';
                     break;
                 case '#unites':
                     url = '{{ path("app_admin_unites") }}';
@@ -815,6 +943,207 @@
                     }
                 }, 200);
             }
+        }
+        
+        // Fonction pour configurer l'onglet Juridique & Comptable
+        function setupJuridiqueComptableTab() {
+            console.log('🔍 Setup Juridique & Comptable tab');
+            
+            // Gérer les sous-onglets de Juridique & Comptable
+            const juridiqueTabs = document.querySelectorAll('#juridique-comptable [data-bs-toggle="tab"]');
+            juridiqueTabs.forEach(tab => {
+                tab.addEventListener('shown.bs.tab', function(e) {
+                    const targetSubTab = e.target.getAttribute('href');
+                    loadJuridiqueComptableSubTab(targetSubTab);
+                });
+            });
+            
+            // Charger le premier sous-onglet par défaut (formes juridiques)
+            loadJuridiqueComptableSubTab('#formes-juridiques-content');
+        }
+        
+        // Fonction pour configurer l'onglet Paramétrage
+        function setupParametrageTab() {
+            console.log('🔍 Setup Paramétrage tab');
+            
+            // Gérer les sous-onglets de Paramétrage
+            const parametrageTabs = document.querySelectorAll('#parametrage [data-bs-toggle="tab"]');
+            parametrageTabs.forEach(tab => {
+                tab.addEventListener('shown.bs.tab', function(e) {
+                    const targetSubTab = e.target.getAttribute('href');
+                    loadParametrageSubTab(targetSubTab);
+                });
+            });
+            
+            // Charger le premier sous-onglet par défaut (société)
+            loadParametrageSubTab('#societe-content');
+        }
+        
+        // Fonction pour charger les sous-onglets Juridique & Comptable
+        function loadJuridiqueComptableSubTab(subTabId) {
+            console.log('🔍 Loading juridique-comptable sub-tab:', subTabId);
+            
+            let url = '';
+            let targetContentId = '';
+            
+            switch(subTabId) {
+                case '#formes-juridiques-content':
+                    url = '{{ path("app_admin_formes_juridiques") }}';
+                    targetContentId = '#formes-juridiques-content';
+                    break;
+                case '#moyens-paiement-content':
+                    url = '{{ path("app_admin_modes_paiement") }}';
+                    targetContentId = '#moyens-paiement-content';
+                    break;
+                case '#modes-reglement-content':
+                    url = '{{ path("app_admin_modes_reglement") }}';
+                    targetContentId = '#modes-reglement-content';
+                    break;
+                case '#banques-content':
+                    url = '{{ path("app_admin_banques") }}';
+                    targetContentId = '#banques-content';
+                    break;
+                case '#taux-tva-content':
+                    url = '{{ path("app_admin_taux_tva") }}';
+                    targetContentId = '#taux-tva-content';
+                    break;
+            }
+            
+            if (url && targetContentId) {
+                const targetElement = document.querySelector(targetContentId);
+                if (targetElement && !targetElement.dataset.loaded) {
+                    loadContentIntoElement(url, targetElement, subTabId);
+                    targetElement.dataset.loaded = 'true';
+                }
+            }
+        }
+        
+        // Fonction pour charger les sous-onglets Paramétrage
+        function loadParametrageSubTab(subTabId) {
+            console.log('🔍 Loading parametrage sub-tab:', subTabId);
+            
+            let url = '';
+            let targetContentId = '';
+            
+            switch(subTabId) {
+                case '#societe-content':
+                    // TODO: À implémenter
+                    targetContentId = '#societe-content';
+                    document.querySelector(targetContentId).innerHTML = '<div class="alert alert-info"><i class="fas fa-info-circle me-2"></i>Section "Informations Société" à implémenter</div>';
+                    break;
+                case '#users-content':
+                    url = '{{ path("app_admin_users") }}';
+                    targetContentId = '#users-content';
+                    break;
+                case '#secteurs-content':
+                    // Secteurs utilise une logique spéciale
+                    targetContentId = '#secteurs-content';
+                    document.querySelector(targetContentId).innerHTML = '<div class="alert alert-info"><i class="fas fa-info-circle me-2"></i>Les secteurs sont gérés via <a href="{{ path("app_secteur_index_moderne") }}" target="_blank">l\'interface dédiée</a></div>';
+                    break;
+                case '#unites-content':
+                    url = '{{ path("app_admin_unites") }}';
+                    targetContentId = '#unites-content';
+                    break;
+                case '#transporteurs-content':
+                    url = '{{ path("app_admin_transporteurs") }}';
+                    targetContentId = '#transporteurs-content';
+                    break;
+                case '#frais-port-content':
+                    url = '{{ path("app_admin_frais_port") }}';
+                    targetContentId = '#frais-port-content';
+                    break;
+            }
+            
+            if (url && targetContentId) {
+                const targetElement = document.querySelector(targetContentId);
+                if (targetElement && !targetElement.dataset.loaded) {
+                    loadContentIntoElement(url, targetElement, subTabId);
+                    targetElement.dataset.loaded = 'true';
+                }
+            }
+        }
+        
+        // Fonction utilitaire pour charger le contenu dans un élément
+        function loadContentIntoElement(url, targetElement, tabId) {
+            fetch(url)
+                .then(response => response.text())
+                .then(html => {
+                    targetElement.innerHTML = html;
+                    
+                    // Exécuter les scripts dans le contenu chargé
+                    const scripts = targetElement.querySelectorAll('script');
+                    scripts.forEach(script => {
+                        const newScript = document.createElement('script');
+                        if (script.src) {
+                            newScript.src = script.src;
+                        } else {
+                            newScript.textContent = script.textContent;
+                        }
+                        document.head.appendChild(newScript);
+                    });
+                    
+                    // Initialiser les fonctions JavaScript spécifiques
+                    setTimeout(() => {
+                        let functionName = '';
+                        let initFunction = null;
+                        
+                        // Map des sous-onglets vers leurs fonctions d'initialisation
+                        switch(tabId) {
+                            case '#formes-juridiques-content':
+                                functionName = 'initFormesJuridiques';
+                                initFunction = window.initFormesJuridiques;
+                                break;
+                            case '#moyens-paiement-content':
+                                functionName = 'initModesPaiement';
+                                initFunction = window.initModesPaiement;
+                                break;
+                            case '#modes-reglement-content':
+                                functionName = 'initModesReglement';
+                                initFunction = window.initModesReglement;
+                                break;
+                            case '#banques-content':
+                                functionName = 'initBanques';
+                                initFunction = window.initBanques;
+                                break;
+                            case '#taux-tva-content':
+                                functionName = 'initTauxTva';
+                                initFunction = window.initTauxTva;
+                                break;
+                            case '#users-content':
+                                functionName = 'initUsers';
+                                initFunction = window.initUsers;
+                                break;
+                            case '#unites-content':
+                                functionName = 'initUnites';
+                                initFunction = window.initUnites;
+                                break;
+                            case '#transporteurs-content':
+                                functionName = 'initTransporteurs';
+                                initFunction = window.initTransporteurs;
+                                break;
+                            case '#frais-port-content':
+                                functionName = 'initFraisPort';
+                                initFunction = window.initFraisPort;
+                                break;
+                        }
+                        
+                        if (initFunction && typeof initFunction === 'function') {
+                            console.log('🚀 Executing init function:', functionName);
+                            try {
+                                initFunction();
+                                console.log('✅ Init function executed successfully:', functionName);
+                            } catch (error) {
+                                console.error('❌ Error executing init function:', functionName, error);
+                            }
+                        } else {
+                            console.log('⚠️ Init function not found:', functionName);
+                        }
+                    }, 100);
+                })
+                .catch(error => {
+                    console.error('❌ Error loading tab content:', error);
+                    targetElement.innerHTML = '<div class="alert alert-danger"><i class="fas fa-exclamation-triangle me-2"></i>Erreur lors du chargement du contenu</div>';
+                });
         }
         
         // Les fonctions d'initialisation sont définies dans chaque template AJAX
