@@ -73,8 +73,15 @@ class GmailMailerService
         try {
             // Configuration du client Google avec les paramètres nécessaires
             $client = new Google_Client();
-            $client->setClientId($_ENV['GOOGLE_OAUTH_CLIENT_ID']);
-            $client->setClientSecret($_ENV['GOOGLE_OAUTH_CLIENT_SECRET']);
+            $clientId = $_ENV['GOOGLE_OAUTH_CLIENT_ID'] ?? null;
+            $clientSecret = $_ENV['GOOGLE_OAUTH_CLIENT_SECRET'] ?? null;
+            
+            if (!$clientId || !$clientSecret) {
+                return false; // OAuth non configuré, fallback vers SMTP
+            }
+            
+            $client->setClientId($clientId);
+            $client->setClientSecret($clientSecret);
             $client->setAccessToken($user->getGoogleAccessToken());
             
             // Vérifier si le token est encore valide

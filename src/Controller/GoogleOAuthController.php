@@ -18,7 +18,11 @@ class GoogleOAuthController extends AbstractController
     #[Route('/google-oauth/start', name: 'google_oauth_start')]
     public function start(SessionInterface $session): Response
     {
-        $client_id = $_ENV['GOOGLE_OAUTH_CLIENT_ID'];
+        $client_id = $_ENV['GOOGLE_OAUTH_CLIENT_ID'] ?? null;
+        
+        if (!$client_id) {
+            throw new \Exception('Google OAuth n\'est pas configuré. Veuillez configurer GOOGLE_OAUTH_CLIENT_ID dans .env.local');
+        }
         $redirect_uri = 'https://test.decorpub.fr:8080/google-oauth/callback';
         $state = bin2hex(random_bytes(16));
         
@@ -64,8 +68,12 @@ class GoogleOAuthController extends AbstractController
         }
         
         // Échanger le code contre un token
-        $client_id = $_ENV['GOOGLE_OAUTH_CLIENT_ID'];
-        $client_secret = $_ENV['GOOGLE_OAUTH_CLIENT_SECRET'];
+        $client_id = $_ENV['GOOGLE_OAUTH_CLIENT_ID'] ?? null;
+        $client_secret = $_ENV['GOOGLE_OAUTH_CLIENT_SECRET'] ?? null;
+        
+        if (!$client_id || !$client_secret) {
+            throw new \Exception('Google OAuth n\'est pas configuré. Veuillez configurer GOOGLE_OAUTH_CLIENT_ID et GOOGLE_OAUTH_CLIENT_SECRET dans .env.local');
+        }
         $redirect_uri = 'https://test.decorpub.fr:8080/google-oauth/callback';
         
         $post_data = [

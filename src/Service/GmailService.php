@@ -103,8 +103,8 @@ class GmailService
 
         try {
             $postData = [
-                'client_id' => $_ENV['GOOGLE_OAUTH_CLIENT_ID'],
-                'client_secret' => $_ENV['GOOGLE_OAUTH_CLIENT_SECRET'],
+                'client_id' => $_ENV['GOOGLE_OAUTH_CLIENT_ID'] ?? '',
+                'client_secret' => $_ENV['GOOGLE_OAUTH_CLIENT_SECRET'] ?? '',
                 'refresh_token' => $user->getGoogleRefreshToken(),
                 'grant_type' => 'refresh_token'
             ];
