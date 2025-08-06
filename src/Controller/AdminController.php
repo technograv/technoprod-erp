@@ -325,7 +325,7 @@ www.technoprod.com';
         try {
             $numerotationService->setCompteur($prefixe, $nouveauCompteur);
             
-            $prochainNumero = $numerotationService->getProchainNumero($prefixe);
+            $prochainNumero = $numerotationService->previewProchainNumero($prefixe);
 
             return $this->json([
                 'success' => true,

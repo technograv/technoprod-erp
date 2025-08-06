@@ -149,7 +149,7 @@
                                 </td>
                                 <td>
                                     {% if commande.devis %}
-                                        <a href="{{ path('app_devis_show_advanced', {'id': commande.devis.id}) }}">
+                                        <a href="{{ path('app_devis_show', {'id': commande.devis.id}) }}">
                                             {{ commande.devis.numeroDevis }}
                                         </a>
                                     {% else %}
