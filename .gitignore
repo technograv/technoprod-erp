@@ -14,6 +14,17 @@
 .env.local
 .env.local.example
 .env.dev
+.env.prod
+.env.test
+
+# API Keys and sensitive configuration
+/config/google/
+google_credentials.json
+oauth_credentials.json
+*.json
+!composer.json
+!package.json
+!webpack.config.json
 
 # Database
 /migrations/*.sql
