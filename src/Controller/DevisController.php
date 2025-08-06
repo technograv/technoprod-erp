@@ -85,7 +85,7 @@ final class DevisController extends AbstractController
         $devis->setStatut('brouillon');
         
         // Générer le prochain numéro de devis avec le nouveau système
-        $nextDevisNumber = $numerotationService->getProchainNumero('DE');
+        $nextDevisNumber = $numerotationService->previewProchainNumero('DE');
         
         // Si un prospect est passé en paramètre
         $prospectId = $request->query->get('prospect');
@@ -165,7 +165,7 @@ final class DevisController extends AbstractController
             
             // Configurer le devis avec le numéro généré par le service
             $devis->setClient($prospect);
-            $numeroGenere = $numerotationService->genererNumero('DE');
+            $numeroGenere = $numerotationService->genererProchainNumero('DE', 'Devis');
             $devis->setNumeroDevis($numeroGenere);
             $devis->setDateCreation(new \DateTime($dateCreation ?: 'now'));
             $devis->setDateValidite(new \DateTime($dateValidite ?: '+30 days'));

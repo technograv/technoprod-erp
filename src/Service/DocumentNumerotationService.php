@@ -26,62 +26,48 @@ class DocumentNumerotationService
     /**
      * Génère le prochain numéro pour un type de document donné
      * 
-     * @param string $typeDocument Type du document (devis, facture, etc.)
-     * @param string $prefixe Préfixe à utiliser (DEV, FACT, etc.)
+     * @param string $prefixe Préfixe du document (DEV, FACT, etc.)
+     * @param string $libelle Libellé du type de document
      * @return string Le numéro complet généré
      */
-    public function genererProchainNumero(string $typeDocument, string $prefixe = null): string
+    public function genererProchainNumero(string $prefixe, string $libelle = null): string
     {
-        // Récupérer ou créer l'entité de numérotation pour ce type
+        // Récupérer ou créer l'entité de numérotation pour ce préfixe
         $numerotation = $this->entityManager->getRepository(DocumentNumerotation::class)
-            ->findOneBy(['typeDocument' => $typeDocument]);
+            ->findOneBy(['prefixe' => $prefixe]);
 
         if (!$numerotation) {
             $numerotation = new DocumentNumerotation();
-            $numerotation->setTypeDocument($typeDocument);
-            $numerotation->setPrefixe($prefixe ?? strtoupper($typeDocument));
-            $numerotation->setCompteur(0);
+            $numerotation->setPrefixe($prefixe);
+            $numerotation->setLibelle($libelle ?? $prefixe);
+            $numerotation->setCompteur(1);
             $this->entityManager->persist($numerotation);
         }
 
-        // Incrémenter le compteur
-        $nouveauCompteur = $numerotation->getCompteur() + 1;
-        $numerotation->setCompteur($nouveauCompteur);
-
-        // Générer le numéro avec format : PREFIXE-YYYY-NNNN
-        $annee = date('Y');
-        $numeroFormate = sprintf(
-            '%s-%s-%04d',
-            $numerotation->getPrefixe(),
-            $annee,
-            $nouveauCompteur
-        );
-
-        $numerotation->setDernierNumero($numeroFormate);
-        $numerotation->setUpdatedAt(new \DateTimeImmutable());
+        // Utiliser la méthode de l'entité pour générer le numéro
+        $numeroGenere = $numerotation->genererProchainNumero();
 
         $this->entityManager->flush();
 
-        return $numeroFormate;
+        return $numeroGenere;
     }
 
     /**
-     * Réinitialise le compteur pour un type de document (utilisé en début d'année)
+     * Réinitialise le compteur pour un préfixe de document (utilisé en début d'année)
      * 
-     * @param string $typeDocument
+     * @param string $prefixe
      * @return bool
      */
-    public function reinitialiserCompteur(string $typeDocument): bool
+    public function reinitialiserCompteur(string $prefixe): bool
     {
         $numerotation = $this->entityManager->getRepository(DocumentNumerotation::class)
-            ->findOneBy(['typeDocument' => $typeDocument]);
+            ->findOneBy(['prefixe' => $prefixe]);
 
         if (!$numerotation) {
             return false;
         }
 
-        $numerotation->setCompteur(0);
-        $numerotation->setUpdatedAt(new \DateTimeImmutable());
+        $numerotation->setCompteur(1);
         $this->entityManager->flush();
 
         return true;
@@ -90,31 +76,53 @@ class DocumentNumerotationService
     /**
      * Obtient le prochain numéro qui sera généré (sans incrémenter)
      * 
-     * @param string $typeDocument
      * @param string $prefixe
      * @return string
      */
-    public function previewProchainNumero(string $typeDocument, string $prefixe = null): string
+    public function previewProchainNumero(string $prefixe): string
     {
         $numerotation = $this->entityManager->getRepository(DocumentNumerotation::class)
-            ->findOneBy(['typeDocument' => $typeDocument]);
+            ->findOneBy(['prefixe' => $prefixe]);
 
-        $compteur = $numerotation ? $numerotation->getCompteur() + 1 : 1;
-        $prefixeUtilise = $numerotation ? $numerotation->getPrefixe() : ($prefixe ?? strtoupper($typeDocument));
-        
-        $annee = date('Y');
-        return sprintf('%s-%s-%04d', $prefixeUtilise, $annee, $compteur);
+        if ($numerotation) {
+            return $numerotation->getProchainNumero();
+        }
+
+        // Si pas trouvé, retourner le format avec compteur 1
+        return $prefixe . str_pad(1, 8, '0', STR_PAD_LEFT);
+    }
+
+    /**
+     * Définit le compteur pour un préfixe donné
+     * 
+     * @param string $prefixe
+     * @param int $compteur
+     * @return bool
+     */
+    public function setCompteur(string $prefixe, int $compteur): bool
+    {
+        $numerotation = $this->entityManager->getRepository(DocumentNumerotation::class)
+            ->findOneBy(['prefixe' => $prefixe]);
+
+        if (!$numerotation) {
+            return false;
+        }
+
+        $numerotation->setCompteur($compteur);
+        $this->entityManager->flush();
+
+        return true;
     }
 
     /**
      * Alias pour genererProchainNumero() pour compatibilité
      * 
-     * @param string $typeDocument Type du document
-     * @param string $prefixe Préfixe à utiliser
+     * @param string $prefixe Préfixe du document
+     * @param string $libelle Libellé du type de document
      * @return string Le numéro complet généré
      */
-    public function getProchainNumero(string $typeDocument, string $prefixe = null): string
+    public function getProchainNumero(string $prefixe, string $libelle = null): string
     {
-        return $this->genererProchainNumero($typeDocument, $prefixe);
+        return $this->genererProchainNumero($prefixe, $libelle);
     }
 }
