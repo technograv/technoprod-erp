@@ -902,6 +902,82 @@ www.technoprod.com';
     }
 
     // =====================================================
+    // DEBUG EXCLUSIONS
+    // =====================================================
+    
+    #[Route('/test/secteur-data/{id}', name: 'app_admin_test_secteur_data', methods: ['GET'])]
+    public function testSecteurData(int $id, EntityManagerInterface $entityManager): JsonResponse
+    {
+        $secteur = $entityManager->getRepository(Secteur::class)->find($id);
+        
+        if (!$secteur) {
+            return new JsonResponse(['error' => 'Secteur non trouvé'], 404);
+        }
+
+        $data = [];
+        foreach ($secteur->getAttributions() as $attribution) {
+            $exclusions = $entityManager->getRepository(ExclusionSecteur::class)
+                ->createQueryBuilder('es')
+                ->leftJoin('es.divisionAdministrative', 'd')
+                ->where('es.attributionSecteur = :attribution')
+                ->setParameter('attribution', $attribution)
+                ->getQuery()
+                ->getResult();
+            
+            $exclusionData = [];
+            foreach ($exclusions as $exclusion) {
+                $exclusionDiv = $exclusion->getDivisionAdministrative();
+                $exclusionData[] = [
+                    'id' => $exclusion->getId(),
+                    'type' => $exclusion->getTypeExclusion(),
+                    'valeur' => $exclusion->getValeurExclusion(),
+                    'commune_nom' => $exclusionDiv ? $exclusionDiv->getNomCommune() : 'NULL',
+                    'commune_code_insee' => $exclusionDiv ? $exclusionDiv->getCodeInseeCommune() : 'NULL',
+                    'div_id' => $exclusionDiv ? $exclusionDiv->getId() : 'NULL'
+                ];
+            }
+            
+            $data[] = [
+                'attribution_id' => $attribution->getId(),
+                'type' => $attribution->getTypeCritere(),
+                'valeur' => $attribution->getValeurCritere(),
+                'exclusions' => $exclusionData
+            ];
+        }
+
+        return new JsonResponse([
+            'secteur' => $secteur->getNomSecteur(),
+            'attributions' => $data
+        ]);
+    }
+    
+    #[Route('/debug/exclusions/{id}', name: 'app_admin_debug_exclusions', methods: ['GET'])]
+    public function debugExclusions(int $id, EntityManagerInterface $entityManager): JsonResponse
+    {
+        try {
+            $attribution = $entityManager->getRepository(AttributionSecteur::class)->find($id);
+            
+            if (!$attribution) {
+                return new JsonResponse(['success' => false, 'message' => 'Attribution non trouvée'], 404);
+            }
+            
+            error_log("🔄 Debug exclusions pour attribution ID $id");
+            error_log("   - Secteur: " . $attribution->getSecteur()->getNomSecteur());
+            error_log("   - Type: " . $attribution->getTypeCritere());
+            error_log("   - Valeur: " . $attribution->getValeurCritere());
+            
+            $this->appliquerReglesExclusionGeographique($attribution, $entityManager);
+            $entityManager->flush();
+            
+            return new JsonResponse(['success' => true, 'message' => 'Exclusions appliquées avec succès']);
+            
+        } catch (\Exception $e) {
+            error_log("❌ Erreur debug exclusions: " . $e->getMessage());
+            return new JsonResponse(['success' => false, 'message' => 'Erreur: ' . $e->getMessage()], 500);
+        }
+    }
+
+    // =====================================================
     // GESTION DES BANQUES
     // =====================================================
 
@@ -2171,15 +2247,11 @@ www.technoprod.com';
             $entityManager->persist($attribution);
             $entityManager->flush();
             
-            // Règle d'exclusion automatique : créer les zones conflictuelles selon la hiérarchie
-            try {
-                $this->appliquerReglesExclusionGeographique($attribution, $entityManager);
-                $entityManager->flush();
-            } catch (\Exception $exclusionError) {
-                // Log l'erreur mais ne pas faire échouer la création de l'attribution
-                error_log("⚠️ Erreur lors de l'application des exclusions géographiques : " . $exclusionError->getMessage());
-                // L'attribution reste créée même si les exclusions échouent
-            }
+            // Avec le nouveau système hiérarchique, plus besoin de gérer les exclusions manuellement
+            // La hiérarchie prioritaire (communes → CP → EPCI → départements → régions) 
+            // se charge automatiquement du filtrage lors de l'affichage
+            error_log("🎯 Attribution créée : {$data['typeCritere']} '{$data['valeurCritere']}' pour secteur {$secteur->getNomSecteur()}");
+            error_log("🔄 Le filtrage hiérarchique s'appliquera automatiquement à l'affichage");
             
             return new JsonResponse(['success' => true, 'message' => 'Attribution créée avec succès', 'id' => $attribution->getId()]);
             
@@ -2635,18 +2707,22 @@ www.technoprod.com';
                     'valeur' => $attribution->getValeurCritere(),
                     'nom' => (string) $attribution,
                     'notes' => $attribution->getNotes(),
-                    'coordinates' => []
+                    'coordinates' => [],
+                    'exclusions' => [] // Sera peuplé plus bas
                 ];
 
-                // Pour les EPCI, récupérer toutes les communes de cet EPCI
+                // Pour les EPCI, récupérer toutes les communes de cet EPCI SAUF celles qui sont exclues
                 if ($attribution->getTypeCritere() === 'epci') {
                     $communesEpci = $entityManager->getRepository(DivisionAdministrative::class)
                         ->createQueryBuilder('d')
+                        ->leftJoin('App\Entity\ExclusionSecteur', 'es', 'WITH', 'es.divisionAdministrative = d AND es.attributionSecteur = :attribution')
                         ->where('d.codeEpci = :codeEpci')
                         ->andWhere('d.actif = true')
                         ->andWhere('d.latitude IS NOT NULL')
                         ->andWhere('d.longitude IS NOT NULL')
+                        ->andWhere('es.id IS NULL') // Exclure les communes qui ont une exclusion pour cette attribution
                         ->setParameter('codeEpci', $division->getCodeEpci())
+                        ->setParameter('attribution', $attribution)
                         ->getQuery()
                         ->getResult();
 
@@ -2759,6 +2835,32 @@ www.technoprod.com';
                         break;
                 }
 
+                // Récupérer les exclusions pour cette attribution avec chargement eager
+                $exclusions = $entityManager->getRepository(ExclusionSecteur::class)
+                    ->createQueryBuilder('es')
+                    ->leftJoin('es.divisionAdministrative', 'd')
+                    ->addSelect('d')  // Forcer le chargement de la division
+                    ->where('es.attributionSecteur = :attribution')
+                    ->setParameter('attribution', $attribution)
+                    ->getQuery()
+                    ->getResult();
+                
+                foreach ($exclusions as $exclusion) {
+                    $exclusionDiv = $exclusion->getDivisionAdministrative();
+                    error_log("🔍 DEBUG Exclusion {$exclusion->getId()}: div=" . ($exclusionDiv ? $exclusionDiv->getId() : 'NULL') . 
+                             ", nom=" . ($exclusionDiv ? $exclusionDiv->getNomCommune() : 'NULL') . 
+                             ", code=" . ($exclusionDiv ? $exclusionDiv->getCodeInseeCommune() : 'NULL'));
+                    
+                    $attributionData['exclusions'][] = [
+                        'id' => $exclusion->getId(),
+                        'type' => $exclusion->getTypeExclusion(),
+                        'valeur' => $exclusion->getValeurExclusion(),
+                        'commune_nom' => $exclusionDiv ? $exclusionDiv->getNomCommune() : null,
+                        'commune_code_insee' => $exclusionDiv ? $exclusionDiv->getCodeInseeCommune() : null,
+                        'motif' => $exclusion->getMotif()
+                    ];
+                }
+
                 $geoData['attributions'][] = $attributionData;
             }
 
@@ -2794,12 +2896,13 @@ www.technoprod.com';
     }
 
     /**
-     * API pour récupérer tous les secteurs avec leurs données géographiques pour la carte générale
+     * API pour récupérer tous les secteurs avec filtrage hiérarchique prioritaire COMPLET
+     * Logique: assignation globale commune → secteur unique selon priorité hiérarchique
      */
     #[Route('/secteurs/all-geo-data', name: 'app_admin_secteurs_all_geo_data', methods: ['GET'])]
-    public function getAllSecteursGeoData(EntityManagerInterface $entityManager, EpciBoundariesService $epciBoundariesService, CommuneGeometryService $communeGeometryService, \App\Service\CommuneGeometryCacheService $cacheService): JsonResponse
+    public function getAllSecteursGeoData(EntityManagerInterface $entityManager, \App\Service\CommuneGeometryCacheService $cacheService): JsonResponse
     {
-        error_log("🔍 DEBUG: getAllSecteursGeoData appelée");
+        error_log("🔍 DEBUG: getAllSecteursGeoData - NOUVELLE APPROCHE hiérarchique globale");
         try {
             $secteurs = $entityManager->getRepository(Secteur::class)
                 ->createQueryBuilder('s')
@@ -2808,16 +2911,74 @@ www.technoprod.com';
                 ->getQuery()
                 ->getResult();
 
-            $secteursData = [];
-
-            error_log("🔍 DEBUG: " . count($secteurs) . " secteurs trouvés");
             if (count($secteurs) === 0) {
-                error_log("❌ Aucun secteur actif trouvé dans la base");
                 return $this->json(['success' => true, 'secteurs' => [], 'total' => 0]);
             }
+
+            // ÉTAPE 1: Créer un mappage global commune → secteur selon priorité hiérarchique
+            $communeVsSecteur = []; // codeInsee → secteurId
+            $attributionsTraitees = [];
+            
+            // Collecter toutes les attributions par type
+            $attributionsParType = [];
             foreach ($secteurs as $secteur) {
-                error_log("🔍 DEBUG: Traitement secteur " . $secteur->getNomSecteur());
-                $secteurInfo = [
+                foreach ($secteur->getAttributions() as $attribution) {
+                    $type = $attribution->getTypeCritere();
+                    if (!isset($attributionsParType[$type])) {
+                        $attributionsParType[$type] = [];
+                    }
+                    $attributionsParType[$type][] = [
+                        'secteur' => $secteur,
+                        'attribution' => $attribution
+                    ];
+                }
+            }
+            
+            // Traitement hiérarchique GLOBAL: communes → CP → EPCIs → départements → régions
+            $ordreTraitement = ['commune', 'code_postal', 'epci', 'departement', 'region'];
+            
+            foreach ($ordreTraitement as $typeActuel) {
+                if (!isset($attributionsParType[$typeActuel])) continue;
+                
+                error_log("🔄 Phase {$typeActuel}: " . count($attributionsParType[$typeActuel]) . " attributions");
+                
+                foreach ($attributionsParType[$typeActuel] as $data) {
+                    $secteur = $data['secteur'];
+                    $attribution = $data['attribution'];
+                    $division = $attribution->getDivisionAdministrative();
+                    
+                    if (!$division) continue;
+                    
+                    // Récupérer toutes les communes de ce type
+                    $communesDuType = $this->getCommunesPourType($typeActuel, $division, $entityManager);
+                    
+                    // Assigner chaque commune NON ENCORE ASSIGNÉE à ce secteur
+                    $nouvellesCommunes = 0;
+                    foreach ($communesDuType as $commune) {
+                        $codeInsee = $commune['codeInseeCommune'];
+                        if (!isset($communeVsSecteur[$codeInsee])) {
+                            $communeVsSecteur[$codeInsee] = $secteur->getId();
+                            $nouvellesCommunes++;
+                        }
+                    }
+                    
+                    if ($nouvellesCommunes > 0) {
+                        $attributionsTraitees[] = [
+                            'secteur' => $secteur,
+                            'attribution' => $attribution,
+                            'nouvelles_communes' => $nouvellesCommunes
+                        ];
+                    }
+                    
+                    error_log("📍 {$typeActuel} '{$attribution->getValeurCritere()}' → {$secteur->getNomSecteur()}: {$nouvellesCommunes} nouvelles communes");
+                }
+            }
+            
+            // ÉTAPE 2: Construire les données secteurs avec SEULEMENT leurs communes assignées
+            $secteursData = [];
+            
+            foreach ($secteurs as $secteur) {
+                $secteurData = [
                     'id' => $secteur->getId(),
                     'nom' => $secteur->getNomSecteur(),
                     'couleur' => $secteur->getCouleurHex() ?: '#3498db',
@@ -2831,255 +2992,235 @@ www.technoprod.com';
                     'center' => null,
                     'hasCoordinates' => false
                 ];
-
-                $minLat = $minLng = PHP_FLOAT_MAX;
-                $maxLat = $maxLng = PHP_FLOAT_MIN;
-                $hasCoordinates = false;
-
-                error_log("🔍 DEBUG: Secteur " . $secteur->getNomSecteur() . " a " . count($secteur->getAttributions()) . " attributions");
-                foreach ($secteur->getAttributions() as $attribution) {
-                    $division = $attribution->getDivisionAdministrative();
-                    if (!$division) continue;
-                    error_log("🔍 DEBUG: Attribution type=" . $attribution->getTypeCritere() . " valeur=" . $attribution->getValeurCritere());
-
-                    $attributionData = [
-                        'id' => $attribution->getId(),
-                        'type' => $attribution->getTypeCritere(),
-                        'valeur' => $attribution->getValeurCritere(),
-                        'nom' => (string) $attribution,
-                        'coordinates' => []
-                    ];
-
-                    // Pour les EPCI, récupérer les communes directement
-                    if ($attribution->getTypeCritere() === 'epci') {
-                        error_log("🏢 Récupération communes pour EPCI: " . $division->getCodeEpci());
-                        
-                        // Récupérer toutes les communes de cet EPCI
-                        $communes = $entityManager->createQuery('
-                            SELECT d FROM App\Entity\DivisionAdministrative d 
-                            WHERE d.codeEpci = :codeEpci 
-                            AND d.codeInseeCommune IS NOT NULL
-                            ORDER BY d.nomCommune
-                        ')
-                        ->setParameter('codeEpci', $division->getCodeEpci())
-                        ->getResult();
-                        
-                        // Récupérer les exclusions pour cette attribution
-                        $exclusions = $entityManager->getRepository(ExclusionSecteur::class)
-                            ->findBy(['attributionSecteur' => $attribution]);
-                        
-                        // Créer un tableau des codes INSEE exclus (gérer tous types d'exclusions)
-                        $communesExclues = [];
-                        foreach ($exclusions as $exclusion) {
-                            // Pour EPCI, on peut avoir des exclusions de communes, codes postaux, ou autres EPCIs
-                            switch ($exclusion->getTypeExclusion()) {
-                                case 'commune':
-                                    $communesExclues[] = $exclusion->getValeurExclusion();
-                                    error_log("🚫 Exclusion commune " . $exclusion->getValeurExclusion() . " de l'EPCI " . $division->getCodeEpci());
-                                    break;
-                                case 'code_postal':
-                                    // Trouver toutes les communes de ce code postal et les exclure
-                                    $communesCodePostal = $entityManager->createQuery('
-                                        SELECT d.codeInseeCommune FROM App\Entity\DivisionAdministrative d 
-                                        WHERE d.codePostal = :codePostal 
-                                        AND d.codeInseeCommune IS NOT NULL
-                                    ')
-                                    ->setParameter('codePostal', $exclusion->getValeurExclusion())
-                                    ->getResult();
-                                    foreach ($communesCodePostal as $result) {
-                                        $communesExclues[] = $result['codeInseeCommune'];
-                                    }
-                                    error_log("🚫 Exclusion code postal " . $exclusion->getValeurExclusion() . " de l'EPCI " . $division->getCodeEpci() . " (" . count($communesCodePostal) . " communes)");
-                                    break;
-                            }
-                        }
-                        
-                        // Filtrer les communes pour exclure celles qui sont dans des secteurs plus spécifiques
-                        $communes = array_filter($communes, function($commune) use ($communesExclues) {
-                            return !in_array($commune->getCodeInseeCommune(), $communesExclues);
-                        });
-
-                        // Préparer les données des communes pour le service de cache
-                        $communesInput = [];
-                        foreach ($communes as $commune) {
-                            $communesInput[] = [
-                                'codeInseeCommune' => $commune->getCodeInseeCommune(),
-                                'nomCommune' => $commune->getNomCommune()
-                            ];
-                        }
-
-                        // Utiliser le service de cache pour récupérer TOUTES les géométries (plus de limite !)
-                        error_log("🚀 Utilisation du service de cache pour " . count($communesInput) . " communes");
-                        $communesData = $cacheService->getMultipleCommunesGeometry($communesInput);
-
-                        // Mettre à jour les bounds avec toutes les communes récupérées
-                        foreach ($communesData as $commune) {
-                            if (isset($commune['coordinates']) && is_array($commune['coordinates'])) {
-                                // Calculer les limites pour l'ensemble
-                                foreach ($commune['coordinates'] as $coord) {
-                                    if (isset($coord['lat']) && isset($coord['lng'])) {
-                                        $minLat = min($minLat, $coord['lat']);
-                                        $maxLat = max($maxLat, $coord['lat']);
-                                        $minLng = min($minLng, $coord['lng']);
-                                        $maxLng = max($maxLng, $coord['lng']);
-                                        $hasCoordinates = true;
-                                    }
-                                }
-                                error_log("✅ Géométrie récupérée pour " . $commune['nom'] . " (" . count($commune['coordinates']) . " points) - Source: " . ($commune['source'] ?? 'unknown'));
-                            }
-                        }
-
-                        if (!empty($communesData)) {
-                            $attributionData['communes'] = $communesData; // Inclure les communes dans les données
-                            $attributionData['boundary_type'] = 'communes_reelles'; // Nouveau type pour différencier
-                            $attributionData['center'] = [
-                                'lat' => ($minLat + $maxLat) / 2,
-                                'lng' => ($minLng + $maxLng) / 2
-                            ];
-                            error_log("🎯 EPCI " . $division->getNomEpci() . " - " . count($communesData) . " communes avec vraies géométries");
-                        } else {
-                            // Fallback sur l'ancienne méthode si pas de frontières en cache
-                            $communesEpci = $entityManager->getRepository(DivisionAdministrative::class)
-                                ->createQueryBuilder('d')
-                                ->where('d.codeEpci = :codeEpci')
-                                ->andWhere('d.actif = true')
-                                ->andWhere('d.latitude IS NOT NULL')
-                                ->andWhere('d.longitude IS NOT NULL')
-                                ->setParameter('codeEpci', $division->getCodeEpci())
-                                ->getQuery()
-                                ->getResult();
-
-                            foreach ($communesEpci as $commune) {
-                                $lat = (float) $commune->getLatitude();
-                                $lng = (float) $commune->getLongitude();
-                                
-                                $attributionData['coordinates'][] = [
-                                    'lat' => $lat,
-                                    'lng' => $lng
-                                ];
-
-                                $minLat = min($minLat, $lat);
-                                $maxLat = max($maxLat, $lat);
-                                $minLng = min($minLng, $lng);
-                                $maxLng = max($maxLng, $lng);
-                                $hasCoordinates = true;
-                            }
-                            $attributionData['boundary_type'] = 'convex_hull'; // Indiquer qu'on utilise l'enveloppe convexe
-                        }
-                    } else {
-                        // Pour les autres types, appliquer les exclusions avant de récupérer les frontières
-                        $attributionData['boundary_type'] = 'real';
-                        
-                        // Récupérer les exclusions pour cette attribution
-                        $exclusions = $entityManager->getRepository(ExclusionSecteur::class)
-                            ->findBy(['attributionSecteur' => $attribution]);
-                        
-                        // Appliquer les exclusions selon le type d'attribution
-                        $exclusionData = $this->appliquerExclusionsAffichage($attribution, $exclusions, $entityManager);
-                        if (!empty($exclusionData)) {
-                            $attributionData['exclusions'] = $exclusionData;
-                            error_log("🚫 Attribution " . $attribution->getTypeCritere() . " '" . $attribution->getValeurCritere() . "' a " . count($exclusionData) . " exclusions");
-                        }
-                        
-                        // Déterminer le code et le type pour l'API
-                        $code = null;
-                        $apiType = null;
-                        
-                        switch ($attribution->getTypeCritere()) {
-                            case 'code_postal':
-                                $code = $attribution->getValeurCritere();
-                                $apiType = 'code_postal';
-                                break;
-                            case 'canton':
-                                $code = $attribution->getValeurCritere();
-                                $apiType = 'canton';
-                                break;
-                            case 'departement':
-                                $code = $division->getCodeDepartement();
-                                $apiType = 'departement';
-                                break;
-                            case 'region':
-                                $code = $division->getCodeRegion();
-                                $apiType = 'region';
-                                break;
-                            case 'commune':
-                                $code = $division->getCodeInseeCommune();
-                                $apiType = 'commune';
-                                break;
-                        }
-                        
-                        if ($code && $apiType) {
-                            $attributionData['api_type'] = $apiType;
-                            $attributionData['api_code'] = $code;
-                            error_log("🗺️ CORRECT: Marquage pour frontières réelles: {$apiType} {$code}");
-                        } else {
-                            error_log("❌ CORRECT: Pas de code/apiType pour " . $attribution->getTypeCritere() . " = " . $attribution->getValeurCritere());
-                        }
-                        
-                        // Fallback vers point unique pour le centrage
-                        if ($division->getLatitude() && $division->getLongitude()) {
-                            $lat = (float) $division->getLatitude();
-                            $lng = (float) $division->getLongitude();
-                            
-                            $attributionData['coordinates'][] = [
-                                'lat' => $lat,
-                                'lng' => $lng
-                            ];
-
-                            $minLat = min($minLat, $lat);
-                            $maxLat = max($maxLat, $lat);
-                            $minLng = min($minLng, $lng);
-                            $maxLng = max($maxLng, $lng);
-                            $hasCoordinates = true;
-                        }
+                
+                // Récupérer TOUTES les communes assignées à ce secteur
+                $communesSecteur = [];
+                foreach ($communeVsSecteur as $codeInsee => $secteurId) {
+                    if ($secteurId === $secteur->getId()) {
+                        $communesSecteur[] = [
+                            'codeInseeCommune' => $codeInsee,
+                            'nomCommune' => 'Commune ' . $codeInsee // Temporaire, sera enrichi
+                        ];
                     }
-
-                    $secteurInfo['attributions'][] = $attributionData;
                 }
-
-                // Calculer les bounds et centre pour ce secteur
-                error_log("🔍 Secteur {$secteur->getNomSecteur()}: hasCoordinates = " . ($hasCoordinates ? 'true' : 'false') . ", attributions = " . count($secteur->getAttributions()));
-                if ($hasCoordinates) {
-                    $latMargin = ($maxLat - $minLat) * 0.1;
-                    $lngMargin = ($maxLng - $minLng) * 0.1;
+                
+                if (!empty($communesSecteur)) {
+                    // Récupérer les géométries
+                    $communesAvecGeometries = $cacheService->getMultipleCommunesGeometry($communesSecteur);
                     
-                    $secteurInfo['bounds'] = [
-                        'southwest' => [
-                            'lat' => $minLat - $latMargin,
-                            'lng' => $minLng - $lngMargin
-                        ],
-                        'northeast' => [
-                            'lat' => $maxLat + $latMargin,
-                            'lng' => $maxLng + $lngMargin
-                        ]
-                    ];
-
-                    $secteurInfo['center'] = [
-                        'lat' => ($minLat + $maxLat) / 2,
-                        'lng' => ($minLng + $maxLng) / 2
-                    ];
-
-                    $secteurInfo['hasCoordinates'] = true;
+                    if (!empty($communesAvecGeometries)) {
+                        // Créer UNE SEULE attribution "virtuelle" qui contient toutes les communes du secteur
+                        $attributionGlobale = [
+                            'id' => 'global_' . $secteur->getId(),
+                            'type' => 'secteur_complet',
+                            'valeur' => $secteur->getNomSecteur(),
+                            'nom' => $secteur->getNomSecteur() . ' (toutes communes)',
+                            'communes' => $communesAvecGeometries,
+                            'boundary_type' => 'communes_reelles'
+                        ];
+                        
+                        $secteurData['attributions'] = [$attributionGlobale];
+                        $this->calculerBoundsSecteur($secteurData, $communesAvecGeometries);
+                    }
                 }
-
-                $secteursData[] = $secteurInfo;
+                
+                $secteursData[] = $secteurData;
             }
-
-            error_log("🎯 FINAL: Retour de " . count($secteursData) . " secteurs");
+            
+            error_log("🎯 Assignation globale terminée - " . count($communeVsSecteur) . " communes assignées");
+            
             return $this->json([
                 'success' => true,
                 'secteurs' => $secteursData,
                 'total' => count($secteursData),
                 'debug' => [
-                    'found_sectors' => count($secteurs),
-                    'processed_sectors' => count($secteursData),
-                    'first_sector_name' => count($secteurs) > 0 ? $secteurs[0]->getNomSecteur() : 'none'
+                    'communes_assignees' => count($communeVsSecteur),
+                    'methode' => 'hierarchique_global'
                 ]
             ]);
 
         } catch (\Exception $e) {
             error_log("❌ Erreur getAllSecteursGeoData: " . $e->getMessage());
             return $this->json(['error' => 'Erreur lors de la récupération des secteurs'], 500);
+        }
+    }
+
+    /**
+     * Récupère les communes concernées par un type d'attribution donné
+     */
+    private function getCommunesPourType(string $type, $division, EntityManagerInterface $entityManager): array
+    {
+        switch ($type) {
+            case 'commune':
+                // Une seule commune
+                return [[
+                    'codeInseeCommune' => $division->getCodeInseeCommune(),
+                    'nomCommune' => $division->getNomCommune()
+                ]];
+                
+            case 'code_postal':
+                // Toutes les communes de ce code postal
+                $communes = $entityManager->createQuery('
+                    SELECT d.codeInseeCommune, d.nomCommune 
+                    FROM App\Entity\DivisionAdministrative d 
+                    WHERE d.codePostal = :codePostal 
+                    AND d.codeInseeCommune IS NOT NULL
+                    ORDER BY d.nomCommune
+                ')
+                ->setParameter('codePostal', $division->getCodePostal())
+                ->getResult();
+                return $communes;
+                
+            case 'epci':
+                // Toutes les communes de cet EPCI
+                $communes = $entityManager->createQuery('
+                    SELECT d.codeInseeCommune, d.nomCommune 
+                    FROM App\Entity\DivisionAdministrative d 
+                    WHERE d.codeEpci = :codeEpci 
+                    AND d.codeInseeCommune IS NOT NULL
+                    ORDER BY d.nomCommune
+                ')
+                ->setParameter('codeEpci', $division->getCodeEpci())
+                ->getResult();
+                return $communes;
+                
+            case 'departement':
+                // Toutes les communes de ce département
+                $communes = $entityManager->createQuery('
+                    SELECT d.codeInseeCommune, d.nomCommune 
+                    FROM App\Entity\DivisionAdministrative d 
+                    WHERE d.codeDepartement = :codeDepartement 
+                    AND d.codeInseeCommune IS NOT NULL
+                    ORDER BY d.nomCommune
+                ')
+                ->setParameter('codeDepartement', $division->getCodeDepartement())
+                ->getResult();
+                return $communes;
+                
+            case 'region':
+                // Toutes les communes de cette région
+                $communes = $entityManager->createQuery('
+                    SELECT d.codeInseeCommune, d.nomCommune 
+                    FROM App\Entity\DivisionAdministrative d 
+                    WHERE d.codeRegion = :codeRegion 
+                    AND d.codeInseeCommune IS NOT NULL
+                    ORDER BY d.nomCommune
+                ')
+                ->setParameter('codeRegion', $division->getCodeRegion())
+                ->getResult();
+                return $communes;
+                
+            default:
+                return [];
+        }
+    }
+    
+    /**
+     * Calcule et met à jour les bounds d'un secteur avec de nouvelles géométries
+     */
+    private function calculerBoundsSecteur(array &$secteurData, array $communesAvecGeometries): void
+    {
+        $minLat = $minLng = PHP_FLOAT_MAX;
+        $maxLat = $maxLng = PHP_FLOAT_MIN;
+        $hasCoordinates = false;
+        
+        foreach ($communesAvecGeometries as $commune) {
+            if (isset($commune['coordinates']) && is_array($commune['coordinates'])) {
+                foreach ($commune['coordinates'] as $coord) {
+                    if (isset($coord['lat']) && isset($coord['lng'])) {
+                        $minLat = min($minLat, $coord['lat']);
+                        $maxLat = max($maxLat, $coord['lat']);
+                        $minLng = min($minLng, $coord['lng']);
+                        $maxLng = max($maxLng, $coord['lng']);
+                        $hasCoordinates = true;
+                    }
+                }
+            }
+        }
+        
+        if ($hasCoordinates) {
+            // Mise à jour des bounds existants ou création
+            if ($secteurData['hasCoordinates']) {
+                // Etendre les bounds existants
+                $currentBounds = $secteurData['bounds'];
+                $minLat = min($minLat, $currentBounds['southwest']['lat']);
+                $minLng = min($minLng, $currentBounds['southwest']['lng']);
+                $maxLat = max($maxLat, $currentBounds['northeast']['lat']);
+                $maxLng = max($maxLng, $currentBounds['northeast']['lng']);
+            }
+            
+            $latMargin = ($maxLat - $minLat) * 0.1;
+            $lngMargin = ($maxLng - $minLng) * 0.1;
+            
+            $secteurData['bounds'] = [
+                'southwest' => [
+                    'lat' => $minLat - $latMargin,
+                    'lng' => $minLng - $lngMargin
+                ],
+                'northeast' => [
+                    'lat' => $maxLat + $latMargin,
+                    'lng' => $maxLng + $lngMargin
+                ]
+            ];
+            
+            $secteurData['center'] = [
+                'lat' => ($minLat + $maxLat) / 2,
+                'lng' => ($minLng + $maxLng) / 2
+            ];
+            
+            $secteurData['hasCoordinates'] = true;
+        }
+    }
+    
+    /**
+     * Ajoute les métadonnées spécifiques selon le type d'attribution
+     */
+    private function ajouterMetadonneesByType(array &$attributionData, string $type, $division): void
+    {
+        // Toujours ajouter les informations pour les frontières réelles
+        $attributionData['boundary_type'] = 'real';
+        
+        switch ($type) {
+            case 'commune':
+                $attributionData['api_type'] = 'commune';
+                $attributionData['api_code'] = $division->getCodeInseeCommune();
+                $attributionData['commune'] = $division->getNomCommune();
+                $attributionData['codePostal'] = $division->getCodePostal();
+                $attributionData['codeInsee'] = $division->getCodeInseeCommune();
+                $attributionData['departement'] = $division->getNomDepartement();
+                break;
+                
+            case 'code_postal':
+                $attributionData['api_type'] = 'code_postal';
+                $attributionData['api_code'] = $division->getCodePostal();
+                $attributionData['codePostal'] = $division->getCodePostal();
+                $attributionData['commune'] = $division->getNomCommune();
+                $attributionData['departement'] = $division->getNomDepartement();
+                break;
+                
+            case 'epci':
+                $attributionData['api_type'] = 'epci';
+                $attributionData['api_code'] = $division->getCodeEpci();
+                $attributionData['epci'] = $division->getNomEpci();
+                $attributionData['codeEpci'] = $division->getCodeEpci();
+                $attributionData['typeEpci'] = $division->getTypeEpci();
+                $attributionData['departement'] = $division->getNomDepartement();
+                break;
+                
+            case 'departement':
+                $attributionData['api_type'] = 'departement';
+                $attributionData['api_code'] = $division->getCodeDepartement();
+                $attributionData['departement'] = $division->getNomDepartement();
+                $attributionData['codeDepartement'] = $division->getCodeDepartement();
+                $attributionData['region'] = $division->getNomRegion();
+                break;
+                
+            case 'region':
+                $attributionData['api_type'] = 'region';
+                $attributionData['api_code'] = $division->getCodeRegion();
+                $attributionData['region'] = $division->getNomRegion();
+                $attributionData['codeRegion'] = $division->getCodeRegion();
+                break;
         }
     }
 
@@ -3443,6 +3584,25 @@ www.technoprod.com';
             foreach ($exclusionsCrees as $exclusion) {
                 $secteurParent = $exclusion->getAttributionSecteur()->getSecteur()->getNomSecteur();
                 error_log("🔄 Suppression exclusion de la commune {$attribution->getValeurCritere()} dans le secteur '$secteurParent'");
+                $entityManager->remove($exclusion);
+            }
+        }
+        
+        // 3. Si c'est un code postal, supprimer toutes les exclusions de ses communes dans d'autres attributions
+        if ($attribution->getTypeCritere() === 'code_postal') {
+            error_log("🔄 Suppression du code postal {$attribution->getValeurCritere()}, nettoyage des exclusions créées");
+            
+            // Trouver toutes les exclusions créées par ce code postal
+            $exclusionsCrees = $entityManager->getRepository(ExclusionSecteur::class)
+                ->findBy([
+                    'typeExclusion' => 'commune',
+                    'motif' => 'Code postal ' . $attribution->getValeurCritere() . ' intégré dans secteur ' . $attribution->getSecteur()->getNomSecteur()
+                ]);
+            
+            foreach ($exclusionsCrees as $exclusion) {
+                $secteurParent = $exclusion->getAttributionSecteur()->getSecteur()->getNomSecteur();
+                $communeExclue = $exclusion->getValeurExclusion();
+                error_log("🔄 Suppression exclusion commune '$communeExclue' dans secteur '$secteurParent' (causée par CP {$attribution->getValeurCritere()})");
                 $entityManager->remove($exclusion);
             }
         }
