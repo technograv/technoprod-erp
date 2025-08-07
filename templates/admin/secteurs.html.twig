@@ -640,6 +640,7 @@
             // Traitement unifié pour toutes les zones avec frontières réelles
             if ((attribution.coordinates && attribution.coordinates.length > 0) || 
                 (attribution.type === 'epci' && attribution.communes && attribution.communes.length > 0) ||
+                (attribution.type === 'secteur_complet' && attribution.communes && attribution.communes.length > 0) ||
                 (attribution.boundary_type === 'real' && attribution.api_type && attribution.api_code)) {
                 
                 if (attribution.type === 'epci') {
@@ -648,6 +649,9 @@
                     } else {
                         afficherEpciSurCarte(attribution, secteur);
                     }
+                } else if (attribution.type === 'secteur_complet' && attribution.boundary_type === 'communes_reelles') {
+                    // Secteurs complets avec communes réelles
+                    afficherEpciAvecVraiesFrontieres(attribution, secteur);
                 } else if (attribution.boundary_type === 'real' && attribution.api_type && attribution.api_code) {
                     // Nouvelles zones avec frontières réelles (codes postaux, cantons, départements, régions)
                     afficherZoneAvecVraiesFrontieresAPI(attribution, secteur);
@@ -843,6 +847,8 @@
                         fillOpacity: 0.25, // Même opacité que les autres zones
                         map: map
                     });
+                    
+                    console.log(`🎨 Commune ${commune.nom} - EPCI: strokeWeight=0, strokeOpacity=0`);
 
                     // Les communes forment un ensemble unifié sans contours internes
                     
@@ -1057,10 +1063,10 @@
                     const polygon = new google.maps.Polygon({
                         paths: positions,
                         strokeColor: secteur.couleur,
-                        strokeOpacity: 0.9,
-                        strokeWeight: 2,
+                        strokeOpacity: 0, // Harmonisé avec les autres zones (pas de contour visible)
+                        strokeWeight: 0,  // Harmonisé avec les autres zones (épaisseur nulle)
                         fillColor: secteur.couleur,
-                        fillOpacity: 0.25,
+                        fillOpacity: 0.25, // Même opacité que les autres zones
                         map: map
                     });
 
@@ -1199,9 +1205,24 @@
                     
                     data.boundaries.communes.forEach(commune => {
                         if (commune.boundaries && commune.boundaries.length >= 3) {
+                            const communeId = commune.codeInsee || commune.nom;
+                            
+                            // VÉRIFIER LES EXCLUSIONS : Ne pas afficher les communes exclues
+                            if (attribution.exclusions && attribution.exclusions.length > 0) {
+                                const estExclue = attribution.exclusions.some(exclusion => {
+                                    // Support des deux formats de données
+                                    const excludedCodeInsee = exclusion.commune_code_insee || exclusion.valeur;
+                                    const excludedNom = exclusion.commune_nom;
+                                    return excludedCodeInsee === communeId || excludedNom === commune.nom;
+                                });
+                                if (estExclue) {
+                                    console.log(`🚫 Commune ${commune.nom} (${communeId}) exclue de ${attribution.type} ${attribution.valeur}`);
+                                    return; // Ignorer cette commune
+                                }
+                            }
+                            
                             // SYSTÈME ANTI-DOUBLONS : Éviter d'afficher la même commune plusieurs fois
                             // (peut arriver si une commune est dans un code postal ET un EPCI différents)
-                            const communeId = commune.codeInsee || commune.nom;
                             
                             if (communesAffichees.has(communeId)) {
                                 console.log(`⚠️ Commune ${commune.nom} (${communeId}) déjà affichée, ignorer pour éviter superposition`);
@@ -1224,6 +1245,8 @@
                                 fillOpacity: 0.25, // Même opacité que les autres zones
                                 map: map
                             });
+                            
+                            console.log(`🎨 Commune ${commune.nom} - API ${attribution.api_type}: strokeWeight=0, strokeOpacity=0`);
 
                             // Créer InfoWindow pour chaque commune du code postal
                             const typeLabels = {
@@ -1277,10 +1300,10 @@
                     const polygon = new google.maps.Polygon({
                         paths: positions,
                         strokeColor: secteur.couleur,
-                        strokeOpacity: 0.9,
-                        strokeWeight: 2,
+                        strokeOpacity: 0, // Harmonisé avec les autres zones (pas de contour visible)
+                        strokeWeight: 0,  // Harmonisé avec les autres zones (épaisseur nulle)
                         fillColor: secteur.couleur,
-                        fillOpacity: 0.25,
+                        fillOpacity: 0.25, // Même opacité que les autres zones
                         map: map
                     });
 
@@ -1359,10 +1382,10 @@
                     const polygon = new google.maps.Polygon({
                         paths: positions,
                         strokeColor: secteur.couleur,
-                        strokeOpacity: 0.9,
-                        strokeWeight: 2,
+                        strokeOpacity: 0, // Harmonisé avec les autres zones (pas de contour visible)
+                        strokeWeight: 0,  // Harmonisé avec les autres zones (épaisseur nulle)
                         fillColor: secteur.couleur,
-                        fillOpacity: 0.25,
+                        fillOpacity: 0.25, // Même opacité que les autres zones
                         map: map
                     });
 
@@ -1511,6 +1534,11 @@
     }
 
     function masquerSecteur(secteurId) {
+        console.log(`🙈 Masquage secteur ${secteurId}`);
+        
+        // IMPORTANT: Compter les polygones AVANT de les supprimer pour la logique de cache
+        const polygonesSupprimés = secteurPolygons[secteurId] ? secteurPolygons[secteurId].length : 0;
+        
         // Supprimer les polygones
         if (secteurPolygons[secteurId]) {
             secteurPolygons[secteurId].forEach(polygon => polygon.setMap(null));
@@ -1532,6 +1560,59 @@
             });
             delete secteurMarkers[secteurId];
         }
+        
+        // IMPORTANT: Nettoyer le cache des communes affichées pour permettre le réaffichage
+        // Récupérer les communes de ce secteur pour les retirer du Set
+        const secteur = secteursData[secteurId];
+        let communesRetirees = 0;
+        let hasCodePostal = false;
+        
+        if (secteur && secteur.attributions) {
+            secteur.attributions.forEach(attribution => {
+                if (attribution.type === 'code_postal') {
+                    hasCodePostal = true;
+                }
+                
+                // Nettoyer le cache pour tous les types d'attributions qui ont des communes
+                if (attribution.communes && attribution.communes.length > 0) {
+                    attribution.communes.forEach(commune => {
+                        const communeId = commune.codeInsee || commune.nom;
+                        if (communesAffichees.has(communeId)) {
+                            communesAffichees.delete(communeId);
+                            communesRetirees++;
+                            console.log(`🗑️ Commune ${commune.nom} (${communeId}) retirée du cache d'affichage pour ${attribution.type}`);
+                        }
+                    });
+                }
+            });
+        }
+        
+        // SOLUTION PROBLÈME CODE POSTAL: Si ce secteur contient un code postal,
+        // on fait un nettoyage agressif pour éviter les problèmes de cache
+        // Note: polygonesSupprimés a été calculé plus haut AVANT la suppression
+        
+        if (hasCodePostal && polygonesSupprimés > 20) {
+            console.log(`⚠️ SECTEUR AVEC CODE POSTAL DÉTECTÉ: Secteur ${secteurId} avait ${polygonesSupprimés} polygones et contient un code postal`);
+            console.log(`🧹 Nettoyage préventif du cache pour éviter "commune déjà affichée"`);
+            
+            // Nettoyage préventif: vider complètement le cache pour les secteurs avec codes postaux
+            const tailleCacheAvant = communesAffichees.size;
+            communesAffichees.clear();
+            console.log(`✅ Cache communes entièrement vidé (${tailleCacheAvant} communes supprimées)`);
+        } else if (polygonesSupprimés > 10 && communesRetirees < 5) {
+            console.log(`⚠️ PROBLÈME CACHE GÉNÉRAL DÉTECTÉ: Secteur ${secteurId} avait ${polygonesSupprimés} polygones mais seulement ${communesRetirees} communes retirées du cache`);
+            console.log(`🧹 Nettoyage agressif du cache pour éviter "commune déjà affichée"`);
+            
+            // Nettoyage agressif: vider complètement le cache
+            const tailleCacheAvant = communesAffichees.size;
+            communesAffichees.clear();
+            console.log(`✅ Cache communes entièrement vidé (${tailleCacheAvant} communes supprimées)`);
+        }
+        
+        // DEBUG: Afficher les valeurs pour diagnostiquer
+        console.log(`🔍 DEBUG Secteur ${secteurId}: hasCodePostal=${hasCodePostal}, polygonesSupprimés=${polygonesSupprimés}, communesRetirees=${communesRetirees}`);
+        
+        console.log(`✅ Secteur ${secteurId} masqué et cache nettoyé`);
     }
 
     function afficherTousLesSecteurs() {
@@ -2712,5 +2793,44 @@
         </div>
     </div>
 </div>
+
+<script>
+// Initialisation immédiate dès chargement du template
+(function() {
+    console.log('🗺️ Template secteurs chargé - initialisation immédiate');
+    
+    // Si le DOM est prêt, on initialise tout de suite
+    if (document.readyState === 'loading') {
+        document.addEventListener('DOMContentLoaded', function() {
+            setTimeout(initSecteursTemplate, 100);
+        });
+    } else {
+        setTimeout(initSecteursTemplate, 100);
+    }
+    
+    function initSecteursTemplate() {
+        console.log('🚀 Initialisation forcée du template secteurs');
+        
+        // S'assurer que la fonction initSecteurs existe
+        if (typeof window.initSecteurs === 'function') {
+            try {
+                window.initSecteurs();
+                console.log('✅ initSecteurs appelée avec succès depuis le template');
+            } catch (error) {
+                console.error('❌ Erreur lors de l\'initialisation secteurs:', error);
+            }
+        } else {
+            console.warn('⚠️ window.initSecteurs non disponible, nouvelle tentative dans 500ms');
+            setTimeout(() => {
+                if (typeof window.initSecteurs === 'function') {
+                    window.initSecteurs();
+                } else {
+                    console.error('❌ window.initSecteurs toujours non disponible');
+                }
+            }, 500);
+        }
+    }
+})();
+</script>
 
 {# Fin du template AJAX #}

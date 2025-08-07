@@ -194,7 +194,9 @@
                         <h6><i class="fas fa-building me-2"></i>Informations client</h6>
                         {% if devis.client %}
                             <p class="mb-1"><strong>{{ devis.client.nomComplet }}</strong></p>
-                            <p class="mb-1">{{ devis.client.typePersonne == 'morale' ? 'Entreprise' : 'Particulier' }}</p>
+                            {% if devis.client.formeJuridique %}
+                                <p class="mb-1">{{ devis.client.formeJuridique.isPersonnePhysique() ? 'Particulier' : 'Entreprise' }}</p>
+                            {% endif %}
                             {% if devis.client.secteur %}
                                 <p class="mb-0">Secteur : {{ devis.client.secteur.nomSecteur }}</p>
                             {% endif %}

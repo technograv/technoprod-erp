@@ -12,6 +12,12 @@ class SecurityController extends AbstractController
     #[Route(path: '/login', name: 'app_login')]
     public function login(AuthenticationUtils $authenticationUtils): Response
     {
+        // Si l'utilisateur est déjà connecté, rediriger vers le dashboard
+        if ($this->getUser()) {
+            return $this->redirectToRoute('workflow_dashboard');
+        }
+        
+        // Pour le mode Google OAuth uniquement, afficher la page de connexion Google
         $error = $authenticationUtils->getLastAuthenticationError();
         $lastUsername = $authenticationUtils->getLastUsername();
 

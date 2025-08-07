@@ -241,8 +241,8 @@
             <div class="client-col">
                 {% if devis.client %}
                     <p><strong>{{ devis.client.nomComplet }}</strong></p>
-                    {% if devis.client.typePersonne == 'morale' %}
-                        {% if devis.client.formeJuridique %}<p>{{ devis.client.formeJuridique }}</p>{% endif %}
+                    {% if devis.client.formeJuridique and not devis.client.formeJuridique.isPersonnePhysique() %}
+                        <p>{{ devis.client.formeJuridique }}</p>
                     {% endif %}
                 {% endif %}
                 

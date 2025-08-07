@@ -154,8 +154,8 @@
                 </a>
             </li>
             <li class="nav-item">
-                <a class="nav-link" data-bs-toggle="tab" href="#parametrage" role="tab">
-                    <i class="fas fa-cogs me-2"></i>Paramétrage
+                <a class="nav-link" data-bs-toggle="tab" href="#gestion-societes" role="tab">
+                    <i class="fas fa-building-user me-2"></i>Gestion des sociétés
                 </a>
             </li>
             <li class="nav-item">
@@ -179,8 +179,23 @@
                 </a>
             </li>
             <li class="nav-item">
+                <a class="nav-link" data-bs-toggle="tab" href="#unites" role="tab">
+                    <i class="fas fa-ruler me-2"></i>Unités
+                </a>
+            </li>
+            <li class="nav-item">
                 <a class="nav-link" data-bs-toggle="tab" href="#tags-clients" role="tab">
                     <i class="fas fa-tags me-2"></i>Tags Clients
+                </a>
+            </li>
+            <li class="nav-item">
+                <a class="nav-link" data-bs-toggle="tab" href="#parametres-app" role="tab">
+                    <i class="fas fa-cog me-2"></i>Paramètres
+                </a>
+            </li>
+            <li class="nav-item">
+                <a class="nav-link" data-bs-toggle="tab" href="#parametres" role="tab">
+                    <i class="fas fa-server me-2"></i>Configuration Système
                 </a>
             </li>
         </ul>
@@ -317,8 +332,14 @@
                         <a href="#produits" class="quick-action-btn" data-bs-toggle="tab">
                             <i class="fas fa-box me-2"></i>Produits
                         </a>
-                        <a href="#settings" class="quick-action-btn" data-bs-toggle="tab">
-                            <i class="fas fa-cogs me-2"></i>Paramètres Système
+                        <a href="#unites" class="quick-action-btn" data-bs-toggle="tab">
+                            <i class="fas fa-ruler me-2"></i>Unités
+                        </a>
+                        <a href="#parametres-app" class="quick-action-btn" data-bs-toggle="tab">
+                            <i class="fas fa-cog me-2"></i>Paramètres App
+                        </a>
+                        <a href="#parametres" class="quick-action-btn" data-bs-toggle="tab">
+                            <i class="fas fa-server me-2"></i>Configuration Système
                         </a>
                     </div>
                 </div>
@@ -431,21 +452,21 @@
             </div>
         </div>
 
-        <!-- Paramétrage -->
-        <div class="tab-pane fade" id="parametrage" role="tabpanel">
+        <!-- Gestion des sociétés -->
+        <div class="tab-pane fade" id="gestion-societes" role="tabpanel">
             <div class="admin-section">
                 <h3 class="section-title">
-                    <i class="fas fa-cogs me-2"></i>Paramétrage
+                    <i class="fas fa-building-user me-2"></i>Gestion des sociétés
                 </h3>
-                <p class="text-muted mb-4">Configuration générale de l'application et des données de référence</p>
+                <p class="text-muted mb-4">Configuration multi-société et gestion des utilisateurs</p>
                 
-                <!-- Sous-navigation pour Paramétrage -->
+                <!-- Sous-navigation pour Gestion des sociétés -->
                 <div class="row">
                     <div class="col-12">
                         <ul class="nav nav-pills mb-4 justify-content-center" role="tablist">
                             <li class="nav-item">
-                                <a class="nav-link active" data-bs-toggle="tab" href="#societe-content" role="tab">
-                                    <i class="fas fa-building me-2"></i>Société
+                                <a class="nav-link active" data-bs-toggle="tab" href="#societes-content" role="tab">
+                                    <i class="fas fa-building me-2"></i>Sociétés
                                 </a>
                             </li>
                             <li class="nav-item">
@@ -454,25 +475,25 @@
                                 </a>
                             </li>
                             <li class="nav-item">
-                                <a class="nav-link" data-bs-toggle="tab" href="#unites-content" role="tab">
-                                    <i class="fas fa-ruler me-2"></i>Unités
-                                </a>
-                            </li>
-                            <li class="nav-item">
                                 <a class="nav-link" data-bs-toggle="tab" href="#groupes-users-content" role="tab">
                                     <i class="fas fa-users-cog me-2"></i>Groupes Utilisateurs
                                 </a>
                             </li>
+                            <li class="nav-item">
+                                <a class="nav-link" data-bs-toggle="tab" href="#environnements-content" role="tab">
+                                    <i class="fas fa-globe me-2"></i>Environnements
+                                </a>
+                            </li>
                         </ul>
                         
-                        <!-- Contenu des sous-onglets paramétrage -->
+                        <!-- Contenu des sous-onglets gestion sociétés -->
                         <div class="tab-content">
-                            <div class="tab-pane fade show active" id="societe-content" role="tabpanel">
+                            <div class="tab-pane fade show active" id="societes-content" role="tabpanel">
                                 <div class="text-center">
                                     <div class="spinner-border text-primary" role="status">
                                         <span class="visually-hidden">Chargement...</span>
                                     </div>
-                                    <p class="text-muted mt-2">Chargement des informations société...</p>
+                                    <p class="text-muted mt-2">Chargement des sociétés...</p>
                                 </div>
                             </div>
                             <div class="tab-pane fade" id="users-content" role="tabpanel">
@@ -483,14 +504,6 @@
                                     <p class="text-muted mt-2">Chargement des utilisateurs...</p>
                                 </div>
                             </div>
-                            <div class="tab-pane fade" id="unites-content" role="tabpanel">
-                                <div class="text-center">
-                                    <div class="spinner-border text-primary" role="status">
-                                        <span class="visually-hidden">Chargement...</span>
-                                    </div>
-                                    <p class="text-muted mt-2">Chargement des unités...</p>
-                                </div>
-                            </div>
                             <div class="tab-pane fade" id="groupes-users-content" role="tabpanel">
                                 <div class="text-center">
                                     <div class="spinner-border text-primary" role="status">
@@ -499,31 +512,20 @@
                                     <p class="text-muted mt-2">Chargement des groupes d'utilisateurs...</p>
                                 </div>
                             </div>
+                            <div class="tab-pane fade" id="environnements-content" role="tabpanel">
+                                <div class="text-center">
+                                    <div class="spinner-border text-primary" role="status">
+                                        <span class="visually-hidden">Chargement...</span>
+                                    </div>
+                                    <p class="text-muted mt-2">Chargement des environnements...</p>
+                                </div>
+                            </div>
                         </div>
                     </div>
                 </div>
             </div>
         </div>
 
-        <!-- Secteurs -->
-        <div class="tab-pane fade" id="secteurs" role="tabpanel">
-            <div class="admin-section">
-                <h3 class="section-title">
-                    <i class="fas fa-map me-2"></i>Gestion des Secteurs Commerciaux
-                </h3>
-                <p class="text-muted mb-4">Configuration des territoires commerciaux et zones géographiques</p>
-                
-                <div class="alert alert-info">
-                    <i class="fas fa-info-circle me-2"></i>
-                    Les secteurs commerciaux sont gérés via l'interface dédiée avec cartographie interactive.
-                    <div class="mt-2">
-                        <a href="{{ path('app_secteur_index_moderne') }}" class="btn btn-primary btn-sm" target="_blank">
-                            <i class="fas fa-external-link-alt me-2"></i>Ouvrir l'interface secteurs
-                        </a>
-                    </div>
-                </div>
-            </div>
-        </div>
 
         <!-- Transporteurs -->
         <div class="tab-pane fade" id="transporteurs" role="tabpanel">
@@ -570,6 +572,22 @@
             </div>
         </div>
 
+
+        <!-- Configuration Système -->
+        <div class="tab-pane fade" id="parametres" role="tabpanel">
+            <div class="admin-section">
+                <h3 class="section-title">
+                    <i class="fas fa-server me-2"></i>Configuration Système
+                </h3>
+                <p class="text-muted mb-4">Configuration technique et paramètres généraux de l'application</p>
+                <div class="text-center">
+                    <div class="spinner-border text-primary" role="status">
+                        <span class="visually-hidden">Chargement...</span>
+                    </div>
+                </div>
+            </div>
+        </div>
+
         <div class="tab-pane fade" id="users" role="tabpanel">
             <div class="admin-section">
                 <h3 class="section-title">
@@ -585,7 +603,31 @@
         </div>
 
         <div class="tab-pane fade" id="secteurs" role="tabpanel">
-            {% include 'admin/secteurs.html.twig' %}
+            {% include 'admin/secteurs.html.twig' with {'google_maps_api_key': google_maps_api_key, 'secteurs': secteurs} %}
+            <script>
+            // Forcer l'initialisation des secteurs après chargement du contenu
+            document.addEventListener('DOMContentLoaded', function() {
+                // Attendre que l'onglet soit activé
+                const secteurTab = document.querySelector('a[href="#secteurs"]');
+                if (secteurTab) {
+                    secteurTab.addEventListener('shown.bs.tab', function() {
+                        console.log('🗺️ Onglet secteurs activé - initialisation forcée');
+                        setTimeout(() => {
+                            if (typeof window.initSecteurs === 'function') {
+                                try {
+                                    window.initSecteurs();
+                                    console.log('✅ initSecteurs forcée réussie');
+                                } catch (error) {
+                                    console.error('❌ Erreur initSecteurs forcée:', error);
+                                }
+                            } else {
+                                console.warn('⚠️ window.initSecteurs non définie');
+                            }
+                        }, 100);
+                    });
+                }
+            });
+            </script>
         </div>
 
 
@@ -593,6 +635,21 @@
             <div class="admin-section">
                 <h3 class="section-title">
                     <i class="fas fa-box me-2"></i>Gestion des Produits
+                </h3>
+                <p class="text-muted">Chargement en cours...</p>
+                <div class="text-center">
+                    <div class="spinner-border text-primary" role="status">
+                        <span class="visually-hidden">Chargement...</span>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Unités -->
+        <div class="tab-pane fade" id="unites" role="tabpanel">
+            <div class="admin-section">
+                <h3 class="section-title">
+                    <i class="fas fa-ruler me-2"></i>Gestion des Unités
                 </h3>
                 <p class="text-muted">Chargement en cours...</p>
                 <div class="text-center">
@@ -614,6 +671,77 @@
                     <div class="spinner-border text-primary" role="status">
                         <span class="visually-hidden">Chargement...</span>
                     </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Paramètres Application -->
+        <div class="tab-pane fade" id="parametres-app" role="tabpanel">
+            <div class="admin-section">
+                <h3 class="section-title">
+                    <i class="fas fa-cog me-2"></i>Paramètres de l'Application
+                </h3>
+                <p class="text-muted mb-4">Configuration des préférences et paramètres utilisateurs de l'application</p>
+                
+                <div class="row">
+                    <div class="col-md-6 mb-4">
+                        <div class="card">
+                            <div class="card-header bg-primary text-white">
+                                <h5 class="mb-0"><i class="fas fa-palette me-2"></i>Interface & Apparence</h5>
+                            </div>
+                            <div class="card-body">
+                                <p class="text-muted">Configuration de l'interface utilisateur et des thèmes</p>
+                                <button class="btn btn-outline-primary btn-sm">
+                                    <i class="fas fa-paint-brush me-2"></i>Gérer les Thèmes
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="col-md-6 mb-4">
+                        <div class="card">
+                            <div class="card-header bg-success text-white">
+                                <h5 class="mb-0"><i class="fas fa-bell me-2"></i>Notifications</h5>
+                            </div>
+                            <div class="card-body">
+                                <p class="text-muted">Configuration des notifications et alertes</p>
+                                <button class="btn btn-outline-success btn-sm">
+                                    <i class="fas fa-cog me-2"></i>Configurer
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="col-md-6 mb-4">
+                        <div class="card">
+                            <div class="card-header bg-info text-white">
+                                <h5 class="mb-0"><i class="fas fa-language me-2"></i>Localisation</h5>
+                            </div>
+                            <div class="card-body">
+                                <p class="text-muted">Langue, format de dates et devises</p>
+                                <button class="btn btn-outline-info btn-sm">
+                                    <i class="fas fa-globe me-2"></i>Gérer
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="col-md-6 mb-4">
+                        <div class="card">
+                            <div class="card-header bg-warning text-white">
+                                <h5 class="mb-0"><i class="fas fa-user-cog me-2"></i>Paramètres par Défaut</h5>
+                            </div>
+                            <div class="card-body">
+                                <p class="text-muted">Valeurs par défaut pour nouveaux utilisateurs</p>
+                                <button class="btn btn-outline-warning btn-sm">
+                                    <i class="fas fa-edit me-2"></i>Modifier
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="alert alert-info">
+                    <i class="fas fa-info-circle me-2"></i>
+                    <strong>Note :</strong> Ces paramètres affectent l'expérience utilisateur générale de l'application. 
+                    Pour les paramètres techniques du système, consultez l'onglet "Configuration Système".
                 </div>
             </div>
         </div>
@@ -678,20 +806,6 @@
             </div>
         </div>
 
-        <!-- Unités -->
-        <div class="tab-pane fade" id="unites" role="tabpanel">
-            <div class="admin-section">
-                <h3 class="section-title">
-                    <i class="fas fa-ruler me-2"></i>Gestion des Unités
-                </h3>
-                <p class="text-muted">Chargement en cours...</p>
-                <div class="text-center">
-                    <div class="spinner-border text-primary" role="status">
-                        <span class="visually-hidden">Chargement...</span>
-                    </div>
-                </div>
-            </div>
-        </div>
 
         <!-- Civilités -->
         <div class="tab-pane fade" id="civilites" role="tabpanel">
@@ -738,19 +852,6 @@
             </div>
         </div>
 
-        <div class="tab-pane fade" id="settings" role="tabpanel">
-            <div class="admin-section">
-                <h3 class="section-title">
-                    <i class="fas fa-cogs me-2"></i>Paramètres Globaux
-                </h3>
-                <p class="text-muted">Chargement en cours...</p>
-                <div class="text-center">
-                    <div class="spinner-border text-primary" role="status">
-                        <span class="visually-hidden">Chargement...</span>
-                    </div>
-                </div>
-            </div>
-        </div>
     </div>
 </div>
 
@@ -792,8 +893,8 @@
                 return;
             }
             
-            if (tabId === '#parametrage') {
-                setupParametrageTab();
+            if (tabId === '#gestion-societes') {
+                setupGestionSocietesTab();
                 tabContent.dataset.loaded = 'true';
                 return;
             }
@@ -810,14 +911,17 @@
                 case '#frais-port':
                     url = '{{ path("app_admin_frais_port") }}';
                     break;
+                case '#parametres':
+                    url = '{{ path("app_admin_settings") }}';
+                    break;
                 case '#produits':
                     url = '{{ path("app_admin_produits") }}';
                     break;
-                case '#tags-clients':
-                    url = '{{ path("app_admin_tags") }}';
-                    break;
                 case '#unites':
                     url = '{{ path("app_admin_unites") }}';
+                    break;
+                case '#tags-clients':
+                    url = '{{ path("app_admin_tags") }}';
                     break;
                 case '#civilites':
                     url = '{{ path("app_admin_civilites") }}';
@@ -827,9 +931,6 @@
                     break;
                 case '#frais-port':
                     url = '{{ path("app_admin_frais_port") }}';
-                    break;
-                case '#settings':
-                    url = '{{ path("app_admin_settings") }}';
                     break;
             }
             
@@ -915,10 +1016,6 @@
                                 case '#taux-tva':
                                     functionName = 'initTauxTva';
                                     initFunction = window.initTauxTva;
-                                    break;
-                                case '#unites':
-                                    functionName = 'initUnites';
-                                    initFunction = window.initUnites;
                                     break;
                                 case '#civilites':
                                     functionName = 'initCivilites';
@@ -1019,21 +1116,21 @@
             loadJuridiqueComptableSubTab('#formes-juridiques-content');
         }
         
-        // Fonction pour configurer l'onglet Paramétrage
-        function setupParametrageTab() {
-            console.log('🔍 Setup Paramétrage tab');
+        // Fonction pour configurer l'onglet Gestion des Sociétés
+        function setupGestionSocietesTab() {
+            console.log('🔍 Setup Gestion Sociétés tab');
             
-            // Gérer les sous-onglets de Paramétrage
-            const parametrageTabs = document.querySelectorAll('#parametrage [data-bs-toggle="tab"]');
-            parametrageTabs.forEach(tab => {
+            // Gérer les sous-onglets de Gestion des Sociétés
+            const gestionSocietesTabs = document.querySelectorAll('#gestion-societes [data-bs-toggle="tab"]');
+            gestionSocietesTabs.forEach(tab => {
                 tab.addEventListener('shown.bs.tab', function(e) {
                     const targetSubTab = e.target.getAttribute('href');
-                    loadParametrageSubTab(targetSubTab);
+                    loadGestionSocietesSubTab(targetSubTab);
                 });
             });
             
-            // Charger le premier sous-onglet par défaut (société)
-            loadParametrageSubTab('#societe-content');
+            // Charger le premier sous-onglet par défaut (sociétés)
+            loadGestionSocietesSubTab('#societes-content');
         }
         
         // Fonction pour charger les sous-onglets Juridique & Comptable
@@ -1075,31 +1172,32 @@
             }
         }
         
-        // Fonction pour charger les sous-onglets Paramétrage
-        function loadParametrageSubTab(subTabId) {
-            console.log('🔍 Loading parametrage sub-tab:', subTabId);
+        // Fonction pour charger les sous-onglets Gestion Sociétés
+        function loadGestionSocietesSubTab(subTabId) {
+            console.log('🔍 Loading gestion-societes sub-tab:', subTabId);
             
             let url = '';
             let targetContentId = '';
             
             switch(subTabId) {
-                case '#societe-content':
+                case '#societes-content':
                     // TODO: À implémenter
-                    targetContentId = '#societe-content';
-                    document.querySelector(targetContentId).innerHTML = '<div class="alert alert-info"><i class="fas fa-info-circle me-2"></i>Section "Informations Société" à implémenter</div>';
+                    targetContentId = '#societes-content';
+                    document.querySelector(targetContentId).innerHTML = '<div class="alert alert-info"><i class="fas fa-info-circle me-2"></i>Section "Gestion Sociétés" à implémenter</div>';
                     break;
                 case '#users-content':
                     url = '{{ path("app_admin_users") }}';
                     targetContentId = '#users-content';
                     break;
-                case '#unites-content':
-                    url = '{{ path("app_admin_unites") }}';
-                    targetContentId = '#unites-content';
-                    break;
                 case '#groupes-users-content':
                     // TODO: À implémenter
                     targetContentId = '#groupes-users-content';
                     document.querySelector(targetContentId).innerHTML = '<div class="alert alert-info"><i class="fas fa-info-circle me-2"></i>Section "Groupes Utilisateurs" à implémenter</div>';
+                    break;
+                case '#environnements-content':
+                    // TODO: À implémenter
+                    targetContentId = '#environnements-content';
+                    document.querySelector(targetContentId).innerHTML = '<div class="alert alert-info"><i class="fas fa-info-circle me-2"></i>Section "Environnements" à implémenter</div>';
                     break;
             }
             
