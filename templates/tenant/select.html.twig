@@ -1,0 +1,216 @@
+{% extends 'base.html.twig' %}
+
+{% block title %}Sélection de société - TechnoProd{% endblock %}
+
+{% block body %}
+<div class="container-fluid">
+    <div class="row justify-content-center align-items-center min-vh-100">
+        <div class="col-md-8 col-lg-6">
+            <div class="card shadow-lg border-0">
+                <div class="card-header bg-primary text-white text-center py-4">
+                    <h3 class="mb-0">
+                        <i class="fas fa-building me-2"></i>
+                        Sélection de société
+                    </h3>
+                    {% if is_super_admin %}
+                        <small class="opacity-75">
+                            <i class="fas fa-crown me-1"></i>Super Administrateur
+                        </small>
+                    {% endif %}
+                </div>
+                <div class="card-body p-4">
+                    <p class="text-muted text-center mb-4">
+                        Choisissez la société avec laquelle vous souhaitez travailler :
+                    </p>
+
+                    <div class="row g-3">
+                        {% for societe in available_societes %}
+                            <div class="col-12">
+                                <div class="society-card" data-societe-id="{{ societe.id }}">
+                                    <div class="card h-100 border-2 shadow-sm society-option">
+                                        <div class="card-body d-flex align-items-center p-3">
+                                            <div class="society-icon me-3">
+                                                {% if societe.logo %}
+                                                    <img src="{{ societe.logo }}" alt="Logo {{ societe.nom }}" class="rounded" width="48" height="48">
+                                                {% else %}
+                                                    <div class="icon-placeholder rounded d-flex align-items-center justify-content-center">
+                                                        <i class="fas {{ societe.type == 'mere' ? 'fa-building' : 'fa-store' }} text-primary"></i>
+                                                    </div>
+                                                {% endif %}
+                                            </div>
+                                            
+                                            <div class="flex-grow-1">
+                                                <h5 class="mb-1">
+                                                    {{ societe.nom }}
+                                                    {% if societe.type == 'mere' %}
+                                                        <span class="badge bg-success ms-2">Société Mère</span>
+                                                    {% else %}
+                                                        <span class="badge bg-info ms-2">Filiale</span>
+                                                    {% endif %}
+                                                </h5>
+                                                {% if societe.type == 'fille' and societe.societeParent %}
+                                                    <small class="text-muted">
+                                                        <i class="fas fa-sitemap me-1"></i>
+                                                        Filiale de {{ societe.societeParent.nom }}
+                                                    </small>
+                                                {% endif %}
+                                            </div>
+                                            
+                                            <div class="ms-3">
+                                                <i class="fas fa-chevron-right text-muted"></i>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        {% endfor %}
+                    </div>
+
+                    {% if available_societes|length == 0 %}
+                        <div class="text-center py-5">
+                            <i class="fas fa-exclamation-triangle text-warning mb-3" style="font-size: 3rem;"></i>
+                            <h5 class="text-muted">Aucune société disponible</h5>
+                            <p class="text-muted">
+                                Vous n'avez accès à aucune société. 
+                                Contactez votre administrateur pour obtenir les accès nécessaires.
+                            </p>
+                        </div>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<style>
+.society-card {
+    cursor: pointer;
+    transition: transform 0.2s ease, box-shadow 0.2s ease;
+}
+
+.society-card:hover {
+    transform: translateY(-2px);
+}
+
+.society-card:hover .society-option {
+    border-color: var(--bs-primary) !important;
+    box-shadow: 0 8px 25px rgba(0, 0, 0, 0.1) !important;
+}
+
+.icon-placeholder {
+    width: 48px;
+    height: 48px;
+    background: rgba(var(--bs-primary-rgb), 0.1);
+    border: 2px solid rgba(var(--bs-primary-rgb), 0.2);
+}
+
+.society-option {
+    border: 2px solid transparent;
+    transition: all 0.2s ease;
+}
+
+.loading-overlay {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background: rgba(255, 255, 255, 0.9);
+    display: none;
+    justify-content: center;
+    align-items: center;
+    z-index: 9999;
+}
+</style>
+
+<!-- Overlay de chargement -->
+<div class="loading-overlay" id="loadingOverlay">
+    <div class="text-center">
+        <div class="spinner-border text-primary mb-3" role="status">
+            <span class="visually-hidden">Chargement...</span>
+        </div>
+        <h5 class="text-primary">Chargement de votre espace...</h5>
+    </div>
+</div>
+
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    const societyCards = document.querySelectorAll('.society-card');
+    const loadingOverlay = document.getElementById('loadingOverlay');
+    
+    societyCards.forEach(card => {
+        card.addEventListener('click', function() {
+            const societeId = this.dataset.societeId;
+            
+            if (!societeId) {
+                console.error('ID de société manquant');
+                return;
+            }
+            
+            // Afficher le loading
+            loadingOverlay.style.display = 'flex';
+            
+            // Désactiver tous les autres cards
+            societyCards.forEach(c => {
+                c.style.pointerEvents = 'none';
+                c.style.opacity = '0.6';
+            });
+            
+            // Mettre en évidence le card sélectionné
+            this.style.opacity = '1';
+            this.querySelector('.society-option').classList.add('border-success');
+            
+            // Effectuer le switch
+            fetch(`/tenant/switch/${societeId}`, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'X-Requested-With': 'XMLHttpRequest'
+                },
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.success) {
+                    // Redirection vers le dashboard
+                    window.location.href = '/dashboard';
+                } else {
+                    // Afficher l'erreur
+                    alert('Erreur: ' + (data.message || 'Impossible de sélectionner cette société'));
+                    
+                    // Réactiver les cards
+                    societyCards.forEach(c => {
+                        c.style.pointerEvents = 'auto';
+                        c.style.opacity = '1';
+                    });
+                    
+                    loadingOverlay.style.display = 'none';
+                }
+            })
+            .catch(error => {
+                console.error('Erreur lors du switch:', error);
+                alert('Une erreur est survenue. Veuillez réessayer.');
+                
+                // Réactiver les cards
+                societyCards.forEach(c => {
+                    c.style.pointerEvents = 'auto';
+                    c.style.opacity = '1';
+                });
+                
+                loadingOverlay.style.display = 'none';
+            });
+        });
+        
+        // Effet hover amélioré
+        card.addEventListener('mouseenter', function() {
+            this.querySelector('.society-option').style.borderColor = 'var(--bs-primary)';
+        });
+        
+        card.addEventListener('mouseleave', function() {
+            if (!this.querySelector('.society-option').classList.contains('border-success')) {
+                this.querySelector('.society-option').style.borderColor = 'transparent';
+            }
+        });
+    });
+});
+</script>
+{% endblock %}

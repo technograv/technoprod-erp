@@ -70,11 +70,15 @@ class User implements UserInterface, PasswordAuthenticatedUserInterface
     #[ORM\OneToMany(mappedBy: 'commercial', targetEntity: Devis::class)]
     private Collection $devis;
 
+    #[ORM\OneToMany(mappedBy: 'user', targetEntity: UserSocieteRole::class, orphanRemoval: true)]
+    private Collection $societeRoles;
+
     public function __construct()
     {
         $this->clients = new ArrayCollection();
         $this->secteurs = new ArrayCollection();
         $this->devis = new ArrayCollection();
+        $this->societeRoles = new ArrayCollection();
         $this->createdAt = new \DateTimeImmutable();
         $this->updatedAt = new \DateTimeImmutable();
     }
@@ -352,5 +356,96 @@ class User implements UserInterface, PasswordAuthenticatedUserInterface
 
         $emailDomain = substr(strrchr($this->email, "@"), 1);
         return in_array($emailDomain, $allowedDomains);
+    }
+
+    // Méthodes pour la gestion des rôles de sociétés
+    /**
+     * @return Collection<int, UserSocieteRole>
+     */
+    public function getSocieteRoles(): Collection
+    {
+        return $this->societeRoles;
+    }
+
+    public function addSocieteRole(UserSocieteRole $societeRole): self
+    {
+        if (!$this->societeRoles->contains($societeRole)) {
+            $this->societeRoles->add($societeRole);
+            $societeRole->setUser($this);
+        }
+        return $this;
+    }
+
+    public function removeSocieteRole(UserSocieteRole $societeRole): self
+    {
+        if ($this->societeRoles->removeElement($societeRole)) {
+            if ($societeRole->getUser() === $this) {
+                $societeRole->setUser(null);
+            }
+        }
+        return $this;
+    }
+
+    /**
+     * Vérifie si l'utilisateur a accès à une société donnée
+     */
+    public function hasAccessToSociete(Societe $societe): bool
+    {
+        if ($this->isSuperAdmin()) {
+            return true;
+        }
+
+        foreach ($this->societeRoles as $role) {
+            if ($role->getSociete() === $societe && $role->isActive()) {
+                return true;
+            }
+        }
+        return false;
+    }
+
+    /**
+     * Récupère le rôle de l'utilisateur dans une société
+     */
+    public function getRoleInSociete(Societe $societe): ?UserSocieteRole
+    {
+        foreach ($this->societeRoles as $role) {
+            if ($role->getSociete() === $societe && $role->isActive()) {
+                return $role;
+            }
+        }
+        return null;
+    }
+
+    /**
+     * Vérifie si l'utilisateur a une permission spécifique dans une société
+     */
+    public function hasPermissionInSociete(Societe $societe, string $permission): bool
+    {
+        if ($this->isSuperAdmin()) {
+            return true;
+        }
+
+        $role = $this->getRoleInSociete($societe);
+        return $role ? $role->hasPermission($permission) : false;
+    }
+
+    /**
+     * Récupère toutes les sociétés accessibles par l'utilisateur
+     */
+    public function getAccessibleSocietes(): array
+    {
+        if ($this->isSuperAdmin()) {
+            // Le super admin a accès à toutes les sociétés
+            // Cette méthode devra être complétée par un service
+            return [];
+        }
+
+        $societes = [];
+        foreach ($this->societeRoles as $role) {
+            if ($role->isActive()) {
+                $societes[] = $role->getSociete();
+            }
+        }
+        return $societes;
     }
 }

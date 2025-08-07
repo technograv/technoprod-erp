@@ -99,6 +99,10 @@
                     
                     <ul class="navbar-nav">
                         {% if app.user %}
+                            <!-- Sélecteur de société -->
+                            <li class="nav-item me-3">
+                                {% include 'components/tenant_selector.html.twig' %}
+                            </li>
                             <!-- Menu de switch de rôles (mode développement) -->
                             {% if app.environment == 'dev' %}
                             <li class="nav-item dropdown me-2">
