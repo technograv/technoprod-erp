@@ -5,8 +5,10 @@ namespace App\Service;
 use App\Entity\Societe;
 use App\Entity\User;
 use App\Entity\UserSocieteRole;
+use App\Entity\GroupeUtilisateur;
 use App\Repository\SocieteRepository;
 use App\Repository\UserSocieteRoleRepository;
+use App\Repository\GroupeUtilisateurRepository;
 use Doctrine\ORM\EntityManagerInterface;
 use Symfony\Bundle\SecurityBundle\Security;
 use Symfony\Component\HttpFoundation\RequestStack;
@@ -22,7 +24,8 @@ class TenantService
         private Security $security,
         private RequestStack $requestStack,
         private SocieteRepository $societeRepository,
-        private UserSocieteRoleRepository $userSocieteRoleRepository
+        private UserSocieteRoleRepository $userSocieteRoleRepository,
+        private GroupeUtilisateurRepository $groupeUtilisateurRepository
     ) {
     }
 
@@ -126,8 +129,38 @@ class TenantService
             // Super admin : toutes les sociétés
             $societes = $this->societeRepository->findActiveSocietes();
         } else {
-            // Utilisateur normal : selon ses rôles
-            $societes = $this->userSocieteRoleRepository->findAccessibleSocietesByUser($user);
+            // Utilisateur normal : selon ses rôles ET ses groupes
+            $societes = [];
+            
+            // 1. Sociétés accessibles via les rôles directs
+            $societesViaRoles = $this->userSocieteRoleRepository->findAccessibleSocietesByUser($user);
+            foreach ($societesViaRoles as $societe) {
+                $societes[$societe->getId()] = $societe;
+            }
+            
+            // 2. Sociétés accessibles via les groupes
+            $societesViaGroupes = $user->getSocietesViaGroupes();
+            foreach ($societesViaGroupes as $societe) {
+                if ($societe->isActive()) {
+                    $societes[$societe->getId()] = $societe;
+                }
+            }
+            
+            $societes = array_values($societes);
+            
+            // Trier les sociétés par ordre personnalisé
+            usort($societes, function($a, $b) {
+                // D'abord par ordre
+                if ($a->getOrdre() !== $b->getOrdre()) {
+                    return $a->getOrdre() <=> $b->getOrdre();
+                }
+                // Puis par type (mère avant fille)
+                if ($a->getType() !== $b->getType()) {
+                    return $a->getType() === 'mere' ? -1 : 1;
+                }
+                // Enfin par nom
+                return strcmp($a->getNom(), $b->getNom());
+            });
         }
 
         // Mettre en cache
@@ -161,7 +194,19 @@ class TenantService
             return true;
         }
 
-        return $user->hasAccessToSociete($societe);
+        // Vérifier accès via rôles directs
+        if ($user->hasAccessToSociete($societe)) {
+            return true;
+        }
+
+        // Vérifier accès via les groupes
+        foreach ($user->getGroupes() as $groupe) {
+            if ($groupe->isActif() && $groupe->hasAccessToSociete($societe)) {
+                return true;
+            }
+        }
+
+        return false;
     }
 
     /**
@@ -194,8 +239,33 @@ class TenantService
      */
     public function hasPermission(string $permission): bool
     {
+        $user = $this->getCurrentUser();
+        $societe = $this->getCurrentSociete();
+        
+        if (!$user || !$societe) {
+            return false;
+        }
+
+        if ($user->isSuperAdmin()) {
+            return true;
+        }
+
+        // Vérifier via le rôle direct dans la société
         $role = $this->getCurrentUserRole();
-        return $role ? $role->hasPermission($permission) : false;
+        if ($role && $role->hasPermission($permission)) {
+            return true;
+        }
+
+        // Vérifier via les groupes
+        foreach ($user->getGroupes() as $groupe) {
+            if ($groupe->isActif() && 
+                $groupe->hasAccessToSociete($societe) && 
+                $groupe->hasPermissionRecursive($permission)) {
+                return true;
+            }
+        }
+
+        return false;
     }
 
     /**
@@ -235,6 +305,8 @@ class TenantService
             'is_current_admin' => $this->isCurrentAdmin(),
             'is_current_manager' => $this->isCurrentManager(),
             'can_switch_societe' => count($availableSocietes) > 1,
+            'user_groups' => $user ? $user->getGroupes()->toArray() : [],
+            'user_groups_for_societe' => $this->getUserGroupsForCurrentSociete(),
         ];
     }
 
@@ -266,7 +338,13 @@ class TenantService
             return null;
         }
 
-        // Priorité : société mère d'abord, puis première société fille
+        // Priorité 1: Société principale définie par l'utilisateur (si elle est accessible)
+        $societePrincipale = $user->getEffectiveSocietePrincipale();
+        if ($societePrincipale && in_array($societePrincipale, $societes, true)) {
+            return $societePrincipale;
+        }
+
+        // Priorité 2: Société mère d'abord, puis première société fille
         foreach ($societes as $societe) {
             if ($societe->isMere()) {
                 return $societe;
@@ -356,5 +434,118 @@ class TenantService
         }
 
         return $default;
+    }
+
+    /**
+     * Récupère les groupes de l'utilisateur qui ont accès à la société actuelle
+     */
+    public function getUserGroupsForCurrentSociete(): array
+    {
+        $user = $this->getCurrentUser();
+        $societe = $this->getCurrentSociete();
+        
+        if (!$user || !$societe) {
+            return [];
+        }
+
+        $groupsForSociete = [];
+        foreach ($user->getGroupes() as $groupe) {
+            if ($groupe->isActif() && $groupe->hasAccessToSociete($societe)) {
+                $groupsForSociete[] = $groupe;
+            }
+        }
+
+        return $groupsForSociete;
+    }
+
+    /**
+     * Récupère toutes les permissions de l'utilisateur dans la société actuelle (rôles + groupes)
+     */
+    public function getAllUserPermissions(): array
+    {
+        $user = $this->getCurrentUser();
+        $societe = $this->getCurrentSociete();
+        
+        if (!$user || !$societe) {
+            return [];
+        }
+
+        if ($user->isSuperAdmin()) {
+            // Super admin a toutes les permissions
+            return ['*'];
+        }
+
+        $permissions = [];
+
+        // Permissions du rôle direct
+        $role = $this->getCurrentUserRole();
+        if ($role) {
+            $permissions = array_merge($permissions, $role->getPermissions());
+        }
+
+        // Permissions des groupes
+        foreach ($this->getUserGroupsForCurrentSociete() as $groupe) {
+            $permissions = array_merge($permissions, $groupe->getAllPermissions());
+        }
+
+        return array_unique($permissions);
+    }
+
+    /**
+     * Récupère le niveau de permission maximum de l'utilisateur dans la société actuelle
+     */
+    public function getUserMaxLevel(): int
+    {
+        $user = $this->getCurrentUser();
+        $societe = $this->getCurrentSociete();
+        
+        if (!$user || !$societe) {
+            return 0;
+        }
+
+        if ($user->isSuperAdmin()) {
+            return 10;
+        }
+
+        $maxLevel = 0;
+
+        // Niveau du rôle direct
+        $role = $this->getCurrentUserRole();
+        if ($role) {
+            if ($role->isAdmin()) {
+                $maxLevel = max($maxLevel, 8);
+            } elseif ($role->isManager()) {
+                $maxLevel = max($maxLevel, 6);
+            } else {
+                $maxLevel = max($maxLevel, 4);
+            }
+        }
+
+        // Niveaux des groupes
+        foreach ($this->getUserGroupsForCurrentSociete() as $groupe) {
+            $maxLevel = max($maxLevel, $groupe->getNiveau());
+        }
+
+        return $maxLevel;
+    }
+
+    /**
+     * Vérifie si l'utilisateur a un niveau de permission suffisant
+     */
+    public function hasMinimumLevel(int $requiredLevel): bool
+    {
+        return $this->getUserMaxLevel() >= $requiredLevel;
+    }
+
+    /**
+     * Récupère les noms des groupes de l'utilisateur pour la société actuelle (pour affichage)
+     */
+    public function getUserGroupsNamesForCurrentSociete(): array
+    {
+        $groupNames = [];
+        foreach ($this->getUserGroupsForCurrentSociete() as $groupe) {
+            $groupNames[] = $groupe->getNom();
+        }
+        return $groupNames;
     }
 }

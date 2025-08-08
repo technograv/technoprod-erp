@@ -143,8 +143,9 @@ class UserSocieteRoleRepository extends ServiceEntityRepository
             ->andWhere('usr.active = true')
             ->andWhere('s.active = true')
             ->setParameter('user', $user)
-            ->orderBy('s.type', 'DESC') // Mères en premier
-            ->addOrderBy('s.nom', 'ASC')
+            ->orderBy('s.ordre', 'ASC') // Ordre personnalisé d'abord
+            ->addOrderBy('s.type', 'DESC') // Puis mères en premier
+            ->addOrderBy('s.nom', 'ASC') // Puis nom alphabétique
             ->getQuery()
             ->getResult();
     }

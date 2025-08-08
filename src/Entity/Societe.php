@@ -71,11 +71,18 @@ class Societe
     #[Assert\Regex(pattern: '/^#[0-9A-Fa-f]{6}$/', message: 'La couleur secondaire doit être un code hexadécimal valide')]
     private ?string $couleurSecondaire = null;
 
+    #[ORM\Column(type: 'string', length: 7, nullable: true)]
+    #[Assert\Regex(pattern: '/^#[0-9A-Fa-f]{6}$/', message: 'La couleur tertiaire doit être un code hexadécimal valide')]
+    private ?string $couleurTertiaire = null;
+
     #[ORM\Column(type: 'json', nullable: true)]
     private ?array $parametresCustom = [];
 
     #[ORM\Column(type: 'boolean')]
     private bool $active = true;
+
+    #[ORM\Column(type: 'integer')]
+    private int $ordre = 0;
 
     #[ORM\Column(type: 'datetime_immutable')]
     private \DateTimeImmutable $createdAt;
@@ -247,6 +254,49 @@ class Societe
         $this->updateTimestamp();
         return $this;
     }
+    
+    /**
+     * Retourne le numéro de téléphone formaté pour l'affichage
+     */
+    public function getTelephoneFormatted(): ?string
+    {
+        if (!$this->telephone) {
+            return null;
+        }
+        
+        $phone = preg_replace('/[^\d+]/', '', $this->telephone);
+        
+        if (str_starts_with($phone, '+33')) {
+            $phone = substr($phone, 3);
+            if (strlen($phone) === 9 && $phone[0] !== '0') {
+                return '+33 ' . $phone[0] . ' ' . substr($phone, 1, 2) . ' ' . substr($phone, 3, 2) . ' ' . substr($phone, 5, 2) . ' ' . substr($phone, 7);
+            }
+        } elseif (str_starts_with($phone, '0') && strlen($phone) === 10) {
+            return substr($phone, 0, 2) . ' ' . substr($phone, 2, 2) . ' ' . substr($phone, 4, 2) . ' ' . substr($phone, 6, 2) . ' ' . substr($phone, 8);
+        }
+        
+        return $this->telephone;
+    }
+    
+    /**
+     * Retourne le numéro de téléphone nettoyé pour les liens tel:
+     */
+    public function getTelephoneForCall(): ?string
+    {
+        if (!$this->telephone) {
+            return null;
+        }
+        
+        $phone = preg_replace('/[^\d+]/', '', $this->telephone);
+        
+        if (str_starts_with($phone, '+33')) {
+            return $phone;
+        } elseif (str_starts_with($phone, '0') && strlen($phone) === 10) {
+            return '+33' . substr($phone, 1);
+        }
+        
+        return $phone;
+    }
 
     public function getEmail(): ?string
     {
@@ -308,6 +358,18 @@ class Societe
         return $this;
     }
 
+    public function getCouleurTertiaire(): ?string
+    {
+        return $this->couleurTertiaire;
+    }
+
+    public function setCouleurTertiaire(?string $couleurTertiaire): self
+    {
+        $this->couleurTertiaire = $couleurTertiaire;
+        $this->updateTimestamp();
+        return $this;
+    }
+
     public function getParametresCustom(): ?array
     {
         return $this->parametresCustom;
@@ -340,6 +402,18 @@ class Societe
     public function getUpdatedAt(): \DateTimeImmutable
     {
         return $this->updatedAt;
+    }
+
+    public function getOrdre(): int
+    {
+        return $this->ordre;
+    }
+
+    public function setOrdre(int $ordre): self
+    {
+        $this->ordre = $ordre;
+        $this->updateTimestamp();
+        return $this;
     }
 
     /**

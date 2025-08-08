@@ -10,6 +10,9 @@
         <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/css/bootstrap.min.css" rel="stylesheet">
         <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
         
+        <!-- CSS Dynamique Société -->
+        <link href="{{ path('theme_css') }}" rel="stylesheet" type="text/css">
+        
         {% block stylesheets %}
         {% endblock %}
         
@@ -103,31 +106,22 @@
                             <li class="nav-item me-3">
                                 {% include 'components/tenant_selector.html.twig' %}
                             </li>
-                            <!-- Menu de switch de rôles (mode développement) -->
+                            <!-- Menu de switch d'utilisateur (mode développement) -->
                             {% if app.environment == 'dev' %}
                             <li class="nav-item dropdown me-2">
-                                <a class="nav-link dropdown-toggle btn btn-outline-light btn-sm" href="#" id="roleDropdown" role="button" data-bs-toggle="dropdown">
-                                    <i class="fas fa-user-cog"></i> 
-                                    {% if 'ROLE_ADMIN' in app.user.roles %}
-                                        Admin
-                                    {% elseif 'ROLE_COMMERCIAL' in app.user.roles %}
-                                        Commercial
-                                    {% else %}
-                                        Utilisateur
-                                    {% endif %}
+                                <a class="nav-link dropdown-toggle btn btn-outline-light btn-sm" href="#" id="userSwitchDropdown" role="button" data-bs-toggle="dropdown">
+                                    <i class="fas fa-users-cog"></i> 
+                                    <span id="current-user-display">{{ app.user.prenom }} {{ app.user.nom }}</span>
                                 </a>
-                                <ul class="dropdown-menu dropdown-menu-end">
-                                    <li><h6 class="dropdown-header">Mode Test - Switch Rôles</h6></li>
+                                <ul class="dropdown-menu dropdown-menu-end" id="userSwitchDropdownMenu">
+                                    <li><h6 class="dropdown-header">Mode Test - Switch Utilisateur</h6></li>
                                     <li><hr class="dropdown-divider"></li>
-                                    <li><a class="dropdown-item" href="#" onclick="switchRole('ROLE_ADMIN')">
-                                        <i class="fas fa-crown text-warning"></i> Administrateur
-                                    </a></li>
-                                    <li><a class="dropdown-item" href="#" onclick="switchRole('ROLE_COMMERCIAL')">
-                                        <i class="fas fa-briefcase text-primary"></i> Commercial
-                                    </a></li>
-                                    <li><a class="dropdown-item" href="#" onclick="switchRole('ROLE_USER')">
-                                        <i class="fas fa-user text-secondary"></i> Utilisateur
-                                    </a></li>
+                                    <li class="px-3">
+                                        <div class="spinner-border spinner-border-sm text-primary" role="status">
+                                            <span class="visually-hidden">Chargement...</span>
+                                        </div>
+                                        <span class="ms-2 small text-muted">Chargement des utilisateurs...</span>
+                                    </li>
                                 </ul>
                             </li>
                             {% endif %}
@@ -184,35 +178,233 @@
             {% block body %}{% endblock %}
         </main>
 
+        <!-- Variables Thème JavaScript -->
+        <script src="{{ path('theme_js_vars') }}"></script>
+        
         <!-- Bootstrap JS -->
         <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/js/bootstrap.bundle.min.js"></script>
         
         <script>
-        // Switch de rôles en mode développement
-        function switchRole(role) {
-            fetch('{{ path('switch_role') }}', {
+        {% if app.environment == 'dev' and app.user %}
+        // Switch d'utilisateur en mode développement
+        let testUsers = [];
+        let currentUserId = null;
+
+        // Charger la liste des utilisateurs au chargement de la page
+        document.addEventListener('DOMContentLoaded', function() {
+            loadTestUsers();
+            
+            // Charger les utilisateurs quand le dropdown est ouvert
+            document.getElementById('userSwitchDropdown').addEventListener('click', function(e) {
+                if (testUsers.length === 0) {
+                    loadTestUsers();
+                }
+            });
+        });
+        {% endif %}
+
+        {% if app.environment == 'dev' and app.user %}
+        function loadTestUsers() {
+            fetch('{{ path('get_test_users') }}', {
+                method: 'GET',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'X-Requested-With': 'XMLHttpRequest'
+                }
+            })
+            .then(response => {
+                if (!response.ok) {
+                    throw new Error(`HTTP error! status: ${response.status}`);
+                }
+                return response.json();
+            })
+            .then(data => {
+                if (data.success) {
+                    testUsers = data.users;
+                    currentUserId = data.currentUserId;
+                    updateUserSwitchDropdown();
+                } else {
+                    console.error('Erreur lors du chargement des utilisateurs:', data.message);
+                }
+            })
+            .catch(error => {
+                console.error('Erreur:', error);
+                document.getElementById('userSwitchDropdownMenu').innerHTML = `
+                    <li><h6 class="dropdown-header">Mode Test - Switch Utilisateur</h6></li>
+                    <li><hr class="dropdown-divider"></li>
+                    <li class="px-3"><span class="text-danger small">Erreur de chargement</span></li>
+                `;
+            });
+        }
+
+        function updateUserSwitchDropdown() {
+            const dropdown = document.getElementById('userSwitchDropdownMenu');
+            
+            let html = `
+                <li><h6 class="dropdown-header">Mode Test - Switch Utilisateur</h6></li>
+                <li><hr class="dropdown-divider"></li>
+            `;
+            
+            // Séparer compte principal et comptes de test
+            const mainAccount = testUsers.find(user => user.isMainAccount);
+            const testAccounts = testUsers.filter(user => !user.isMainAccount);
+            
+            // Afficher d'abord le compte principal
+            if (mainAccount) {
+                const isCurrentUser = mainAccount.id === currentUserId;
+                const rolesBadges = mainAccount.roles
+                    .filter(role => role !== 'ROLE_USER')
+                    .map(role => {
+                        const color = role === 'ROLE_ADMIN' ? 'danger' : role === 'ROLE_COMMERCIAL' ? 'success' : 'primary';
+                        const label = role === 'ROLE_ADMIN' ? 'Admin' : role === 'ROLE_COMMERCIAL' ? 'Com' : role;
+                        return `<span class="badge bg-${color} me-1">${label}</span>`;
+                    }).join('');
+                
+                const groupesBadges = mainAccount.groupes && mainAccount.groupes.length > 0 
+                    ? mainAccount.groupes.map(groupe => `<span class="badge bg-info me-1">${groupe}</span>`).join('')
+                    : '';
+                
+                html += `
+                    <li><h6 class="dropdown-header text-primary"><i class="fab fa-google me-1"></i>Compte Principal</h6></li>
+                    <li>
+                        <a class="dropdown-item ${isCurrentUser ? 'active' : ''}" 
+                           href="#" 
+                           onclick="${isCurrentUser ? 'return false;' : `switchUser(${mainAccount.id})`}">
+                            <div class="d-flex flex-column">
+                                <div class="d-flex align-items-center">
+                                    <i class="fas fa-user-shield me-2 text-primary"></i>
+                                    <strong>${mainAccount.nom}</strong>
+                                    ${isCurrentUser ? '<i class="fas fa-check text-success ms-auto"></i>' : ''}
+                                </div>
+                                <small class="text-muted">${mainAccount.email}</small>
+                                ${rolesBadges ? `<div class="mt-1">${rolesBadges}</div>` : ''}
+                                ${groupesBadges ? `<div class="mt-1">${groupesBadges}</div>` : ''}
+                                ${mainAccount.societePrincipale ? `<small class="text-info"><i class="fas fa-building me-1"></i>${mainAccount.societePrincipale}</small>` : ''}
+                            </div>
+                        </a>
+                    </li>
+                    <li><hr class="dropdown-divider"></li>
+                `;
+            }
+            
+            // Puis afficher les comptes de test
+            if (testAccounts.length > 0) {
+                html += `<li><h6 class="dropdown-header text-warning"><i class="fas fa-flask me-1"></i>Comptes de Test</h6></li>`;
+                
+                testAccounts.forEach(user => {
+                    const isCurrentUser = user.id === currentUserId;
+                    const rolesBadges = user.roles
+                        .filter(role => role !== 'ROLE_USER')
+                        .map(role => {
+                            const color = role === 'ROLE_ADMIN' ? 'danger' : role === 'ROLE_COMMERCIAL' ? 'success' : 'primary';
+                            const label = role === 'ROLE_ADMIN' ? 'Admin' : role === 'ROLE_COMMERCIAL' ? 'Com' : role;
+                            return `<span class="badge bg-${color} me-1">${label}</span>`;
+                        }).join('');
+                    
+                    const groupesBadges = user.groupes && user.groupes.length > 0 
+                        ? user.groupes.map(groupe => `<span class="badge bg-info me-1">${groupe}</span>`).join('')
+                        : '';
+                    
+                    html += `
+                        <li>
+                            <a class="dropdown-item ${isCurrentUser ? 'active' : ''}" 
+                               href="#" 
+                               onclick="${isCurrentUser ? 'return false;' : `switchUser(${user.id})`}">
+                                <div class="d-flex flex-column">
+                                    <div class="d-flex align-items-center">
+                                        <i class="fas fa-user-circle me-2"></i>
+                                        <strong>${user.nom}</strong>
+                                        ${isCurrentUser ? '<i class="fas fa-check text-success ms-auto"></i>' : ''}
+                                    </div>
+                                    <small class="text-muted">${user.email}</small>
+                                    ${rolesBadges ? `<div class="mt-1">${rolesBadges}</div>` : ''}
+                                    ${groupesBadges ? `<div class="mt-1">${groupesBadges}</div>` : ''}
+                                    ${user.societePrincipale ? `<small class="text-info"><i class="fas fa-building me-1"></i>${user.societePrincipale}</small>` : ''}
+                                </div>
+                            </a>
+                        </li>
+                    `;
+                });
+            }
+            
+            dropdown.innerHTML = html;
+        }
+
+        function switchUser(userId) {
+            if (userId === currentUserId) {
+                return false;
+            }
+            
+            fetch('{{ path('switch_user') }}', {
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/json',
                     'X-Requested-With': 'XMLHttpRequest'
                 },
-                body: JSON.stringify({ role: role })
+                body: JSON.stringify({ userId: userId })
             })
             .then(response => response.json())
             .then(data => {
                 if (data.success) {
-                    // Attendre un moment avant de recharger pour s'assurer que la base est mise à jour
+                    // Mettre à jour l'affichage du nom de l'utilisateur actuel
+                    document.getElementById('current-user-display').textContent = data.user.nom;
+                    
+                    // Afficher une notification et recharger
+                    showUserSwitchNotification('Basculement vers ' + data.user.nom + ' réussi !', 'success');
                     setTimeout(() => {
                         location.reload();
-                    }, 500);
+                    }, 1000);
                 } else {
-                    alert('Erreur lors du changement de rôle: ' + (data.message || 'Erreur inconnue'));
+                    showUserSwitchNotification('Erreur: ' + (data.message || 'Erreur inconnue'), 'error');
                 }
             })
             .catch(error => {
                 console.error('Erreur:', error);
-                alert('Erreur lors du changement de rôle');
+                showUserSwitchNotification('Erreur lors du changement d\'utilisateur', 'error');
             });
+            
+            return false;
+        }
+
+        function showUserSwitchNotification(message, type = 'info') {
+            const alertClass = type === 'success' ? 'alert-success' : 
+                              type === 'error' ? 'alert-danger' : 'alert-info';
+            
+            const notification = document.createElement('div');
+            notification.className = `alert ${alertClass} alert-dismissible fade show position-fixed`;
+            notification.style.cssText = 'top: 20px; right: 20px; z-index: 9999; min-width: 350px;';
+            notification.innerHTML = `
+                <i class="fas fa-users-cog me-2"></i>${message}
+                <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+            `;
+            
+            document.body.appendChild(notification);
+            
+            setTimeout(() => {
+                if (notification.parentNode) {
+                    notification.remove();
+                }
+            }, 5000);
+        }
+        {% endif %}
+
+        // Fonction pour recharger le CSS dynamique après changement de société
+        function reloadDynamicTheme() {
+            const themeLink = document.querySelector('link[href*="theme/css"]');
+            if (themeLink) {
+                // Ajouter un timestamp pour forcer le rechargement
+                const timestamp = new Date().getTime();
+                const newHref = themeLink.href.split('?')[0] + '?t=' + timestamp;
+                themeLink.href = newHref;
+            }
+            
+            // Recharger les variables JavaScript aussi
+            const scriptTag = document.querySelector('script[src*="theme/vars.js"]');
+            if (scriptTag) {
+                const newScript = document.createElement('script');
+                newScript.src = scriptTag.src.split('?')[0] + '?t=' + new Date().getTime();
+                scriptTag.parentNode.replaceChild(newScript, scriptTag);
+            }
         }
         </script>
         

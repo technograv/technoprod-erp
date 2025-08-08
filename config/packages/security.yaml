@@ -36,6 +36,8 @@ security:
         - { path: ^/login, roles: PUBLIC_ACCESS }
         - { path: ^/google-oauth, roles: PUBLIC_ACCESS }
         - { path: ^/api/communes/search, roles: PUBLIC_ACCESS }
+        - { path: ^/theme/, roles: PUBLIC_ACCESS }
+        - { path: ^/admin/environment/preview-css, roles: PUBLIC_ACCESS }
         - { path: ^/secteur/api/, roles: ROLE_USER }
         - { path: ^/, roles: ROLE_USER }
 

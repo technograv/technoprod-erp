@@ -204,8 +204,12 @@ document.addEventListener('DOMContentLoaded', function() {
             .then(response => response.json())
             .then(data => {
                 if (data.success) {
+                    // Recharger le thème dynamique avant la page
+                    if (typeof reloadDynamicTheme === 'function') {
+                        reloadDynamicTheme();
+                    }
                     // Recharger la page pour appliquer le nouveau contexte
-                    window.location.reload();
+                    setTimeout(() => window.location.reload(), 500);
                 } else {
                     // Restaurer le contenu original et afficher l'erreur
                     this.innerHTML = originalContent;
