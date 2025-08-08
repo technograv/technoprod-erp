@@ -142,20 +142,38 @@
 <div class="container-fluid">
     <!-- Navigation Admin -->
     <div class="admin-nav">
+        {% if current_societe %}
+            <div class="alert alert-info mb-3">
+                <i class="fas fa-info-circle me-2"></i>
+                <strong>Société active :</strong> {{ current_societe.displayName }}
+                <span class="badge bg-{{ is_societe_mere ? 'primary' : 'success' }} ms-2">
+                    {{ is_societe_mere ? 'Société Mère' : 'Société Fille' }}
+                </span>
+            </div>
+        {% endif %}
+        
         <ul class="nav nav-tabs" role="tablist">
             <li class="nav-item">
                 <a class="nav-link active" data-bs-toggle="tab" href="#dashboard" role="tab">
                     <i class="fas fa-tachometer-alt me-2"></i>Dashboard
                 </a>
             </li>
+            
+            <!-- Onglet Juridique & Comptable (société mère uniquement) -->
+            {% if is_societe_mere %}
             <li class="nav-item">
                 <a class="nav-link" data-bs-toggle="tab" href="#juridique-comptable" role="tab">
                     <i class="fas fa-balance-scale me-2"></i>Juridique & Comptable
                 </a>
             </li>
+            {% endif %}
+            
+            
+            <!-- Onglets Gestion Globale (société mère uniquement) -->
+            {% if is_societe_mere %}
             <li class="nav-item">
                 <a class="nav-link" data-bs-toggle="tab" href="#gestion-societes" role="tab">
-                    <i class="fas fa-building-user me-2"></i>Gestion des sociétés
+                    <i class="fas fa-building-user me-2"></i>Société
                 </a>
             </li>
             <li class="nav-item">
@@ -163,6 +181,25 @@
                     <i class="fas fa-map me-2"></i>Secteurs
                 </a>
             </li>
+            <li class="nav-item">
+                <a class="nav-link" data-bs-toggle="tab" href="#unites-tags" role="tab">
+                    <i class="fas fa-tags me-2"></i>Unités & Tags
+                </a>
+            </li>
+            <li class="nav-item">
+                <a class="nav-link" data-bs-toggle="tab" href="#utilisateurs" role="tab">
+                    <i class="fas fa-users me-2"></i>Utilisateurs
+                </a>
+            </li>
+            {% else %}
+            <!-- Onglet Paramètres Enseigne pour société fille -->
+            <li class="nav-item">
+                <a class="nav-link" data-bs-toggle="tab" href="#parametres-enseigne" role="tab">
+                    <i class="fas fa-cog me-2"></i>Paramètres Enseigne
+                </a>
+            </li>
+            {% endif %}
+            
             <li class="nav-item">
                 <a class="nav-link" data-bs-toggle="tab" href="#transporteurs" role="tab">
                     <i class="fas fa-truck me-2"></i>Transporteurs
@@ -222,6 +259,20 @@
                     <div class="stats-card">
                         <div class="stats-number">{{ stats.admins }}</div>
                         <div class="stats-label">Administrateurs</div>
+                    </div>
+                </div>
+                <div class="col-md-3 mb-3">
+                    <div class="stats-card">
+                        <div class="stats-number">{{ stats.groupes_utilisateurs }}</div>
+                        <div class="stats-label">Groupes Utilisateurs</div>
+                    </div>
+                </div>
+            </div>
+            <div class="row mb-4">
+                <div class="col-md-3 mb-3">
+                    <div class="stats-card">
+                        <div class="stats-number">{{ stats.groupes_actifs }}</div>
+                        <div class="stats-label">Groupes Actifs</div>
                     </div>
                 </div>
                 <div class="col-md-3 mb-3">
@@ -305,6 +356,24 @@
                     </div>
                 </div>
             </div>
+
+            <!-- Statistiques Sociétés -->
+            {% if is_societe_mere %}
+            <div class="row mb-4">
+                <div class="col-md-6 mb-3">
+                    <div class="stats-card">
+                        <div class="stats-number">{{ stats.societes_meres }}</div>
+                        <div class="stats-label">Sociétés Mères</div>
+                    </div>
+                </div>
+                <div class="col-md-6 mb-3">
+                    <div class="stats-card">
+                        <div class="stats-number">{{ stats.societes_filles }}</div>
+                        <div class="stats-label">Sociétés Filles / Enseignes</div>
+                    </div>
+                </div>
+            </div>
+            {% endif %}
 
             <!-- Actions rapides -->
             <div class="admin-section">
@@ -480,8 +549,13 @@
                                 </a>
                             </li>
                             <li class="nav-item">
-                                <a class="nav-link" data-bs-toggle="tab" href="#environnements-content" role="tab">
-                                    <i class="fas fa-globe me-2"></i>Environnements
+                                <a class="nav-link" data-bs-toggle="tab" href="#themes-couleurs-content" role="tab">
+                                    <i class="fas fa-palette me-2"></i>Thèmes & Couleurs
+                                </a>
+                            </li>
+                            <li class="nav-item">
+                                <a class="nav-link" data-bs-toggle="tab" href="#templates-documents-content" role="tab">
+                                    <i class="fas fa-file-alt me-2"></i>Templates de documents
                                 </a>
                             </li>
                         </ul>
@@ -512,12 +586,134 @@
                                     <p class="text-muted mt-2">Chargement des groupes d'utilisateurs...</p>
                                 </div>
                             </div>
-                            <div class="tab-pane fade" id="environnements-content" role="tabpanel">
-                                <div class="text-center">
-                                    <div class="spinner-border text-primary" role="status">
-                                        <span class="visually-hidden">Chargement...</span>
+                            <div class="tab-pane fade" id="themes-couleurs-content" role="tabpanel">
+                                <div class="admin-section">
+                                    <h5 class="section-title">
+                                        <i class="fas fa-palette me-2"></i>Thèmes & Couleurs
+                                    </h5>
+                                            <div class="row">
+                                                <div class="col-md-8">
+                                                    <h5>Configuration des Couleurs</h5>
+                                                    {% if is_societe_mere %}
+                                                        <p class="text-muted">Couleurs par défaut utilisées par toutes les sociétés filles.</p>
+                                                    {% else %}
+                                                        <p class="text-muted">Couleurs spécifiques à cette enseigne. Hérite de la société mère si non défini.</p>
+                                                    {% endif %}
+                                                    
+                                                    <form id="colors-form" class="mb-4">
+                                                        <div class="row">
+                                                            <div class="col-md-4 mb-3">
+                                                                <label for="primary-color" class="form-label">Couleur Primaire</label>
+                                                                <input type="color" class="form-control form-control-color" id="primary-color" name="primary" value="#dc3545" title="Couleur primaire">
+                                                                <div class="form-text">Couleur principale de l'interface</div>
+                                                            </div>
+                                                            <div class="col-md-4 mb-3">
+                                                                <label for="secondary-color" class="form-label">Couleur Secondaire</label>
+                                                                <input type="color" class="form-control form-control-color" id="secondary-color" name="secondary" value="#6c757d" title="Couleur secondaire">
+                                                                <div class="form-text">Couleur pour les éléments secondaires</div>
+                                                            </div>
+                                                            <div class="col-md-4 mb-3">
+                                                                <label for="tertiary-color" class="form-label">Couleur Tertiaire</label>
+                                                                <input type="color" class="form-control form-control-color" id="tertiary-color" name="tertiary" value="#28a745" title="Couleur tertiaire">
+                                                                <div class="form-text">Couleur d'accent et succès</div>
+                                                            </div>
+                                                        </div>
+                                                        
+                                                        <div class="row">
+                                                            <div class="col-md-6 mb-3">
+                                                                <label for="theme-select" class="form-label">Thème Prédéfini</label>
+                                                                <select class="form-select" id="theme-select">
+                                                                    <option value="default">Défaut (Rouge)</option>
+                                                                    <option value="blue">Bleu (TechnoGrav)</option>
+                                                                    <option value="green">Vert (TechnoPrint)</option>
+                                                                    <option value="yellow">Jaune (TechnoBuro)</option>
+                                                                </select>
+                                                                <div class="form-text">Applique un thème prédéfini</div>
+                                                            </div>
+                                                            <div class="col-md-6 mb-3">
+                                                                <label class="form-label">Actions</label><br>
+                                                                <button type="submit" class="btn btn-primary me-2">
+                                                                    <i class="fas fa-save"></i> Enregistrer
+                                                                </button>
+                                                                <button type="button" class="btn btn-outline-secondary" id="reset-colors">
+                                                                    <i class="fas fa-undo"></i> Réinitialiser
+                                                                </button>
+                                                            </div>
+                                                        </div>
+                                                    </form>
+                                                    
+                                                    <h5 class="mt-4">Gestion du Logo</h5>
+                                                    <div id="logo-management">
+                                                        <div class="row">
+                                                            <div class="col-md-6">
+                                                                <div class="border rounded p-3 text-center" id="logo-preview">
+                                                                    <div id="logo-current" style="display: none;">
+                                                                        <img id="logo-image" src="" alt="Logo actuel" class="img-thumbnail mb-2" style="max-height: 100px;">
+                                                                        <br>
+                                                                        <button type="button" class="btn btn-outline-danger btn-sm" id="delete-logo">
+                                                                            <i class="fas fa-trash"></i> Supprimer
+                                                                        </button>
+                                                                    </div>
+                                                                    <div id="logo-placeholder">
+                                                                        <i class="fas fa-image fa-3x text-muted mb-2"></i>
+                                                                        <p class="text-muted">Aucun logo défini</p>
+                                                                    </div>
+                                                                </div>
+                                                            </div>
+                                                            <div class="col-md-6">
+                                                                <div class="mb-3">
+                                                                    <label for="logo-upload" class="form-label">Télécharger un nouveau logo</label>
+                                                                    <input type="file" class="form-control" id="logo-upload" accept="image/*">
+                                                                    <div class="form-text">Formats acceptés: JPG, PNG, GIF (max 2MB)</div>
+                                                                </div>
+                                                                <button type="button" class="btn btn-success" id="upload-logo" disabled>
+                                                                    <i class="fas fa-upload"></i> Télécharger
+                                                                </button>
+                                                            </div>
+                                                        </div>
+                                                    </div>
+                                                </div>
+                                                
+                                                <div class="col-md-4">
+                                                    <h5>Prévisualisation</h5>
+                                                    <div id="theme-preview" class="border rounded p-3">
+                                                        <div class="preview-navbar mb-3" style="background: var(--bs-primary, #dc3545); color: white; padding: 10px; border-radius: 4px;">
+                                                            <strong>Navigation</strong>
+                                                        </div>
+                                                        <div class="preview-content">
+                                                            <button class="btn btn-primary mb-2">Bouton Principal</button><br>
+                                                            <button class="btn btn-secondary mb-2">Bouton Secondaire</button><br>
+                                                            <button class="btn btn-success mb-2">Bouton Succès</button><br>
+                                                            <div class="alert alert-primary" role="alert">Exemple d'alerte primaire</div>
+                                                        </div>
+                                                    </div>
+                                                    
+                                                    <div class="mt-3">
+                                                        <h6>Informations d'héritage</h6>
+                                                        <div id="inheritance-info">
+                                                            <small class="text-muted">Chargement...</small>
+                                                        </div>
+                                                    </div>
+                                                </div>
+                                            </div>
+                                        </div>
+                                </div>
+                            </div>
+                            <div class="tab-pane fade" id="templates-documents-content" role="tabpanel">
+                                <div class="admin-section">
+                                    <h5 class="section-title">
+                                        <i class="fas fa-file-alt me-2"></i>Templates de documents
+                                    </h5>
+                                    <div class="row">
+                                        <div class="col-12">
+                                            {% if is_societe_mere %}
+                                                <p class="text-muted">Templates de base utilisés par défaut par toutes les sociétés.</p>
+                                            {% else %}
+                                                <p class="text-muted">Templates spécifiques à cette enseigne (surcharge optionnelle).</p>
+                                            {% endif %}
+                                            <div id="templates-management"></div>
+                                        </div>
                                     </div>
-                                    <p class="text-muted mt-2">Chargement des environnements...</p>
                                 </div>
                             </div>
                         </div>
@@ -852,6 +1048,78 @@
             </div>
         </div>
 
+        
+        <!-- Section Paramètres Enseigne (société fille uniquement) -->
+        {% if not is_societe_mere %}
+        <div class="tab-pane fade" id="parametres-enseigne" role="tabpanel">
+            <div class="admin-section">
+                <h3 class="section-title">
+                    <i class="fas fa-cog me-2"></i>Paramètres de l'Enseigne
+                </h3>
+                
+                <div class="row">
+                    <div class="col-md-6">
+                        <h5>Identité Visuelle</h5>
+                        <p class="text-muted">Logo, couleurs et éléments visuels spécifiques à cette enseigne.</p>
+                        <div id="identite-visuelle"></div>
+                    </div>
+                    <div class="col-md-6">
+                        <h5>Communication</h5>
+                        <p class="text-muted">Signature email, coordonnées spécifiques à l'enseigne.</p>
+                        <div id="communication-enseigne"></div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        {% endif %}
+        
+        <!-- Section Unités & Tags (société mère uniquement) -->
+        {% if is_societe_mere %}
+        <div class="tab-pane fade" id="unites-tags" role="tabpanel">
+            <div class="admin-section">
+                <h3 class="section-title">
+                    <i class="fas fa-tags me-2"></i>Unités & Tags Clients
+                </h3>
+                
+                <!-- Navigation sous-onglets Unités & Tags -->
+                <ul class="nav nav-pills mb-4" role="tablist">
+                    <li class="nav-item">
+                        <a class="nav-link active" data-bs-toggle="pill" href="#unites-content" role="tab">
+                            <i class="fas fa-ruler me-1"></i>Unités
+                        </a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link" data-bs-toggle="pill" href="#tags-content" role="tab">
+                            <i class="fas fa-tag me-1"></i>Tags Clients
+                        </a>
+                    </li>
+                </ul>
+                
+                <div class="tab-content">
+                    <div class="tab-pane fade show active" id="unites-content" role="tabpanel">
+                        <div id="unites-management"></div>
+                    </div>
+                    
+                    <div class="tab-pane fade" id="tags-content" role="tabpanel">
+                        <div id="tags-management"></div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        {% endif %}
+
+        <!-- Section Utilisateurs (société mère uniquement) -->
+        {% if is_societe_mere %}
+        <div class="tab-pane fade" id="utilisateurs" role="tabpanel">
+            <div class="admin-section">
+                <h3 class="section-title">
+                    <i class="fas fa-users me-2"></i>Gestion des Utilisateurs
+                </h3>
+                <div id="utilisateurs-management"></div>
+            </div>
+        </div>
+        {% endif %}
+
     </div>
 </div>
 
@@ -871,6 +1139,7 @@
         
         function loadTabContent(tabId) {
             console.log('🔍 DEBUG: loadTabContent called for:', tabId);
+            
             
             const tabContent = document.querySelector(tabId + ' .admin-section');
             console.log('🔍 DEBUG: tabContent found:', !!tabContent);
@@ -1181,23 +1450,34 @@
             
             switch(subTabId) {
                 case '#societes-content':
-                    // TODO: À implémenter
+                    url = '{{ path("app_admin_societes") }}';
                     targetContentId = '#societes-content';
-                    document.querySelector(targetContentId).innerHTML = '<div class="alert alert-info"><i class="fas fa-info-circle me-2"></i>Section "Gestion Sociétés" à implémenter</div>';
                     break;
                 case '#users-content':
                     url = '{{ path("app_admin_users") }}';
                     targetContentId = '#users-content';
                     break;
                 case '#groupes-users-content':
-                    // TODO: À implémenter
+                    url = '{{ path("app_admin_groupes_utilisateurs") }}';
                     targetContentId = '#groupes-users-content';
-                    document.querySelector(targetContentId).innerHTML = '<div class="alert alert-info"><i class="fas fa-info-circle me-2"></i>Section "Groupes Utilisateurs" à implémenter</div>';
                     break;
-                case '#environnements-content':
-                    // TODO: À implémenter
-                    targetContentId = '#environnements-content';
-                    document.querySelector(targetContentId).innerHTML = '<div class="alert alert-info"><i class="fas fa-info-circle me-2"></i>Section "Environnements" à implémenter</div>';
+                case '#themes-couleurs-content':
+                    targetContentId = '#themes-couleurs-content';
+                    // Le contenu est déjà présent dans le HTML, initialiser les fonctionnalités
+                    const themesElement = document.querySelector(targetContentId);
+                    if (themesElement && !themesElement.dataset.loaded) {
+                        initEnvironmentTab();
+                        themesElement.dataset.loaded = 'true';
+                    }
+                    break;
+                case '#templates-documents-content':
+                    targetContentId = '#templates-documents-content';
+                    // Le contenu est déjà présent dans le HTML, initialiser les fonctionnalités templates
+                    const templatesElement = document.querySelector(targetContentId);
+                    if (templatesElement && !templatesElement.dataset.loaded) {
+                        initTemplatesTab();
+                        templatesElement.dataset.loaded = 'true';
+                    }
                     break;
             }
             
@@ -1260,6 +1540,10 @@
                                 functionName = 'initUsers';
                                 initFunction = window.initUsers;
                                 break;
+                            case '#societes-content':
+                                functionName = 'initSocietes';
+                                initFunction = window.initSocietes;
+                                break;
                             case '#unites-content':
                                 functionName = 'initUnites';
                                 initFunction = window.initUnites;
@@ -1287,6 +1571,419 @@
         
         // Les fonctions d'initialisation sont définies dans chaque template AJAX
         // et seront disponibles après le chargement du contenu
+        
+        // Variables globales pour l'environnement
+        let currentEnvironmentData = null;
+        
+        // Initialisation de l'onglet Environnement
+        function initEnvironmentTab() {
+            console.log('🎨 Initializing Environment Tab');
+            loadEnvironmentData();
+            setupEnvironmentEventListeners();
+        }
+
+        // Initialisation de l'onglet Templates
+        function initTemplatesTab() {
+            console.log('📄 Initializing Templates Tab');
+            loadTemplatesData();
+        }
+
+        // Charger les données des templates
+        async function loadTemplatesData() {
+            try {
+                console.log('📄 Loading templates data...');
+                const container = document.getElementById('templates-management');
+                if (container) {
+                    container.innerHTML = `
+                        <div class="alert alert-info">
+                            <i class="fas fa-info-circle me-2"></i>
+                            <strong>Templates de documents</strong><br>
+                            Gestion des modèles de documents (devis, factures, etc.) - Fonctionnalité à venir
+                        </div>
+                        <div class="row">
+                            <div class="col-md-6">
+                                <div class="card">
+                                    <div class="card-header">
+                                        <h6><i class="fas fa-file-invoice me-1"></i> Templates Commerciaux</h6>
+                                    </div>
+                                    <div class="card-body">
+                                        <ul class="list-group list-group-flush">
+                                            <li class="list-group-item d-flex justify-content-between">
+                                                <span>Template Devis</span>
+                                                <span class="badge bg-success">Actif</span>
+                                            </li>
+                                            <li class="list-group-item d-flex justify-content-between">
+                                                <span>Template Facture</span>
+                                                <span class="badge bg-warning">À développer</span>
+                                            </li>
+                                            <li class="list-group-item d-flex justify-content-between">
+                                                <span>Template Bon de livraison</span>
+                                                <span class="badge bg-warning">À développer</span>
+                                            </li>
+                                        </ul>
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="col-md-6">
+                                <div class="card">
+                                    <div class="card-header">
+                                        <h6><i class="fas fa-envelope me-1"></i> Templates Email</h6>
+                                    </div>
+                                    <div class="card-body">
+                                        <ul class="list-group list-group-flush">
+                                            <li class="list-group-item d-flex justify-content-between">
+                                                <span>Email Devis</span>
+                                                <span class="badge bg-success">Actif</span>
+                                            </li>
+                                            <li class="list-group-item d-flex justify-content-between">
+                                                <span>Email Facture</span>
+                                                <span class="badge bg-warning">À développer</span>
+                                            </li>
+                                            <li class="list-group-item d-flex justify-content-between">
+                                                <span>Email Relance</span>
+                                                <span class="badge bg-warning">À développer</span>
+                                            </li>
+                                        </ul>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    `;
+                }
+            } catch (error) {
+                console.error('❌ Error loading templates:', error);
+                const container = document.getElementById('templates-management');
+                if (container) {
+                    container.innerHTML = '<div class="alert alert-danger">Erreur lors du chargement des templates</div>';
+                }
+            }
+        }
+        
+        // Charger les données d'environnement
+        async function loadEnvironmentData() {
+            try {
+                const response = await fetch('/admin/environment');
+                if (!response.ok) throw new Error('Erreur lors du chargement');
+                
+                currentEnvironmentData = await response.json();
+                console.log('🎨 Environment data loaded:', currentEnvironmentData);
+                
+                updateEnvironmentForm();
+                updateInheritanceInfo();
+                updatePreview();
+                
+            } catch (error) {
+                console.error('❌ Error loading environment data:', error);
+                showNotification('error', 'Erreur lors du chargement des paramètres environnement');
+            }
+        }
+        
+        // Mettre à jour le formulaire avec les données
+        function updateEnvironmentForm() {
+            if (!currentEnvironmentData) return;
+            
+            const { theme } = currentEnvironmentData;
+            
+            // Mettre à jour les couleurs
+            document.getElementById('primary-color').value = theme.colors.primary;
+            document.getElementById('secondary-color').value = theme.colors.secondary;
+            document.getElementById('tertiary-color').value = theme.colors.tertiary;
+            
+            // Mettre à jour le thème sélectionné
+            document.getElementById('theme-select').value = theme.name;
+            
+            // Mettre à jour le logo
+            updateLogoDisplay(theme.logo);
+        }
+        
+        // Mettre à jour l'affichage du logo
+        function updateLogoDisplay(logoUrl) {
+            const logoCurrentDiv = document.getElementById('logo-current');
+            const logoPlaceholder = document.getElementById('logo-placeholder');
+            const logoImage = document.getElementById('logo-image');
+            
+            if (logoUrl) {
+                logoImage.src = logoUrl;
+                logoCurrentDiv.style.display = 'block';
+                logoPlaceholder.style.display = 'none';
+            } else {
+                logoCurrentDiv.style.display = 'none';
+                logoPlaceholder.style.display = 'block';
+            }
+        }
+        
+        // Mettre à jour les informations d'héritage
+        function updateInheritanceInfo() {
+            if (!currentEnvironmentData) return;
+            
+            const { societe, inheritance_info } = currentEnvironmentData;
+            let html = '';
+            
+            if (societe.is_mere) {
+                html = '<small class="text-success"><i class="fas fa-crown"></i> Société mère - Configuration principale</small>';
+            } else {
+                html = `<small class="text-info"><i class="fas fa-link"></i> Hérite de: ${societe.parent_name}</small><br>`;
+                
+                // Afficher l'état d'héritage des couleurs
+                const colorStatus = inheritance_info.has_local_colors;
+                html += '<div class="mt-2">';
+                html += `<span class="badge bg-${colorStatus.primary ? 'success' : 'secondary'} me-1">Primaire</span>`;
+                html += `<span class="badge bg-${colorStatus.secondary ? 'success' : 'secondary'} me-1">Secondaire</span>`;
+                html += `<span class="badge bg-${colorStatus.tertiary ? 'success' : 'secondary'}">Tertiaire</span>`;
+                html += '</div>';
+                
+                html += `<div class="mt-1"><small>${inheritance_info.has_local_logo ? '✅' : '⬆️'} Logo</small></div>`;
+            }
+            
+            document.getElementById('inheritance-info').innerHTML = html;
+        }
+        
+        // Mettre à jour la prévisualisation
+        function updatePreview() {
+            if (!currentEnvironmentData) return;
+            
+            const { theme } = currentEnvironmentData;
+            const root = document.documentElement;
+            
+            // Mettre à jour les variables CSS pour la prévisualisation
+            root.style.setProperty('--bs-primary', theme.colors.primary);
+            root.style.setProperty('--bs-secondary', theme.colors.secondary);
+            root.style.setProperty('--bs-success', theme.colors.tertiary);
+        }
+        
+        // Configuration des événements
+        function setupEnvironmentEventListeners() {
+            // Formulaire couleurs
+            document.getElementById('colors-form').addEventListener('submit', handleColorsSubmit);
+            
+            // Sélecteur de thème
+            document.getElementById('theme-select').addEventListener('change', handleThemeChange);
+            
+            // Bouton reset
+            document.getElementById('reset-colors').addEventListener('click', handleResetColors);
+            
+            // Changement de couleurs en temps réel
+            ['primary-color', 'secondary-color', 'tertiary-color'].forEach(id => {
+                document.getElementById(id).addEventListener('input', updatePreview);
+            });
+            
+            // Upload logo
+            document.getElementById('logo-upload').addEventListener('change', handleLogoFileSelected);
+            document.getElementById('upload-logo').addEventListener('click', handleLogoUpload);
+            document.getElementById('delete-logo').addEventListener('click', handleLogoDelete);
+            
+            // Gestion des onglets Pills pour l'environnement
+            document.querySelectorAll('a[data-bs-toggle="pill"]').forEach(tab => {
+                tab.addEventListener('shown.bs.tab', function (event) {
+                    const target = event.target.getAttribute('href');
+                    if (target === '#templates-content') {
+                        loadTemplatesManagement();
+                    }
+                });
+            });
+        }
+        
+        // Gestion de la soumission des couleurs
+        async function handleColorsSubmit(e) {
+            e.preventDefault();
+            
+            const formData = new FormData(e.target);
+            const colors = {
+                primary: formData.get('primary'),
+                secondary: formData.get('secondary'),
+                tertiary: formData.get('tertiary')
+            };
+            
+            try {
+                const response = await fetch('/admin/environment/colors', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(colors)
+                });
+                
+                if (!response.ok) throw new Error('Erreur de sauvegarde');
+                
+                showNotification('success', 'Couleurs enregistrées avec succès');
+                loadEnvironmentData(); // Recharger les données
+                
+            } catch (error) {
+                console.error('❌ Error saving colors:', error);
+                showNotification('error', 'Erreur lors de la sauvegarde des couleurs');
+            }
+        }
+        
+        // Gestion du changement de thème
+        async function handleThemeChange(e) {
+            const themeName = e.target.value;
+            
+            // Appliquer les couleurs du thème
+            const themeColors = {
+                'default': { primary: '#dc3545', secondary: '#6c757d', tertiary: '#28a745' },
+                'blue': { primary: '#007bff', secondary: '#28a745', tertiary: '#17a2b8' },
+                'green': { primary: '#28a745', secondary: '#17a2b8', tertiary: '#20c997' },
+                'yellow': { primary: '#ffc107', secondary: '#fd7e14', tertiary: '#e0a800' }
+            };
+            
+            const colors = themeColors[themeName];
+            if (colors) {
+                document.getElementById('primary-color').value = colors.primary;
+                document.getElementById('secondary-color').value = colors.secondary;
+                document.getElementById('tertiary-color').value = colors.tertiary;
+                updatePreview();
+            }
+            
+            // Sauvegarder le thème
+            try {
+                const response = await fetch('/admin/environment/theme', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ theme: themeName })
+                });
+                
+                if (!response.ok) throw new Error('Erreur de sauvegarde');
+                showNotification('success', 'Thème appliqué avec succès');
+                
+            } catch (error) {
+                console.error('❌ Error saving theme:', error);
+                showNotification('error', 'Erreur lors de la sauvegarde du thème');
+            }
+        }
+        
+        // Réinitialiser les couleurs
+        function handleResetColors() {
+            if (!confirm('Réinitialiser aux couleurs par défaut ?')) return;
+            
+            document.getElementById('primary-color').value = '#dc3545';
+            document.getElementById('secondary-color').value = '#6c757d';
+            document.getElementById('tertiary-color').value = '#28a745';
+            document.getElementById('theme-select').value = 'default';
+            updatePreview();
+        }
+        
+        // Sélection fichier logo
+        function handleLogoFileSelected(e) {
+            const file = e.target.files[0];
+            const uploadBtn = document.getElementById('upload-logo');
+            
+            if (file) {
+                // Validation basique
+                if (file.size > 2 * 1024 * 1024) {
+                    alert('Le fichier est trop volumineux (max 2MB)');
+                    e.target.value = '';
+                    uploadBtn.disabled = true;
+                    return;
+                }
+                
+                if (!file.type.startsWith('image/')) {
+                    alert('Veuillez sélectionner un fichier image');
+                    e.target.value = '';
+                    uploadBtn.disabled = true;
+                    return;
+                }
+                
+                uploadBtn.disabled = false;
+            } else {
+                uploadBtn.disabled = true;
+            }
+        }
+        
+        // Upload logo
+        async function handleLogoUpload() {
+            const fileInput = document.getElementById('logo-upload');
+            const file = fileInput.files[0];
+            
+            if (!file) return;
+            
+            const formData = new FormData();
+            formData.append('logo', file);
+            
+            try {
+                const response = await fetch('/admin/environment/logo', {
+                    method: 'POST',
+                    body: formData
+                });
+                
+                if (!response.ok) throw new Error('Erreur upload');
+                
+                const result = await response.json();
+                showNotification('success', result.message);
+                updateLogoDisplay(result.logo_url);
+                fileInput.value = '';
+                document.getElementById('upload-logo').disabled = true;
+                
+            } catch (error) {
+                console.error('❌ Error uploading logo:', error);
+                showNotification('error', 'Erreur lors du téléchargement du logo');
+            }
+        }
+        
+        // Supprimer logo
+        async function handleLogoDelete() {
+            if (!confirm('Supprimer le logo ?')) return;
+            
+            try {
+                const response = await fetch('/admin/environment/logo', {
+                    method: 'DELETE'
+                });
+                
+                if (!response.ok) throw new Error('Erreur suppression');
+                
+                const result = await response.json();
+                showNotification('success', result.message);
+                updateLogoDisplay(null);
+                
+            } catch (error) {
+                console.error('❌ Error deleting logo:', error);
+                showNotification('error', 'Erreur lors de la suppression du logo');
+            }
+        }
+        
+        // Gestion des templates
+        async function loadTemplatesManagement() {
+            const container = document.getElementById('templates-management');
+            if (!container || container.dataset.loaded === 'true') return;
+            
+            try {
+                container.innerHTML = '<div class="text-center p-4"><div class="spinner-border text-primary" role="status"><span class="visually-hidden">Chargement...</span></div><p class="text-muted mt-2">Chargement de la gestion des templates...</p></div>';
+                
+                const response = await fetch('/admin/templates');
+                if (!response.ok) throw new Error('Erreur lors du chargement');
+                
+                const html = await response.text();
+                container.innerHTML = html;
+                container.dataset.loaded = 'true';
+                
+                console.log('📄 Templates management loaded successfully');
+            } catch (error) {
+                console.error('❌ Error loading templates management:', error);
+                container.innerHTML = '<div class="alert alert-danger"><i class="fas fa-exclamation-triangle me-2"></i>Erreur lors du chargement de la gestion des templates</div>';
+            }
+        }
+        
+        // Fonction utilitaire pour afficher les notifications
+        function showNotification(type, message) {
+            // Créer une notification toast simple
+            const alertClass = type === 'success' ? 'alert-success' : 'alert-danger';
+            const icon = type === 'success' ? 'fa-check-circle' : 'fa-exclamation-triangle';
+            
+            const notification = document.createElement('div');
+            notification.className = `alert ${alertClass} alert-dismissible fade show position-fixed`;
+            notification.style.cssText = 'top: 20px; right: 20px; z-index: 9999; min-width: 300px;';
+            notification.innerHTML = `
+                <i class="fas ${icon} me-2"></i>${message}
+                <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+            `;
+            
+            document.body.appendChild(notification);
+            
+            // Auto-suppression après 5 secondes
+            setTimeout(() => {
+                if (notification.parentNode) {
+                    notification.remove();
+                }
+            }, 5000);
+        }
+        
     });
     </script>
 {% endblock %}

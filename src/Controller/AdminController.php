@@ -3,6 +3,7 @@
 namespace App\Controller;
 
 use App\Entity\User;
+use App\Entity\Societe;
 use App\Entity\FormeJuridique;
 use App\Entity\Secteur;
 use App\Entity\Produit;
@@ -18,14 +19,19 @@ use App\Entity\PalierFraisPort;
 use App\Entity\Transporteur;
 use App\Entity\MethodeExpedition;
 use App\Entity\ModeleDocument;
+use App\Entity\DocumentTemplate;
 use App\Entity\DivisionAdministrative;
 use App\Entity\TypeSecteur;
 use App\Entity\AttributionSecteur;
 use App\Entity\ExclusionSecteur;
+use App\Entity\GroupeUtilisateur;
 use App\Service\DocumentNumerotationService;
 use App\Service\EpciBoundariesService;
 use App\Service\CommuneGeometryService;
 use App\Service\GeographicBoundariesService;
+use App\Service\TenantService;
+use App\Service\InheritanceService;
+use App\Service\ThemeService;
 use Doctrine\ORM\EntityManagerInterface;
 use Symfony\Bundle\FrameworkBundle\Controller\AbstractController;
 use Symfony\Component\HttpFoundation\Request;
@@ -40,8 +46,11 @@ use Symfony\Component\Cache\Adapter\FilesystemAdapter;
 final class AdminController extends AbstractController
 {
     #[Route('/', name: 'app_admin_dashboard', methods: ['GET'])]
-    public function dashboard(EntityManagerInterface $entityManager): Response
+    public function dashboard(EntityManagerInterface $entityManager, TenantService $tenantService): Response
     {
+        // Récupération de la société courante
+        $currentSociete = $tenantService->getCurrentSociete();
+        $isSocieteMere = $currentSociete ? $currentSociete->isMere() : true;
         // Statistiques générales pour le dashboard admin
         $stats = [
             'users' => $entityManager->getRepository(User::class)->count([]),
@@ -68,13 +77,21 @@ final class AdminController extends AbstractController
             // Nouvelles entités système secteurs
             'divisions_administratives' => $entityManager->getRepository(DivisionAdministrative::class)->count(['actif' => true]),
             'types_secteur' => $entityManager->getRepository(TypeSecteur::class)->count(['actif' => true]),
-            'attributions_secteur' => $entityManager->getRepository(AttributionSecteur::class)->count([])
+            'attributions_secteur' => $entityManager->getRepository(AttributionSecteur::class)->count([]),
+            // Statistiques sociétés
+            'societes_meres' => $entityManager->getRepository(Societe::class)->count(['type' => 'mere']),
+            'societes_filles' => $entityManager->getRepository(Societe::class)->count(['type' => 'fille']),
+            // Statistiques groupes utilisateurs
+            'groupes_utilisateurs' => $entityManager->getRepository(GroupeUtilisateur::class)->count([]),
+            'groupes_actifs' => $entityManager->getRepository(GroupeUtilisateur::class)->count(['actif' => true]),
         ];
 
         return $this->render('admin/dashboard.html.twig', [
             'stats' => $stats,
             'google_maps_api_key' => $this->getParameter('google.maps.api.key'),
             'secteurs' => $entityManager->getRepository(Secteur::class)->findBy([], ['nomSecteur' => 'ASC']),
+            'current_societe' => $currentSociete,
+            'is_societe_mere' => $isSocieteMere,
         ]);
     }
 
@@ -217,9 +234,13 @@ final class AdminController extends AbstractController
     public function users(EntityManagerInterface $entityManager): Response
     {
         $users = $entityManager->getRepository(User::class)->findBy([], ['nom' => 'ASC']);
+        $groupes = $entityManager->getRepository(GroupeUtilisateur::class)->findAllOrdered();
+        $societes = $entityManager->getRepository(Societe::class)->findBy(['active' => true], ['nom' => 'ASC']);
 
         return $this->render('admin/users.html.twig', [
             'users' => $users,
+            'groupes' => $groupes,
+            'societes' => $societes,
         ]);
     }
 
@@ -256,6 +277,299 @@ final class AdminController extends AbstractController
         return $this->json([
             'success' => true,
             'roles' => $user->getRoles()
+        ]);
+    }
+
+    #[Route('/users/{id}/groupes', name: 'app_admin_users_get_groupes', methods: ['GET'])]
+    public function getUserGroupes(User $user): JsonResponse
+    {
+        $groupes = [];
+        foreach ($user->getGroupes() as $groupe) {
+            $groupes[] = [
+                'id' => $groupe->getId(),
+                'nom' => $groupe->getNom(),
+                'niveau' => $groupe->getNiveau(),
+                'couleur' => $groupe->getCouleur(),
+                'societes' => array_map(fn($s) => ['id' => $s->getId(), 'nom' => $s->getNom()], 
+                                      $groupe->getSocietes()->toArray())
+            ];
+        }
+        
+        return $this->json(['groupes' => $groupes]);
+    }
+
+    #[Route('/users/{id}/groupes', name: 'app_admin_users_update_groupes', methods: ['PUT'])]
+    public function updateUserGroupes(User $user, Request $request, EntityManagerInterface $entityManager): JsonResponse
+    {
+        $data = json_decode($request->getContent(), true);
+        
+        if (!isset($data['groupes']) || !is_array($data['groupes'])) {
+            return $this->json(['error' => 'Groupes invalides'], 400);
+        }
+        
+        // Supprimer tous les groupes actuels
+        foreach ($user->getGroupes() as $groupe) {
+            $user->removeGroupe($groupe);
+        }
+        
+        // Ajouter les nouveaux groupes
+        foreach ($data['groupes'] as $groupeId) {
+            $groupe = $entityManager->getRepository(GroupeUtilisateur::class)->find($groupeId);
+            if ($groupe && $groupe->isActif()) {
+                $user->addGroupe($groupe);
+            }
+        }
+        
+        // Mettre à jour la société principale si fournie
+        if (isset($data['societe_principale_id'])) {
+            $societePrincipale = $entityManager->getRepository(Societe::class)->find($data['societe_principale_id']);
+            if ($societePrincipale) {
+                $user->setSocietePrincipale($societePrincipale);
+            }
+        }
+        
+        $entityManager->flush();
+        
+        return $this->json(['success' => true, 'message' => 'Groupes mis à jour avec succès']);
+    }
+
+    #[Route('/societes', name: 'app_admin_societes', methods: ['GET'])]
+    public function societes(EntityManagerInterface $entityManager, TenantService $tenantService): Response
+    {
+        $currentSociete = $tenantService->getCurrentSociete();
+        
+        // Récupérer toutes les sociétés pour une société mère ou seulement la société actuelle si c'est une fille
+        if ($currentSociete && $currentSociete->isMere()) {
+            $societes = $entityManager->getRepository(Societe::class)->findBy([], ['ordre' => 'ASC', 'nom' => 'ASC']);
+        } else {
+            $societes = $currentSociete ? [$currentSociete] : [];
+        }
+
+        return $this->render('admin/societes.html.twig', [
+            'societes' => $societes,
+            'current_societe' => $currentSociete,
+            'is_societe_mere' => $currentSociete ? $currentSociete->isMere() : false,
+        ]);
+    }
+
+    #[Route('/societes/{id}', name: 'app_admin_societe_get', methods: ['GET'], requirements: ['id' => '\d+'])]
+    public function getSociete(Societe $societe): JsonResponse
+    {
+        return $this->json([
+            'success' => true,
+            'societe' => [
+                'id' => $societe->getId(),
+                'nom' => $societe->getNom(),
+                'type' => $societe->getType(),
+                'adresse' => $societe->getAdresse(),
+                'codePostal' => $societe->getCodePostal(),
+                'ville' => $societe->getVille(),
+                'telephone' => $societe->getTelephone(),
+                'email' => $societe->getEmail(),
+                'siret' => $societe->getSiret(),
+                'couleurPrimaire' => $societe->getCouleurPrimaire(),
+                'couleurSecondaire' => $societe->getCouleurSecondaire(),
+                'active' => $societe->isActive(),
+                'parentId' => $societe->getSocieteParent()?->getId(),
+                'parentNom' => $societe->getSocieteParent()?->getNom(),
+            ]
+        ]);
+    }
+
+    #[Route('/societes', name: 'app_admin_societe_create', methods: ['POST'])]
+    public function createSociete(Request $request, EntityManagerInterface $entityManager, TenantService $tenantService): JsonResponse
+    {
+        try {
+            $data = json_decode($request->getContent(), true);
+            
+            if (!$data) {
+                return $this->json(['success' => false, 'error' => 'Données JSON invalides'], 400);
+            }
+            
+            if (!isset($data['nom']) || empty(trim($data['nom']))) {
+                return $this->json(['success' => false, 'error' => 'Le nom de la société est obligatoire'], 400);
+            }
+
+            $currentSociete = $tenantService->getCurrentSociete();
+            
+            $societe = new Societe();
+            $societe->setNom(trim($data['nom']))
+                    ->setType($data['type'] ?? 'fille')
+                    ->setAdresse($data['adresse'] ?? '')
+                    ->setCodePostal($data['codePostal'] ?? '')
+                    ->setVille($data['ville'] ?? '')
+                    ->setTelephone($data['telephone'] ?? '')
+                    ->setEmail($data['email'] ?? '')
+                    ->setSiret($data['siret'] ?? '')
+                    ->setCouleurPrimaire($data['couleurPrimaire'] ?? null)
+                    ->setCouleurSecondaire($data['couleurSecondaire'] ?? null)
+                    ->setActive($data['active'] ?? true);
+            
+            // Gestion de la société parente
+            if (isset($data['societeParentId']) && !empty($data['societeParentId'])) {
+                $societeParent = $entityManager->getRepository(Societe::class)->find($data['societeParentId']);
+                if ($societeParent && $societeParent->isMere()) {
+                    $societe->setSocieteParent($societeParent);
+                    // Forcer le type à 'fille' si on assigne un parent
+                    $societe->setType('fille');
+                } else {
+                    return $this->json(['success' => false, 'error' => 'Société parente invalide'], 400);
+                }
+            } elseif ($societe->getType() === 'fille') {
+                // Une société fille doit avoir un parent
+                return $this->json(['success' => false, 'error' => 'Une société fille doit avoir une société mère'], 400);
+            }
+            
+            // createdAt et updatedAt sont automatiquement définis dans le constructeur et updateTimestamp()
+
+            // Si c'est une société fille et qu'on a une société mère courante
+            if ($societe->getType() === 'fille' && $currentSociete && $currentSociete->isMere()) {
+                $societe->setSocieteParent($currentSociete);
+            }
+
+            $entityManager->persist($societe);
+            $entityManager->flush();
+
+            return $this->json([
+                'success' => true, 
+                'message' => 'Société créée avec succès',
+                'societe' => [
+                    'id' => $societe->getId(),
+                    'nom' => $societe->getNom(),
+                    'type' => $societe->getType(),
+                ]
+            ]);
+            
+        } catch (\Exception $e) {
+            return $this->json(['success' => false, 'error' => 'Erreur lors de la création de la société: ' . $e->getMessage()], 500);
+        }
+    }
+
+    #[Route('/societes/{id}', name: 'app_admin_societe_update', methods: ['PUT'], requirements: ['id' => '\d+'])]
+    public function updateSociete(Societe $societe, Request $request, EntityManagerInterface $entityManager): JsonResponse
+    {
+        $data = json_decode($request->getContent(), true);
+        
+        // Debug : log des données reçues dans un fichier spécifique
+        $debugFile = __DIR__ . '/../../var/societe_debug.log';
+        file_put_contents($debugFile, date('Y-m-d H:i:s') . ' - DEBUG SOCIETE UPDATE - ID: ' . $societe->getId() . PHP_EOL, FILE_APPEND);
+        file_put_contents($debugFile, date('Y-m-d H:i:s') . ' - DEBUG SOCIETE UPDATE - Ancien type: ' . $societe->getType() . PHP_EOL, FILE_APPEND);
+        file_put_contents($debugFile, date('Y-m-d H:i:s') . ' - DEBUG SOCIETE UPDATE - Données reçues: ' . json_encode($data) . PHP_EOL, FILE_APPEND);
+        
+        if (!isset($data['nom']) || empty(trim($data['nom']))) {
+            return $this->json(['error' => 'Le nom de la société est obligatoire'], 400);
+        }
+
+        $societe->setNom(trim($data['nom']));
+        
+        // Gestion du type de société
+        if (isset($data['type'])) {
+            $oldType = $societe->getType();
+            $newType = $data['type'];
+            
+            $societe->setType($newType);
+            
+            // Si on passe de fille à mère, supprimer la relation parent
+            if ($oldType === 'fille' && $newType === 'mere') {
+                $societe->setSocieteParent(null);
+            }
+            // Si on passe de mère à fille, il faudra définir un parent via l'interface
+            // (on ne peut pas le deviner automatiquement)
+        }
+        
+        // Gestion de la société parente pour les sociétés filles
+        if (isset($data['societeParentId'])) {
+            if ($data['societeParentId']) {
+                $societeParent = $entityManager->getRepository(Societe::class)->find($data['societeParentId']);
+                if ($societeParent && $societeParent->isMere()) {
+                    $societe->setSocieteParent($societeParent);
+                    // Forcer le type à 'fille' si on assigne un parent
+                    $societe->setType('fille');
+                }
+            } else {
+                // Si societeParentId est null ou vide, supprimer la relation parent
+                $societe->setSocieteParent(null);
+                // Si plus de parent, devenir société mère
+                $societe->setType('mere');
+            }
+        }
+        
+        if (isset($data['adresse'])) $societe->setAdresse($data['adresse']);
+        if (isset($data['codePostal'])) $societe->setCodePostal($data['codePostal']);
+        if (isset($data['ville'])) $societe->setVille($data['ville']);
+        if (isset($data['telephone'])) $societe->setTelephone($data['telephone']);
+        if (isset($data['email'])) $societe->setEmail($data['email']);
+        if (isset($data['siret'])) $societe->setSiret($data['siret']);
+        if (isset($data['couleurPrimaire'])) $societe->setCouleurPrimaire($data['couleurPrimaire']);
+        if (isset($data['couleurSecondaire'])) $societe->setCouleurSecondaire($data['couleurSecondaire']);
+        if (isset($data['active'])) $societe->setActive($data['active']);
+        
+        // Debug : log après traitement
+        file_put_contents($debugFile, date('Y-m-d H:i:s') . ' - DEBUG SOCIETE UPDATE - Nouveau type après traitement: ' . $societe->getType() . PHP_EOL, FILE_APPEND);
+        file_put_contents($debugFile, date('Y-m-d H:i:s') . ' - DEBUG SOCIETE UPDATE - Société parente après traitement: ' . ($societe->getSocieteParent()?->getId() ?? 'null') . PHP_EOL, FILE_APPEND);
+        
+        $entityManager->flush();
+
+        return $this->json([
+            'success' => true, 
+            'message' => 'Société modifiée avec succès'
+        ]);
+    }
+
+    #[Route('/societes/{id}/toggle', name: 'app_admin_societe_toggle', methods: ['POST'], requirements: ['id' => '\d+'])]
+    public function toggleSocieteActive(Societe $societe, EntityManagerInterface $entityManager): JsonResponse
+    {
+        $societe->setActive(!$societe->isActive());
+        $entityManager->flush();
+
+        return $this->json([
+            'success' => true,
+            'isActive' => $societe->isActive(),
+            'message' => $societe->isActive() ? 'Société activée' : 'Société désactivée'
+        ]);
+    }
+
+    #[Route('/societes/{id}', name: 'app_admin_societe_delete', methods: ['DELETE'], requirements: ['id' => '\d+'])]
+    public function deleteSociete(Societe $societe, EntityManagerInterface $entityManager): JsonResponse
+    {
+        // Vérifier si la société a des utilisateurs ou des données liées
+        $hasUsers = !$societe->getUserRoles()->isEmpty();
+        if ($hasUsers) {
+            return $this->json(['error' => 'Impossible de supprimer une société qui a des utilisateurs associés'], 400);
+        }
+
+        $entityManager->remove($societe);
+        $entityManager->flush();
+
+        return $this->json([
+            'success' => true,
+            'message' => 'Société supprimée avec succès'
+        ]);
+    }
+
+    #[Route('/societes/reorder', name: 'app_admin_societes_reorder', methods: ['POST'])]
+    public function reorderSocietes(Request $request, EntityManagerInterface $entityManager): JsonResponse
+    {
+        $data = json_decode($request->getContent(), true);
+        $societesOrder = $data['societes'] ?? [];
+
+        if (empty($societesOrder)) {
+            return $this->json(['error' => 'Données manquantes'], 400);
+        }
+
+        // Mettre à jour l'ordre de chaque société
+        foreach ($societesOrder as $index => $societeId) {
+            $societe = $entityManager->getRepository(Societe::class)->find($societeId);
+            if ($societe) {
+                $societe->setOrdre($index + 1);
+            }
+        }
+
+        $entityManager->flush();
+
+        return $this->json([
+            'success' => true,
+            'message' => 'Ordre des sociétés mis à jour avec succès'
         ]);
     }
 
@@ -4207,5 +4521,602 @@ www.technoprod.com';
         error_log("✅ Exclusions code postal $codePostal appliquées");
     }
 
+    /**
+     * Récupère les paramètres d'environnement pour la société courante
+     */
+    #[Route('/environment', name: 'app_admin_environment', methods: ['GET'])]
+    public function getEnvironment(
+        TenantService $tenantService,
+        InheritanceService $inheritanceService
+    ): JsonResponse {
+        $currentSociete = $tenantService->getCurrentSociete();
+        
+        if (!$currentSociete) {
+            return $this->json(['error' => 'Aucune société sélectionnée'], 400);
+        }
+
+        $colors = $inheritanceService->getColors($currentSociete);
+        $theme = $inheritanceService->getTheme($currentSociete);
+        $logo = $inheritanceService->getLogo($currentSociete);
+
+        return $this->json([
+            'societe' => [
+                'id' => $currentSociete->getId(),
+                'nom' => $currentSociete->getNom(),
+                'type' => $currentSociete->getType(),
+                'is_mere' => $currentSociete->isMere(),
+                'parent_name' => $currentSociete->getSocieteParent()?->getNom(),
+            ],
+            'theme' => [
+                'name' => $theme,
+                'colors' => $colors,
+                'logo' => $logo,
+            ],
+            'inheritance_info' => [
+                'has_local_colors' => [
+                    'primary' => $currentSociete->getCouleurPrimaire() !== null,
+                    'secondary' => $currentSociete->getCouleurSecondaire() !== null,
+                    'tertiary' => $currentSociete->getCouleurTertiaire() !== null,
+                ],
+                'has_local_logo' => $currentSociete->getLogo() !== null,
+                'has_local_theme' => $inheritanceService->hasLocalParameter($currentSociete, 'template_theme'),
+            ]
+        ]);
+    }
+
+    /**
+     * Met à jour les couleurs de la société courante
+     */
+    #[Route('/environment/colors', name: 'app_admin_environment_colors', methods: ['POST'])]
+    public function updateColors(
+        Request $request,
+        EntityManagerInterface $entityManager,
+        TenantService $tenantService
+    ): JsonResponse {
+        $currentSociete = $tenantService->getCurrentSociete();
+        
+        if (!$currentSociete) {
+            return $this->json(['error' => 'Aucune société sélectionnée'], 400);
+        }
+
+        $data = json_decode($request->getContent(), true);
+        
+        if (isset($data['primary']) && $data['primary']) {
+            $currentSociete->setCouleurPrimaire($data['primary']);
+        }
+        
+        if (isset($data['secondary']) && $data['secondary']) {
+            $currentSociete->setCouleurSecondaire($data['secondary']);
+        }
+        
+        if (isset($data['tertiary']) && $data['tertiary']) {
+            $currentSociete->setCouleurTertiaire($data['tertiary']);
+        }
+
+        $entityManager->flush();
+
+        return $this->json(['success' => true, 'message' => 'Couleurs mises à jour']);
+    }
+
+    /**
+     * Met à jour le logo de la société courante
+     */
+    #[Route('/environment/logo', name: 'app_admin_environment_logo', methods: ['POST'])]
+    public function updateLogo(
+        Request $request,
+        EntityManagerInterface $entityManager,
+        TenantService $tenantService
+    ): JsonResponse {
+        $currentSociete = $tenantService->getCurrentSociete();
+        
+        if (!$currentSociete) {
+            return $this->json(['error' => 'Aucune société sélectionnée'], 400);
+        }
+
+        $uploadedFile = $request->files->get('logo');
+        
+        if ($uploadedFile) {
+            // TODO: Validation du fichier (taille, type MIME, etc.)
+            $uploadDir = $this->getParameter('kernel.project_dir') . '/public/uploads/logos';
+            
+            if (!is_dir($uploadDir)) {
+                mkdir($uploadDir, 0777, true);
+            }
+            
+            $filename = uniqid('logo_') . '.' . $uploadedFile->guessExtension();
+            $uploadedFile->move($uploadDir, $filename);
+            
+            // Supprimer l'ancien logo s'il existe
+            $oldLogo = $currentSociete->getLogo();
+            if ($oldLogo && file_exists($this->getParameter('kernel.project_dir') . '/public' . $oldLogo)) {
+                unlink($this->getParameter('kernel.project_dir') . '/public' . $oldLogo);
+            }
+            
+            $currentSociete->setLogo('/uploads/logos/' . $filename);
+            $entityManager->flush();
+            
+            return $this->json([
+                'success' => true,
+                'logo_url' => '/uploads/logos/' . $filename,
+                'message' => 'Logo mis à jour'
+            ]);
+        }
+        
+        return $this->json(['error' => 'Aucun fichier reçu'], 400);
+    }
+
+    /**
+     * Supprime le logo de la société courante
+     */
+    #[Route('/environment/logo', name: 'app_admin_environment_logo_delete', methods: ['DELETE'])]
+    public function deleteLogo(
+        EntityManagerInterface $entityManager,
+        TenantService $tenantService
+    ): JsonResponse {
+        $currentSociete = $tenantService->getCurrentSociete();
+        
+        if (!$currentSociete) {
+            return $this->json(['error' => 'Aucune société sélectionnée'], 400);
+        }
+
+        $oldLogo = $currentSociete->getLogo();
+        if ($oldLogo && file_exists($this->getParameter('kernel.project_dir') . '/public' . $oldLogo)) {
+            unlink($this->getParameter('kernel.project_dir') . '/public' . $oldLogo);
+        }
+        
+        $currentSociete->setLogo(null);
+        $entityManager->flush();
+        
+        return $this->json(['success' => true, 'message' => 'Logo supprimé']);
+    }
+
+    /**
+     * Met à jour le thème de la société courante
+     */
+    #[Route('/environment/theme', name: 'app_admin_environment_theme', methods: ['POST'])]
+    public function updateTheme(
+        Request $request,
+        EntityManagerInterface $entityManager,
+        TenantService $tenantService
+    ): JsonResponse {
+        $currentSociete = $tenantService->getCurrentSociete();
+        
+        if (!$currentSociete) {
+            return $this->json(['error' => 'Aucune société sélectionnée'], 400);
+        }
+
+        $data = json_decode($request->getContent(), true);
+        
+        if (isset($data['theme'])) {
+            $validThemes = ['default', 'blue', 'green', 'yellow'];
+            if (in_array($data['theme'], $validThemes)) {
+                $currentSociete->setParametreCustom('template_theme', $data['theme']);
+                $entityManager->flush();
+                
+                return $this->json(['success' => true, 'message' => 'Thème mis à jour']);
+            }
+        }
+        
+        return $this->json(['error' => 'Thème invalide'], 400);
+    }
+
+    /**
+     * Génère un aperçu CSS pour la société courante
+     */
+    #[Route('/environment/preview-css', name: 'app_admin_environment_preview_css', methods: ['GET'])]
+    public function previewCSS(
+        TenantService $tenantService,
+        ThemeService $themeService
+    ): Response {
+        $currentSociete = $tenantService->getCurrentSociete();
+        
+        if (!$currentSociete) {
+            return new Response('/* Aucune société sélectionnée */', 200, ['Content-Type' => 'text/css']);
+        }
+
+        $css = $themeService->generateDynamicCSS($currentSociete);
+        
+        return new Response($css, 200, ['Content-Type' => 'text/css']);
+    }
+
+    /**
+     * Récupère les informations d'héritage pour une société
+     */
+    #[Route('/inheritance-info', name: 'app_admin_inheritance_info', methods: ['GET'])]
+    public function getInheritanceInfo(
+        InheritanceService $inheritanceService,
+        TenantService $tenantService
+    ): JsonResponse {
+        $currentSociete = $tenantService->getCurrentSociete();
+        
+        if (!$currentSociete) {
+            return $this->json(['error' => 'Aucune société sélectionnée'], 400);
+        }
+
+        $parametersInfo = $inheritanceService->getAllParametersInfo($currentSociete);
+        $visualParameters = $inheritanceService->getVisualParameters($currentSociete);
+
+        return $this->json([
+            'societe' => [
+                'id' => $currentSociete->getId(),
+                'nom' => $currentSociete->getNom(),
+                'type' => $currentSociete->getType(),
+                'is_mere' => $currentSociete->isMere(),
+                'is_fille' => $currentSociete->isFille(),
+                'parent_name' => $currentSociete->getSocieteParent()?->getNom(),
+            ],
+            'parameters_info' => $parametersInfo,
+            'visual_parameters' => $visualParameters,
+        ]);
+    }
+
+    // ROUTES GESTION TEMPLATES DOCUMENTS
+
+    #[Route('/templates', name: 'app_admin_templates', methods: ['GET'])]
+    public function templates(EntityManagerInterface $entityManager, TenantService $tenantService): Response
+    {
+        $currentSociete = $tenantService->getCurrentSociete();
+        $templates = $entityManager->getRepository(DocumentTemplate::class)->findBySocieteWithInheritance($currentSociete);
+        
+        return $this->render('admin/templates_simple.html.twig', [
+            'templates' => $templates,
+            'types_documents' => DocumentTemplate::getTypesDocuments(),
+            'current_societe' => $currentSociete,
+        ]);
+    }
+
+    #[Route('/templates/{id}', name: 'app_admin_template_get', methods: ['GET'], requirements: ['id' => '\d+'])]
+    public function getTemplate(DocumentTemplate $template): JsonResponse
+    {
+        return $this->json([
+            'id' => $template->getId(),
+            'type_document' => $template->getTypeDocument(),
+            'nom' => $template->getNom(),
+            'chemin_fichier' => $template->getCheminFichier(),
+            'description' => $template->getDescription(),
+            'est_actif' => $template->isEstActif(),
+            'est_defaut' => $template->isEstDefaut(),
+            'ordre' => $template->getOrdre(),
+            'societe_id' => $template->getSociete()?->getId(),
+            'societe_nom' => $template->getSociete()?->getNom(),
+        ]);
+    }
+
+    #[Route('/templates', name: 'app_admin_template_create', methods: ['POST'])]
+    public function createTemplate(Request $request, EntityManagerInterface $entityManager, TenantService $tenantService): JsonResponse
+    {
+        $data = json_decode($request->getContent(), true);
+        
+        if (!$data) {
+            return $this->json(['error' => 'Données JSON invalides'], 400);
+        }
+        
+        $template = new DocumentTemplate();
+        $template->setTypeDocument($data['type_document']);
+        $template->setNom($data['nom']);
+        $template->setCheminFichier($data['chemin_fichier']);
+        $template->setDescription($data['description'] ?? null);
+        $template->setEstActif($data['est_actif'] ?? true);
+        $template->setOrdre($data['ordre'] ?? 0);
+        
+        // Associer à la société courante si ce n'est pas un template global
+        if (isset($data['societe_id']) && $data['societe_id']) {
+            $societe = $entityManager->getRepository(Societe::class)->find($data['societe_id']);
+            if ($societe) {
+                $template->setSociete($societe);
+            }
+        }
+        
+        $entityManager->persist($template);
+        $entityManager->flush();
+        
+        // Réorganiser les ordres si nécessaire
+        if (isset($data['ordre']) && $data['ordre'] > 0) {
+            $entityManager->getRepository(DocumentTemplate::class)
+                ->reorganizeOrdres($template->getTypeDocument(), $template->getSociete());
+        }
+        
+        // Définir comme défaut si demandé
+        if ($data['est_defaut'] ?? false) {
+            $entityManager->getRepository(DocumentTemplate::class)->setAsDefault($template);
+        }
+        
+        return $this->json(['success' => true, 'message' => 'Template créé avec succès', 'id' => $template->getId()]);
+    }
+
+    #[Route('/templates/{id}', name: 'app_admin_template_update', methods: ['PUT'], requirements: ['id' => '\d+'])]
+    public function updateTemplate(DocumentTemplate $template, Request $request, EntityManagerInterface $entityManager): JsonResponse
+    {
+        $data = json_decode($request->getContent(), true);
+        
+        if (!$data) {
+            return $this->json(['error' => 'Données JSON invalides'], 400);
+        }
+        
+        if (isset($data['type_document'])) $template->setTypeDocument($data['type_document']);
+        if (isset($data['nom'])) $template->setNom($data['nom']);
+        if (isset($data['chemin_fichier'])) $template->setCheminFichier($data['chemin_fichier']);
+        if (isset($data['description'])) $template->setDescription($data['description']);
+        if (isset($data['est_actif'])) $template->setEstActif($data['est_actif']);
+        if (isset($data['ordre'])) $template->setOrdre($data['ordre']);
+        
+        $entityManager->flush();
+        
+        // Réorganiser les ordres si nécessaire
+        if (isset($data['ordre'])) {
+            $entityManager->getRepository(DocumentTemplate::class)
+                ->reorganizeOrdres($template->getTypeDocument(), $template->getSociete());
+        }
+        
+        // Définir comme défaut si demandé
+        if ($data['est_defaut'] ?? false) {
+            $entityManager->getRepository(DocumentTemplate::class)->setAsDefault($template);
+        }
+        
+        return $this->json(['success' => true, 'message' => 'Template mis à jour avec succès']);
+    }
+
+    #[Route('/templates/{id}', name: 'app_admin_template_delete', methods: ['DELETE'], requirements: ['id' => '\d+'])]
+    public function deleteTemplate(DocumentTemplate $template, EntityManagerInterface $entityManager): JsonResponse
+    {
+        try {
+            $entityManager->getRepository(DocumentTemplate::class)->safeRemove($template);
+            return $this->json(['success' => true, 'message' => 'Template supprimé avec succès']);
+        } catch (\Exception $e) {
+            return $this->json(['error' => 'Impossible de supprimer le template : ' . $e->getMessage()], 400);
+        }
+    }
+
+    #[Route('/templates/{id}/set-default', name: 'app_admin_template_set_default', methods: ['POST'], requirements: ['id' => '\d+'])]
+    public function setTemplateAsDefault(DocumentTemplate $template, EntityManagerInterface $entityManager): JsonResponse
+    {
+        try {
+            $entityManager->getRepository(DocumentTemplate::class)->setAsDefault($template);
+            return $this->json(['success' => true, 'message' => 'Template défini comme défaut']);
+        } catch (\Exception $e) {
+            return $this->json(['error' => 'Impossible de définir le template comme défaut : ' . $e->getMessage()], 400);
+        }
+    }
+
+    // ==========================================
+    // ROUTES GROUPES UTILISATEURS
+    // ==========================================
+
+    #[Route('/groupes-utilisateurs', name: 'app_admin_groupes_utilisateurs', methods: ['GET'])]
+    public function groupesUtilisateurs(EntityManagerInterface $entityManager): Response
+    {
+        $groupes = $entityManager->getRepository(GroupeUtilisateur::class)->findAllOrderedWithInactive();
+        $stats = $entityManager->getRepository(GroupeUtilisateur::class)->getStatistiques();
+        
+        // Permissions disponibles dans le système
+        $availablePermissions = [
+            'admin' => [
+                'admin.all' => 'Administration complète',
+                'users.manage' => 'Gestion des utilisateurs',
+                'companies.manage' => 'Gestion des sociétés',
+                'system.config' => 'Configuration système'
+            ],
+            'users' => [
+                'users.read' => 'Lecture utilisateurs',
+                'users.create' => 'Création utilisateurs',
+                'users.update' => 'Modification utilisateurs',
+                'users.delete' => 'Suppression utilisateurs'
+            ],
+            'companies' => [
+                'companies.read' => 'Lecture sociétés',
+                'companies.create' => 'Création sociétés',
+                'companies.update' => 'Modification sociétés',
+                'companies.delete' => 'Suppression sociétés'
+            ],
+            'documents' => [
+                'documents.all' => 'Gestion documents complète',
+                'documents.read' => 'Lecture documents',
+                'documents.create' => 'Création documents',
+                'documents.update' => 'Modification documents',
+                'documents.delete' => 'Suppression documents'
+            ],
+            'commercial' => [
+                'prospects.all' => 'Gestion prospects complète',
+                'prospects.read' => 'Lecture prospects',
+                'prospects.create' => 'Création prospects',
+                'prospects.update' => 'Modification prospects',
+                'devis.all' => 'Gestion devis complète',
+                'devis.read' => 'Lecture devis',
+                'devis.create' => 'Création devis',
+                'devis.update' => 'Modification devis',
+                'clients.read' => 'Lecture clients'
+            ],
+            'accounting' => [
+                'invoices.all' => 'Gestion factures complète',
+                'payments.all' => 'Gestion paiements complète',
+                'accounting.all' => 'Comptabilité complète'
+            ],
+            'reports' => [
+                'reports.all' => 'Tous les rapports',
+                'reports.commercial' => 'Rapports commerciaux',
+                'reports.financial' => 'Rapports financiers'
+            ]
+        ];
+
+        return $this->render('admin/groupes_utilisateurs.html.twig', [
+            'groupes' => $groupes,
+            'stats' => $stats,
+            'available_permissions' => $availablePermissions
+        ]);
+    }
+
+    #[Route('/groupes-utilisateurs/{id}', name: 'app_admin_groupe_utilisateur_get', methods: ['GET'], requirements: ['id' => '\d+'])]
+    public function getGroupeUtilisateur(GroupeUtilisateur $groupe): JsonResponse
+    {
+        return $this->json([
+            'id' => $groupe->getId(),
+            'nom' => $groupe->getNom(),
+            'description' => $groupe->getDescription(),
+            'actif' => $groupe->isActif(),
+            'ordre' => $groupe->getOrdre(),
+            'permissions' => $groupe->getPermissions(),
+            'niveau' => $groupe->getNiveau(),
+            'couleur' => $groupe->getCouleur(),
+            'parent_id' => $groupe->getParent()?->getId(),
+            'nombre_utilisateurs' => $groupe->getNombreUtilisateurs(),
+            'societes' => array_map(fn($s) => ['id' => $s->getId(), 'nom' => $s->getNom()], $groupe->getSocietes()->toArray())
+        ]);
+    }
+
+    #[Route('/groupes-utilisateurs', name: 'app_admin_groupe_utilisateur_create', methods: ['POST'])]
+    public function createGroupeUtilisateur(Request $request, EntityManagerInterface $entityManager): JsonResponse
+    {
+        $data = json_decode($request->getContent(), true);
+
+        if (!$data) {
+            return $this->json(['error' => 'Données JSON invalides'], 400);
+        }
+
+        if (empty($data['nom'])) {
+            return $this->json(['error' => 'Le nom du groupe est obligatoire'], 400);
+        }
+
+        $groupe = new GroupeUtilisateur();
+        $groupe->setNom($data['nom']);
+        $groupe->setDescription($data['description'] ?? null);
+        $groupe->setActif($data['actif'] ?? true);
+        $groupe->setPermissions($data['permissions'] ?? []);
+        $groupe->setNiveau($data['niveau'] ?? 5);
+        $groupe->setCouleur($data['couleur'] ?? null);
+
+        // Gestion du parent
+        if (!empty($data['parent_id'])) {
+            $parent = $entityManager->getRepository(GroupeUtilisateur::class)->find($data['parent_id']);
+            if ($parent) {
+                $groupe->setParent($parent);
+            }
+        }
+
+        // Ordre automatique
+        $groupe->setOrdre($entityManager->getRepository(GroupeUtilisateur::class)->getNextOrdre());
+
+        $entityManager->persist($groupe);
+        $entityManager->flush();
+
+        // Gestion des sociétés
+        if (isset($data['societes']) && is_array($data['societes'])) {
+            foreach ($data['societes'] as $societeId) {
+                $societe = $entityManager->getRepository(Societe::class)->find($societeId);
+                if ($societe) {
+                    $groupe->addSociete($societe);
+                }
+            }
+            $entityManager->flush();
+        }
+
+        // Réorganiser les ordres
+        if (isset($data['ordre'])) {
+            $entityManager->getRepository(GroupeUtilisateur::class)->reorganizeOrdres();
+        }
+
+        return $this->json(['success' => true, 'message' => 'Groupe créé avec succès', 'id' => $groupe->getId()]);
+    }
+
+    #[Route('/groupes-utilisateurs/{id}', name: 'app_admin_groupe_utilisateur_update', methods: ['PUT'], requirements: ['id' => '\d+'])]
+    public function updateGroupeUtilisateur(GroupeUtilisateur $groupe, Request $request, EntityManagerInterface $entityManager): JsonResponse
+    {
+        $data = json_decode($request->getContent(), true);
+
+        if (!$data) {
+            return $this->json(['error' => 'Données JSON invalides'], 400);
+        }
+
+        if (isset($data['nom'])) {
+            if (empty($data['nom'])) {
+                return $this->json(['error' => 'Le nom du groupe est obligatoire'], 400);
+            }
+            $groupe->setNom($data['nom']);
+        }
+
+        if (isset($data['description'])) $groupe->setDescription($data['description']);
+        if (isset($data['actif'])) $groupe->setActif($data['actif']);
+        if (isset($data['permissions'])) $groupe->setPermissions($data['permissions']);
+        if (isset($data['niveau'])) $groupe->setNiveau($data['niveau']);
+        if (isset($data['couleur'])) $groupe->setCouleur($data['couleur']);
+        if (isset($data['ordre'])) $groupe->setOrdre($data['ordre']);
+
+        // Gestion du parent
+        if (isset($data['parent_id'])) {
+            if ($data['parent_id']) {
+                $parent = $entityManager->getRepository(GroupeUtilisateur::class)->find($data['parent_id']);
+                if ($parent && $parent !== $groupe) { // Éviter auto-référence
+                    $groupe->setParent($parent);
+                }
+            } else {
+                $groupe->setParent(null);
+            }
+        }
+
+        // Gestion des sociétés
+        if (isset($data['societes'])) {
+            // Vider les sociétés actuelles
+            foreach ($groupe->getSocietes() as $societe) {
+                $groupe->removeSociete($societe);
+            }
+            // Ajouter les nouvelles sociétés
+            if (is_array($data['societes'])) {
+                foreach ($data['societes'] as $societeId) {
+                    $societe = $entityManager->getRepository(Societe::class)->find($societeId);
+                    if ($societe) {
+                        $groupe->addSociete($societe);
+                    }
+                }
+            }
+        }
+
+        $entityManager->flush();
+
+        // Réorganiser les ordres si nécessaire
+        if (isset($data['ordre'])) {
+            $entityManager->getRepository(GroupeUtilisateur::class)->reorganizeOrdres();
+        }
+
+        return $this->json(['success' => true, 'message' => 'Groupe mis à jour avec succès']);
+    }
+
+    #[Route('/groupes-utilisateurs/{id}', name: 'app_admin_groupe_utilisateur_delete', methods: ['DELETE'], requirements: ['id' => '\d+'])]
+    public function deleteGroupeUtilisateur(GroupeUtilisateur $groupe, EntityManagerInterface $entityManager): JsonResponse
+    {
+        // Vérifier si le groupe a des utilisateurs
+        if ($groupe->getNombreUtilisateurs() > 0) {
+            return $this->json([
+                'error' => 'Impossible de supprimer un groupe qui contient des utilisateurs'
+            ], 400);
+        }
+
+        // Vérifier si le groupe a des enfants
+        if (!$groupe->getEnfants()->isEmpty()) {
+            return $this->json([
+                'error' => 'Impossible de supprimer un groupe qui a des groupes enfants'
+            ], 400);
+        }
+
+        try {
+            $entityManager->remove($groupe);
+            $entityManager->flush();
+            
+            return $this->json(['success' => true, 'message' => 'Groupe supprimé avec succès']);
+        } catch (\Exception $e) {
+            return $this->json(['error' => 'Erreur lors de la suppression : ' . $e->getMessage()], 500);
+        }
+    }
+
+    #[Route('/groupes-utilisateurs/{id}/toggle', name: 'app_admin_groupe_utilisateur_toggle', methods: ['POST'], requirements: ['id' => '\d+'])]
+    public function toggleGroupeUtilisateur(GroupeUtilisateur $groupe, EntityManagerInterface $entityManager): JsonResponse
+    {
+        $groupe->setActif(!$groupe->isActif());
+        $entityManager->flush();
+
+        return $this->json([
+            'success' => true, 
+            'message' => 'Statut du groupe modifié avec succès',
+            'actif' => $groupe->isActif()
+        ]);
+    }
 
 }

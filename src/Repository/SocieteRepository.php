@@ -72,8 +72,9 @@ class SocieteRepository extends ServiceEntityRepository
     {
         return $this->createQueryBuilder('s')
             ->andWhere('s.active = true')
-            ->orderBy('s.type', 'ASC') // Mères d'abord
-            ->addOrderBy('s.nom', 'ASC')
+            ->orderBy('s.ordre', 'ASC') // Ordre personnalisé d'abord
+            ->addOrderBy('s.type', 'ASC') // Puis mères d'abord
+            ->addOrderBy('s.nom', 'ASC') // Puis nom alphabétique
             ->getQuery()
             ->getResult();
     }
