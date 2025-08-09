@@ -45,12 +45,14 @@ use Symfony\Component\Mailer\MailerInterface;
 use Symfony\Component\Mime\Email;
 
 #[Route('/admin')]
-#[IsGranted('ROLE_ADMIN')]
 final class AdminController extends AbstractController
 {
     #[Route('/', name: 'app_admin_dashboard', methods: ['GET'])]
     public function dashboard(EntityManagerInterface $entityManager, TenantService $tenantService): Response
     {
+        // Vérifier les permissions d'administration
+        $this->denyAccessUnlessGranted('ADMIN_ACCESS');
+        
         // Récupération de la société courante
         $currentSociete = $tenantService->getCurrentSociete();
         $isSocieteMere = $currentSociete ? $currentSociete->isMere() : true;
@@ -99,7 +101,7 @@ final class AdminController extends AbstractController
     }
 
     #[Route('/formes-juridiques', name: 'app_admin_formes_juridiques', methods: ['GET'])]
-    public function formesJuridiques(EntityManagerInterface $entityManager): Response
+    public function formesJuridiques(Request $request, EntityManagerInterface $entityManager): Response
     {
         $formesJuridiques = $entityManager->getRepository(FormeJuridique::class)->findBy([], ['ordre' => 'ASC']);
 
@@ -234,8 +236,11 @@ final class AdminController extends AbstractController
     }
 
     #[Route('/users', name: 'app_admin_users', methods: ['GET'])]
-    public function users(EntityManagerInterface $entityManager): Response
+    public function users(Request $request, EntityManagerInterface $entityManager): Response
     {
+        // Vérifier les permissions d'administration
+        $this->denyAccessUnlessGranted('ADMIN_ACCESS');
+        
         $users = $entityManager->getRepository(User::class)->findBy([], ['nom' => 'ASC']);
         $groupes = $entityManager->getRepository(GroupeUtilisateur::class)->findAllOrdered();
         $societes = $entityManager->getRepository(Societe::class)->findBy(['active' => true], ['nom' => 'ASC']);
@@ -521,8 +526,11 @@ final class AdminController extends AbstractController
     }
 
     #[Route('/societes', name: 'app_admin_societes', methods: ['GET'])]
-    public function societes(EntityManagerInterface $entityManager, TenantService $tenantService): Response
+    public function societes(Request $request, EntityManagerInterface $entityManager, TenantService $tenantService): Response
     {
+        // Vérifier les permissions d'administration
+        $this->denyAccessUnlessGranted('ADMIN_ACCESS');
+        
         $currentSociete = $tenantService->getCurrentSociete();
         
         // Récupérer toutes les sociétés pour une société mère ou seulement la société actuelle si c'est une fille
@@ -1243,7 +1251,7 @@ www.technoprod.com';
     // =====================================================
 
     #[Route('/modes-paiement', name: 'app_admin_modes_paiement', methods: ['GET'])]
-    public function modesPaiement(EntityManagerInterface $entityManager): Response
+    public function modesPaiement(Request $request, EntityManagerInterface $entityManager): Response
     {
         $modes = $entityManager->getRepository(ModePaiement::class)->findBy([], ['ordre' => 'ASC']);
         $banques = $entityManager->getRepository(Banque::class)->findBy(['actif' => true], ['ordre' => 'ASC']);

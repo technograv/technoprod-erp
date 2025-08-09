@@ -152,7 +152,7 @@
             </div>
         {% endif %}
         
-        <ul class="nav nav-tabs" role="tablist">
+        <ul class="nav nav-tabs" role="tablist" id="main-admin-tabs">
             <li class="nav-item">
                 <a class="nav-link active" data-bs-toggle="tab" href="#dashboard" role="tab">
                     <i class="fas fa-tachometer-alt me-2"></i>Dashboard
@@ -181,16 +181,6 @@
                     <i class="fas fa-map me-2"></i>Secteurs
                 </a>
             </li>
-            <li class="nav-item">
-                <a class="nav-link" data-bs-toggle="tab" href="#unites-tags" role="tab">
-                    <i class="fas fa-tags me-2"></i>Unités & Tags
-                </a>
-            </li>
-            <li class="nav-item">
-                <a class="nav-link" data-bs-toggle="tab" href="#utilisateurs" role="tab">
-                    <i class="fas fa-users me-2"></i>Utilisateurs
-                </a>
-            </li>
             {% else %}
             <!-- Onglet Paramètres Enseigne pour société fille -->
             <li class="nav-item">
@@ -210,31 +200,34 @@
                     <i class="fas fa-shipping-fast me-2"></i>Frais de Port
                 </a>
             </li>
+            {% if is_societe_mere %}
             <li class="nav-item">
                 <a class="nav-link" data-bs-toggle="tab" href="#produits" role="tab">
                     <i class="fas fa-box me-2"></i>Produits
                 </a>
             </li>
+            {% endif %}
+            {% if is_societe_mere %}
             <li class="nav-item">
                 <a class="nav-link" data-bs-toggle="tab" href="#unites" role="tab">
                     <i class="fas fa-ruler me-2"></i>Unités
                 </a>
             </li>
+            {% endif %}
+            {% if is_societe_mere %}
             <li class="nav-item">
                 <a class="nav-link" data-bs-toggle="tab" href="#tags-clients" role="tab">
                     <i class="fas fa-tags me-2"></i>Tags Clients
                 </a>
             </li>
-            <li class="nav-item">
-                <a class="nav-link" data-bs-toggle="tab" href="#parametres-app" role="tab">
-                    <i class="fas fa-cog me-2"></i>Paramètres
-                </a>
-            </li>
+            {% endif %}
+            {% if is_societe_mere %}
             <li class="nav-item">
                 <a class="nav-link" data-bs-toggle="tab" href="#parametres" role="tab">
                     <i class="fas fa-server me-2"></i>Configuration Système
                 </a>
             </li>
+            {% endif %}
         </ul>
     </div>
 
@@ -398,18 +391,17 @@
                         <a href="#secteurs" class="quick-action-btn" data-bs-toggle="tab">
                             <i class="fas fa-map me-2"></i>Secteurs
                         </a>
+                        {% if is_societe_mere %}
                         <a href="#produits" class="quick-action-btn" data-bs-toggle="tab">
                             <i class="fas fa-box me-2"></i>Produits
                         </a>
                         <a href="#unites" class="quick-action-btn" data-bs-toggle="tab">
                             <i class="fas fa-ruler me-2"></i>Unités
                         </a>
-                        <a href="#parametres-app" class="quick-action-btn" data-bs-toggle="tab">
-                            <i class="fas fa-cog me-2"></i>Paramètres App
-                        </a>
                         <a href="#parametres" class="quick-action-btn" data-bs-toggle="tab">
                             <i class="fas fa-server me-2"></i>Configuration Système
                         </a>
+                        {% endif %}
                     </div>
                 </div>
             </div>
@@ -434,7 +426,8 @@
             </div>
         </div>
 
-        <!-- Juridique & Comptable -->
+        <!-- Juridique & Comptable (société mère uniquement) -->
+        {% if is_societe_mere %}
         <div class="tab-pane fade" id="juridique-comptable" role="tabpanel">
             <div class="admin-section">
                 <h3 class="section-title">
@@ -445,29 +438,29 @@
                 <!-- Sous-navigation pour Juridique & Comptable -->
                 <div class="row">
                     <div class="col-12">
-                        <ul class="nav nav-pills mb-4 justify-content-center" role="tablist">
+                        <ul class="nav nav-pills mb-4 justify-content-center" role="tablist" id="juridique-sub-tabs">
                             <li class="nav-item">
-                                <a class="nav-link active" data-bs-toggle="tab" href="#formes-juridiques-content" role="tab">
+                                <a class="nav-link active" data-bs-toggle="pill" href="#formes-juridiques-content" role="tab">
                                     <i class="fas fa-building me-2"></i>Formes Juridiques
                                 </a>
                             </li>
                             <li class="nav-item">
-                                <a class="nav-link" data-bs-toggle="tab" href="#moyens-paiement-content" role="tab">
+                                <a class="nav-link" data-bs-toggle="pill" href="#moyens-paiement-content" role="tab">
                                     <i class="fas fa-money-check-alt me-2"></i>Moyens de Paiement
                                 </a>
                             </li>
                             <li class="nav-item">
-                                <a class="nav-link" data-bs-toggle="tab" href="#modes-reglement-content" role="tab">
+                                <a class="nav-link" data-bs-toggle="pill" href="#modes-reglement-content" role="tab">
                                     <i class="fas fa-credit-card me-2"></i>Modes de Règlement
                                 </a>
                             </li>
                             <li class="nav-item">
-                                <a class="nav-link" data-bs-toggle="tab" href="#banques-content" role="tab">
+                                <a class="nav-link" data-bs-toggle="pill" href="#banques-content" role="tab">
                                     <i class="fas fa-university me-2"></i>Banques
                                 </a>
                             </li>
                             <li class="nav-item">
-                                <a class="nav-link" data-bs-toggle="tab" href="#taux-tva-content" role="tab">
+                                <a class="nav-link" data-bs-toggle="pill" href="#taux-tva-content" role="tab">
                                     <i class="fas fa-percent me-2"></i>Taux TVA
                                 </a>
                             </li>
@@ -520,6 +513,7 @@
                 </div>
             </div>
         </div>
+        {% endif %}
 
         <!-- Gestion des sociétés -->
         <div class="tab-pane fade" id="gestion-societes" role="tabpanel">
@@ -532,29 +526,29 @@
                 <!-- Sous-navigation pour Gestion des sociétés -->
                 <div class="row">
                     <div class="col-12">
-                        <ul class="nav nav-pills mb-4 justify-content-center" role="tablist">
+                        <ul class="nav nav-pills mb-4 justify-content-center" role="tablist" id="societes-sub-tabs">
                             <li class="nav-item">
-                                <a class="nav-link active" data-bs-toggle="tab" href="#societes-content" role="tab">
+                                <a class="nav-link active" href="#societes-content" role="tab">
                                     <i class="fas fa-building me-2"></i>Sociétés
                                 </a>
                             </li>
                             <li class="nav-item">
-                                <a class="nav-link" data-bs-toggle="tab" href="#users-content" role="tab">
+                                <a class="nav-link" href="#users-content" role="tab">
                                     <i class="fas fa-users me-2"></i>Utilisateurs
                                 </a>
                             </li>
                             <li class="nav-item">
-                                <a class="nav-link" data-bs-toggle="tab" href="#groupes-users-content" role="tab">
+                                <a class="nav-link" href="#groupes-users-content" role="tab">
                                     <i class="fas fa-users-cog me-2"></i>Groupes Utilisateurs
                                 </a>
                             </li>
                             <li class="nav-item">
-                                <a class="nav-link" data-bs-toggle="tab" href="#themes-couleurs-content" role="tab">
+                                <a class="nav-link" href="#themes-couleurs-content" role="tab">
                                     <i class="fas fa-palette me-2"></i>Thèmes & Couleurs
                                 </a>
                             </li>
                             <li class="nav-item">
-                                <a class="nav-link" data-bs-toggle="tab" href="#templates-documents-content" role="tab">
+                                <a class="nav-link" href="#templates-documents-content" role="tab">
                                     <i class="fas fa-file-alt me-2"></i>Templates de documents
                                 </a>
                             </li>
@@ -711,7 +705,7 @@
                                             {% else %}
                                                 <p class="text-muted">Templates spécifiques à cette enseigne (surcharge optionnelle).</p>
                                             {% endif %}
-                                            <div id="templates-management"></div>
+                                            <div id="templates-documents-container" style="position: relative; overflow: hidden;"></div>
                                         </div>
                                     </div>
                                 </div>
@@ -769,7 +763,8 @@
         </div>
 
 
-        <!-- Configuration Système -->
+        <!-- Configuration Système (société mère uniquement) -->
+        {% if is_societe_mere %}
         <div class="tab-pane fade" id="parametres" role="tabpanel">
             <div class="admin-section">
                 <h3 class="section-title">
@@ -783,6 +778,7 @@
                 </div>
             </div>
         </div>
+        {% endif %}
 
         <div class="tab-pane fade" id="users" role="tabpanel">
             <div class="admin-section">
@@ -827,6 +823,8 @@
         </div>
 
 
+        <!-- Produits (société mère uniquement) -->
+        {% if is_societe_mere %}
         <div class="tab-pane fade" id="produits" role="tabpanel">
             <div class="admin-section">
                 <h3 class="section-title">
@@ -840,8 +838,10 @@
                 </div>
             </div>
         </div>
+        {% endif %}
 
-        <!-- Unités -->
+        <!-- Unités (société mère uniquement) -->
+        {% if is_societe_mere %}
         <div class="tab-pane fade" id="unites" role="tabpanel">
             <div class="admin-section">
                 <h3 class="section-title">
@@ -855,8 +855,10 @@
                 </div>
             </div>
         </div>
+        {% endif %}
 
-        <!-- Tags Clients -->
+        <!-- Tags Clients (société mère uniquement) -->
+        {% if is_societe_mere %}
         <div class="tab-pane fade" id="tags-clients" role="tabpanel">
             <div class="admin-section">
                 <h3 class="section-title">
@@ -870,77 +872,8 @@
                 </div>
             </div>
         </div>
+        {% endif %}
 
-        <!-- Paramètres Application -->
-        <div class="tab-pane fade" id="parametres-app" role="tabpanel">
-            <div class="admin-section">
-                <h3 class="section-title">
-                    <i class="fas fa-cog me-2"></i>Paramètres de l'Application
-                </h3>
-                <p class="text-muted mb-4">Configuration des préférences et paramètres utilisateurs de l'application</p>
-                
-                <div class="row">
-                    <div class="col-md-6 mb-4">
-                        <div class="card">
-                            <div class="card-header bg-primary text-white">
-                                <h5 class="mb-0"><i class="fas fa-palette me-2"></i>Interface & Apparence</h5>
-                            </div>
-                            <div class="card-body">
-                                <p class="text-muted">Configuration de l'interface utilisateur et des thèmes</p>
-                                <button class="btn btn-outline-primary btn-sm">
-                                    <i class="fas fa-paint-brush me-2"></i>Gérer les Thèmes
-                                </button>
-                            </div>
-                        </div>
-                    </div>
-                    <div class="col-md-6 mb-4">
-                        <div class="card">
-                            <div class="card-header bg-success text-white">
-                                <h5 class="mb-0"><i class="fas fa-bell me-2"></i>Notifications</h5>
-                            </div>
-                            <div class="card-body">
-                                <p class="text-muted">Configuration des notifications et alertes</p>
-                                <button class="btn btn-outline-success btn-sm">
-                                    <i class="fas fa-cog me-2"></i>Configurer
-                                </button>
-                            </div>
-                        </div>
-                    </div>
-                    <div class="col-md-6 mb-4">
-                        <div class="card">
-                            <div class="card-header bg-info text-white">
-                                <h5 class="mb-0"><i class="fas fa-language me-2"></i>Localisation</h5>
-                            </div>
-                            <div class="card-body">
-                                <p class="text-muted">Langue, format de dates et devises</p>
-                                <button class="btn btn-outline-info btn-sm">
-                                    <i class="fas fa-globe me-2"></i>Gérer
-                                </button>
-                            </div>
-                        </div>
-                    </div>
-                    <div class="col-md-6 mb-4">
-                        <div class="card">
-                            <div class="card-header bg-warning text-white">
-                                <h5 class="mb-0"><i class="fas fa-user-cog me-2"></i>Paramètres par Défaut</h5>
-                            </div>
-                            <div class="card-body">
-                                <p class="text-muted">Valeurs par défaut pour nouveaux utilisateurs</p>
-                                <button class="btn btn-outline-warning btn-sm">
-                                    <i class="fas fa-edit me-2"></i>Modifier
-                                </button>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-                
-                <div class="alert alert-info">
-                    <i class="fas fa-info-circle me-2"></i>
-                    <strong>Note :</strong> Ces paramètres affectent l'expérience utilisateur générale de l'application. 
-                    Pour les paramètres techniques du système, consultez l'onglet "Configuration Système".
-                </div>
-            </div>
-        </div>
 
         <!-- Moyens de Paiement -->
         <div class="tab-pane fade" id="moyens-paiement" role="tabpanel">
@@ -1072,41 +1005,6 @@
             </div>
         </div>
         {% endif %}
-        
-        <!-- Section Unités & Tags (société mère uniquement) -->
-        {% if is_societe_mere %}
-        <div class="tab-pane fade" id="unites-tags" role="tabpanel">
-            <div class="admin-section">
-                <h3 class="section-title">
-                    <i class="fas fa-tags me-2"></i>Unités & Tags Clients
-                </h3>
-                
-                <!-- Navigation sous-onglets Unités & Tags -->
-                <ul class="nav nav-pills mb-4" role="tablist">
-                    <li class="nav-item">
-                        <a class="nav-link active" data-bs-toggle="pill" href="#unites-content" role="tab">
-                            <i class="fas fa-ruler me-1"></i>Unités
-                        </a>
-                    </li>
-                    <li class="nav-item">
-                        <a class="nav-link" data-bs-toggle="pill" href="#tags-content" role="tab">
-                            <i class="fas fa-tag me-1"></i>Tags Clients
-                        </a>
-                    </li>
-                </ul>
-                
-                <div class="tab-content">
-                    <div class="tab-pane fade show active" id="unites-content" role="tabpanel">
-                        <div id="unites-management"></div>
-                    </div>
-                    
-                    <div class="tab-pane fade" id="tags-content" role="tabpanel">
-                        <div id="tags-management"></div>
-                    </div>
-                </div>
-            </div>
-        </div>
-        {% endif %}
 
         <!-- Section Utilisateurs (société mère uniquement) -->
         {% if is_societe_mere %}
@@ -1129,19 +1027,62 @@
     {{ parent() }}
     <script>
     document.addEventListener('DOMContentLoaded', function() {
-        // Gérer le chargement AJAX des onglets
-        document.querySelectorAll('[data-bs-toggle="tab"]').forEach(function(tab) {
+        console.log('🔍 DEBUG: DOM Content Loaded - Admin Dashboard Initialized');
+        console.log('🔍 DEBUG: Bootstrap available:', typeof bootstrap !== 'undefined');
+        console.log('🔍 DEBUG: Main admin tabs found:', document.querySelectorAll('#main-admin-tabs [data-bs-toggle="tab"]').length);
+        console.log('🔍 DEBUG: Pill tabs found:', document.querySelectorAll('[data-bs-toggle="pill"]').length);
+        console.log('🔍 DEBUG: All tab elements:', document.querySelectorAll('[data-bs-toggle]').length);
+        
+        // CORRECTION: Masquer immédiatement tout le contenu parasite au chargement, sauf dashboard actif
+        setTimeout(() => {
+            document.querySelectorAll('.tab-pane:not(#dashboard)').forEach(pane => {
+                if (!pane.id.includes('-content')) { // Garder les sous-onglets
+                    pane.classList.remove('show', 'active');
+                    pane.style.display = 'none';
+                    pane.style.visibility = 'hidden';
+                    pane.style.opacity = '0';
+                    console.log('🔍 DEBUG: Masqué onglet parasite:', pane.id);
+                }
+            });
+        }, 500);
+        
+        // Log tous les clics sur les onglets pour debug
+        document.addEventListener('click', function(e) {
+            if (e.target.matches('[data-bs-toggle="tab"], [data-bs-toggle="pill"]')) {
+                console.log('🔍 DEBUG: Tab clicked:', e.target.getAttribute('href'), 'Type:', e.target.getAttribute('data-bs-toggle'));
+            }
+        });
+        
+        // Gérer le chargement AJAX des onglets PRINCIPAUX seulement
+        document.querySelectorAll('#main-admin-tabs [data-bs-toggle="tab"]').forEach(function(tab) {
             tab.addEventListener('shown.bs.tab', function(e) {
                 const targetTab = e.target.getAttribute('href');
                 loadTabContent(targetTab);
             });
         });
         
+        // Gérer les sous-onglets avec chargement conditionnel
+        document.querySelectorAll('[data-bs-toggle="pill"]').forEach(function(pill) {
+            pill.addEventListener('shown.bs.tab', function(e) {
+                const targetTab = e.target.getAttribute('href');
+                console.log('🔄 Sub-tab switched to:', targetTab);
+                
+                // Certains sous-onglets nécessitent un chargement spécial
+                if (targetTab === '#templates-documents-content' || 
+                    targetTab === '#themes-couleurs-content') {
+                    loadTabContent(targetTab);
+                }
+            });
+        });
+        
         function loadTabContent(tabId) {
             console.log('🔍 DEBUG: loadTabContent called for:', tabId);
-            
+            console.log('🔍 DEBUG: Current URL:', window.location.href);
+            console.log('🔍 DEBUG: Timestamp:', new Date().toISOString());
             
             const tabContent = document.querySelector(tabId + ' .admin-section');
+            console.log('🔍 DEBUG: Selector used:', tabId + ' .admin-section');
+            console.log('🔍 DEBUG: tabContent element:', tabContent);
             console.log('🔍 DEBUG: tabContent found:', !!tabContent);
             console.log('🔍 DEBUG: tabContent.dataset.loaded:', tabContent?.dataset?.loaded);
             
@@ -1151,34 +1092,103 @@
             }
             
             if (tabContent.dataset.loaded) {
-                console.log('🔍 DEBUG: Tab already loaded, skipping:', tabId);
+                console.log('🔍 DEBUG: Tab already loaded, but reactivating:', tabId);
+                
+                // CORRECTION: Permettre le rechargement - activer l'onglet même s'il est déjà chargé
+                const tabPane = document.querySelector(tabId);
+                if (tabPane) {
+                    // Désactiver tous les autres onglets
+                    document.querySelectorAll('.tab-pane').forEach(pane => {
+                        pane.classList.remove('show', 'active');
+                        pane.style.display = 'none';
+                        pane.style.visibility = 'hidden';
+                        pane.style.opacity = '0';
+                    });
+                    
+                    // Activer l'onglet courant
+                    tabPane.classList.add('show', 'active');
+                    tabPane.style.display = 'block';
+                    tabPane.style.visibility = 'visible';
+                    tabPane.style.opacity = '1';
+                    
+                    // Scroller vers le haut
+                    setTimeout(() => {
+                        window.scrollTo(0, 0);
+                        tabPane.scrollIntoView({ behavior: 'smooth', block: 'start' });
+                    }, 100);
+                    
+                    console.log('🔍 DEBUG: Tab reactivated successfully:', tabId);
+                }
                 return;
             }
             
-            // Gérer les nouveaux onglets principaux avec sous-onglets
+            // Gérer l'onglet juridique-comptable avec sous-onglets et AJAX
             if (tabId === '#juridique-comptable') {
-                setupJuridiqueComptableTab();
+                setupJuridiqueComptableTabFixed();
                 tabContent.dataset.loaded = 'true';
                 return;
             }
             
             if (tabId === '#gestion-societes') {
-                setupGestionSocietesTab();
+                console.log('🔍 DEBUG: Activating gestion-societes tab - using Fixed version');
+                const societesPane = document.querySelector('#gestion-societes');
+                if (societesPane) {
+                    // Masquer tous les autres onglets
+                    document.querySelectorAll('.tab-pane').forEach(pane => {
+                        pane.classList.remove('show', 'active');
+                        pane.style.display = 'none';
+                        pane.style.visibility = 'hidden';
+                        pane.style.opacity = '0';
+                    });
+                    // Activer l'onglet societes
+                    societesPane.classList.add('show', 'active');
+                    societesPane.style.display = 'block';
+                    societesPane.style.visibility = 'visible';
+                    societesPane.style.opacity = '1';
+                    console.log('✅ DEBUG: gestion-societes activated successfully');
+                    
+                    // Initialiser les sous-onglets avec notre logique Fixed
+                    setTimeout(() => {
+                        setupSocietesSubTabsFixed();
+                    }, 100);
+                } else {
+                    console.error('🔍 TEST: #gestion-societes not found!');
+                }
                 tabContent.dataset.loaded = 'true';
                 return;
             }
             
             let url = '';
+            console.log('🔍 DEBUG: Entering switch for tabId:', tabId);
             switch(tabId) {
                 case '#secteurs':
+                    console.log('🔍 DEBUG: Case #secteurs matched');
                     // Secteurs utilise une interface dédiée - pas de chargement AJAX
                     tabContent.dataset.loaded = 'true';
+                    
+                    // CORRECTION: Activer l'onglet secteurs même sans AJAX
+                    const secteursPane = document.querySelector('#secteurs');
+                    if (secteursPane) {
+                        // Désactiver tous les autres onglets
+                        document.querySelectorAll('.tab-pane').forEach(pane => {
+                            pane.classList.remove('show', 'active');
+                            pane.style.display = 'none';
+                            pane.style.visibility = 'hidden';
+                            pane.style.opacity = '0';
+                        });
+                        
+                        // Activer l'onglet secteurs
+                        secteursPane.classList.add('show', 'active');
+                        secteursPane.style.display = 'block';
+                        secteursPane.style.visibility = 'visible';
+                        secteursPane.style.opacity = '1';
+                        
+                        console.log('🔍 DEBUG: Secteurs tab activated');
+                    }
                     return;
-                case '#transporteurs':
-                    url = '{{ path("app_admin_transporteurs") }}';
-                    break;
                 case '#frais-port':
                     url = '{{ path("app_admin_frais_port") }}';
+                    console.log('🔍 DEBUG: Case #frais-port matched, URL:', url);
                     break;
                 case '#parametres':
                     url = '{{ path("app_admin_settings") }}';
@@ -1192,6 +1202,12 @@
                 case '#tags-clients':
                     url = '{{ path("app_admin_tags") }}';
                     break;
+                case '#parametres-app':
+                    url = '{{ path("app_admin_settings") }}';
+                    break;
+                case '#parametres-enseigne':
+                    url = '{{ path("app_admin_settings") }}';
+                    break;
                 case '#civilites':
                     url = '{{ path("app_admin_civilites") }}';
                     break;
@@ -1203,8 +1219,11 @@
                     break;
             }
             
+            console.log('🔍 DEBUG: After switch - URL is:', url);
+            console.log('🔍 DEBUG: URL is truthy:', !!url);
+            
             if (url) {
-                console.log('Loading tab:', tabId, 'URL:', url);
+                console.log('🔍 DEBUG: Loading tab:', tabId, 'URL:', url);
                 fetch(url, {
                         credentials: 'same-origin',
                         headers: {
@@ -1212,8 +1231,9 @@
                         }
                     })
                     .then(response => {
-                        console.log('Response status:', response.status);
-                        console.log('Response URL:', response.url);
+                        console.log('🔍 DEBUG: Response received for', tabId);
+                        console.log('🔍 DEBUG: Response status:', response.status);
+                        console.log('🔍 DEBUG: Response URL:', response.url);
                         
                         // Check if redirected to login
                         if (response.url.includes('/login')) {
@@ -1226,10 +1246,41 @@
                         return response.text();
                     })
                     .then(html => {
-                        console.log('HTML loaded, length:', html.length);
-                        // Remplacer tout le contenu de l'onglet avec la réponse HTML
-                        tabContent.innerHTML = html;
+                        console.log('🔍 DEBUG: HTML loaded for', tabId, '- Length:', html.length);
+                        console.log('🔍 DEBUG: HTML preview:', html.substring(0, 200));
+                        // CORRECTION: Ne pas écraser la structure Bootstrap, créer un container
+                        console.log('🔍 DEBUG: Original tabContent structure preserved');
+                        tabContent.innerHTML = `<div class="loaded-content">${html}</div>`;
                         tabContent.dataset.loaded = 'true';
+                        console.log('🔍 DEBUG: Tab content successfully set for', tabId);
+                        
+                        // CORRECTION: Rendre l'onglet visible avec les classes Bootstrap
+                        const tabPane = document.querySelector(tabId);
+                        console.log('🔍 DEBUG: TabPane found:', !!tabPane, 'Current classes:', tabPane?.className);
+                        
+                        if (tabPane) {
+                            // CORRECTION: Masquer TOUT le contenu statique parasite
+                            document.querySelectorAll('.tab-pane').forEach(pane => {
+                                pane.classList.remove('show', 'active');
+                                pane.style.display = 'none';
+                                pane.style.visibility = 'hidden';
+                                pane.style.opacity = '0';
+                            });
+                            
+                            // Activer SEULEMENT l'onglet courant
+                            tabPane.classList.add('show', 'active');
+                            tabPane.style.display = 'block';
+                            tabPane.style.visibility = 'visible';
+                            tabPane.style.opacity = '1';
+                            
+                            // Scroller vers le haut pour voir le contenu
+                            setTimeout(() => {
+                                window.scrollTo(0, 0);
+                                tabPane.scrollIntoView({ behavior: 'smooth', block: 'start' });
+                            }, 100);
+                            
+                            console.log('🔍 DEBUG: Onglet activé et visible:', tabId);
+                        }
                         
                         // Exécuter les scripts qui sont dans le HTML chargé
                         const scripts = tabContent.querySelectorAll('script');
@@ -1372,35 +1423,132 @@
         function setupJuridiqueComptableTab() {
             console.log('🔍 Setup Juridique & Comptable tab');
             
+            // CORRECTION: Masquer tous les autres onglets et activer Juridique & Comptable
+            setTimeout(() => {
+                document.querySelectorAll('.tab-pane').forEach(pane => {
+                    pane.classList.remove('show', 'active');
+                    pane.style.display = 'none';
+                    pane.style.visibility = 'hidden';
+                    pane.style.opacity = '0';
+                });
+                
+                // Activer l'onglet Juridique & Comptable
+                const juridiquePane = document.querySelector('#juridique-comptable');
+                console.log('🔍 DEBUG: Searching for #juridique-comptable, found:', !!juridiquePane);
+                if (juridiquePane) {
+                    juridiquePane.classList.add('show', 'active');
+                    juridiquePane.style.display = 'block';
+                    juridiquePane.style.visibility = 'visible';
+                    juridiquePane.style.opacity = '1';
+                    console.log('🔍 DEBUG: Onglet Juridique & Comptable activé');
+                    console.log('🔍 DEBUG: juridiquePane classes:', juridiquePane.className);
+                    console.log('🔍 DEBUG: juridiquePane visible:', juridiquePane.offsetHeight > 0);
+                } else {
+                    console.error('🔍 ERROR: #juridique-comptable not found!');
+                    console.log('🔍 DEBUG: Available tab-panes:', Array.from(document.querySelectorAll('.tab-pane')).map(p => p.id));
+                }
+            }, 100);
+            
             // Gérer les sous-onglets de Juridique & Comptable
-            const juridiqueTabs = document.querySelectorAll('#juridique-comptable [data-bs-toggle="tab"]');
-            juridiqueTabs.forEach(tab => {
+            const juridiqueTabs = document.querySelectorAll('#juridique-sub-tabs [data-bs-toggle="pill"]');
+            console.log('🔍 DEBUG: Found juridique sub-tabs:', juridiqueTabs.length);
+            juridiqueTabs.forEach((tab, index) => {
+                console.log('🔍 DEBUG: Sub-tab', index, ':', tab.getAttribute('href'));
                 tab.addEventListener('shown.bs.tab', function(e) {
                     const targetSubTab = e.target.getAttribute('href');
+                    console.log('🔍 DEBUG: Sub-tab clicked:', targetSubTab);
                     loadJuridiqueComptableSubTab(targetSubTab);
                 });
             });
             
             // Charger le premier sous-onglet par défaut (formes juridiques)
-            loadJuridiqueComptableSubTab('#formes-juridiques-content');
+            loadJuridiqueComptableSubTabFixed('#formes-juridiques-content');
+        }
+        
+        // Version corrigée de setupJuridiqueComptableTab avec forçage CSS
+        function setupJuridiqueComptableTabFixed() {
+            console.log('🔍 Setup Juridique & Comptable tab (version corrigée)');
+            
+            // Activer l'onglet principal
+            setTimeout(() => {
+                document.querySelectorAll('.tab-pane').forEach(pane => {
+                    pane.classList.remove('show', 'active');
+                    pane.style.display = 'none';
+                    pane.style.visibility = 'hidden';
+                    pane.style.opacity = '0';
+                });
+                
+                const juridiquePane = document.querySelector('#juridique-comptable');
+                if (juridiquePane) {
+                    juridiquePane.classList.add('show', 'active');
+                    juridiquePane.style.display = 'block';
+                    juridiquePane.style.visibility = 'visible';
+                    juridiquePane.style.opacity = '1';
+                    console.log('🔍 DEBUG: Onglet Juridique & Comptable activé');
+                }
+            }, 100);
+            
+            // Gérer les sous-onglets
+            const juridiqueTabs = document.querySelectorAll('#juridique-sub-tabs [data-bs-toggle="pill"]');
+            juridiqueTabs.forEach(tab => {
+                tab.addEventListener('shown.bs.tab', function(e) {
+                    const targetSubTab = e.target.getAttribute('href');
+                    loadJuridiqueComptableSubTabFixed(targetSubTab);
+                });
+            });
+            
+            // Charger le premier sous-onglet par défaut
+            setTimeout(() => {
+                loadJuridiqueComptableSubTabFixed('#formes-juridiques-content');
+            }, 200);
         }
         
         // Fonction pour configurer l'onglet Gestion des Sociétés
         function setupGestionSocietesTab() {
             console.log('🔍 Setup Gestion Sociétés tab');
             
-            // Gérer les sous-onglets de Gestion des Sociétés
-            const gestionSocietesTabs = document.querySelectorAll('#gestion-societes [data-bs-toggle="tab"]');
+            // CORRECTION: Masquer tous les autres onglets et activer Gestion Sociétés
+            setTimeout(() => {
+                document.querySelectorAll('.tab-pane').forEach(pane => {
+                    pane.classList.remove('show', 'active');
+                    pane.style.display = 'none';
+                    pane.style.visibility = 'hidden';
+                    pane.style.opacity = '0';
+                });
+                
+                // Activer l'onglet Gestion Sociétés
+                const gestionPane = document.querySelector('#gestion-societes');
+                if (gestionPane) {
+                    gestionPane.classList.add('show', 'active');
+                    gestionPane.style.display = 'block';
+                    gestionPane.style.visibility = 'visible';
+                    gestionPane.style.opacity = '1';
+                    console.log('🔍 DEBUG: Onglet Gestion Sociétés activé');
+                }
+                
+                // Masquer aussi toutes les div.admin-section parasites qui traînent
+                document.querySelectorAll('#gestion-societes .admin-section').forEach((adminSection, index) => {
+                    if (index > 0) { // Garder seulement la première
+                        adminSection.style.display = 'none';
+                        console.log('🔍 DEBUG: Masqué admin-section parasite #', index);
+                    }
+                });
+            }, 100);
+            
+            // Gérer les sous-onglets de Gestion des Sociétés avec CSS forcing
+            const gestionSocietesTabs = document.querySelectorAll('#societes-sub-tabs .nav-link');
             gestionSocietesTabs.forEach(tab => {
-                tab.addEventListener('shown.bs.tab', function(e) {
+                tab.addEventListener('click', function(e) {
+                    e.preventDefault();
                     const targetSubTab = e.target.getAttribute('href');
-                    loadGestionSocietesSubTab(targetSubTab);
+                    loadGestionSocietesSubTabFixed(targetSubTab);
                 });
             });
             
-            // Charger le premier sous-onglet par défaut (sociétés)
-            loadGestionSocietesSubTab('#societes-content');
+            // Charger le premier sous-onglet par défaut (sociétés) avec CSS forcing
+            loadGestionSocietesSubTabFixed('#societes-content');
         }
+        
         
         // Fonction pour charger les sous-onglets Juridique & Comptable
         function loadJuridiqueComptableSubTab(subTabId) {
@@ -1432,18 +1580,212 @@
                     break;
             }
             
+            console.log('🔍 DEBUG: url=', url, 'targetContentId=', targetContentId);
+            console.log('🔍 DEBUG: Searching for element with selector:', targetContentId);
+            console.log('🔍 DEBUG: All elements with id containing "content":', document.querySelectorAll('[id*="content"]').length);
+            document.querySelectorAll('[id*="content"]').forEach(el => console.log('🔍 DEBUG: Found element:', el.id));
+            
             if (url && targetContentId) {
                 const targetElement = document.querySelector(targetContentId);
+                console.log('🔍 DEBUG: targetElement found=', !!targetElement, 'loaded=', targetElement?.dataset?.loaded);
+                console.log('🔍 DEBUG: targetElement details:', targetElement?.id, targetElement?.className);
+                
                 if (targetElement && !targetElement.dataset.loaded) {
+                    console.log('🔍 DEBUG: Loading content into', targetContentId, 'from URL:', url);
                     loadContentIntoElement(url, targetElement, subTabId);
                     targetElement.dataset.loaded = 'true';
+                } else if (targetElement && targetElement.dataset.loaded) {
+                    console.log('🔍 DEBUG: Content already loaded for', subTabId);
+                } else {
+                    console.error('🔍 ERROR: Target element not found for', targetContentId);
+                    console.error('🔍 ERROR: Available elements in DOM:');
+                    console.error('🔍 ERROR: All divs with id:', Array.from(document.querySelectorAll('div[id]')).map(el => el.id));
+                }
+            } else {
+                console.error('🔍 ERROR: Missing URL or targetContentId for', subTabId);
+            }
+        }
+        
+        // Version corrigée de loadJuridiqueComptableSubTab avec forçage CSS
+        function loadJuridiqueComptableSubTabFixed(subTabId) {
+            console.log('🔍 Loading juridique-comptable sub-tab (version corrigée):', subTabId);
+            
+            let url = '';
+            let targetContentId = '';
+            
+            switch(subTabId) {
+                case '#formes-juridiques-content':
+                    url = '{{ path("app_admin_formes_juridiques") }}';
+                    targetContentId = '#formes-juridiques-content';
+                    break;
+                case '#moyens-paiement-content':
+                    url = '{{ path("app_admin_modes_paiement") }}';
+                    targetContentId = '#moyens-paiement-content';
+                    break;
+                case '#modes-reglement-content':
+                    url = '{{ path("app_admin_modes_reglement") }}';
+                    targetContentId = '#modes-reglement-content';
+                    break;
+                case '#banques-content':
+                    url = '{{ path("app_admin_banques") }}';
+                    targetContentId = '#banques-content';
+                    break;
+                case '#taux-tva-content':
+                    url = '{{ path("app_admin_taux_tva") }}';
+                    targetContentId = '#taux-tva-content';
+                    break;
+            }
+            
+            if (url && targetContentId) {
+                const targetElement = document.querySelector(targetContentId);
+                
+                if (targetElement && !targetElement.dataset.loaded) {
+                    console.log('🔍 DEBUG: Loading content into', targetContentId, 'from URL:', url);
+                    loadContentIntoElementFixed(url, targetElement, subTabId);
+                    targetElement.dataset.loaded = 'true';
+                } else if (targetElement && targetElement.dataset.loaded) {
+                    console.log('🔍 DEBUG: Content already loaded for', subTabId, '- activating display');
+                    // Activer l'affichage même si déjà chargé
+                    activateSubTabContent(targetElement, subTabId);
                 }
             }
         }
         
-        // Fonction pour charger les sous-onglets Gestion Sociétés
-        function loadGestionSocietesSubTab(subTabId) {
-            console.log('🔍 Loading gestion-societes sub-tab:', subTabId);
+        // Version corrigée de loadContentIntoElement avec forçage CSS et timeout
+        function loadContentIntoElementFixed(url, targetElement, tabId) {
+            console.log('🔄 loadContentIntoElementFixed called with:', {url, targetElementId: targetElement.id, tabId});
+            console.log('🔄 Starting fetch request to:', url);
+            
+            // Créer un AbortController pour gérer le timeout
+            const controller = new AbortController();
+            const timeoutId = setTimeout(() => {
+                console.log('⏰ Request timeout after 10 seconds');
+                controller.abort();
+            }, 10000); // 10 secondes de timeout
+            
+            fetch(url, {
+                    signal: controller.signal,
+                    credentials: 'same-origin',
+                    headers: {
+                        'X-Requested-With': 'XMLHttpRequest'
+                    }
+                })
+                .then(response => {
+                    clearTimeout(timeoutId);
+                    console.log('✅ Fetch response received:', response.status, response.statusText);
+                    console.log('🔄 Response headers:', Object.fromEntries(response.headers.entries()));
+                    
+                    if (!response.ok) {
+                        throw new Error(`HTTP error! status: ${response.status}`);
+                    }
+                    
+                    return response.text();
+                })
+                .then(html => {
+                    console.log('✅ Received HTML length:', html.length, 'characters');
+                    console.log('🔄 HTML preview (first 500 chars):', html.substring(0, 500));
+                    
+                    if (html.length === 0) {
+                        throw new Error('Empty response received');
+                    }
+                    
+                    targetElement.innerHTML = html;
+                    
+                    // CORRECTION: Activer l'affichage avec forçage CSS
+                    activateSubTabContent(targetElement, tabId);
+                    
+                    // Exécuter les scripts dans le contenu chargé
+                    const scripts = targetElement.querySelectorAll('script');
+                    console.log('📜 Found', scripts.length, 'scripts to execute');
+                    scripts.forEach(script => {
+                        const newScript = document.createElement('script');
+                        if (script.src) {
+                            newScript.src = script.src;
+                        } else {
+                            newScript.textContent = script.textContent;
+                        }
+                        document.head.appendChild(newScript);
+                    });
+                    
+                    console.log('✅ Content loaded successfully for:', tabId);
+                })
+                .catch(error => {
+                    clearTimeout(timeoutId);
+                    console.error('❌ Error loading tab content:', error);
+                    console.error('❌ Error details:', {
+                        message: error.message,
+                        name: error.name,
+                        url: url,
+                        tabId: tabId
+                    });
+                    
+                    let errorMessage = 'Erreur lors du chargement du contenu';
+                    if (error.name === 'AbortError') {
+                        errorMessage = 'Timeout: Le contenu met trop de temps à charger';
+                    } else if (error.message.includes('HTTP error')) {
+                        errorMessage = `Erreur serveur: ${error.message}`;
+                    }
+                    
+                    targetElement.innerHTML = `<div class="alert alert-danger"><i class="fas fa-exclamation-triangle me-2"></i>${errorMessage}</div>`;
+                    
+                    // Activer l'affichage même en cas d'erreur
+                    activateSubTabContent(targetElement, tabId);
+                });
+        }
+        
+        // Fonction pour activer l'affichage d'un sous-onglet avec forçage CSS
+        function activateSubTabContent(targetElement, tabId) {
+            console.log('🔍 DEBUG: Activating sub-tab content for:', tabId, 'element:', targetElement?.id);
+            
+            // Déterminer le conteneur parent des sous-onglets
+            let parentContainer = null;
+            if (tabId.includes('juridique') || tabId.includes('formes-') || tabId.includes('moyens-') || tabId.includes('modes-') || tabId.includes('banques-') || tabId.includes('taux-')) {
+                parentContainer = '#juridique-comptable';
+            } else if (tabId.includes('societes-') || tabId.includes('users-') || tabId.includes('groupes-') || tabId.includes('themes-') || tabId.includes('templates-')) {
+                parentContainer = '#gestion-societes';
+            }
+            
+            if (parentContainer) {
+                // Désactiver tous les autres contenus de sous-onglets du même parent
+                document.querySelectorAll(`${parentContainer} .tab-content .tab-pane`).forEach(pane => {
+                    pane.classList.remove('show', 'active');
+                    pane.style.display = 'none';
+                    pane.style.visibility = 'hidden';
+                    pane.style.opacity = '0';
+                });
+            }
+            
+            // Activer le contenu ciblé avec forçage CSS
+            if (targetElement) {
+                targetElement.classList.add('show', 'active');
+                targetElement.style.display = 'block';
+                targetElement.style.visibility = 'visible';
+                targetElement.style.opacity = '1';
+                console.log('🔍 DEBUG: Sub-tab content activated with forced CSS:', tabId);
+            } else {
+                console.error('🔍 ERROR: targetElement is null for tabId:', tabId);
+            }
+        }
+        
+        // Fonction pour charger les sous-onglets Gestion Sociétés avec CSS forcing
+        function loadGestionSocietesSubTabFixed(subTabId) {
+            console.log('🔍 Loading gestion-societes sub-tab with CSS forcing:', subTabId);
+            
+            // Désactiver tous les autres sous-onglets
+            document.querySelectorAll('#gestion-societes .tab-content .tab-pane').forEach(pane => {
+                pane.classList.remove('show', 'active');
+                pane.style.display = 'none';
+            });
+            
+            // Activer l'onglet de navigation
+            document.querySelectorAll('#societes-sub-tabs .nav-link').forEach(link => {
+                link.classList.remove('active');
+            });
+            
+            const navLink = document.querySelector(`#societes-sub-tabs .nav-link[href="${subTabId}"]`);
+            if (navLink) {
+                navLink.classList.add('active');
+            }
             
             let url = '';
             let targetContentId = '';
@@ -1463,38 +1805,88 @@
                     break;
                 case '#themes-couleurs-content':
                     targetContentId = '#themes-couleurs-content';
+                    console.log('🎨 Initializing themes-couleurs-content tab');
                     // Le contenu est déjà présent dans le HTML, initialiser les fonctionnalités
                     const themesElement = document.querySelector(targetContentId);
+                    console.log('🎨 Themes element found:', !!themesElement, 'already loaded:', themesElement?.dataset.loaded);
                     if (themesElement && !themesElement.dataset.loaded) {
+                        console.log('🎨 Calling initEnvironmentTab');
                         initEnvironmentTab();
                         themesElement.dataset.loaded = 'true';
                     }
                     break;
                 case '#templates-documents-content':
                     targetContentId = '#templates-documents-content';
+                    console.log('📄 Initializing templates-documents-content tab');
                     // Le contenu est déjà présent dans le HTML, initialiser les fonctionnalités templates
                     const templatesElement = document.querySelector(targetContentId);
+                    console.log('📄 Templates element found:', !!templatesElement, 'already loaded:', templatesElement?.dataset.loaded);
                     if (templatesElement && !templatesElement.dataset.loaded) {
+                        console.log('📄 Calling initTemplatesTab');
                         initTemplatesTab();
                         templatesElement.dataset.loaded = 'true';
                     }
                     break;
             }
             
-            if (url && targetContentId) {
-                const targetElement = document.querySelector(targetContentId);
-                if (targetElement && !targetElement.dataset.loaded) {
-                    loadContentIntoElement(url, targetElement, subTabId);
+            // Activer l'élément cible avec CSS forcing
+            const targetElement = document.querySelector(targetContentId);
+            if (targetElement) {
+                if (url) {
+                    // Toujours essayer de charger le contenu (on peut supprimer le flag dataset.loaded pour des tests)
+                    console.log('🔍 DEBUG: Loading content into', targetContentId, 'from URL:', url);
+                    console.log('🔍 DEBUG: Element loaded flag:', targetElement.dataset.loaded);
+                    loadContentIntoElementFixed(url, targetElement, subTabId);
                     targetElement.dataset.loaded = 'true';
+                } else {
+                    console.log('🔍 DEBUG: No URL provided, activating display for', subTabId);
+                    // Activer l'affichage pour les onglets sans URL (contenu statique)
+                    activateSubTabContent(targetElement, subTabId);
                 }
+            } else {
+                console.error('❌ ERROR: Target element not found for:', targetContentId);
             }
+        }
+        
+        // Fonction pour initialiser les sous-onglets Société avec logique Fixed
+        function setupSocietesSubTabsFixed() {
+            console.log('🔧 setupSocietesSubTabsFixed: Starting setup');
+            
+            // Configurer les event listeners pour les sous-onglets
+            const gestionSocietesTabs = document.querySelectorAll('#societes-sub-tabs .nav-link');
+            console.log('🔧 Found', gestionSocietesTabs.length, 'sub-tabs to configure');
+            
+            gestionSocietesTabs.forEach(tab => {
+                tab.addEventListener('click', function(e) {
+                    e.preventDefault();
+                    const targetSubTab = e.target.getAttribute('href');
+                    console.log('🔧 Sub-tab clicked:', targetSubTab);
+                    loadGestionSocietesSubTabFixed(targetSubTab);
+                });
+            });
+            
+            // Charger le premier sous-onglet par défaut (sociétés)
+            console.log('🔧 Loading default sub-tab: #societes-content');
+            loadGestionSocietesSubTabFixed('#societes-content');
         }
         
         // Fonction utilitaire pour charger le contenu dans un élément
         function loadContentIntoElement(url, targetElement, tabId) {
-            fetch(url)
-                .then(response => response.text())
+            console.log('🔄 loadContentIntoElement called with:', {url, targetElementId: targetElement.id, tabId});
+            
+            fetch(url, {
+                    credentials: 'same-origin',
+                    headers: {
+                        'X-Requested-With': 'XMLHttpRequest'
+                    }
+                })
+                .then(response => {
+                    console.log('🔄 Fetch response status:', response.status, response.statusText);
+                    return response.text();
+                })
                 .then(html => {
+                    console.log('🔄 Received HTML length:', html.length, 'characters');
+                    console.log('🔄 HTML preview:', html.substring(0, 200) + '...');
                     targetElement.innerHTML = html;
                     
                     // Exécuter les scripts dans le contenu chargé
@@ -1578,6 +1970,24 @@
         // Initialisation de l'onglet Environnement
         function initEnvironmentTab() {
             console.log('🎨 Initializing Environment Tab');
+            
+            // Vérifier que nous sommes dans le bon contexte
+            const themesTab = document.getElementById('themes-couleurs-content');
+            console.log('🎨 Themes tab element found:', !!themesTab);
+            console.log('🎨 Themes tab classes:', themesTab?.className);
+            
+            // S'assurer qu'on ne charge pas par erreur dans le mauvais onglet
+            const templatesManagement = document.getElementById('templates-documents-container');
+            if (templatesManagement) {
+                console.warn('🎨 WARNING: templates-documents-container div found during themes init! This could cause content leakage.');
+                
+                // Vérifier si on est bien dans l'onglet themes
+                const currentTab = document.querySelector('#themes-couleurs-content');
+                if (!currentTab || !currentTab.classList.contains('active')) {
+                    console.error('🎨 ERROR: Not in themes tab but templates container found!');
+                }
+            }
+            
             loadEnvironmentData();
             setupEnvironmentEventListeners();
         }
@@ -1585,14 +1995,45 @@
         // Initialisation de l'onglet Templates
         function initTemplatesTab() {
             console.log('📄 Initializing Templates Tab');
-            loadTemplatesData();
+            
+            // Debug: Vérifier que nous ciblons le bon conteneur
+            const container = document.getElementById('templates-documents-container');
+            console.log('📄 Templates container found:', !!container);
+            console.log('📄 Container parent tab:', container?.closest('.tab-pane')?.id);
+            
+            // S'assurer que le conteneur existe avant de charger les données
+            if (container) {
+                console.log('📄 Loading templates data...');
+                loadTemplatesData();
+            } else {
+                console.error('📄 Templates container not found!');
+            }
         }
 
         // Charger les données des templates
         async function loadTemplatesData() {
             try {
                 console.log('📄 Loading templates data...');
-                const container = document.getElementById('templates-management');
+                const container = document.getElementById('templates-documents-container');
+                
+                // Vérifications de sécurité
+                if (!container) {
+                    console.error('📄 Templates container not found');
+                    return;
+                }
+                
+                const parentTab = container.closest('.tab-pane');
+                if (!parentTab || parentTab.id !== 'templates-documents-content') {
+                    console.error('📄 Container not in correct tab, expected templates-documents-content, found:', parentTab?.id);
+                    return;
+                }
+                
+                console.log('📄 All checks passed, loading data into container');
+                
+                // Sauvegarde l'état actuel en cas de problème
+                const previousContent = container.innerHTML;
+                console.log('📄 Previous container content length:', previousContent.length);
+                
                 if (container) {
                     container.innerHTML = `
                         <div class="alert alert-info">
@@ -1652,7 +2093,7 @@
                 }
             } catch (error) {
                 console.error('❌ Error loading templates:', error);
-                const container = document.getElementById('templates-management');
+                const container = document.getElementById('templates-documents-container');
                 if (container) {
                     container.innerHTML = '<div class="alert alert-danger">Erreur lors du chargement des templates</div>';
                 }
@@ -1940,7 +2381,7 @@
         
         // Gestion des templates
         async function loadTemplatesManagement() {
-            const container = document.getElementById('templates-management');
+            const container = document.getElementById('templates-documents-container');
             if (!container || container.dataset.loaded === 'true') return;
             
             try {
