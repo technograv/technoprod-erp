@@ -1,0 +1,66 @@
+{# Template personnalisé TechnoGrav - Enseigne de gravure #}
+<div class="invoice-header technograv-header" style="margin-bottom: 30px; border-bottom: 4px solid {{ couleur_primaire|default('#007bff') }}; padding-bottom: 20px; background: linear-gradient(135deg, #f8f9ff 0%, #ffffff 100%);">
+    <div style="display: flex; justify-content: space-between; align-items: flex-start;">
+        <div class="company-info">
+            {% if logo_path %}
+                <img src="{{ logo_path }}" alt="Logo {{ societe_nom }}" style="max-height: 90px; margin-bottom: 15px; filter: drop-shadow(2px 2px 4px rgba(0,123,255,0.2));">
+            {% else %}
+                <div style="width: 90px; height: 90px; background: {{ couleur_primaire|default('#007bff') }}; border-radius: 8px; display: flex; align-items: center; justify-content: center; margin-bottom: 15px;">
+                    <i class="fas fa-cut" style="color: white; font-size: 36px;"></i>
+                </div>
+            {% endif %}
+            <h1 style="color: {{ couleur_primaire|default('#007bff') }}; font-size: 32px; margin: 0; font-weight: 800; text-transform: uppercase; letter-spacing: 1px;">
+                {{ societe_nom|default('TechnoGrav') }}
+            </h1>
+            <p style="margin: 8px 0; color: #0056b3; font-size: 14px; font-weight: 600;">
+                🎨 GRAVURE & MARQUAGE PROFESSIONNEL
+            </p>
+            <p style="margin: 5px 0; color: #666; font-size: 13px;">
+                Spécialiste de la personnalisation sur tous supports
+            </p>
+        </div>
+        
+        <div class="document-info" style="text-align: right; background: linear-gradient(135deg, {{ couleur_primaire|default('#007bff') }}, {{ couleur_secondaire|default('#0056b3') }}); color: white; padding: 20px; border-radius: 12px; box-shadow: 0 8px 20px rgba(0,123,255,0.3);">
+            <h2 style="color: white; margin: 0 0 15px 0; font-size: 26px; text-shadow: 1px 1px 2px rgba(0,0,0,0.3);">
+                DEVIS
+            </h2>
+            <p style="margin: 5px 0; opacity: 0.9;"><strong>N° :</strong> {{ devis.numeroDevis }}</p>
+            <p style="margin: 5px 0; opacity: 0.9;"><strong>Date :</strong> {{ devis.dateCreation|date('d/m/Y') }}</p>
+            {% if devis.validiteDevis %}
+                <p style="margin: 5px 0; opacity: 0.9;"><strong>Validité :</strong> {{ devis.validiteDevis|date('d/m/Y') }}</p>
+            {% endif %}
+            <div style="margin-top: 15px; padding-top: 15px; border-top: 1px solid rgba(255,255,255,0.3);">
+                <small style="opacity: 0.8;">Devis personnalisé</small>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Barre décorative spécifique TechnoGrav -->
+    <div style="margin-top: 20px; height: 4px; background: linear-gradient(90deg, {{ couleur_primaire|default('#007bff') }} 0%, {{ couleur_secondaire|default('#0056b3') }} 50%, #17a2b8 100%); border-radius: 2px;"></div>
+</div>
+
+<style>
+    .technograv-header {
+        font-family: 'Arial', sans-serif;
+        position: relative;
+    }
+    
+    .technograv-header::before {
+        content: "";
+        position: absolute;
+        top: 0;
+        left: 0;
+        right: 0;
+        height: 2px;
+        background: linear-gradient(90deg, transparent 0%, {{ couleur_primaire|default('#007bff') }} 20%, {{ couleur_primaire|default('#007bff') }} 80%, transparent 100%);
+    }
+    
+    .company-info h1 {
+        text-shadow: 2px 2px 4px rgba(0,123,255,0.1);
+    }
+    
+    .document-info {
+        min-width: 220px;
+        border: 1px solid rgba(255,255,255,0.2);
+    }
+</style>

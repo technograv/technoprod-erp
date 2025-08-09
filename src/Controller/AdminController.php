@@ -25,6 +25,7 @@ use App\Entity\TypeSecteur;
 use App\Entity\AttributionSecteur;
 use App\Entity\ExclusionSecteur;
 use App\Entity\GroupeUtilisateur;
+use App\Entity\UserPermission;
 use App\Service\DocumentNumerotationService;
 use App\Service\EpciBoundariesService;
 use App\Service\CommuneGeometryService;
@@ -40,6 +41,8 @@ use Symfony\Component\HttpFoundation\JsonResponse;
 use Symfony\Component\Routing\Attribute\Route;
 use Symfony\Component\Security\Http\Attribute\IsGranted;
 use Symfony\Component\Cache\Adapter\FilesystemAdapter;
+use Symfony\Component\Mailer\MailerInterface;
+use Symfony\Component\Mime\Email;
 
 #[Route('/admin')]
 #[IsGranted('ROLE_ADMIN')]
@@ -331,6 +334,190 @@ final class AdminController extends AbstractController
         $entityManager->flush();
         
         return $this->json(['success' => true, 'message' => 'Groupes mis à jour avec succès']);
+    }
+
+    #[Route('/users/{id}/permissions', name: 'app_admin_users_get_permissions', methods: ['GET'])]
+    public function getUserPermissions(User $user): JsonResponse
+    {
+        $permissions = [];
+        foreach ($user->getPermissions() as $permission) {
+            if ($permission->isActif()) {
+                $permissions[] = [
+                    'id' => $permission->getId(),
+                    'societe_id' => $permission->getSociete()->getId(),
+                    'societe_nom' => $permission->getSociete()->getNom(),
+                    'permissions' => $permission->getPermissions(),
+                    'niveau' => $permission->getNiveau(),
+                    'actif' => $permission->isActif()
+                ];
+            }
+        }
+        
+        return $this->json($permissions);
+    }
+
+    #[Route('/users/{id}/permissions', name: 'app_admin_users_update_permissions', methods: ['PUT'])]
+    public function updateUserPermissions(User $user, Request $request, EntityManagerInterface $entityManager): JsonResponse
+    {
+        $data = json_decode($request->getContent(), true);
+        
+        if (!isset($data['permissions']) || !is_array($data['permissions'])) {
+            return $this->json(['error' => 'Permissions invalides'], 400);
+        }
+
+        // Désactiver toutes les permissions existantes
+        foreach ($user->getPermissions() as $permission) {
+            $permission->setActif(false);
+        }
+
+        // Créer ou réactiver les permissions
+        foreach ($data['permissions'] as $permissionData) {
+            if (!isset($permissionData['societe_id']) || !isset($permissionData['permissions'])) {
+                continue;
+            }
+
+            $societe = $entityManager->getRepository(Societe::class)->find($permissionData['societe_id']);
+            if (!$societe) {
+                continue;
+            }
+
+            // Chercher une permission existante
+            $userPermission = $user->getPermissionsForSociete($societe);
+            
+            if (!$userPermission) {
+                // Créer une nouvelle permission
+                $userPermission = new UserPermission();
+                $userPermission->setUser($user);
+                $userPermission->setSociete($societe);
+                $entityManager->persist($userPermission);
+                $user->addPermission($userPermission);
+            }
+
+            // Mettre à jour les données
+            $userPermission->setPermissions($permissionData['permissions']);
+            $userPermission->setNiveau($permissionData['niveau'] ?? 5);
+            $userPermission->setActif(true);
+        }
+
+        $entityManager->flush();
+
+        // Retourner les permissions mises à jour pour l'affichage
+        $updatedPermissions = [];
+        foreach ($user->getPermissions() as $permission) {
+            if ($permission->isActif()) {
+                $updatedPermissions[] = [
+                    'id' => $permission->getId(),
+                    'societe' => [
+                        'id' => $permission->getSociete()->getId(),
+                        'nom' => $permission->getSociete()->getNom()
+                    ],
+                    'niveau' => $permission->getNiveau()
+                ];
+            }
+        }
+
+        return $this->json([
+            'success' => true,
+            'permissions' => $updatedPermissions
+        ]);
+    }
+
+    #[Route('/users/{id}/societe-principale', name: 'app_admin_users_update_societe_principale', methods: ['PUT'])]
+    public function updateUserSocietePrincipale(User $user, Request $request, EntityManagerInterface $entityManager): JsonResponse
+    {
+        $data = json_decode($request->getContent(), true);
+        
+        $societePrincipale = null;
+        if (isset($data['societe_principale_id']) && !empty($data['societe_principale_id'])) {
+            $societePrincipale = $entityManager->getRepository(Societe::class)->find($data['societe_principale_id']);
+            if (!$societePrincipale) {
+                return $this->json(['error' => 'Société non trouvée'], 404);
+            }
+        }
+
+        $user->setSocietePrincipale($societePrincipale);
+        $entityManager->flush();
+
+        return $this->json([
+            'success' => true,
+            'societe' => $societePrincipale ? [
+                'id' => $societePrincipale->getId(),
+                'nom' => $societePrincipale->getNom()
+            ] : null
+        ]);
+    }
+
+    #[Route('/users/{id}', name: 'app_admin_user_get', methods: ['GET'])]
+    public function getUserDetails(User $user): JsonResponse
+    {
+        return $this->json([
+            'id' => $user->getId(),
+            'nom' => $user->getNom(),
+            'prenom' => $user->getPrenom(),
+            'email' => $user->getEmail(),
+            'isActive' => $user->isActive(),
+            'isGoogleAccount' => $user->isGoogleAccount(),
+            'roles' => $user->getRoles(),
+            'createdAt' => $user->getCreatedAt()?->format('Y-m-d H:i:s'),
+            'updatedAt' => $user->getUpdatedAt()?->format('Y-m-d H:i:s'),
+            'societePrincipale' => $user->getSocietePrincipale() ? [
+                'id' => $user->getSocietePrincipale()->getId(),
+                'nom' => $user->getSocietePrincipale()->getNom()
+            ] : null,
+            'groupes' => array_map(function($groupe) {
+                return [
+                    'id' => $groupe->getId(),
+                    'nom' => $groupe->getNom(),
+                    'couleur' => $groupe->getCouleur(),
+                    'niveau' => $groupe->getNiveau()
+                ];
+            }, $user->getGroupes()->toArray())
+        ]);
+    }
+
+    #[Route('/users/{id}/reset-password', name: 'app_admin_user_reset_password', methods: ['POST'])]
+    public function resetUserPassword(User $user, EntityManagerInterface $entityManager, MailerInterface $mailer = null): JsonResponse
+    {
+        // Générer un nouveau mot de passe temporaire
+        $newPassword = bin2hex(random_bytes(8)); // 16 caractères
+        
+        // Hasher le mot de passe
+        $hashedPassword = password_hash($newPassword, PASSWORD_DEFAULT);
+        $user->setPassword($hashedPassword);
+        
+        $entityManager->flush();
+        
+        // Si le mailer est disponible, envoyer un email (optionnel)
+        if ($mailer) {
+            try {
+                $email = (new Email())
+                    ->from('no-reply@technoprod.com')
+                    ->to($user->getEmail())
+                    ->subject('Réinitialisation de votre mot de passe TechnoProd')
+                    ->html("
+                        <h3>Réinitialisation de mot de passe</h3>
+                        <p>Votre mot de passe a été réinitialisé.</p>
+                        <p><strong>Nouveau mot de passe temporaire :</strong> <code>{$newPassword}</code></p>
+                        <p>Veuillez vous connecter et changer ce mot de passe dès que possible.</p>
+                        <hr>
+                        <small>Cet email a été généré automatiquement par TechnoProd.</small>
+                    ");
+                
+                $mailer->send($email);
+            } catch (\Exception $e) {
+                // Si l'envoi d'email échoue, ce n'est pas bloquant
+                return $this->json([
+                    'success' => true,
+                    'warning' => 'Mot de passe réinitialisé mais email non envoyé',
+                    'password' => $newPassword
+                ]);
+            }
+        }
+        
+        return $this->json([
+            'success' => true,
+            'message' => 'Mot de passe réinitialisé avec succès'
+        ]);
     }
 
     #[Route('/societes', name: 'app_admin_societes', methods: ['GET'])]
@@ -5117,6 +5304,71 @@ www.technoprod.com';
             'message' => 'Statut du groupe modifié avec succès',
             'actif' => $groupe->isActif()
         ]);
+    }
+
+    #[Route('/groupes-utilisateurs/reorganize', name: 'app_admin_groupe_utilisateur_reorganize', methods: ['POST'])]
+    public function reorganizeGroupesUtilisateurs(EntityManagerInterface $entityManager): JsonResponse
+    {
+        try {
+            $entityManager->getRepository(GroupeUtilisateur::class)->reorganizeOrdres();
+            return $this->json(['success' => true, 'message' => 'Ordres réorganisés avec succès']);
+        } catch (\Exception $e) {
+            return $this->json(['error' => 'Erreur lors de la réorganisation : ' . $e->getMessage()], 500);
+        }
+    }
+
+    #[Route('/api/societes-tree', name: 'app_admin_api_societes_tree', methods: ['GET'])]
+    public function getSocietesTree(EntityManagerInterface $entityManager, TenantService $tenantService): JsonResponse
+    {
+        $user = $this->getUser();
+        $allSocietes = [];
+
+        if ($user && $user->isSuperAdmin()) {
+            // Super admin : toutes les sociétés
+            $allSocietes = $entityManager->getRepository(Societe::class)->findBy(['active' => true], ['ordre' => 'ASC', 'nom' => 'ASC']);
+        } else {
+            // Utilisateur normal : sociétés accessibles via TenantService
+            $allSocietes = $tenantService->getAvailableSocietes();
+        }
+
+        // Organiser en arbre hiérarchique
+        $tree = [];
+        $meres = [];
+        $filles = [];
+
+        foreach ($allSocietes as $societe) {
+            $societeData = [
+                'id' => $societe->getId(),
+                'nom' => $societe->getNom(),
+                'type' => $societe->getType(),
+                'display_name' => $societe->getDisplayName(),
+                'parent_id' => $societe->getSocieteParent() ? $societe->getSocieteParent()->getId() : null,
+                'enfants' => []
+            ];
+
+            if ($societe->isMere()) {
+                $meres[$societe->getId()] = $societeData;
+            } else {
+                $filles[] = $societeData;
+            }
+        }
+
+        // Attacher les filles aux mères
+        foreach ($filles as $fille) {
+            if ($fille['parent_id'] && isset($meres[$fille['parent_id']])) {
+                $meres[$fille['parent_id']]['enfants'][] = $fille;
+            } else {
+                // Société fille orpheline, l'ajouter en racine
+                $tree[] = $fille;
+            }
+        }
+
+        // Ajouter toutes les mères à l'arbre
+        foreach ($meres as $mere) {
+            $tree[] = $mere;
+        }
+
+        return $this->json($tree);
     }
 
 }

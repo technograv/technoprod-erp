@@ -1,0 +1,855 @@
+<div class="admin-section">
+    <h3 class="section-title">
+        <i class="fas fa-users me-2"></i>Gestion des Groupes Utilisateurs
+    </h3>
+    <p class="text-muted mb-4">Configuration des groupes et des droits d'accès avec hiérarchie et permissions</p>
+
+    <!-- Statistiques rapides -->
+    <div class="row mb-4">
+        <div class="col-md-3">
+            <div class="card text-center">
+                <div class="card-body">
+                    <h4 class="text-primary">{{ stats.total }}</h4>
+                    <small class="text-muted">Groupes Total</small>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="card text-center">
+                <div class="card-body">
+                    <h4 class="text-success">{{ stats.actifs }}</h4>
+                    <small class="text-muted">Actifs</small>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="card text-center">
+                <div class="card-body">
+                    <h4 class="text-warning">{{ stats.racines }}</h4>
+                    <small class="text-muted">Groupes Racines</small>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="card text-center">
+                <div class="card-body">
+                    <h4 class="text-info">{{ stats.enfants }}</h4>
+                    <small class="text-muted">Sous-groupes</small>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Actions rapides -->
+    <div class="d-flex justify-content-between align-items-center mb-3">
+        <div>
+            <button type="button" class="btn btn-primary" onclick="ouvrirModalGroupe()">
+                <i class="fas fa-plus me-1"></i>Nouveau Groupe
+            </button>
+            <button type="button" class="btn btn-outline-secondary ms-2" onclick="reorganiserOrdres()">
+                <i class="fas fa-sort me-1"></i>Réorganiser
+            </button>
+        </div>
+        <div class="input-group" style="width: 300px;">
+            <input type="text" class="form-control" id="searchGroupe" placeholder="Rechercher un groupe...">
+            <button class="btn btn-outline-secondary" type="button">
+                <i class="fas fa-search"></i>
+            </button>
+        </div>
+    </div>
+
+    <!-- Tableau des groupes -->
+    <div class="card">
+        <div class="card-body p-0">
+            {% if groupes|length > 0 %}
+                <div class="table-responsive">
+                    <table class="table table-hover mb-0" id="tableGroupes">
+                        <thead>
+                            <tr>
+                                <th width="8%">Ordre</th>
+                                <th width="20%">Nom</th>
+                                <th width="25%">Description</th>
+                                <th width="12%">Niveau</th>
+                                <th width="10%">Permissions</th>
+                                <th width="10%">Utilisateurs</th>
+                                <th width="8%">Statut</th>
+                                <th width="7%">Actions</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for groupe in groupes %}
+                                <tr data-groupe-id="{{ groupe.id }}" 
+                                    {% if not groupe.actif %}class="table-secondary"{% endif %}>
+                                    <td>
+                                        <span class="badge bg-secondary">{{ groupe.ordre }}</span>
+                                    </td>
+                                    <td>
+                                        <div class="d-flex align-items-center">
+                                            {% if groupe.couleur %}
+                                                <div class="me-2" style="width: 12px; height: 12px; border-radius: 50%; background-color: {{ groupe.couleur }};"></div>
+                                            {% endif %}
+                                            <div>
+                                                <strong>{{ groupe.nomAffiche }}</strong>
+                                                {% if groupe.parent %}
+                                                    <br><small class="text-muted">↳ Enfant de {{ groupe.parent.nom }}</small>
+                                                {% endif %}
+                                            </div>
+                                        </div>
+                                    </td>
+                                    <td>
+                                        <span class="text-muted">{{ groupe.description|default('Aucune description') }}</span>
+                                    </td>
+                                    <td>
+                                        <div class="d-flex align-items-center">
+                                            <div class="progress me-2" style="width: 60px; height: 10px;">
+                                                <div class="progress-bar" role="progressbar" 
+                                                     style="width: {{ (groupe.niveau / 10) * 100 }}%" 
+                                                     aria-valuenow="{{ groupe.niveau }}" 
+                                                     aria-valuemin="0" aria-valuemax="10"></div>
+                                            </div>
+                                            <span class="badge bg-primary">{{ groupe.niveau }}/10</span>
+                                        </div>
+                                    </td>
+                                    <td>
+                                        <span class="badge bg-info">{{ groupe.permissions|length }}</span>
+                                        {% if groupe.permissions|length > 0 %}
+                                            <i class="fas fa-info-circle text-muted ms-1" 
+                                               title="{{ groupe.permissions|join(', ') }}"></i>
+                                        {% endif %}
+                                    </td>
+                                    <td>
+                                        <span class="badge bg-secondary">{{ groupe.nombreUtilisateurs }}</span>
+                                    </td>
+                                    <td>
+                                        {% if groupe.actif %}
+                                            <span class="badge bg-success">Actif</span>
+                                        {% else %}
+                                            <span class="badge bg-danger">Inactif</span>
+                                        {% endif %}
+                                    </td>
+                                    <td>
+                                        <div class="btn-group btn-group-sm">
+                                            <button class="btn btn-outline-primary" 
+                                                    onclick="voirGroupe({{ groupe.id }})" 
+                                                    title="Voir détails">
+                                                <i class="fas fa-eye"></i>
+                                            </button>
+                                            <button class="btn btn-outline-secondary" 
+                                                    onclick="modifierGroupe({{ groupe.id }})" 
+                                                    title="Modifier">
+                                                <i class="fas fa-edit"></i>
+                                            </button>
+                                            <button class="btn btn-outline-warning" 
+                                                    onclick="toggleGroupe({{ groupe.id }})" 
+                                                    title="{% if groupe.actif %}Désactiver{% else %}Activer{% endif %}">
+                                                <i class="fas fa-{% if groupe.actif %}pause{% else %}play{% endif %}"></i>
+                                            </button>
+                                            {% if groupe.nombreUtilisateurs == 0 and groupe.enfants|length == 0 %}
+                                                <button class="btn btn-outline-danger" 
+                                                        onclick="supprimerGroupe({{ groupe.id }})" 
+                                                        title="Supprimer">
+                                                    <i class="fas fa-trash"></i>
+                                                </button>
+                                            {% endif %}
+                                        </div>
+                                    </td>
+                                </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+            {% else %}
+                <div class="text-center py-5">
+                    <i class="fas fa-users fa-3x text-muted mb-3"></i>
+                    <h5>Aucun groupe configuré</h5>
+                    <p class="text-muted mb-3">Commencez par créer votre premier groupe d'utilisateurs</p>
+                    <button type="button" class="btn btn-primary" onclick="ouvrirModalGroupe()">
+                        <i class="fas fa-plus me-1"></i>Créer un groupe
+                    </button>
+                </div>
+            {% endif %}
+        </div>
+    </div>
+</div>
+
+<!-- Modal Groupe -->
+<div class="modal fade" id="modalGroupe" tabindex="-1" aria-labelledby="modalGroupeLabel" aria-hidden="true">
+    <div class="modal-dialog modal-xl">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title" id="modalGroupeLabel">
+                    <span id="modalGroupeTitle">Nouveau Groupe</span>
+                </h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body">
+                <form id="formGroupe">
+                    <div class="row">
+                        <!-- Informations générales -->
+                        <div class="col-md-6">
+                            <div class="card mb-3">
+                                <div class="card-header bg-light">
+                                    <h6 class="mb-0"><i class="fas fa-info-circle me-1"></i>Informations Générales</h6>
+                                </div>
+                                <div class="card-body">
+                                    <div class="mb-3">
+                                        <label for="groupeNom" class="form-label">Nom du groupe *</label>
+                                        <input type="text" class="form-control" id="groupeNom" name="nom" required>
+                                    </div>
+                                    
+                                    <div class="mb-3">
+                                        <label for="groupeDescription" class="form-label">Description</label>
+                                        <textarea class="form-control" id="groupeDescription" name="description" rows="3"></textarea>
+                                    </div>
+                                    
+                                    <div class="row">
+                                        <div class="col-md-6">
+                                            <label for="groupeNiveau" class="form-label">Niveau (1-10)</label>
+                                            <input type="number" class="form-control" id="groupeNiveau" name="niveau" min="1" max="10" value="5">
+                                        </div>
+                                        <div class="col-md-6">
+                                            <label for="groupeCouleur" class="form-label">Couleur</label>
+                                            <input type="color" class="form-control form-control-color" id="groupeCouleur" name="couleur" value="#6c757d">
+                                        </div>
+                                    </div>
+                                    
+                                    <div class="mb-3">
+                                        <label for="groupeParent" class="form-label">Groupe parent (optionnel)</label>
+                                        <select class="form-select" id="groupeParent" name="parent_id">
+                                            <option value="">Aucun parent (groupe racine)</option>
+                                            {% for g in groupes %}
+                                                {% if g.actif %}
+                                                    <option value="{{ g.id }}">{{ g.nomAffiche }}</option>
+                                                {% endif %}
+                                            {% endfor %}
+                                        </select>
+                                    </div>
+                                    
+                                    <div class="form-check">
+                                        <input class="form-check-input" type="checkbox" id="groupeActif" name="actif" checked>
+                                        <label class="form-check-label" for="groupeActif">
+                                            Groupe actif
+                                        </label>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <!-- Permissions -->
+                        <div class="col-md-6">
+                            <div class="card mb-3">
+                                <div class="card-header bg-light">
+                                    <h6 class="mb-0"><i class="fas fa-key me-1"></i>Permissions</h6>
+                                </div>
+                                <div class="card-body" style="max-height: 400px; overflow-y: auto;">
+                                    {% for category, perms in available_permissions %}
+                                        <h6 class="text-uppercase fw-bold mt-3 mb-2 text-primary">{{ category|title }}</h6>
+                                        <div class="row">
+                                            {% for perm, label in perms %}
+                                                <div class="col-12 mb-1">
+                                                    <div class="form-check form-check-sm">
+                                                        <input class="form-check-input permission-checkbox" 
+                                                               type="checkbox" 
+                                                               id="perm_{{ perm|replace({'.': '_'}) }}" 
+                                                               value="{{ perm }}">
+                                                        <label class="form-check-label small" for="perm_{{ perm|replace({'.': '_'}) }}">
+                                                            {{ label }}
+                                                        </label>
+                                                    </div>
+                                                </div>
+                                            {% endfor %}
+                                        </div>
+                                    {% endfor %}
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <!-- Sociétés -->
+                    <div class="card mb-3">
+                        <div class="card-header bg-light">
+                            <h6 class="mb-0"><i class="fas fa-building me-1"></i>Accès aux Sociétés</h6>
+                        </div>
+                        <div class="card-body">
+                            <p class="text-muted small mb-2">Sélectionnez les sociétés auxquelles ce groupe donne accès (laissez vide pour accès global)</p>
+                            <div id="societesList">
+                                <!-- Les sociétés seront chargées via AJAX -->
+                            </div>
+                        </div>
+                    </div>
+                </form>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Annuler</button>
+                <button type="button" class="btn btn-primary" onclick="sauvegarderGroupe()">
+                    <i class="fas fa-save me-1"></i>Sauvegarder
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Modal de confirmation -->
+<div class="modal fade" id="modalConfirmation" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">Confirmation</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <p id="messageConfirmation"></p>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Annuler</button>
+                <button type="button" class="btn btn-danger" id="btnConfirmer">Confirmer</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+let groupeEnCours = null;
+
+// Initialisation
+document.addEventListener('DOMContentLoaded', function() {
+    // Recherche en temps réel
+    document.getElementById('searchGroupe').addEventListener('input', function() {
+        filtrerGroupes(this.value);
+    });
+    
+    // Activer les tooltips
+    const tooltipTriggerList = [].slice.call(document.querySelectorAll('[title]'));
+    tooltipTriggerList.map(function (tooltipTriggerEl) {
+        return new bootstrap.Tooltip(tooltipTriggerEl);
+    });
+});
+
+function ouvrirModalGroupe(groupeId = null) {
+    const modal = new bootstrap.Modal(document.getElementById('modalGroupe'));
+    
+    if (groupeId) {
+        // Mode édition
+        document.getElementById('modalGroupeTitle').textContent = 'Modifier le Groupe';
+        chargerGroupe(groupeId);
+    } else {
+        // Mode création
+        document.getElementById('modalGroupeTitle').textContent = 'Nouveau Groupe';
+        reinitialiserFormulaire();
+    }
+    
+    chargerSocietes();
+    modal.show();
+}
+
+function chargerGroupe(groupeId) {
+    fetch(`/admin/groupes-utilisateurs/${groupeId}`)
+        .then(response => response.json())
+        .then(data => {
+            groupeEnCours = data.id;
+            
+            // Remplir le formulaire
+            document.getElementById('groupeNom').value = data.nom;
+            document.getElementById('groupeDescription').value = data.description || '';
+            document.getElementById('groupeNiveau').value = data.niveau;
+            document.getElementById('groupeCouleur').value = data.couleur || '#6c757d';
+            document.getElementById('groupeParent').value = data.parent_id || '';
+            document.getElementById('groupeActif').checked = data.actif;
+            
+            // Cocher les permissions
+            document.querySelectorAll('.permission-checkbox').forEach(checkbox => {
+                checkbox.checked = data.permissions.includes(checkbox.value);
+            });
+            
+            // Les sociétés seront cochées après chargement de la liste
+            setTimeout(() => {
+                if (data.societes.length === 0) {
+                    // Aucune société spécifique = accès global
+                    document.getElementById('societe_all').checked = true;
+                    toggleAllSocietes(true);
+                } else {
+                    // Cocher les sociétés spécifiques
+                    data.societes.forEach(societe => {
+                        const checkbox = document.getElementById(`societe_${societe.id}`);
+                        if (checkbox) checkbox.checked = true;
+                    });
+                }
+            }, 200);
+        })
+        .catch(error => {
+            console.error('Erreur lors du chargement du groupe:', error);
+            showNotification('Erreur lors du chargement du groupe', 'error');
+        });
+}
+
+function chargerSocietes() {
+    const societesList = document.getElementById('societesList');
+    
+    // Afficher le chargement
+    societesList.innerHTML = `
+        <div class="d-flex justify-content-center align-items-center py-3">
+            <div class="spinner-border spinner-border-sm text-primary me-2" role="status"></div>
+            <span class="text-muted">Chargement des sociétés...</span>
+        </div>
+    `;
+    
+    // Charger les sociétés via l'API
+    fetch('/admin/api/societes-tree')
+        .then(response => response.json())
+        .then(societes => {
+            if (societes.length === 0) {
+                societesList.innerHTML = `
+                    <div class="text-center py-3">
+                        <i class="fas fa-building fa-2x text-muted mb-2"></i>
+                        <p class="text-muted mb-0">Aucune société disponible</p>
+                    </div>
+                `;
+                return;
+            }
+            
+            // Construire l'arbre généalogique
+            let html = '<div class="societes-tree">';
+            
+            // Ajouter une option pour sélectionner toutes les sociétés
+            html += `
+                <div class="mb-3 p-2 bg-light rounded">
+                    <div class="form-check">
+                        <input class="form-check-input" type="checkbox" id="societe_all" onchange="toggleAllSocietes(this.checked)">
+                        <label class="form-check-label fw-bold text-primary" for="societe_all">
+                            <i class="fas fa-globe me-1"></i>Toutes les sociétés (accès global)
+                        </label>
+                    </div>
+                </div>
+            `;
+            
+            html += '<div class="societes-list">';
+            
+            societes.forEach(societe => {
+                html += renderSocieteNode(societe, 0);
+            });
+            
+            html += '</div></div>';
+            
+            societesList.innerHTML = html;
+        })
+        .catch(error => {
+            console.error('Erreur lors du chargement des sociétés:', error);
+            societesList.innerHTML = `
+                <div class="alert alert-danger">
+                    <i class="fas fa-exclamation-triangle me-1"></i>
+                    Erreur lors du chargement des sociétés
+                </div>
+            `;
+        });
+}
+
+function renderSocieteNode(societe, level) {
+    const indent = level * 20;
+    const typeIcon = societe.type === 'mere' ? 'fas fa-building' : 'far fa-building';
+    const typeBadge = societe.type === 'mere' ? 
+        '<span class="badge bg-primary ms-1">Mère</span>' : 
+        '<span class="badge bg-secondary ms-1">Fille</span>';
+    
+    let html = `
+        <div class="societe-item mb-2" style="margin-left: ${indent}px;">
+            <div class="form-check">
+                <input class="form-check-input societe-checkbox" 
+                       type="checkbox" 
+                       id="societe_${societe.id}" 
+                       value="${societe.id}"
+                       onchange="updateSocieteSelection()">
+                <label class="form-check-label d-flex align-items-center" for="societe_${societe.id}">
+                    <i class="${typeIcon} me-2"></i>
+                    <span>${societe.display_name}</span>
+                    ${typeBadge}
+                    ${societe.enfants.length > 0 ? `<small class="text-muted ms-2">(${societe.enfants.length} fille${societe.enfants.length > 1 ? 's' : ''})</small>` : ''}
+                </label>
+            </div>
+        </div>
+    `;
+    
+    // Ajouter les enfants de manière récursive
+    if (societe.enfants && societe.enfants.length > 0) {
+        societe.enfants.forEach(enfant => {
+            html += renderSocieteNode(enfant, level + 1);
+        });
+    }
+    
+    return html;
+}
+
+function toggleAllSocietes(checked) {
+    const allCheckboxes = document.querySelectorAll('.societe-checkbox');
+    allCheckboxes.forEach(checkbox => {
+        checkbox.checked = checked;
+    });
+    
+    // Afficher/masquer la liste des sociétés
+    const societesList = document.querySelector('.societes-list');
+    if (societesList) {
+        societesList.style.opacity = checked ? '0.5' : '1';
+        societesList.style.pointerEvents = checked ? 'none' : 'auto';
+    }
+}
+
+function updateSocieteSelection() {
+    const allCheckbox = document.getElementById('societe_all');
+    const societeCheckboxes = document.querySelectorAll('.societe-checkbox');
+    const checkedSocietes = document.querySelectorAll('.societe-checkbox:checked');
+    
+    // Si toutes les sociétés sont sélectionnées, cocher "Toutes les sociétés"
+    if (checkedSocietes.length === societeCheckboxes.length && societeCheckboxes.length > 0) {
+        allCheckbox.checked = true;
+        toggleAllSocietes(true);
+    } else {
+        // Si on décoche une société, décocher "Toutes les sociétés"
+        if (allCheckbox.checked) {
+            allCheckbox.checked = false;
+            const societesList = document.querySelector('.societes-list');
+            if (societesList) {
+                societesList.style.opacity = '1';
+                societesList.style.pointerEvents = 'auto';
+            }
+        }
+    }
+}
+
+function reinitialiserFormulaire() {
+    groupeEnCours = null;
+    document.getElementById('formGroupe').reset();
+    document.getElementById('groupeNiveau').value = 5;
+    document.getElementById('groupeCouleur').value = '#6c757d';
+    document.getElementById('groupeActif').checked = true;
+    
+    // Décocher toutes les permissions
+    document.querySelectorAll('.permission-checkbox').forEach(checkbox => {
+        checkbox.checked = false;
+    });
+}
+
+function sauvegarderGroupe() {
+    const formData = new FormData(document.getElementById('formGroupe'));
+    
+    // Collecter les permissions sélectionnées
+    const permissions = Array.from(document.querySelectorAll('.permission-checkbox:checked'))
+        .map(checkbox => checkbox.value);
+    
+    // Collecter les sociétés sélectionnées
+    const allSocietesChecked = document.getElementById('societe_all').checked;
+    let societes = [];
+    
+    if (allSocietesChecked) {
+        // Si "toutes les sociétés" est coché, renvoyer un tableau vide (accès global)
+        societes = [];
+    } else {
+        // Sinon, collecter les sociétés spécifiquement sélectionnées
+        societes = Array.from(document.querySelectorAll('.societe-checkbox:checked'))
+            .map(checkbox => parseInt(checkbox.value));
+    }
+    
+    const data = {
+        nom: formData.get('nom'),
+        description: formData.get('description'),
+        niveau: parseInt(formData.get('niveau')),
+        couleur: formData.get('couleur'),
+        parent_id: formData.get('parent_id') || null,
+        actif: document.getElementById('groupeActif').checked,
+        permissions: permissions,
+        societes: societes
+    };
+    
+    if (groupeEnCours) {
+        data.ordre = parseInt(document.querySelector(`tr[data-groupe-id="${groupeEnCours}"] .badge`).textContent);
+    }
+    
+    const url = groupeEnCours ? 
+        `/admin/groupes-utilisateurs/${groupeEnCours}` : 
+        '/admin/groupes-utilisateurs';
+    const method = groupeEnCours ? 'PUT' : 'POST';
+    
+    fetch(url, {
+        method: method,
+        headers: {
+            'Content-Type': 'application/json',
+            'X-Requested-With': 'XMLHttpRequest'
+        },
+        body: JSON.stringify(data)
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.success) {
+            showNotification(data.message, 'success');
+            bootstrap.Modal.getInstance(document.getElementById('modalGroupe')).hide();
+            rechargerTableauGroupes();
+        } else {
+            showNotification(data.error || 'Erreur lors de la sauvegarde', 'error');
+        }
+    })
+    .catch(error => {
+        console.error('Erreur:', error);
+        showNotification('Erreur lors de la communication avec le serveur', 'error');
+    });
+}
+
+function voirGroupe(groupeId) {
+    const modal = new bootstrap.Modal(document.getElementById('modalGroupe'));
+    
+    // Mode consultation - charger les données mais en lecture seule
+    document.getElementById('modalGroupeTitle').textContent = 'Détails du Groupe';
+    chargerGroupe(groupeId);
+    
+    // Attendre que les données soient chargées puis désactiver
+    setTimeout(() => {
+        document.querySelectorAll('#modalGroupe input, #modalGroupe textarea, #modalGroupe select').forEach(field => {
+            field.readOnly = true;
+            field.disabled = true;
+        });
+        document.querySelectorAll('#modalGroupe .form-check-input').forEach(checkbox => {
+            checkbox.disabled = true;
+        });
+        
+        // Masquer le bouton sauvegarder et changer le bouton fermer
+        const modalFooter = document.querySelector('#modalGroupe .modal-footer');
+        modalFooter.innerHTML = `
+            <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Fermer</button>
+        `;
+    }, 200);
+    
+    modal.show();
+    
+    // Restaurer le modal après fermeture
+    document.getElementById('modalGroupe').addEventListener('hidden.bs.modal', function() {
+        const modalFooter = document.querySelector('#modalGroupe .modal-footer');
+        modalFooter.innerHTML = `
+            <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Annuler</button>
+            <button type="button" class="btn btn-primary" onclick="sauvegarderGroupe()">
+                <i class="fas fa-save me-1"></i>Sauvegarder
+            </button>
+        `;
+        
+        // Réactiver tous les champs
+        document.querySelectorAll('#modalGroupe input, #modalGroupe textarea, #modalGroupe select').forEach(field => {
+            field.readOnly = false;
+            field.disabled = false;
+        });
+        document.querySelectorAll('#modalGroupe .form-check-input').forEach(checkbox => {
+            checkbox.disabled = false;
+        });
+    }, { once: true });
+}
+
+function modifierGroupe(groupeId) {
+    ouvrirModalGroupe(groupeId);
+}
+
+function toggleGroupe(groupeId) {
+    fetch(`/admin/groupes-utilisateurs/${groupeId}/toggle`, {
+        method: 'POST',
+        headers: {
+            'X-Requested-With': 'XMLHttpRequest'
+        }
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.success) {
+            showNotification(data.message, 'success');
+            rechargerTableauGroupes();
+        } else {
+            showNotification(data.error || 'Erreur lors du changement de statut', 'error');
+        }
+    })
+    .catch(error => {
+        console.error('Erreur:', error);
+        showNotification('Erreur lors de la communication avec le serveur', 'error');
+    });
+}
+
+function supprimerGroupe(groupeId) {
+    const row = document.querySelector(`tr[data-groupe-id="${groupeId}"]`);
+    const nomGroupe = row.querySelector('strong').textContent;
+    
+    document.getElementById('messageConfirmation').textContent = 
+        `Êtes-vous sûr de vouloir supprimer le groupe "${nomGroupe}" ? Cette action est irréversible.`;
+    
+    const modal = new bootstrap.Modal(document.getElementById('modalConfirmation'));
+    modal.show();
+    
+    document.getElementById('btnConfirmer').onclick = function() {
+        fetch(`/admin/groupes-utilisateurs/${groupeId}`, {
+            method: 'DELETE',
+            headers: {
+                'X-Requested-With': 'XMLHttpRequest'
+            }
+        })
+        .then(response => response.json())
+        .then(data => {
+            if (data.success) {
+                showNotification(data.message, 'success');
+                rechargerTableauGroupes();
+            } else {
+                showNotification(data.error || 'Erreur lors de la suppression', 'error');
+            }
+            modal.hide();
+        })
+        .catch(error => {
+            console.error('Erreur:', error);
+            showNotification('Erreur lors de la communication avec le serveur', 'error');
+        });
+    };
+}
+
+function reorganiserOrdres() {
+    fetch('/admin/groupes-utilisateurs/reorganize', {
+        method: 'POST',
+        headers: {
+            'X-Requested-With': 'XMLHttpRequest'
+        }
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.success) {
+            showNotification('Ordres réorganisés avec succès', 'success');
+            rechargerTableauGroupes();
+        } else {
+            showNotification('Erreur lors de la réorganisation', 'error');
+        }
+    })
+    .catch(error => {
+        console.error('Erreur:', error);
+        showNotification('Erreur lors de la communication avec le serveur', 'error');
+    });
+}
+
+function filtrerGroupes(searchTerm) {
+    const rows = document.querySelectorAll('#tableGroupes tbody tr');
+    const term = searchTerm.toLowerCase();
+    
+    rows.forEach(row => {
+        const nom = row.querySelector('strong').textContent.toLowerCase();
+        const description = row.querySelector('.text-muted').textContent.toLowerCase();
+        
+        if (nom.includes(term) || description.includes(term)) {
+            row.style.display = '';
+        } else {
+            row.style.display = 'none';
+        }
+    });
+}
+
+function rechargerTableauGroupes() {
+    // Recharger uniquement la section des groupes
+    fetch('/admin/groupes-utilisateurs')
+        .then(response => response.text())
+        .then(html => {
+            const parser = new DOMParser();
+            const newDoc = parser.parseFromString(html, 'text/html');
+            const newContent = newDoc.querySelector('.admin-section');
+            
+            if (newContent) {
+                document.querySelector('.admin-section').replaceWith(newContent);
+                // Réinitialiser les event listeners
+                document.addEventListener('DOMContentLoaded', function() {
+                    document.getElementById('searchGroupe').addEventListener('input', function() {
+                        filtrerGroupes(this.value);
+                    });
+                });
+            }
+        })
+        .catch(error => {
+            console.error('Erreur lors du rechargement:', error);
+            window.location.reload(); // Fallback
+        });
+}
+
+function showNotification(message, type = 'info') {
+    // Utiliser le système de notification existant ou créer une notification simple
+    const alertClass = type === 'success' ? 'alert-success' : 
+                      type === 'error' ? 'alert-danger' : 'alert-info';
+    
+    const notification = document.createElement('div');
+    notification.className = `alert ${alertClass} alert-dismissible fade show position-fixed`;
+    notification.style.cssText = 'top: 20px; right: 20px; z-index: 9999; min-width: 300px;';
+    notification.innerHTML = `
+        ${message}
+        <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+    `;
+    
+    document.body.appendChild(notification);
+    
+    setTimeout(() => {
+        if (notification.parentNode) {
+            notification.remove();
+        }
+    }, 5000);
+}
+</script>
+
+<style>
+/* Styles pour l'arbre généalogique des sociétés */
+.societes-tree {
+    max-height: 300px;
+    overflow-y: auto;
+    border: 1px solid #dee2e6;
+    border-radius: 0.375rem;
+    padding: 0.5rem;
+}
+
+.societe-item {
+    position: relative;
+}
+
+.societe-item:before {
+    content: '';
+    position: absolute;
+    left: -10px;
+    top: 15px;
+    width: 8px;
+    height: 1px;
+    background-color: #dee2e6;
+}
+
+.societe-item[style*="margin-left: 20px"]:before {
+    left: 10px;
+}
+
+.societe-item[style*="margin-left: 40px"]:before {
+    left: 30px;
+}
+
+.societe-item .form-check {
+    background-color: #f8f9fa;
+    border-radius: 0.25rem;
+    padding: 0.5rem;
+    margin-bottom: 0.25rem;
+    border-left: 3px solid transparent;
+    transition: all 0.2s ease;
+}
+
+.societe-item .form-check:hover {
+    background-color: #e9ecef;
+    border-left-color: #6c757d;
+}
+
+.societe-item .form-check-input:checked ~ .form-check-label {
+    font-weight: 500;
+}
+
+.societe-item .form-check-input:checked ~ .form-check-label .badge {
+    opacity: 1;
+}
+
+.societe-item .form-check-label .badge {
+    opacity: 0.7;
+    transition: opacity 0.2s ease;
+}
+
+/* Style spécial pour l'option "Toutes les sociétés" */
+.societes-tree > div:first-child .form-check {
+    background: linear-gradient(135deg, #e3f2fd 0%, #bbdefb 100%);
+    border: 1px solid #90caf9;
+}
+
+.societes-tree > div:first-child .form-check:hover {
+    background: linear-gradient(135deg, #bbdefb 0%, #90caf9 100%);
+}
+</style>

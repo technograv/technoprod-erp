@@ -1,0 +1,80 @@
+{# Template personnalisé TechnoPrint - Enseigne d'impression #}
+<div class="invoice-header technoprint-header" style="margin-bottom: 30px; border-bottom: 4px solid {{ couleur_primaire|default('#28a745') }}; padding-bottom: 20px; background: linear-gradient(135deg, #f8fff8 0%, #ffffff 100%);">
+    <div style="display: flex; justify-content: space-between; align-items: flex-start;">
+        <div class="company-info">
+            {% if logo_path %}
+                <img src="{{ logo_path }}" alt="Logo {{ societe_nom }}" style="max-height: 90px; margin-bottom: 15px; filter: drop-shadow(2px 2px 4px rgba(40,167,69,0.2));">
+            {% else %}
+                <div style="width: 90px; height: 90px; background: {{ couleur_primaire|default('#28a745') }}; border-radius: 8px; display: flex; align-items: center; justify-content: center; margin-bottom: 15px;">
+                    <i class="fas fa-print" style="color: white; font-size: 36px;"></i>
+                </div>
+            {% endif %}
+            <h1 style="color: {{ couleur_primaire|default('#28a745') }}; font-size: 32px; margin: 0; font-weight: 800; text-transform: uppercase; letter-spacing: 1px;">
+                {{ societe_nom|default('TechnoPrint') }}
+            </h1>
+            <p style="margin: 8px 0; color: #1e7e34; font-size: 14px; font-weight: 600;">
+                📄 IMPRESSION & COMMUNICATION VISUELLE
+            </p>
+            <p style="margin: 5px 0; color: #666; font-size: 13px;">
+                Solutions d'impression professionnelle et signalétique
+            </p>
+        </div>
+        
+        <div class="document-info" style="text-align: right; background: linear-gradient(135deg, {{ couleur_primaire|default('#28a745') }}, {{ couleur_secondaire|default('#1e7e34') }}); color: white; padding: 20px; border-radius: 12px; box-shadow: 0 8px 20px rgba(40,167,69,0.3);">
+            <h2 style="color: white; margin: 0 0 15px 0; font-size: 26px; text-shadow: 1px 1px 2px rgba(0,0,0,0.3);">
+                DEVIS
+            </h2>
+            <p style="margin: 5px 0; opacity: 0.9;"><strong>N° :</strong> {{ devis.numeroDevis }}</p>
+            <p style="margin: 5px 0; opacity: 0.9;"><strong>Date :</strong> {{ devis.dateCreation|date('d/m/Y') }}</p>
+            {% if devis.validiteDevis %}
+                <p style="margin: 5px 0; opacity: 0.9;"><strong>Validité :</strong> {{ devis.validiteDevis|date('d/m/Y') }}</p>
+            {% endif %}
+            <div style="margin-top: 15px; padding-top: 15px; border-top: 1px solid rgba(255,255,255,0.3);">
+                <small style="opacity: 0.8;">Solutions sur mesure</small>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Pattern décoratif spécifique TechnoPrint -->
+    <div style="margin-top: 20px; height: 6px; background: repeating-linear-gradient(90deg, {{ couleur_primaire|default('#28a745') }} 0px, {{ couleur_primaire|default('#28a745') }} 10px, {{ couleur_secondaire|default('#1e7e34') }} 10px, {{ couleur_secondaire|default('#1e7e34') }} 20px); border-radius: 3px; opacity: 0.7;"></div>
+</div>
+
+<style>
+    .technoprint-header {
+        font-family: 'Arial', sans-serif;
+        position: relative;
+    }
+    
+    .technoprint-header::after {
+        content: "🖨️";
+        position: absolute;
+        top: 10px;
+        right: -20px;
+        font-size: 24px;
+        opacity: 0.1;
+        transform: rotate(15deg);
+    }
+    
+    .company-info h1 {
+        text-shadow: 2px 2px 4px rgba(40,167,69,0.1);
+        position: relative;
+    }
+    
+    .document-info {
+        min-width: 220px;
+        border: 1px solid rgba(255,255,255,0.2);
+        position: relative;
+        overflow: hidden;
+    }
+    
+    .document-info::before {
+        content: "";
+        position: absolute;
+        top: -50%;
+        right: -50%;
+        width: 100px;
+        height: 100px;
+        background: radial-gradient(circle, rgba(255,255,255,0.1) 0%, transparent 70%);
+        border-radius: 50%;
+    }
+</style>
