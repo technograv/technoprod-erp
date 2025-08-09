@@ -478,6 +478,44 @@ class User implements UserInterface, PasswordAuthenticatedUserInterface
         return $societes;
     }
 
+    /**
+     * Vérifie si l'utilisateur peut accéder aux fonctions d'administration pour une société donnée
+     */
+    public function canAccessAdminForSociete(Societe $societe): bool
+    {
+        // Super admin a toujours accès
+        if ($this->isSuperAdmin()) {
+            return true;
+        }
+
+        // Vérifier les rôles spécifiques à la société
+        $role = $this->getRoleInSociete($societe);
+        if ($role && $role->isActive()) {
+            // Admin et Manager peuvent accéder aux fonctions d'administration
+            if ($role->isAdmin() || $role->isManager()) {
+                return true;
+            }
+        }
+
+        // Vérifier les permissions via les groupes
+        foreach ($this->groupes as $groupe) {
+            if ($groupe->isActif() && $groupe->hasAccessToSociete($societe)) {
+                // Si le groupe a un niveau élevé (7+), il peut administrer
+                if ($groupe->getNiveau() >= 7) {
+                    return true;
+                }
+            }
+        }
+
+        // Vérifier les permissions individuelles
+        if ($this->hasPermissionInSociete($societe, 'admin') || 
+            $this->hasPermissionInSociete($societe, 'manage_admin')) {
+            return true;
+        }
+
+        return false;
+    }
+
     public function getSocietePrincipale(): ?Societe
     {
         return $this->societePrincipale;

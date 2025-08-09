@@ -47,16 +47,10 @@ class Tag
     #[ORM\ManyToMany(targetEntity: Client::class, mappedBy: 'tags')]
     private Collection $clients;
 
-    /**
-     * @var Collection<int, Produit>
-     */
-    #[ORM\ManyToMany(targetEntity: Produit::class, mappedBy: 'tags')]
-    private Collection $produits;
 
     public function __construct()
     {
         $this->clients = new ArrayCollection();
-        $this->produits = new ArrayCollection();
         $this->createdAt = new \DateTimeImmutable();
         $this->updatedAt = new \DateTimeImmutable();
     }
@@ -187,32 +181,6 @@ class Tag
         return $this;
     }
 
-    /**
-     * @return Collection<int, Produit>
-     */
-    public function getProduits(): Collection
-    {
-        return $this->produits;
-    }
-
-    public function addProduit(Produit $produit): static
-    {
-        if (!$this->produits->contains($produit)) {
-            $this->produits->add($produit);
-            $produit->addTag($this);
-        }
-
-        return $this;
-    }
-
-    public function removeProduit(Produit $produit): static
-    {
-        if ($this->produits->removeElement($produit)) {
-            $produit->removeTag($this);
-        }
-
-        return $this;
-    }
 
     public function __toString(): string
     {
