@@ -15,7 +15,9 @@
                 <tr>
                     <th>Utilisateur</th>
                     <th>Email</th>
-                    <th>Rôles</th>
+                    <th>Société Principale</th>
+                    <th>Groupes</th>
+                    <th>Permissions Individuelles</th>
                     <th>Statut</th>
                     <th>Actions</th>
                 </tr>
@@ -42,19 +44,64 @@
                         </a>
                     </td>
                     <td>
-                        <div class="roles-container" data-user-id="{{ user.id }}">
-                            {% for role in user.roles %}
-                                {% if role != 'ROLE_USER' %}
-                                    <span class="badge bg-{{ role == 'ROLE_ADMIN' ? 'danger' : 'primary' }} me-1">
-                                        {{ role == 'ROLE_ADMIN' ? 'Administrateur' : role }}
-                                    </span>
-                                {% endif %}
-                            {% endfor %}
+                        <!-- Société Principale -->
+                        <div class="societe-principale-container" data-user-id="{{ user.id }}">
+                            {% if user.societePrincipale %}
+                                <span class="badge bg-info">
+                                    <i class="fas fa-building me-1"></i>{{ user.societePrincipale.nom }}
+                                </span>
+                            {% else %}
+                                <span class="text-muted small">Aucune société principale</span>
+                            {% endif %}
                         </div>
-                        <button class="btn btn-outline-primary btn-sm mt-1 edit-roles-btn" 
+                        <button class="btn btn-outline-info btn-sm mt-1 edit-societe-btn" 
                                 data-user-id="{{ user.id }}"
-                                data-roles="{{ user.roles|json_encode|e('html_attr') }}">
-                            <i class="fas fa-edit me-1"></i>Modifier
+                                data-societe-id="{{ user.societePrincipale ? user.societePrincipale.id : '' }}">
+                            <i class="fas fa-building me-1"></i>Modifier
+                        </button>
+                    </td>
+                    <td>
+                        <!-- Groupes Utilisateurs -->
+                        <div class="groupes-container" data-user-id="{{ user.id }}">
+                            {% if user.groupes|length > 0 %}
+                                {% for groupe in user.groupes %}
+                                    {% if groupe.actif %}
+                                        <span class="badge me-1" style="background-color: {{ groupe.couleur ?? '#6c757d' }}">
+                                            <i class="fas fa-users me-1"></i>{{ groupe.nom }}
+                                        </span>
+                                    {% endif %}
+                                {% endfor %}
+                            {% else %}
+                                <span class="text-muted small">Aucun groupe assigné</span>
+                            {% endif %}
+                        </div>
+                        <button class="btn btn-outline-success btn-sm mt-1 edit-groupes-btn" 
+                                data-user-id="{{ user.id }}">
+                            <i class="fas fa-users-cog me-1"></i>Modifier
+                        </button>
+                    </td>
+                    <td>
+                        <!-- Permissions Individuelles -->
+                        <div class="permissions-container" data-user-id="{{ user.id }}">
+                            {% set userPermissions = user.permissions %}
+                            {% if userPermissions|length > 0 %}
+                                {% for permission in userPermissions %}
+                                    {% if permission.actif %}
+                                        <div class="mb-1">
+                                            <span class="badge bg-warning text-dark me-1">
+                                                <i class="fas fa-building me-1"></i>{{ permission.societe.nom }}
+                                            </span>
+                                            <small class="text-muted">(niveau {{ permission.niveau }})</small>
+                                        </div>
+                                    {% endif %}
+                                {% endfor %}
+                            {% else %}
+                                <span class="text-muted small">Aucune permission individuelle</span>
+                            {% endif %}
+                        </div>
+                        <button class="btn btn-outline-primary btn-sm mt-1 edit-permissions-btn" 
+                                data-user-id="{{ user.id }}">
+                            <i class="fas fa-key me-1"></i>Modifier
                         </button>
                     </td>
                     <td>
@@ -68,12 +115,12 @@
                     </td>
                     <td>
                         <div class="btn-group btn-group-sm">
-                            <button class="btn btn-outline-info" title="Voir détails"
-                                    onclick="alert('Fonctionnalité à venir')">
+                            <button class="btn btn-outline-info voir-profil-btn" title="Voir détails"
+                                    data-user-id="{{ user.id }}">
                                 <i class="fas fa-eye"></i>
                             </button>
-                            <button class="btn btn-outline-warning" title="Réinitialiser mot de passe"
-                                    onclick="alert('Fonctionnalité à venir')">
+                            <button class="btn btn-outline-warning reset-password-btn" title="Réinitialiser mot de passe"
+                                    data-user-id="{{ user.id }}">
                                 <i class="fas fa-key"></i>
                             </button>
                         </div>
@@ -85,72 +132,12 @@
     </div>
 </div>
 
-<!-- Modal Édition des Rôles -->
-<div class="modal fade" id="rolesModal" tabindex="-1">
-    <div class="modal-dialog">
-        <div class="modal-content">
-            <div class="modal-header">
-                <h5 class="modal-title">
-                    <i class="fas fa-user-shield me-2"></i>
-                    Modifier les Rôles - <span id="modal-user-name"></span>
-                </h5>
-                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
-            </div>
-            <div class="modal-body">
-                <input type="hidden" id="modal-user-id">
-                
-                <div class="alert alert-info">
-                    <i class="fas fa-info-circle me-2"></i>
-                    <strong>Information :</strong> Le rôle "ROLE_USER" est automatiquement attribué à tous les utilisateurs.
-                </div>
-                
-                <div class="mb-3">
-                    <label class="form-label fw-bold">Rôles disponibles :</label>
-                    
-                    <div class="form-check">
-                        <input class="form-check-input" type="checkbox" id="role-admin" value="ROLE_ADMIN">
-                        <label class="form-check-label" for="role-admin">
-                            <strong class="text-danger">ROLE_ADMIN</strong>
-                            <br><small class="text-muted">Accès complet à l'administration</small>
-                        </label>
-                    </div>
-                    
-                    <div class="form-check">
-                        <input class="form-check-input" type="checkbox" id="role-manager" value="ROLE_MANAGER">
-                        <label class="form-check-label" for="role-manager">
-                            <strong class="text-primary">ROLE_MANAGER</strong>
-                            <br><small class="text-muted">Gestion des équipes et rapports</small>
-                        </label>
-                    </div>
-                    
-                    <div class="form-check">
-                        <input class="form-check-input" type="checkbox" id="role-commercial" value="ROLE_COMMERCIAL">
-                        <label class="form-check-label" for="role-commercial">
-                            <strong class="text-success">ROLE_COMMERCIAL</strong>
-                            <br><small class="text-muted">Accès avancé aux fonctions commerciales</small>
-                        </label>
-                    </div>
-                </div>
-                
-                <div class="alert alert-warning">
-                    <i class="fas fa-exclamation-triangle me-2"></i>
-                    <strong>Attention :</strong> La modification des rôles prend effet immédiatement.
-                </div>
-            </div>
-            <div class="modal-footer">
-                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Annuler</button>
-                <button type="button" class="btn btn-primary" id="save-roles">
-                    <i class="fas fa-save me-2"></i>Enregistrer
-                </button>
-            </div>
-        </div>
-    </div>
-</div>
 
 <script>
-document.addEventListener('DOMContentLoaded', function() {
-    const rolesModal = new bootstrap.Modal(document.getElementById('rolesModal'));
-
+// Test simple pour vérifier que la fonction est accessible
+window.initUsers = function() {
+    console.log('initUsers appelée !');
+    
     // Toggle statut utilisateur
     document.querySelectorAll('.status-toggle').forEach(function(toggle) {
         toggle.addEventListener('change', function() {
@@ -176,98 +163,739 @@ document.addEventListener('DOMContentLoaded', function() {
                         row.classList.add('table-warning');
                         label.textContent = 'Inactif';
                     }
+                    showNotification('Statut utilisateur mis à jour', 'success');
                 } else {
                     // Annuler le changement en cas d'erreur
                     this.checked = !this.checked;
-                    alert('Erreur lors de la modification du statut');
+                    showNotification('Erreur lors de la modification du statut', 'error');
                 }
             })
             .catch(error => {
                 console.error('Erreur:', error);
                 this.checked = !this.checked;
-                alert('Erreur de connexion');
+                showNotification('Erreur de connexion', 'error');
             });
         });
     });
 
-    // Édition des rôles
-    document.querySelectorAll('.edit-roles-btn').forEach(function(btn) {
+    // Édition des permissions individuelles
+    document.querySelectorAll('.edit-permissions-btn').forEach(function(btn) {
         btn.addEventListener('click', function() {
             const userId = this.dataset.userId;
-            const currentRoles = JSON.parse(this.dataset.roles);
-            
-            // Récupérer le nom de l'utilisateur
-            const row = document.querySelector(`tr[data-id="${userId}"]`);
-            const userName = row.querySelector('strong').textContent;
-            
-            // Remplir le modal
-            document.getElementById('modal-user-id').value = userId;
-            document.getElementById('modal-user-name').textContent = userName;
-            
-            // Cocher les rôles actuels
-            document.querySelectorAll('#rolesModal input[type="checkbox"]').forEach(function(checkbox) {
-                checkbox.checked = currentRoles.includes(checkbox.value);
-            });
-            
-            rolesModal.show();
+            ouvrirModalPermissions(userId);
         });
     });
 
-    // Sauvegarde des rôles
-    document.getElementById('save-roles').addEventListener('click', function() {
-        const userId = document.getElementById('modal-user-id').value;
-        const roles = ['ROLE_USER']; // Toujours inclure ROLE_USER
+    // Modal société principale
+    document.querySelectorAll('.edit-societe-btn').forEach(button => {
+        button.addEventListener('click', function() {
+            const userId = this.dataset.userId;
+            const societeId = this.dataset.societeId;
+            ouvrirModalSocietePrincipale(userId, societeId);
+        });
+    });
+
+    // Modal groupes
+    document.querySelectorAll('.edit-groupes-btn').forEach(button => {
+        button.addEventListener('click', function() {
+            const userId = this.dataset.userId;
+            ouvrirModalGroupes(userId);
+        });
+    });
+
+    // Voir profil utilisateur
+    document.querySelectorAll('.voir-profil-btn').forEach(button => {
+        button.addEventListener('click', function() {
+            const userId = this.dataset.userId;
+            ouvrirModalProfilUtilisateur(userId);
+        });
+    });
+
+    // Réinitialiser mot de passe
+    document.querySelectorAll('.reset-password-btn').forEach(button => {
+        button.addEventListener('click', function() {
+            const userId = this.dataset.userId;
+            resetPasswordUtilisateur(userId);
+        });
+    });
+
+    console.log('initUsers terminée !');
+};
+
+// Appeler automatiquement si le document est déjà chargé (chargement direct)
+if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', window.initUsers);
+} else {
+    window.initUsers();
+}
+
+function ouvrirModalPermissions(userId) {
+    // Créer le modal s'il n'existe pas
+    if (!document.getElementById('permissionsModal')) {
+        createPermissionsModal();
+    }
+    
+    const modal = new bootstrap.Modal(document.getElementById('permissionsModal'));
+    document.getElementById('modalPermissionsLabel').textContent = 'Permissions Individuelles - Utilisateur #' + userId;
+    document.getElementById('btnSauvegarderPermissions').onclick = function() {
+        sauvegarderPermissionsUtilisateur(userId);
+    };
+    
+    // Charger les permissions actuelles de l'utilisateur
+    chargerPermissionsUtilisateur(userId);
+    modal.show();
+}
+
+function createPermissionsModal() {
+    const modalHtml = `
+        <div class="modal fade" id="permissionsModal" tabindex="-1">
+            <div class="modal-dialog modal-xl">
+                <div class="modal-content">
+                    <div class="modal-header">
+                        <h5 class="modal-title" id="modalPermissionsLabel">Permissions Individuelles</h5>
+                        <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                    </div>
+                    <div class="modal-body">
+                        <div class="alert alert-info">
+                            <i class="fas fa-info-circle me-2"></i>
+                            <strong>Note :</strong> Ces permissions s'ajoutent à celles héritées des groupes. 
+                            L'utilisateur aura l'union de toutes ses permissions (groupes + individuelles).
+                        </div>
+                        
+                        <div id="societesPermissionsList" class="mb-3">
+                            <div class="text-center">
+                                <div class="spinner-border spinner-border-sm text-primary" role="status"></div>
+                                <span class="ms-2">Chargement des sociétés...</span>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="modal-footer">
+                        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Annuler</button>
+                        <button type="button" class="btn btn-primary" id="btnSauvegarderPermissions">
+                            <i class="fas fa-save me-1"></i>Sauvegarder
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    `;
+    document.body.insertAdjacentHTML('beforeend', modalHtml);
+}
+
+function chargerPermissionsUtilisateur(userId) {
+    const container = document.getElementById('societesPermissionsList');
+    
+    Promise.all([
+        fetch(`/admin/users/${userId}/permissions`).then(r => r.json()),
+        fetch('/admin/api/societes-tree').then(r => r.json())
+    ])
+    .then(([userPermissions, societes]) => {
+        let html = '';
         
-        // Récupérer les rôles cochés
-        document.querySelectorAll('#rolesModal input[type="checkbox"]:checked').forEach(function(checkbox) {
-            if (checkbox.value !== 'ROLE_USER') {
-                roles.push(checkbox.value);
+        if (societes.length === 0) {
+            html = '<div class="alert alert-warning">Aucune société disponible</div>';
+        } else {
+            societes.forEach(societe => {
+                const existingPermission = userPermissions.find(p => p.societe_id === societe.id);
+                
+                html += renderSocietePermissionCard(societe, existingPermission);
+                
+                // Ajouter les enfants
+                if (societe.enfants && societe.enfants.length > 0) {
+                    societe.enfants.forEach(enfant => {
+                        const childPermission = userPermissions.find(p => p.societe_id === enfant.id);
+                        html += renderSocietePermissionCard(enfant, childPermission, true);
+                    });
+                }
+            });
+        }
+        
+        container.innerHTML = html;
+    })
+    .catch(error => {
+        console.error('Erreur:', error);
+        container.innerHTML = '<div class="alert alert-danger">Erreur lors du chargement</div>';
+    });
+}
+
+function renderSocietePermissionCard(societe, permission, isChild = false) {
+    const indentClass = isChild ? 'ms-4' : '';
+    const typeIcon = societe.type === 'mere' ? 'fas fa-building' : 'far fa-building';
+    const typeBadge = societe.type === 'mere' ? 
+        '<span class="badge bg-primary ms-2">Mère</span>' : 
+        '<span class="badge bg-secondary ms-2">Fille</span>';
+    
+    const isActive = permission ? permission.actif : false;
+    const niveau = permission ? permission.niveau : 5;
+    const permissions = permission ? permission.permissions : [];
+    
+    return `
+        <div class="card mb-3 ${indentClass}">
+            <div class="card-header d-flex align-items-center">
+                <div class="form-check me-3">
+                    <input class="form-check-input societe-permission-toggle" 
+                           type="checkbox" 
+                           id="societe_perm_${societe.id}" 
+                           ${isActive ? 'checked' : ''}
+                           data-societe-id="${societe.id}">
+                    <label class="form-check-label" for="societe_perm_${societe.id}">
+                        <i class="${typeIcon} me-2"></i>
+                        <strong>${societe.display_name}</strong>
+                        ${typeBadge}
+                    </label>
+                </div>
+                <div class="ms-auto">
+                    <label class="form-label small mb-0">Niveau (1-10):</label>
+                    <input type="number" 
+                           class="form-control form-control-sm permission-niveau" 
+                           style="width: 80px; display: inline-block;" 
+                           min="1" max="10" 
+                           value="${niveau}"
+                           data-societe-id="${societe.id}"
+                           ${!isActive ? 'disabled' : ''}>
+                </div>
+            </div>
+            <div class="card-body permission-details" data-societe-id="${societe.id}" style="display: ${isActive ? 'block' : 'none'}">
+                <div class="row">
+                    <div class="col-md-4">
+                        <h6 class="text-primary">Administration</h6>
+                        <div class="form-check form-check-sm">
+                            <input class="form-check-input permission-checkbox" type="checkbox" 
+                                   id="perm_${societe.id}_admin_all" value="admin.all"
+                                   ${permissions.includes('admin.all') ? 'checked' : ''}>
+                            <label class="form-check-label small" for="perm_${societe.id}_admin_all">Administration complète</label>
+                        </div>
+                        <div class="form-check form-check-sm">
+                            <input class="form-check-input permission-checkbox" type="checkbox" 
+                                   id="perm_${societe.id}_users_manage" value="users.manage"
+                                   ${permissions.includes('users.manage') ? 'checked' : ''}>
+                            <label class="form-check-label small" for="perm_${societe.id}_users_manage">Gestion utilisateurs</label>
+                        </div>
+                        <div class="form-check form-check-sm">
+                            <input class="form-check-input permission-checkbox" type="checkbox" 
+                                   id="perm_${societe.id}_companies_manage" value="companies.manage"
+                                   ${permissions.includes('companies.manage') ? 'checked' : ''}>
+                            <label class="form-check-label small" for="perm_${societe.id}_companies_manage">Gestion sociétés</label>
+                        </div>
+                    </div>
+                    <div class="col-md-4">
+                        <h6 class="text-success">Commercial</h6>
+                        <div class="form-check form-check-sm">
+                            <input class="form-check-input permission-checkbox" type="checkbox" 
+                                   id="perm_${societe.id}_prospects_all" value="prospects.all"
+                                   ${permissions.includes('prospects.all') ? 'checked' : ''}>
+                            <label class="form-check-label small" for="perm_${societe.id}_prospects_all">Gestion prospects complète</label>
+                        </div>
+                        <div class="form-check form-check-sm">
+                            <input class="form-check-input permission-checkbox" type="checkbox" 
+                                   id="perm_${societe.id}_devis_all" value="devis.all"
+                                   ${permissions.includes('devis.all') ? 'checked' : ''}>
+                            <label class="form-check-label small" for="perm_${societe.id}_devis_all">Gestion devis complète</label>
+                        </div>
+                        <div class="form-check form-check-sm">
+                            <input class="form-check-input permission-checkbox" type="checkbox" 
+                                   id="perm_${societe.id}_clients_read" value="clients.read"
+                                   ${permissions.includes('clients.read') ? 'checked' : ''}>
+                            <label class="form-check-label small" for="perm_${societe.id}_clients_read">Lecture clients</label>
+                        </div>
+                    </div>
+                    <div class="col-md-4">
+                        <h6 class="text-warning">Documents & Comptabilité</h6>
+                        <div class="form-check form-check-sm">
+                            <input class="form-check-input permission-checkbox" type="checkbox" 
+                                   id="perm_${societe.id}_documents_all" value="documents.all"
+                                   ${permissions.includes('documents.all') ? 'checked' : ''}>
+                            <label class="form-check-label small" for="perm_${societe.id}_documents_all">Gestion documents complète</label>
+                        </div>
+                        <div class="form-check form-check-sm">
+                            <input class="form-check-input permission-checkbox" type="checkbox" 
+                                   id="perm_${societe.id}_invoices_all" value="invoices.all"
+                                   ${permissions.includes('invoices.all') ? 'checked' : ''}>
+                            <label class="form-check-label small" for="perm_${societe.id}_invoices_all">Gestion factures complète</label>
+                        </div>
+                        <div class="form-check form-check-sm">
+                            <input class="form-check-input permission-checkbox" type="checkbox" 
+                                   id="perm_${societe.id}_accounting_all" value="accounting.all"
+                                   ${permissions.includes('accounting.all') ? 'checked' : ''}>
+                            <label class="form-check-label small" for="perm_${societe.id}_accounting_all">Comptabilité complète</label>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    `;
+}
+
+// Event listeners pour les permissions
+document.addEventListener('change', function(e) {
+    if (e.target.classList.contains('societe-permission-toggle')) {
+        const societeId = e.target.dataset.societeId;
+        const isChecked = e.target.checked;
+        
+        // Afficher/masquer les détails de permissions
+        const details = document.querySelector(`[data-societe-id="${societeId}"].permission-details`);
+        const niveauInput = document.querySelector(`[data-societe-id="${societeId}"].permission-niveau`);
+        
+        if (details) {
+            details.style.display = isChecked ? 'block' : 'none';
+            niveauInput.disabled = !isChecked;
+            
+            // Décocher toutes les permissions si on désactive la société
+            if (!isChecked) {
+                details.querySelectorAll('.permission-checkbox').forEach(checkbox => {
+                    checkbox.checked = false;
+                });
             }
+        }
+    }
+});
+
+function sauvegarderPermissionsUtilisateur(userId) {
+    const permissions = [];
+    
+    document.querySelectorAll('.societe-permission-toggle:checked').forEach(toggle => {
+        const societeId = parseInt(toggle.dataset.societeId);
+        const niveau = parseInt(document.querySelector(`[data-societe-id="${societeId}"].permission-niveau`).value);
+        
+        // Collecter les permissions cochées pour cette société
+        const societePermissions = [];
+        const permissionDetails = document.querySelector(`[data-societe-id="${societeId}"].permission-details`);
+        permissionDetails.querySelectorAll('.permission-checkbox:checked').forEach(checkbox => {
+            societePermissions.push(checkbox.value);
         });
         
-        fetch(`/admin/users/${userId}/update-roles`, {
-            method: 'PUT',
-            headers: {
-                'Content-Type': 'application/json',
-            },
-            body: JSON.stringify({ roles: roles })
-        })
+        permissions.push({
+            societe_id: societeId,
+            permissions: societePermissions,
+            niveau: niveau,
+            actif: true
+        });
+    });
+    
+    fetch(`/admin/users/${userId}/permissions`, {
+        method: 'PUT',
+        headers: {
+            'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ permissions: permissions })
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.success) {
+            // Mettre à jour l'affichage des permissions dans le tableau
+            updatePermissionsDisplay(userId, data.permissions);
+            bootstrap.Modal.getInstance(document.getElementById('permissionsModal')).hide();
+            showNotification('Permissions mises à jour avec succès', 'success');
+        } else {
+            showNotification('Erreur: ' + (data.error || 'Erreur inconnue'), 'error');
+        }
+    })
+    .catch(error => {
+        console.error('Erreur:', error);
+        showNotification('Erreur lors de la sauvegarde', 'error');
+    });
+}
+
+function updatePermissionsDisplay(userId, permissions) {
+    const container = document.querySelector(`.permissions-container[data-user-id="${userId}"]`);
+    
+    if (permissions.length === 0) {
+        container.innerHTML = '<span class="text-muted small">Aucune permission individuelle</span>';
+    } else {
+        let html = '';
+        permissions.forEach(permission => {
+            html += `
+                <div class="mb-1">
+                    <span class="badge bg-warning text-dark me-1">
+                        <i class="fas fa-building me-1"></i>${permission.societe.nom}
+                    </span>
+                    <small class="text-muted">(niveau ${permission.niveau})</small>
+                </div>
+            `;
+        });
+        container.innerHTML = html;
+    }
+}
+
+function ouvrirModalSocietePrincipale(userId, societeId) {
+    // Créer le modal s'il n'existe pas
+    if (!document.getElementById('societePrincipaleModal')) {
+        createSocietePrincipaleModal();
+    }
+    
+    const modal = new bootstrap.Modal(document.getElementById('societePrincipaleModal'));
+    document.getElementById('modalSocietePrincipaleLabel').textContent = 'Société Principale - Utilisateur #' + userId;
+    document.getElementById('societeSelect').value = societeId || '';
+    document.getElementById('btnSauvegarderSociete').onclick = function() {
+        sauvegarderSocietePrincipale(userId);
+    };
+    
+    // Charger les sociétés disponibles
+    chargerSocietesDisponibles();
+    modal.show();
+}
+
+function ouvrirModalGroupes(userId) {
+    // Créer le modal s'il n'existe pas
+    if (!document.getElementById('groupesModal')) {
+        createGroupesModal();
+    }
+    
+    const modal = new bootstrap.Modal(document.getElementById('groupesModal'));
+    document.getElementById('modalGroupesLabel').textContent = 'Groupes - Utilisateur #' + userId;
+    document.getElementById('btnSauvegarderGroupes').onclick = function() {
+        sauvegarderGroupesUtilisateur(userId);
+    };
+    
+    // Charger les groupes actuels de l'utilisateur
+    chargerGroupesUtilisateur(userId);
+    modal.show();
+}
+
+function createSocietePrincipaleModal() {
+    const modalHtml = `
+        <div class="modal fade" id="societePrincipaleModal" tabindex="-1">
+            <div class="modal-dialog">
+                <div class="modal-content">
+                    <div class="modal-header">
+                        <h5 class="modal-title" id="modalSocietePrincipaleLabel">Société Principale</h5>
+                        <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                    </div>
+                    <div class="modal-body">
+                        <div class="mb-3">
+                            <label for="societeSelect" class="form-label">Sélectionnez la société principale :</label>
+                            <select class="form-select" id="societeSelect">
+                                <option value="">Aucune société principale</option>
+                            </select>
+                            <small class="text-muted">La société principale détermine la page d'atterrissage de l'utilisateur.</small>
+                        </div>
+                    </div>
+                    <div class="modal-footer">
+                        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Annuler</button>
+                        <button type="button" class="btn btn-primary" id="btnSauvegarderSociete">
+                            <i class="fas fa-save me-1"></i>Sauvegarder
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    `;
+    document.body.insertAdjacentHTML('beforeend', modalHtml);
+}
+
+function createGroupesModal() {
+    const modalHtml = `
+        <div class="modal fade" id="groupesModal" tabindex="-1">
+            <div class="modal-dialog modal-lg">
+                <div class="modal-content">
+                    <div class="modal-header">
+                        <h5 class="modal-title" id="modalGroupesLabel">Groupes Utilisateur</h5>
+                        <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                    </div>
+                    <div class="modal-body">
+                        <div class="mb-3">
+                            <p class="text-muted">Sélectionnez les groupes auxquels cet utilisateur doit appartenir :</p>
+                            <div id="groupesList" class="border rounded p-3" style="max-height: 300px; overflow-y: auto;">
+                                <div class="text-center">
+                                    <div class="spinner-border spinner-border-sm text-primary" role="status"></div>
+                                    <span class="ms-2">Chargement des groupes...</span>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="modal-footer">
+                        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Annuler</button>
+                        <button type="button" class="btn btn-primary" id="btnSauvegarderGroupes">
+                            <i class="fas fa-save me-1"></i>Sauvegarder
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    `;
+    document.body.insertAdjacentHTML('beforeend', modalHtml);
+}
+
+function chargerSocietesDisponibles() {
+    fetch('/admin/api/societes-tree')
         .then(response => response.json())
-        .then(data => {
-            if (data.success) {
-                // Mettre à jour l'affichage des rôles dans le tableau
-                updateRolesDisplay(userId, data.roles);
-                rolesModal.hide();
+        .then(societes => {
+            const select = document.getElementById('societeSelect');
+            select.innerHTML = '<option value="">Aucune société principale</option>';
+            
+            societes.forEach(societe => {
+                const option = document.createElement('option');
+                option.value = societe.id;
+                option.textContent = societe.display_name;
+                select.appendChild(option);
+                
+                // Ajouter les enfants
+                if (societe.enfants && societe.enfants.length > 0) {
+                    societe.enfants.forEach(enfant => {
+                        const childOption = document.createElement('option');
+                        childOption.value = enfant.id;
+                        childOption.textContent = `└─ ${enfant.display_name}`;
+                        select.appendChild(childOption);
+                    });
+                }
+            });
+        })
+        .catch(error => {
+            console.error('Erreur lors du chargement des sociétés:', error);
+        });
+}
+
+function chargerGroupesUtilisateur(userId) {
+    const groupesList = document.getElementById('groupesList');
+    
+    Promise.all([
+        fetch(`/admin/users/${userId}/groupes`).then(r => r.json()),
+        fetch('/admin/groupes-utilisateurs').then(r => r.text())
+    ])
+    .then(([userGroups, groupesHtml]) => {
+        // Parser le HTML pour extraire les groupes
+        const parser = new DOMParser();
+        const doc = parser.parseFromString(groupesHtml, 'text/html');
+        const groupesRows = doc.querySelectorAll('#tableGroupes tbody tr');
+        
+        let html = '';
+        groupesRows.forEach(row => {
+            const groupeId = row.dataset.groupeId;
+            const groupeNom = row.querySelector('strong').textContent;
+            const groupeDescription = row.querySelector('.text-muted').textContent;
+            const isChecked = userGroups.groupes.some(g => g.id == groupeId);
+            
+            html += `
+                <div class="form-check mb-2">
+                    <input class="form-check-input" type="checkbox" id="groupe_${groupeId}" value="${groupeId}" ${isChecked ? 'checked' : ''}>
+                    <label class="form-check-label d-flex align-items-center" for="groupe_${groupeId}">
+                        <strong>${groupeNom}</strong>
+                        ${groupeDescription !== 'Aucune description' ? `<span class="text-muted ms-2">${groupeDescription}</span>` : ''}
+                    </label>
+                </div>
+            `;
+        });
+        
+        groupesList.innerHTML = html;
+    })
+    .catch(error => {
+        console.error('Erreur:', error);
+        groupesList.innerHTML = '<div class="alert alert-danger">Erreur lors du chargement des groupes</div>';
+    });
+}
+
+function sauvegarderSocietePrincipale(userId) {
+    const societeId = document.getElementById('societeSelect').value || null;
+    
+    fetch(`/admin/users/${userId}/societe-principale`, {
+        method: 'PUT',
+        headers: {
+            'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ societe_principale_id: societeId })
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.success) {
+            // Mettre à jour l'affichage
+            const container = document.querySelector(`.societe-principale-container[data-user-id="${userId}"]`);
+            if (data.societe) {
+                container.innerHTML = `
+                    <span class="badge bg-info">
+                        <i class="fas fa-building me-1"></i>${data.societe.nom}
+                    </span>
+                `;
             } else {
-                alert('Erreur: ' + (data.error || 'Erreur inconnue'));
+                container.innerHTML = '<span class="text-muted small">Aucune société principale</span>';
             }
+            
+            // Mettre à jour le bouton
+            const btn = document.querySelector(`.edit-societe-btn[data-user-id="${userId}"]`);
+            btn.dataset.societeId = data.societe ? data.societe.id : '';
+            
+            bootstrap.Modal.getInstance(document.getElementById('societePrincipaleModal')).hide();
+            showNotification('Société principale mise à jour avec succès', 'success');
+        } else {
+            showNotification('Erreur: ' + (data.error || 'Erreur inconnue'), 'error');
+        }
+    })
+    .catch(error => {
+        console.error('Erreur:', error);
+        showNotification('Erreur lors de la sauvegarde', 'error');
+    });
+}
+
+function sauvegarderGroupesUtilisateur(userId) {
+    const groupesIds = Array.from(document.querySelectorAll('#groupesList input:checked')).map(cb => parseInt(cb.value));
+    
+    fetch(`/admin/users/${userId}/groupes`, {
+        method: 'PUT',
+        headers: {
+            'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ groupes_ids: groupesIds })
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.success) {
+            // Mettre à jour l'affichage des groupes
+            const container = document.querySelector(`.groupes-container[data-user-id="${userId}"]`);
+            if (data.groupes.length > 0) {
+                let html = '';
+                data.groupes.forEach(groupe => {
+                    html += `<span class="badge me-1" style="background-color: ${groupe.couleur || '#6c757d'}">
+                        <i class="fas fa-users me-1"></i>${groupe.nom}
+                    </span>`;
+                });
+                container.innerHTML = html;
+            } else {
+                container.innerHTML = '<span class="text-muted small">Aucun groupe assigné</span>';
+            }
+            
+            bootstrap.Modal.getInstance(document.getElementById('groupesModal')).hide();
+            showNotification('Groupes mis à jour avec succès', 'success');
+        } else {
+            showNotification('Erreur: ' + (data.error || 'Erreur inconnue'), 'error');
+        }
+    })
+    .catch(error => {
+        console.error('Erreur:', error);
+        showNotification('Erreur lors de la sauvegarde', 'error');
+    });
+}
+
+function showNotification(message, type = 'info') {
+    const alertClass = type === 'success' ? 'alert-success' : 
+                      type === 'error' ? 'alert-danger' : 'alert-info';
+    
+    const notification = document.createElement('div');
+    notification.className = `alert ${alertClass} alert-dismissible fade show position-fixed`;
+    notification.style.cssText = 'top: 20px; right: 20px; z-index: 9999; min-width: 300px;';
+    notification.innerHTML = `
+        ${message}
+        <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+    `;
+    
+    document.body.appendChild(notification);
+    
+    setTimeout(() => {
+        if (notification.parentNode) {
+            notification.remove();
+        }
+    }, 5000);
+}
+
+function ouvrirModalProfilUtilisateur(userId) {
+    // Créer le modal s'il n'existe pas
+    if (!document.getElementById('profilModal')) {
+        createProfilModal();
+    }
+    
+    const modal = new bootstrap.Modal(document.getElementById('profilModal'));
+    document.getElementById('modalProfilLabel').textContent = 'Profil Utilisateur #' + userId;
+    
+    // Charger les données de l'utilisateur
+    chargerProfilUtilisateur(userId);
+    modal.show();
+}
+
+function createProfilModal() {
+    const modalHtml = `
+        <div class="modal fade" id="profilModal" tabindex="-1">
+            <div class="modal-dialog modal-lg">
+                <div class="modal-content">
+                    <div class="modal-header">
+                        <h5 class="modal-title" id="modalProfilLabel">Profil Utilisateur</h5>
+                        <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                    </div>
+                    <div class="modal-body">
+                        <div id="profilContent">
+                            <div class="text-center">
+                                <div class="spinner-border spinner-border-sm text-primary" role="status"></div>
+                                <span class="ms-2">Chargement du profil...</span>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="modal-footer">
+                        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Fermer</button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    `;
+    document.body.insertAdjacentHTML('beforeend', modalHtml);
+}
+
+function chargerProfilUtilisateur(userId) {
+    const container = document.getElementById('profilContent');
+    
+    fetch(`/admin/users/${userId}`)
+        .then(response => response.json())
+        .then(user => {
+            // Construire le HTML sans template literals complexes
+            let html = '<div class="row">';
+            html += '<div class="col-md-6">';
+            html += '<h6 class="text-primary">Informations Personnelles</h6>';
+            html += '<table class="table table-sm">';
+            html += '<tr><td><strong>Nom :</strong></td><td>' + (user.nom || 'Non renseigné') + '</td></tr>';
+            html += '<tr><td><strong>Prénom :</strong></td><td>' + (user.prenom || 'Non renseigné') + '</td></tr>';
+            html += '<tr><td><strong>Email :</strong></td><td>' + user.email + '</td></tr>';
+            html += '<tr><td><strong>Statut :</strong></td><td>';
+            html += '<span class="badge ' + (user.isActive ? 'bg-success' : 'bg-danger') + '">';
+            html += (user.isActive ? 'Actif' : 'Inactif');
+            html += '</span></td></tr>';
+            html += '</table></div>';
+            
+            html += '<div class="col-md-6">';
+            html += '<h6 class="text-success">Accès et Permissions</h6>';
+            html += '<table class="table table-sm">';
+            html += '<tr><td><strong>Rôles :</strong></td><td>';
+            if (user.roles && user.roles.length > 0) {
+                user.roles.forEach(role => {
+                    html += '<span class="badge bg-primary me-1">' + role + '</span>';
+                });
+            }
+            html += '</td></tr>';
+            html += '<tr><td><strong>Société principale :</strong></td><td>';
+            html += (user.societePrincipale ? user.societePrincipale.nom : 'Non définie');
+            html += '</td></tr>';
+            html += '</table></div>';
+            html += '</div>';
+            
+            container.innerHTML = html;
         })
         .catch(error => {
             console.error('Erreur:', error);
-            alert('Erreur lors de la sauvegarde');
+            container.innerHTML = '<div class="alert alert-danger">Erreur lors du chargement du profil</div>';
         });
-    });
+}
 
-    function updateRolesDisplay(userId, roles) {
-        const container = document.querySelector(`.roles-container[data-user-id="${userId}"]`);
-        const editBtn = document.querySelector(`.edit-roles-btn[data-user-id="${userId}"]`);
-        
-        // Vider le conteneur
-        container.innerHTML = '';
-        
-        // Ajouter les badges pour chaque rôle (sauf ROLE_USER)
-        roles.forEach(function(role) {
-            if (role !== 'ROLE_USER') {
-                const badge = document.createElement('span');
-                badge.className = `badge bg-${role === 'ROLE_ADMIN' ? 'danger' : 'primary'} me-1`;
-                badge.textContent = role === 'ROLE_ADMIN' ? 'Administrateur' : role;
-                container.appendChild(badge);
-            }
-        });
-        
-        // Mettre à jour les données du bouton d'édition
-        editBtn.dataset.roles = JSON.stringify(roles);
+function resetPasswordUtilisateur(userId) {
+    const confirmation = confirm('Êtes-vous sûr de vouloir réinitialiser le mot de passe de cet utilisateur ?\n\nUn nouveau mot de passe temporaire sera généré et envoyé par email.');
+    
+    if (!confirmation) {
+        return;
     }
-});
+    
+    fetch(`/admin/users/${userId}/reset-password`, {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json',
+        }
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.success) {
+            showNotification('Mot de passe réinitialisé avec succès. Un email a été envoyé à l\'utilisateur.', 'success');
+        } else {
+            showNotification('Erreur: ' + (data.error || 'Erreur inconnue'), 'error');
+        }
+    })
+    .catch(error => {
+        console.error('Erreur:', error);
+        showNotification('Erreur lors de la réinitialisation du mot de passe', 'error');
+    });
+}
 </script>
+
 {# Fin du template AJAX #}

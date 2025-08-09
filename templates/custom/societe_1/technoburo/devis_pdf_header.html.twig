@@ -1,0 +1,86 @@
+{# Template personnalisé TechnoBuro - Enseigne bureautique #}
+<div class="invoice-header technoburo-header" style="margin-bottom: 30px; border-bottom: 4px solid {{ couleur_primaire|default('#ffc107') }}; padding-bottom: 20px; background: linear-gradient(135deg, #fffef8 0%, #ffffff 100%);">
+    <div style="display: flex; justify-content: space-between; align-items: flex-start;">
+        <div class="company-info">
+            {% if logo_path %}
+                <img src="{{ logo_path }}" alt="Logo {{ societe_nom }}" style="max-height: 90px; margin-bottom: 15px; filter: drop-shadow(2px 2px 4px rgba(255,193,7,0.3));">
+            {% else %}
+                <div style="width: 90px; height: 90px; background: {{ couleur_primaire|default('#ffc107') }}; border-radius: 8px; display: flex; align-items: center; justify-content: center; margin-bottom: 15px;">
+                    <i class="fas fa-desktop" style="color: white; font-size: 36px;"></i>
+                </div>
+            {% endif %}
+            <h1 style="color: {{ couleur_primaire|default('#ffc107') }}; font-size: 32px; margin: 0; font-weight: 800; text-transform: uppercase; letter-spacing: 1px; text-shadow: 1px 1px 2px rgba(0,0,0,0.1);">
+                {{ societe_nom|default('TechnoBuro') }}
+            </h1>
+            <p style="margin: 8px 0; color: #e0a800; font-size: 14px; font-weight: 600;">
+                💼 SOLUTIONS BUREAUTIQUES & IT
+            </p>
+            <p style="margin: 5px 0; color: #666; font-size: 13px;">
+                Équipements informatiques et solutions digitales
+            </p>
+        </div>
+        
+        <div class="document-info" style="text-align: right; background: linear-gradient(135deg, {{ couleur_primaire|default('#ffc107') }}, {{ couleur_secondaire|default('#e0a800') }}); color: #333; padding: 20px; border-radius: 12px; box-shadow: 0 8px 20px rgba(255,193,7,0.4); border: 2px solid rgba(255,255,255,0.3);">
+            <h2 style="color: #333; margin: 0 0 15px 0; font-size: 26px; text-shadow: 1px 1px 2px rgba(255,255,255,0.5); font-weight: 900;">
+                DEVIS
+            </h2>
+            <p style="margin: 5px 0; color: #444;"><strong>N° :</strong> {{ devis.numeroDevis }}</p>
+            <p style="margin: 5px 0; color: #444;"><strong>Date :</strong> {{ devis.dateCreation|date('d/m/Y') }}</p>
+            {% if devis.validiteDevis %}
+                <p style="margin: 5px 0; color: #444;"><strong>Validité :</strong> {{ devis.validiteDevis|date('d/m/Y') }}</p>
+            {% endif %}
+            <div style="margin-top: 15px; padding-top: 15px; border-top: 1px solid rgba(0,0,0,0.2);">
+                <small style="color: #555; font-weight: 600;">Solutions digitales</small>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Motif hexagonal spécifique TechnoBuro -->
+    <div style="margin-top: 20px; display: flex; gap: 2px; align-items: center;">
+        {% for i in 0..20 %}
+            <div style="width: 8px; height: 8px; background: {{ i % 3 == 0 ? couleur_primaire|default('#ffc107') : (i % 3 == 1 ? couleur_secondaire|default('#e0a800') : '#fd7e14') }}; transform: rotate(45deg); opacity: {{ 0.3 + (i % 4) * 0.2 }};"></div>
+        {% endfor %}
+    </div>
+</div>
+
+<style>
+    .technoburo-header {
+        font-family: 'Arial', sans-serif;
+        position: relative;
+        overflow: hidden;
+    }
+    
+    .technoburo-header::before {
+        content: "";
+        position: absolute;
+        top: -10px;
+        right: -30px;
+        width: 100px;
+        height: 100px;
+        background: radial-gradient(circle, rgba(255,193,7,0.05) 0%, transparent 70%);
+        border-radius: 50%;
+    }
+    
+    .company-info h1 {
+        background: linear-gradient(45deg, {{ couleur_primaire|default('#ffc107') }}, {{ couleur_secondaire|default('#e0a800') }});
+        -webkit-background-clip: text;
+        -webkit-text-fill-color: transparent;
+        background-clip: text;
+        filter: drop-shadow(1px 1px 2px rgba(255,193,7,0.3));
+    }
+    
+    .document-info {
+        min-width: 220px;
+        position: relative;
+        backdrop-filter: blur(10px);
+    }
+    
+    .document-info::after {
+        content: "⚡";
+        position: absolute;
+        bottom: 5px;
+        right: 5px;
+        font-size: 16px;
+        opacity: 0.3;
+    }
+</style>

@@ -1,0 +1,178 @@
+<div class="admin-section">
+    <h3 class="section-title">
+        <i class="fas fa-file-alt me-2"></i>Gestion des Templates
+    </h3>
+    <p class="text-muted mb-4">Configuration des templates de documents par type avec héritage multi-tenant</p>
+
+    <!-- Statistiques rapides -->
+    <div class="row mb-4">
+        <div class="col-md-3">
+            <div class="card text-center">
+                <div class="card-body">
+                    <h4 class="text-primary">{{ templates|length }}</h4>
+                    <small class="text-muted">Templates Total</small>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="card text-center">
+                <div class="card-body">
+                    <h4 class="text-success">
+                        {% set actifs = 0 %}
+                        {% for template in templates %}
+                            {% if template.estActif %}{% set actifs = actifs + 1 %}{% endif %}
+                        {% endfor %}
+                        {{ actifs }}
+                    </h4>
+                    <small class="text-muted">Actifs</small>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="card text-center">
+                <div class="card-body">
+                    <h4 class="text-warning">
+                        {% set defauts = 0 %}
+                        {% for template in templates %}
+                            {% if template.estDefaut %}{% set defauts = defauts + 1 %}{% endif %}
+                        {% endfor %}
+                        {{ defauts }}
+                    </h4>
+                    <small class="text-muted">Par Défaut</small>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="card text-center">
+                <div class="card-body">
+                    <h4 class="text-info">{{ types_documents|length }}</h4>
+                    <small class="text-muted">Types Documents</small>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    {% if current_societe and current_societe.isFille %}
+        <div class="alert alert-info mb-4">
+            <i class="fas fa-info-circle me-2"></i>
+            <strong>Héritage actif :</strong> Cette société hérite automatiquement des templates de 
+            <strong>{{ current_societe.societeParent.nom }}</strong>. 
+            Les templates que vous créez ici seront spécifiques à cette société.
+        </div>
+    {% endif %}
+
+    <!-- Templates regroupés par type -->
+    {% set templates_by_type = {} %}
+    {% for template in templates %}
+        {% set type = template.typeDocument %}
+        {% if type not in templates_by_type.keys %}
+            {% set templates_by_type = templates_by_type|merge({(type): []}) %}
+        {% endif %}
+        {% set templates_by_type = templates_by_type|merge({(type): templates_by_type[type]|merge([template])}) %}
+    {% endfor %}
+
+    {% for type, type_templates in templates_by_type %}
+        <div class="card mb-4">
+            <div class="card-header bg-light">
+                <div class="d-flex justify-content-between align-items-center">
+                    <h5 class="card-title mb-0">
+                        <i class="fas fa-file-alt text-primary me-2"></i>
+                        {{ types_documents[type] ?? type|title }}
+                    </h5>
+                    <div>
+                        <span class="badge bg-info">{{ type_templates|length }} template(s)</span>
+                        <button type="button" class="btn btn-sm btn-outline-primary ms-2">
+                            <i class="fas fa-plus"></i> Nouveau
+                        </button>
+                    </div>
+                </div>
+            </div>
+            <div class="card-body p-0">
+                {% if type_templates|length > 0 %}
+                    <div class="table-responsive">
+                        <table class="table table-hover mb-0">
+                            <thead>
+                                <tr>
+                                    <th width="5%">Ordre</th>
+                                    <th width="30%">Nom</th>
+                                    <th width="35%">Chemin</th>
+                                    <th width="15%">Société</th>
+                                    <th width="10%">Statut</th>
+                                    <th width="5%">Actions</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% for template in type_templates %}
+                                    <tr>
+                                        <td>
+                                            <span class="badge bg-secondary">{{ template.ordre }}</span>
+                                        </td>
+                                        <td>
+                                            <div>
+                                                <strong>{{ template.nom }}</strong>
+                                                {% if template.estDefaut %}
+                                                    <span class="badge bg-warning text-dark ms-1">
+                                                        <i class="fas fa-star"></i> Défaut
+                                                    </span>
+                                                {% endif %}
+                                            </div>
+                                            {% if template.description %}
+                                                <small class="text-muted">{{ template.description }}</small>
+                                            {% endif %}
+                                        </td>
+                                        <td>
+                                            <code class="small">{{ template.cheminFichier }}</code>
+                                        </td>
+                                        <td>
+                                            {% if template.societe %}
+                                                <span class="badge bg-info">{{ template.societe.nom }}</span>
+                                            {% else %}
+                                                <span class="badge bg-secondary">Global</span>
+                                            {% endif %}
+                                        </td>
+                                        <td>
+                                            {% if template.estActif %}
+                                                <span class="badge bg-success">Actif</span>
+                                            {% else %}
+                                                <span class="badge bg-danger">Inactif</span>
+                                            {% endif %}
+                                        </td>
+                                        <td>
+                                            <div class="btn-group btn-group-sm">
+                                                <button class="btn btn-outline-primary" title="Modifier">
+                                                    <i class="fas fa-edit"></i>
+                                                </button>
+                                                {% if not template.estDefaut %}
+                                                <button class="btn btn-outline-warning" title="Définir comme défaut">
+                                                    <i class="fas fa-star"></i>
+                                                </button>
+                                                {% endif %}
+                                            </div>
+                                        </td>
+                                    </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+                {% else %}
+                    <div class="text-center py-4">
+                        <p class="text-muted mb-0">Aucun template configuré pour ce type de document</p>
+                    </div>
+                {% endif %}
+            </div>
+        </div>
+    {% endfor %}
+
+    {% if templates|length == 0 %}
+        <div class="card">
+            <div class="card-body text-center py-5">
+                <i class="fas fa-file-alt fa-3x text-muted mb-3"></i>
+                <h5>Aucun template configuré</h5>
+                <p class="text-muted mb-3">Commencez par créer votre premier template de document</p>
+                <button type="button" class="btn btn-primary">
+                    <i class="fas fa-plus me-1"></i>Créer un template
+                </button>
+            </div>
+        </div>
+    {% endif %}
+</div>

@@ -73,12 +73,25 @@ class User implements UserInterface, PasswordAuthenticatedUserInterface
     #[ORM\OneToMany(mappedBy: 'user', targetEntity: UserSocieteRole::class, orphanRemoval: true)]
     private Collection $societeRoles;
 
+    #[ORM\ManyToOne(targetEntity: Societe::class, fetch: 'LAZY')]
+    #[ORM\JoinColumn(nullable: true)]
+    private ?Societe $societePrincipale = null;
+
+    #[ORM\ManyToMany(targetEntity: GroupeUtilisateur::class, inversedBy: 'utilisateurs')]
+    #[ORM\JoinTable(name: 'user_groupe_utilisateur')]
+    private Collection $groupes;
+
+    #[ORM\OneToMany(mappedBy: 'user', targetEntity: UserPermission::class)]
+    private Collection $permissions;
+
     public function __construct()
     {
         $this->clients = new ArrayCollection();
         $this->secteurs = new ArrayCollection();
         $this->devis = new ArrayCollection();
         $this->societeRoles = new ArrayCollection();
+        $this->groupes = new ArrayCollection();
+        $this->permissions = new ArrayCollection();
         $this->createdAt = new \DateTimeImmutable();
         $this->updatedAt = new \DateTimeImmutable();
     }
@@ -417,7 +430,7 @@ class User implements UserInterface, PasswordAuthenticatedUserInterface
     }
 
     /**
-     * Vérifie si l'utilisateur a une permission spécifique dans une société
+     * Vérifie si l'utilisateur a une permission spécifique dans une société (tous les systèmes combinés)
      */
     public function hasPermissionInSociete(Societe $societe, string $permission): bool
     {
@@ -425,6 +438,22 @@ class User implements UserInterface, PasswordAuthenticatedUserInterface
             return true;
         }
 
+        // 1. Vérifier permission individuelle
+        $userPermission = $this->getPermissionsForSociete($societe);
+        if ($userPermission && $userPermission->hasPermission($permission)) {
+            return true;
+        }
+
+        // 2. Vérifier permissions des groupes
+        foreach ($this->groupes as $groupe) {
+            if ($groupe->isActif() && $groupe->hasAccessToSociete($societe)) {
+                if ($groupe->hasPermissionRecursive($permission)) {
+                    return true;
+                }
+            }
+        }
+
+        // 3. Vérifier rôle direct dans la société (pour compatibilité)
         $role = $this->getRoleInSociete($societe);
         return $role ? $role->hasPermission($permission) : false;
     }
@@ -447,5 +476,234 @@ class User implements UserInterface, PasswordAuthenticatedUserInterface
             }
         }
         return $societes;
+    }
+
+    public function getSocietePrincipale(): ?Societe
+    {
+        return $this->societePrincipale;
+    }
+
+    public function setSocietePrincipale(?Societe $societePrincipale): static
+    {
+        $this->societePrincipale = $societePrincipale;
+        $this->updatedAt = new \DateTimeImmutable();
+        return $this;
+    }
+
+
+    /**
+     * Retourne la société principale ou la première accessible si non définie
+     */
+    public function getEffectiveSocietePrincipale(): ?Societe
+    {
+        // Si une société principale est définie et que l'utilisateur y a accès
+        if ($this->societePrincipale && $this->hasAccessToSociete($this->societePrincipale)) {
+            return $this->societePrincipale;
+        }
+
+        // Sinon, retourner la première société accessible
+        $accessibles = $this->getAccessibleSocietes();
+        return !empty($accessibles) ? $accessibles[0] : null;
+    }
+
+    /**
+     * @return Collection<int, GroupeUtilisateur>
+     */
+    public function getGroupes(): Collection
+    {
+        return $this->groupes;
+    }
+
+    public function addGroupe(GroupeUtilisateur $groupe): static
+    {
+        if (!$this->groupes->contains($groupe)) {
+            $this->groupes->add($groupe);
+            $this->updatedAt = new \DateTimeImmutable();
+        }
+        return $this;
+    }
+
+    public function removeGroupe(GroupeUtilisateur $groupe): static
+    {
+        if ($this->groupes->removeElement($groupe)) {
+            $this->updatedAt = new \DateTimeImmutable();
+        }
+        return $this;
+    }
+
+    /**
+     * Récupère toutes les permissions de l'utilisateur via ses groupes
+     */
+    public function getAllPermissionsFromGroupes(): array
+    {
+        $permissions = [];
+        foreach ($this->groupes as $groupe) {
+            if ($groupe->isActif()) {
+                $permissions = array_merge($permissions, $groupe->getAllPermissions());
+            }
+        }
+        return array_unique($permissions);
+    }
+
+    /**
+     * Vérifie si l'utilisateur a une permission via ses groupes
+     */
+    public function hasPermissionFromGroupes(string $permission): bool
+    {
+        return in_array($permission, $this->getAllPermissionsFromGroupes(), true);
+    }
+
+    /**
+     * Récupère toutes les sociétés accessibles via les groupes
+     */
+    public function getAccessibleSocietesFromGroupes(): array
+    {
+        $societes = [];
+        foreach ($this->groupes as $groupe) {
+            if ($groupe->isActif()) {
+                $societes = array_merge($societes, $groupe->getAllSocietes());
+            }
+        }
+        
+        // Supprimer les doublons basés sur l'ID
+        $uniqueSocietes = [];
+        foreach ($societes as $societe) {
+            $uniqueSocietes[$societe->getId()] = $societe;
+        }
+        
+        return array_values($uniqueSocietes);
+    }
+
+    /**
+     * Obtient le niveau maximum des groupes de l'utilisateur
+     */
+    public function getNiveauMaximumGroupes(): int
+    {
+        $niveauMax = 0;
+        foreach ($this->groupes as $groupe) {
+            if ($groupe->isActif() && $groupe->getNiveau() > $niveauMax) {
+                $niveauMax = $groupe->getNiveau();
+            }
+        }
+        return $niveauMax;
+    }
+
+    /**
+     * Vérifie si l'utilisateur appartient à un groupe spécifique
+     */
+    public function belongsToGroupe(GroupeUtilisateur $groupe): bool
+    {
+        return $this->groupes->contains($groupe);
+    }
+
+    /**
+     * Récupère les noms des groupes de l'utilisateur (pour affichage)
+     */
+    public function getNomsGroupes(): array
+    {
+        $noms = [];
+        foreach ($this->groupes as $groupe) {
+            if ($groupe->isActif()) {
+                $noms[] = $groupe->getNom();
+            }
+        }
+        return $noms;
+    }
+
+    // ===== GESTION DES PERMISSIONS INDIVIDUELLES =====
+
+    /**
+     * @return Collection<int, UserPermission>
+     */
+    public function getPermissions(): Collection
+    {
+        return $this->permissions;
+    }
+
+    public function addPermission(UserPermission $permission): static
+    {
+        if (!$this->permissions->contains($permission)) {
+            $this->permissions->add($permission);
+            $permission->setUser($this);
+        }
+        return $this;
+    }
+
+    public function removePermission(UserPermission $permission): static
+    {
+        if ($this->permissions->removeElement($permission)) {
+            if ($permission->getUser() === $this) {
+                $permission->setUser(null);
+            }
+        }
+        return $this;
+    }
+
+    /**
+     * Récupère les permissions individuelles pour une société
+     */
+    public function getPermissionsForSociete(Societe $societe): ?UserPermission
+    {
+        foreach ($this->permissions as $permission) {
+            if ($permission->getSociete() === $societe && $permission->isActif()) {
+                return $permission;
+            }
+        }
+        return null;
+    }
+
+
+    /**
+     * Récupère toutes les permissions de l'utilisateur dans une société (individuel + groupes)
+     */
+    public function getAllPermissionsInSociete(Societe $societe): array
+    {
+        $allPermissions = [];
+
+        // Permissions individuelles
+        $userPermission = $this->getPermissionsForSociete($societe);
+        if ($userPermission) {
+            $allPermissions = array_merge($allPermissions, $userPermission->getPermissions());
+        }
+
+        // Permissions des groupes
+        foreach ($this->groupes as $groupe) {
+            if ($groupe->isActif() && $groupe->hasAccessToSociete($societe)) {
+                $allPermissions = array_merge($allPermissions, $groupe->getAllPermissions());
+            }
+        }
+
+        return array_unique($allPermissions);
+    }
+
+    /**
+     * Récupère le niveau maximum de l'utilisateur dans une société (individuel + groupes)
+     */
+    public function getMaxLevelInSociete(Societe $societe): int
+    {
+        $maxLevel = 0;
+
+        // Niveau permission individuelle
+        $userPermission = $this->getPermissionsForSociete($societe);
+        if ($userPermission) {
+            $maxLevel = max($maxLevel, $userPermission->getNiveau());
+        }
+
+        // Niveau des groupes
+        foreach ($this->groupes as $groupe) {
+            if ($groupe->isActif() && $groupe->hasAccessToSociete($societe)) {
+                $maxLevel = max($maxLevel, $groupe->getNiveau());
+            }
+        }
+
+        return $maxLevel;
+    }
+
+    /**
+     * Vérifie si l'utilisateur a un niveau minimum dans une société
+     */
+    public function hasMinimumLevelInSociete(int $requiredLevel, Societe $societe): bool
+    {
+        return $this->getMaxLevelInSociete($societe) >= $requiredLevel;
     }
 }
