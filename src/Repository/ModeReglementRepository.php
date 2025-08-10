@@ -17,6 +17,20 @@ class ModeReglementRepository extends ServiceEntityRepository
     }
 
     /**
+     * Récupère tous les modes de règlement triés par ordre
+     */
+    public function findAllOrdered(): array
+    {
+        return $this->createQueryBuilder('m')
+            ->leftJoin('m.modePaiement', 'mp')
+            ->addSelect('mp')
+            ->orderBy('m.ordre', 'ASC')
+            ->addOrderBy('m.nom', 'ASC')
+            ->getQuery()
+            ->getResult();
+    }
+
+    /**
      * Récupère tous les modes de règlement actifs
      */
     public function findActive(): array

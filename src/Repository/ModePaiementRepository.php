@@ -17,6 +17,18 @@ class ModePaiementRepository extends ServiceEntityRepository
     }
 
     /**
+     * Récupère tous les modes de paiement triés par ordre
+     */
+    public function findAllOrdered(): array
+    {
+        return $this->createQueryBuilder('m')
+            ->orderBy('m.ordre', 'ASC')
+            ->addOrderBy('m.nom', 'ASC')
+            ->getQuery()
+            ->getResult();
+    }
+
+    /**
      * Récupère tous les modes de paiement actifs
      */
     public function findActive(): array
