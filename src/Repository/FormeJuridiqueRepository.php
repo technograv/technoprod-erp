@@ -17,6 +17,18 @@ class FormeJuridiqueRepository extends ServiceEntityRepository
     }
 
     /**
+     * Récupère toutes les formes juridiques triées par ordre
+     */
+    public function findAllOrdered(): array
+    {
+        return $this->createQueryBuilder('f')
+            ->orderBy('f.ordre', 'ASC')
+            ->addOrderBy('f.nom', 'ASC')
+            ->getQuery()
+            ->getResult();
+    }
+
+    /**
      * Récupère toutes les formes juridiques actives
      */
     public function findActive(): array
