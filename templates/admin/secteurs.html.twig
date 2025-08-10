@@ -597,7 +597,7 @@
             .then(response => response.json())
             .then(data => {
                 console.log('🔍 DEBUG: Données de tous les secteurs reçues:', data);
-                if (data.success) {
+                if (data.success && data.secteurs && Array.isArray(data.secteurs)) {
                     // Nettoyer tous les secteurs existants sur la carte avant de recharger
                     console.log('🧹 Nettoyage des secteurs existants sur la carte...');
                     Object.keys(secteurPolygons).forEach(secteurId => {
@@ -608,24 +608,59 @@
                     communesAffichees.clear();
                     
                     secteursData = {};
+                    let secteurAffiche = false;
+                    
                     data.secteurs.forEach(secteur => {
                         secteursData[secteur.id] = secteur;
-                        // Afficher le secteur si la checkbox est cochée
-                        if (document.getElementById(`secteur-${secteur.id}`)?.checked) {
+                        
+                        // Afficher automatiquement tous les secteurs actifs avec des coordonnées
+                        if (secteur.hasCoordinates && secteur.isActive) {
+                            console.log('🗺️ Affichage automatique du secteur actif:', secteur.nom);
+                            
+                            // Cocher automatiquement la checkbox si elle ne l'est pas déjà
+                            const checkbox = document.getElementById(`secteur-${secteur.id}`);
+                            if (checkbox && !checkbox.checked) {
+                                checkbox.checked = true;
+                            }
+                            
                             afficherSecteurSurCarte(secteur);
+                            secteurAffiche = true;
+                        }
+                        // Afficher aussi si la checkbox était déjà cochée manuellement 
+                        else if (document.getElementById(`secteur-${secteur.id}`)?.checked) {
+                            afficherSecteurSurCarte(secteur);
+                            secteurAffiche = true;
                         }
                     });
+                    
+                    if (secteurAffiche) {
+                        console.log('✅ Au moins un secteur a été affiché sur la carte');
+                    } else {
+                        console.warn('⚠️ Aucun secteur actif avec coordonnées trouvé à afficher');
+                    }
+                    
                     mettreAJourStatistiques();
                     
                     // Centrer automatiquement sur tous les secteurs après le chargement initial
-                    setTimeout(() => {
-                        console.log('🎯 Centrage automatique après chargement initial des secteurs');
-                        centrerSurTousLesSecteursIntelligent();
-                    }, 500);
+                    if (secteurAffiche) {
+                        setTimeout(() => {
+                            console.log('🎯 Centrage automatique après chargement initial des secteurs');
+                            centrerSurTousLesSecteursIntelligent();
+                        }, 300);
+                    } else {
+                        console.log('ℹ️ Pas de centrage automatique car aucun secteur affiché');
+                    }
+                } else {
+                    console.error('❌ Erreur chargement secteurs: Réponse API invalide');
+                    console.error('❌ Données reçues:', data);
+                    if (data.error) {
+                        console.error('❌ Message d\'erreur:', data.error);
+                    }
                 }
             })
             .catch(error => {
                 console.error('❌ Erreur chargement secteurs:', error);
+                console.error('❌ Stack trace:', error.stack);
             });
     }
 
@@ -638,22 +673,19 @@
             console.log('🔍 DEBUG: Attribution', index, ':', attribution);
             console.log('🔍 DEBUG: - type:', attribution.type, 'boundary_type:', attribution.boundary_type, 'api_type:', attribution.api_type, 'api_code:', attribution.api_code);
             // Traitement unifié pour toutes les zones avec frontières réelles
-            if ((attribution.coordinates && attribution.coordinates.length > 0) || 
-                (attribution.type === 'epci' && attribution.communes && attribution.communes.length > 0) ||
+            if ((attribution.type === 'epci' && attribution.communes && attribution.communes.length > 0) ||
                 (attribution.type === 'secteur_complet' && attribution.communes && attribution.communes.length > 0) ||
                 (attribution.boundary_type === 'real' && attribution.api_type && attribution.api_code)) {
                 
                 if (attribution.type === 'epci') {
-                    if (attribution.boundary_type === 'real' || attribution.boundary_type === 'communes_reelles') {
-                        afficherEpciAvecVraiesFrontieres(attribution, secteur);
-                    } else {
-                        afficherEpciSurCarte(attribution, secteur);
-                    }
+                    // Tous les EPCIs utilisent maintenant les vraies frontières
+                    afficherEpciAvecVraiesFrontieres(attribution, secteur);
                 } else if (attribution.type === 'secteur_complet' && attribution.boundary_type === 'communes_reelles') {
                     // Secteurs complets avec communes réelles
                     afficherEpciAvecVraiesFrontieres(attribution, secteur);
                 } else if (attribution.boundary_type === 'real' && attribution.api_type && attribution.api_code) {
                     // Nouvelles zones avec frontières réelles (codes postaux, cantons, départements, régions)
+                    console.log(`🗺️ Affichage zone avec vraies frontières API: ${attribution.api_type} ${attribution.api_code}`);
                     afficherZoneAvecVraiesFrontieresAPI(attribution, secteur);
                 } else {
                     afficherAttributionStandard(attribution, secteur);
@@ -902,56 +934,17 @@
             
             console.log(`🎨 EPCI ${attribution.nom} affiché: ${attribution.communes.length} communes avec rendu unifié, SANS contours artificiels`);
         } else {
-            console.warn(`⚠️ Pas de communes disponibles pour EPCI ${attribution.nom}, fallback vers ancien affichage`);
-            // Fallback vers l'ancien affichage
-            afficherEpciSurCarte(attribution, secteur);
+            console.warn(`⚠️ Pas de communes disponibles pour EPCI ${attribution.nom}, essai API EPCI`);
+            // Fallback vers l'API EPCI directe
+            afficherZoneAvecVraiesFrontieresAPI(attribution, secteur);
         }
     }
 
     function afficherEpciSurCarte(attribution, secteur) {
-        console.log(`🔺 Affichage EPCI avec enveloppe convexe: ${attribution.nom}`);
-        
-        const positions = attribution.coordinates.map(coord => 
-            new google.maps.LatLng(coord.lat, coord.lng)
-        );
-
-        if (positions.length >= 3) {
-            const enveloppeConvexe = calculerEnveloppeConvexe(positions);
-            
-            const polygon = new google.maps.Polygon({
-                paths: enveloppeConvexe,
-                strokeColor: secteur.couleur,
-                strokeOpacity: 0.6,
-                strokeWeight: 2,
-                fillColor: secteur.couleur,
-                fillOpacity: 0.15,
-                map: map
-            });
-
-            // Ajouter une info au clic sur le polygone
-            const infoContent = `
-                <div style="max-width: 200px;">
-                    <h6 style="color: ${secteur.couleur};">${attribution.nom}</h6>
-                    <small>Secteur: ${secteur.nom}</small><br>
-                    <small class="text-warning">⚠️ Approximation géométrique</small>
-                </div>
-            `;
-            
-            const infoWindow = new google.maps.InfoWindow({ content: infoContent });
-            polygon.addListener('click', (event) => {
-                // Fermer l'InfoWindow précédente si elle existe
-                if (currentInfoWindow) {
-                    currentInfoWindow.close();
-                }
-                infoWindow.setPosition(event.latLng);
-                infoWindow.open(map);
-                // Stocker la référence pour fermeture future
-                currentInfoWindow = infoWindow;
-            });
-
-            if (!secteurPolygons[secteur.id]) secteurPolygons[secteur.id] = [];
-            secteurPolygons[secteur.id].push(polygon);
-        }
+        // Cette fonction est obsolète - tous les EPCIs utilisent maintenant les vraies frontières
+        console.warn(`⚠️ ATTENTION: afficherEpciSurCarte() appelée pour ${attribution.nom} - cette fonction est obsolète`);
+        console.warn(`⚠️ Redirection vers afficherZoneAvecVraiesFrontieresAPI()`);
+        afficherZoneAvecVraiesFrontieresAPI(attribution, secteur);
     }
 
     function afficherAttributionStandard(attribution, secteur) {
@@ -1119,8 +1112,32 @@
      * Fonction pour afficher une zone en cercle (fallback)
      */
     function afficherZoneEnCercle(attribution, secteur) {
-        const coordonnee = attribution.coordinates[0];
-        const position = new google.maps.LatLng(coordonnee.lat, coordonnee.lng);
+        console.warn(`⚠️ FALLBACK: Affichage en cercle pour ${attribution.nom} (API frontières non disponible)`);
+        
+        // Coordonnées par défaut pour différents types de divisions
+        const coordonneesDefaut = {
+            // France métropolitaine - centre approximatif
+            'default': { lat: 46.603354, lng: 1.888334 },
+            // Coordonnées spécifiques par département (quelques exemples)
+            '31': { lat: 43.604652, lng: 1.444209 }, // Haute-Garonne
+            '09': { lat: 42.864, lng: 1.595 }, // Ariège
+            '65': { lat: 43.233, lng: 0.078 }  // Hautes-Pyrénées
+        };
+        
+        // Essayer de déterminer les coordonnées selon le type d'attribution
+        let position;
+        if (attribution.api_type === 'departement' && coordonneesDefaut[attribution.api_code]) {
+            position = new google.maps.LatLng(
+                coordonneesDefaut[attribution.api_code].lat,
+                coordonneesDefaut[attribution.api_code].lng
+            );
+        } else {
+            // Position par défaut (centre de la France)
+            position = new google.maps.LatLng(
+                coordonneesDefaut.default.lat,
+                coordonneesDefaut.default.lng
+            );
+        }
 
         // Rayon selon le type de zone
         const rayons = {
@@ -1132,7 +1149,7 @@
             'epci': 12000
         };
         
-        const rayon = rayons[attribution.type] || 10000;
+        const rayon = rayons[attribution.api_type] || 10000;
 
         const circle = new google.maps.Circle({
             strokeColor: secteur.couleur,
@@ -1143,6 +1160,27 @@
             map: map,
             center: position,
             radius: rayon
+        });
+
+        // InfoWindow pour le cercle
+        const infoContent = `
+            <div style="max-width: 200px;">
+                <h6 style="color: ${secteur.couleur};">${attribution.nom}</h6>
+                <small>Secteur: ${secteur.nom}</small><br>
+                <small class="text-warning">⚠️ Approximation géographique (API non disponible)</small>
+            </div>
+        `;
+        
+        const infoWindow = new google.maps.InfoWindow({ content: infoContent });
+        circle.addListener('click', (event) => {
+            // Fermer l'InfoWindow précédente si elle existe
+            if (currentInfoWindow) {
+                currentInfoWindow.close();
+            }
+            infoWindow.setPosition(event.latLng);
+            infoWindow.open(map);
+            // Stocker la référence pour fermeture future
+            currentInfoWindow = infoWindow;
         });
 
         if (!secteurPolygons[secteur.id]) secteurPolygons[secteur.id] = [];
@@ -1174,9 +1212,12 @@
             case 'commune':
                 apiUrl = `/admin/commune/${attribution.api_code}/geometry`;
                 break;
+            case 'epci':
+                apiUrl = `/admin/epci/${attribution.api_code}/boundaries`;
+                break;
             default:
                 console.warn(`❌ Type API non supporté: ${attribution.api_type}`);
-                afficherZoneEnCercle(attribution, secteur);
+                console.warn(`❌ Impossible d'afficher la zone ${attribution.nom} - type API non supporté`);
                 return;
         }
         
@@ -1184,7 +1225,25 @@
         
         // Appel API pour récupérer les frontières
         fetch(apiUrl)
-            .then(response => response.json())
+            .then(response => {
+                console.log(`🔍 DEBUG: Réponse API ${apiUrl}:`, response.status, response.statusText);
+                if (!response.ok) {
+                    throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+                }
+                return response.text(); // D'abord récupérer le texte brut
+            })
+            .then(textData => {
+                console.log(`🔍 DEBUG: Données brutes reçues (100 chars):`, textData.substring(0, 100));
+                try {
+                    const data = JSON.parse(textData);
+                    console.log(`🔍 DEBUG: JSON parsé avec succès`);
+                    return data;
+                } catch (parseError) {
+                    console.error(`❌ Erreur parsing JSON:`, parseError);
+                    console.error(`❌ Données reçues (200 premiers caractères):`, textData.substring(0, 200));
+                    throw new Error(`JSON invalide: ${parseError.message}`);
+                }
+            })
             .then(data => {
                 let boundaries = null;
                 
