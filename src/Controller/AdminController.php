@@ -37,7 +37,6 @@ final class AdminController extends AbstractController
         private EntityManagerInterface $entityManager,
         private CommuneGeometryCacheService $cacheService
     ) {}
-
     #[Route('/', name: 'app_admin_dashboard', methods: ['GET'])]
     public function dashboard(EntityManagerInterface $entityManager, TenantService $tenantService): Response
     {
