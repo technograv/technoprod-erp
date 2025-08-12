@@ -1,0 +1,171 @@
+{% extends 'base.html.twig' %}
+
+{% block title %}Paramétrage Utilisateur{% endblock %}
+
+{% block body %}
+<div class="container-fluid mt-4">
+    <div class="row">
+        <div class="col-12">
+            <div class="d-sm-flex align-items-center justify-content-between mb-4">
+                <h1 class="h3 mb-0 text-gray-800">
+                    <i class="fas fa-user-cog me-2"></i>Paramétrage Utilisateur
+                </h1>
+            </div>
+
+            <!-- Messages flash -->
+            {% for label, messages in app.flashes %}
+                {% for message in messages %}
+                    <div class="alert alert-{{ label == 'error' ? 'danger' : label }} alert-dismissible fade show" role="alert">
+                        {{ message }}
+                        <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+                    </div>
+                {% endfor %}
+            {% endfor %}
+
+            <div class="row">
+                <div class="col-lg-3">
+                    <!-- Menu de navigation -->
+                    <div class="card shadow mb-4">
+                        <div class="card-header py-3">
+                            <h6 class="m-0 font-weight-bold text-primary">Navigation</h6>
+                        </div>
+                        <div class="list-group list-group-flush">
+                            <a href="{{ path('app_user_preferences_index') }}" 
+                               class="list-group-item list-group-item-action {{ app.request.get('_route') == 'app_user_preferences_index' ? 'active' : '' }}">
+                                <i class="fas fa-home me-2"></i>Aperçu général
+                            </a>
+                            <a href="{{ path('app_user_preferences_email') }}" 
+                               class="list-group-item list-group-item-action {{ app.request.get('_route') == 'app_user_preferences_email' ? 'active' : '' }}">
+                                <i class="fas fa-envelope me-2"></i>Email & signatures
+                            </a>
+                            <a href="{{ path('app_user_preferences_general') }}" 
+                               class="list-group-item list-group-item-action {{ app.request.get('_route') == 'app_user_preferences_general' ? 'active' : '' }}">
+                                <i class="fas fa-cog me-2"></i>Préférences générales
+                            </a>
+                            <a href="{{ path('app_user_preferences_notes') }}" 
+                               class="list-group-item list-group-item-action {{ app.request.get('_route') == 'app_user_preferences_notes' ? 'active' : '' }}">
+                                <i class="fas fa-sticky-note me-2"></i>Notes personnelles
+                            </a>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="col-lg-9">
+                    <!-- Aperçu général -->
+                    <div class="card shadow mb-4">
+                        <div class="card-header py-3">
+                            <h6 class="m-0 font-weight-bold text-primary">Aperçu de vos préférences</h6>
+                        </div>
+                        <div class="card-body">
+                            <div class="row">
+                                <div class="col-md-6">
+                                    <h6 class="text-secondary">Informations utilisateur</h6>
+                                    <p><strong>Nom :</strong> {{ user.prenom }} {{ user.nom }}</p>
+                                    <p><strong>Email :</strong> {{ user.email }}</p>
+                                    <p><strong>Rôles :</strong> 
+                                        {% for role in user.roles %}
+                                            <span class="badge bg-secondary me-1">{{ role }}</span>
+                                        {% endfor %}
+                                    </p>
+                                </div>
+                                <div class="col-md-6">
+                                    <h6 class="text-secondary">Paramètres actuels</h6>
+                                    <p><strong>Signature email :</strong> 
+                                        {% if preferences.usePersonalSignature %}
+                                            <span class="badge bg-info">Signature personnelle</span>
+                                        {% else %}
+                                            <span class="badge bg-primary">Signature d'entreprise</span>
+                                        {% endif %}
+                                    </p>
+                                    <p><strong>Langue :</strong> {{ preferences.language|upper }}</p>
+                                    <p><strong>Fuseau horaire :</strong> {{ preferences.timezone }}</p>
+                                    <p><strong>Notifications email :</strong> 
+                                        {% if preferences.emailNotifications %}
+                                            <span class="badge bg-success">Activées</span>
+                                        {% else %}
+                                            <span class="badge bg-warning">Désactivées</span>
+                                        {% endif %}
+                                    </p>
+                                </div>
+                            </div>
+
+                            <hr>
+
+                            <h6 class="text-secondary">Actions rapides</h6>
+                            <div class="row">
+                                <div class="col-md-6 mb-3">
+                                    <div class="card border-left-primary">
+                                        <div class="card-body py-3">
+                                            <div class="d-flex align-items-center">
+                                                <div class="me-3">
+                                                    <i class="fas fa-envelope fa-2x text-primary"></i>
+                                                </div>
+                                                <div>
+                                                    <div class="text-xs font-weight-bold text-primary text-uppercase mb-1">
+                                                        Email & Signatures
+                                                    </div>
+                                                    <div class="text-sm">
+                                                        Configurez votre signature email
+                                                    </div>
+                                                    <a href="{{ path('app_user_preferences_email') }}" class="btn btn-primary btn-sm mt-2">
+                                                        Configurer
+                                                    </a>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+
+                                <div class="col-md-6 mb-3">
+                                    <div class="card border-left-success">
+                                        <div class="card-body py-3">
+                                            <div class="d-flex align-items-center">
+                                                <div class="me-3">
+                                                    <i class="fas fa-sticky-note fa-2x text-success"></i>
+                                                </div>
+                                                <div>
+                                                    <div class="text-xs font-weight-bold text-success text-uppercase mb-1">
+                                                        Notes personnelles
+                                                    </div>
+                                                    <div class="text-sm">
+                                                        Stockez vos notes et idées
+                                                    </div>
+                                                    <a href="{{ path('app_user_preferences_notes') }}" class="btn btn-success btn-sm mt-2">
+                                                        Voir les notes
+                                                    </a>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Notes de développement -->
+                    <div class="card shadow">
+                        <div class="card-header py-3">
+                            <h6 class="m-0 font-weight-bold text-info">
+                                <i class="fas fa-lightbulb me-2"></i>Fonctionnalités à venir
+                            </h6>
+                        </div>
+                        <div class="card-body">
+                            <div class="alert alert-info" role="alert">
+                                <h6 class="alert-heading">🚧 En cours de développement</h6>
+                                <p class="mb-2">Voici quelques fonctionnalités qui seront ajoutées prochainement :</p>
+                                <ul class="mb-0">
+                                    <li>Personnalisation du tableau de bord</li>
+                                    <li>Préférences d'affichage des tableaux</li>
+                                    <li>Configuration des notifications SMS</li>
+                                    <li>Thèmes et apparence</li>
+                                    <li>Raccourcis clavier personnalisés</li>
+                                </ul>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

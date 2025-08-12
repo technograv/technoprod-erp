@@ -1,0 +1,218 @@
+{% extends 'base.html.twig' %}
+
+{% block title %}Export de Données - TechnoProd{% endblock %}
+
+{% block stylesheets %}
+    {{ parent() }}
+    <style>
+        .export-header {
+            background: linear-gradient(135deg, #17a2b8 0%, #138496 100%);
+            color: white;
+            padding: 3rem 0;
+            margin-bottom: 2rem;
+        }
+        
+        .export-card {
+            border-radius: 12px;
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+            transition: transform 0.3s ease;
+        }
+        
+        .export-card:hover {
+            transform: translateY(-5px);
+        }
+        
+        .data-category {
+            background: #f8f9fa;
+            border-left: 4px solid #17a2b8;
+            padding: 1rem;
+            margin: 1rem 0;
+            border-radius: 0 8px 8px 0;
+        }
+        
+        .export-info {
+            background: #e3f2fd;
+            border: 1px solid #2196f3;
+            border-radius: 8px;
+            padding: 1.5rem;
+            margin: 2rem 0;
+        }
+        
+        .rights-reminder {
+            background: #f1f8e9;
+            border: 1px solid #8bc34a;
+            border-radius: 8px;
+            padding: 1rem;
+            margin: 1rem 0;
+        }
+    </style>
+{% endblock %}
+
+{% block body %}
+<div class="export-header">
+    <div class="container">
+        <h1><i class="fas fa-download me-3"></i>Export de vos Données</h1>
+        <p class="lead">Récupérez toutes vos données personnelles au format JSON</p>
+    </div>
+</div>
+
+<div class="container">
+    <div class="row justify-content-center">
+        <div class="col-lg-8">
+            
+            <!-- Information RGPD -->
+            <div class="export-info">
+                <h4><i class="fas fa-info-circle me-2"></i>Droit à la Portabilité des Données (Article 20 RGPD)</h4>
+                <p class="mb-0">
+                    Conformément au Règlement Général sur la Protection des Données (RGPD), vous avez le droit 
+                    de recevoir les données personnelles vous concernant dans un format structuré, couramment utilisé 
+                    et lisible par machine.
+                </p>
+            </div>
+            
+            <!-- Carte d'export principal -->
+            <div class="card export-card">
+                <div class="card-header bg-info text-white">
+                    <h3 class="mb-0"><i class="fas fa-file-export me-2"></i>Export Complet de vos Données</h3>
+                </div>
+                <div class="card-body">
+                    
+                    <!-- Catégories de données -->
+                    <h5>Données incluses dans l'export :</h5>
+                    
+                    <div class="data-category">
+                        <h6><i class="fas fa-user text-primary me-2"></i>Informations de Compte</h6>
+                        <ul>
+                            <li>Identifiants de connexion</li>
+                            <li>Nom, prénom, email</li>
+                            <li>Rôles et permissions</li>
+                            <li>Dates de création et dernière connexion</li>
+                            <li>Préférences utilisateur</li>
+                        </ul>
+                    </div>
+                    
+                    <div class="data-category">
+                        <h6><i class="fas fa-shield-alt text-success me-2"></i>Historique des Consentements</h6>
+                        <ul>
+                            <li>Tous vos consentements accordés et retirés</li>
+                            <li>Dates et heures précises</li>
+                            <li>Bases légales du traitement</li>
+                            <li>Adresses IP d'origine (pour preuve)</li>
+                        </ul>
+                    </div>
+                    
+                    <div class="data-category">
+                        <h6><i class="fas fa-chart-bar text-warning me-2"></i>Données d'Usage</h6>
+                        <ul>
+                            <li>Logs de connexion et d'activité</li>
+                            <li>Préférences d'interface</li>
+                            <li>Historique des actions</li>
+                        </ul>
+                    </div>
+                    
+                    <!-- Format d'export -->
+                    <div class="alert alert-info">
+                        <h6><i class="fas fa-file-code me-2"></i>Format d'Export</h6>
+                        <p class="mb-0">
+                            <strong>Format :</strong> JSON (JavaScript Object Notation)<br>
+                            <strong>Encodage :</strong> UTF-8<br>
+                            <strong>Lisible par :</strong> Tous les systèmes informatiques modernes
+                        </p>
+                    </div>
+                    
+                    <!-- Bouton d'export -->
+                    <div class="text-center mt-4">
+                        <form method="post" id="export-form">
+                            <button type="submit" class="btn btn-info btn-lg" id="export-btn">
+                                <i class="fas fa-download me-2"></i>Télécharger mes Données
+                                <div class="spinner-border spinner-border-sm ms-2 d-none" role="status" id="export-spinner">
+                                    <span class="visually-hidden">Génération en cours...</span>
+                                </div>
+                            </button>
+                        </form>
+                        <p class="text-muted mt-2">
+                            <small>
+                                <i class="fas fa-clock me-1"></i>
+                                La génération peut prendre quelques secondes selon la quantité de données
+                            </small>
+                        </p>
+                    </div>
+                    
+                </div>
+            </div>
+            
+            <!-- Informations supplémentaires -->
+            <div class="row mt-4">
+                <div class="col-md-6">
+                    <div class="rights-reminder">
+                        <h6><i class="fas fa-balance-scale me-2"></i>Rappel de vos Droits</h6>
+                        <ul class="mb-0">
+                            <li><strong>Rectification :</strong> Corriger vos données</li>
+                            <li><strong>Effacement :</strong> Supprimer vos données</li>
+                            <li><strong>Opposition :</strong> Refuser certains traitements</li>
+                            <li><strong>Limitation :</strong> Restreindre l'usage</li>
+                        </ul>
+                    </div>
+                </div>
+                <div class="col-md-6">
+                    <div class="card">
+                        <div class="card-header">
+                            <h6><i class="fas fa-envelope me-2"></i>Besoin d'Aide ?</h6>
+                        </div>
+                        <div class="card-body">
+                            <p class="mb-2">
+                                <strong>Délégué à la Protection des Données</strong><br>
+                                <a href="mailto:dpo@technoprod.fr">dpo@technoprod.fr</a>
+                            </p>
+                            <a href="{{ path('app_gdpr_dpo_contact') }}" class="btn btn-outline-primary btn-sm">
+                                <i class="fas fa-paper-plane me-1"></i>Contacter le DPO
+                            </a>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- Liens utiles -->
+            <div class="text-center mt-4">
+                <a href="{{ path('app_gdpr_consent') }}" class="btn btn-outline-success me-2">
+                    <i class="fas fa-cog me-1"></i>Gérer mes Consentements
+                </a>
+                <a href="{{ path('app_gdpr_privacy_policy') }}" class="btn btn-outline-info me-2">
+                    <i class="fas fa-shield-alt me-1"></i>Politique de Confidentialité
+                </a>
+                <a href="{{ path('app_gdpr_account_deletion') }}" class="btn btn-outline-danger">
+                    <i class="fas fa-user-times me-1"></i>Supprimer mon Compte
+                </a>
+            </div>
+            
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block javascripts %}
+    {{ parent() }}
+    <script>
+    document.addEventListener('DOMContentLoaded', function() {
+        const exportForm = document.getElementById('export-form');
+        const exportBtn = document.getElementById('export-btn');
+        const exportSpinner = document.getElementById('export-spinner');
+        
+        exportForm.addEventListener('submit', function(e) {
+            // Afficher le spinner
+            exportBtn.disabled = true;
+            exportSpinner.classList.remove('d-none');
+            
+            // Le formulaire se soumet normalement
+            // Le serveur renverra un fichier JSON à télécharger
+        });
+        
+        // Gérer la réactivation du bouton après téléchargement
+        // (au cas où l'utilisateur reste sur la page)
+        setTimeout(function() {
+            exportBtn.disabled = false;
+            exportSpinner.classList.add('d-none');
+        }, 5000);
+    });
+    </script>
+{% endblock %}

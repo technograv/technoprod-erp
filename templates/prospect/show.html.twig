@@ -1,0 +1,503 @@
+{% extends 'base.html.twig' %}
+
+{% block title %}{{ prospect.isClient ? 'Client' : 'Prospect' }} {{ prospect.code }}{% endblock %}
+
+{% block stylesheets %}
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
+    <style>
+        .prospect-header {
+            background: linear-gradient(135deg, {{ prospect.isClient ? '#28a745' : '#17a2b8' }} 0%, {{ prospect.isClient ? '#20c997' : '#138496' }} 100%);
+            color: white;
+            padding: 1.5rem 0;
+            margin-bottom: 0;
+        }
+        .prospect-tabs {
+            background-color: #f8f9fa;
+            border-bottom: 1px solid #dee2e6;
+            margin-bottom: 0;
+        }
+        .nav-tabs .nav-link {
+            border: none;
+            border-bottom: 3px solid transparent;
+            background: none;
+            color: #6c757d;
+            padding: 1rem 1.5rem;
+        }
+        .nav-tabs .nav-link:hover {
+            border-bottom-color: #dee2e6;
+            color: #495057;
+        }
+        .nav-tabs .nav-link.active {
+            background: white;
+            color: #495057;
+            border-bottom-color: {{ prospect.isClient ? '#28a745' : '#17a2b8' }};
+            font-weight: 600;
+        }
+        .tab-content {
+            background: white;
+            min-height: 400px;
+        }
+        .info-group {
+            background: #f8f9fa;
+            border-radius: 8px;
+            padding: 1rem;
+            margin-bottom: 1rem;
+        }
+        .info-group h6 {
+            color: #495057;
+            font-weight: 600;
+            margin-bottom: 0.75rem;
+            border-bottom: 2px solid #dee2e6;
+            padding-bottom: 0.5rem;
+        }
+        .action-buttons {
+            background: #fff;
+            border-top: 1px solid #dee2e6;
+            padding: 1rem;
+        }
+        .status-badge {
+            font-size: 0.875rem;
+            padding: 0.5rem 1rem;
+        }
+        .identique-note {
+            background: #e7f3ff;
+            border: 1px solid #b3d9ff;
+            border-radius: 4px;
+            padding: 0.75rem;
+            color: #0056b3;
+            font-style: italic;
+        }
+    </style>
+{% endblock %}
+
+{% block body %}
+<!-- En-tête -->
+<div class="prospect-header">
+    <div class="container-fluid">
+        <div class="row align-items-center">
+            <div class="col-md-8">
+                <div class="d-flex align-items-center">
+                    <div class="me-3">
+                        <i class="fas {{ prospect.isClient ? 'fa-user-check' : 'fa-user-clock' }} fa-2x"></i>
+                    </div>
+                    <div>
+                        <h1 class="mb-1">{{ prospect.nomComplet }}</h1>
+                        <p class="mb-0">
+                            <span class="badge {{ prospect.isClient ? 'bg-success' : 'bg-info' }} status-badge">
+                                {{ prospect.isClient ? 'CLIENT' : 'PROSPECT' }}
+                            </span>
+                            <span class="ms-2">{{ prospect.code }}</span>
+                            {% if prospect.famille %}
+                                <span class="ms-2">• {{ prospect.famille }}</span>
+                            {% endif %}
+                        </p>
+                    </div>
+                </div>
+            </div>
+            <div class="col-md-4 text-end">
+                <div class="btn-group">
+                    <a href="{{ path('app_prospect_edit', {'id': prospect.id}) }}" class="btn btn-light">
+                        <i class="fas fa-edit"></i> Modifier
+                    </a>
+                    {% if prospect.isProspect %}
+                        <button type="button" class="btn btn-warning" onclick="convertToClient()">
+                            <i class="fas fa-user-plus"></i> Convertir en client
+                        </button>
+                    {% endif %}
+                    {% if prospect.adresseFacturation and prospect.adresseFacturation.isNavigable %}
+                        <div class="btn-group">
+                            <button type="button" class="btn btn-outline-light dropdown-toggle" data-bs-toggle="dropdown">
+                                <i class="fas fa-map-marker-alt"></i> Itinéraire
+                            </button>
+                            <ul class="dropdown-menu">
+                                <li><a class="dropdown-item" href="{{ prospect.adresseFacturation.itineraireGoogleMapsUrl }}" target="_blank">
+                                    <i class="fab fa-google text-primary"></i> Google Maps
+                                </a></li>
+                                <li><a class="dropdown-item" href="{{ prospect.adresseFacturation.wazeUrl }}" target="_blank">
+                                    <i class="fas fa-route text-info"></i> Waze
+                                </a></li>
+                                <li><a class="dropdown-item" href="{{ prospect.adresseFacturation.googleMapsUrl }}" target="_blank">
+                                    <i class="fas fa-map text-success"></i> Voir sur la carte
+                                </a></li>
+                            </ul>
+                        </div>
+                    {% else %}
+                        <button type="button" class="btn btn-outline-light" disabled title="Adresse incomplète">
+                            <i class="fas fa-map-marker-alt"></i> Itinéraire
+                        </button>
+                    {% endif %}
+                    <button type="button" class="btn btn-outline-light">
+                        <i class="fas fa-history"></i> Historique
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Onglets -->
+<div class="prospect-tabs">
+    <div class="container-fluid">
+        <ul class="nav nav-tabs" id="prospectTabs" role="tablist">
+            <li class="nav-item" role="presentation">
+                <button class="nav-link active" id="facturation-tab" data-bs-toggle="tab" data-bs-target="#facturation" type="button" role="tab">
+                    <i class="fas fa-file-invoice me-2"></i>Facturation
+                </button>
+            </li>
+            <li class="nav-item" role="presentation">
+                <button class="nav-link" id="livraison-tab" data-bs-toggle="tab" data-bs-target="#livraison" type="button" role="tab">
+                    <i class="fas fa-truck me-2"></i>Livraison
+                </button>
+            </li>
+            <li class="nav-item" role="presentation">
+                <button class="nav-link" id="gestion-tab" data-bs-toggle="tab" data-bs-target="#gestion" type="button" role="tab">
+                    <i class="fas fa-cogs me-2"></i>Gestion
+                </button>
+            </li>
+            {% if prospect.isClient %}
+                <li class="nav-item" role="presentation">
+                    <button class="nav-link" id="tarifs-tab" data-bs-toggle="tab" data-bs-target="#tarifs" type="button" role="tab">
+                        <i class="fas fa-tags me-2"></i>Tarifs
+                    </button>
+                </li>
+                <li class="nav-item" role="presentation">
+                    <button class="nav-link" id="compte-tab" data-bs-toggle="tab" data-bs-target="#compte" type="button" role="tab">
+                        <i class="fas fa-chart-bar me-2"></i>Compte
+                    </button>
+                </li>
+            {% endif %}
+            <li class="nav-item" role="presentation">
+                <button class="nav-link" id="notes-tab" data-bs-toggle="tab" data-bs-target="#notes" type="button" role="tab">
+                    <i class="fas fa-sticky-note me-2"></i>Notes
+                </button>
+            </li>
+        </ul>
+    </div>
+</div>
+
+<!-- Contenu des onglets -->
+<div class="container-fluid">
+    <div class="tab-content" id="prospectTabsContent">
+        <!-- Onglet Facturation -->
+        <div class="tab-pane fade show active" id="facturation" role="tabpanel">
+            <div class="row p-4">
+                <div class="col-md-6">
+                    <div class="info-group">
+                        <h6><i class="fas fa-map-marker-alt me-2"></i>Adresse de facturation</h6>
+                        {% if prospect.adresseFacturation %}
+                            <address class="mb-2">
+                                {{ prospect.adresseFacturation.ligne1 }}<br>
+                                {% if prospect.adresseFacturation.ligne2 %}{{ prospect.adresseFacturation.ligne2 }}<br>{% endif %}
+                                {% if prospect.adresseFacturation.ligne3 %}{{ prospect.adresseFacturation.ligne3 }}<br>{% endif %}
+                                {{ prospect.adresseFacturation.codePostal }} {{ prospect.adresseFacturation.ville }}<br>
+                                {{ prospect.adresseFacturation.pays }}
+                            </address>
+                            {% if prospect.adresseFacturation.isNavigable %}
+                                <div class="btn-group btn-group-sm">
+                                    <a href="{{ prospect.adresseFacturation.itineraireGoogleMapsUrl }}" target="_blank" class="btn btn-outline-primary btn-sm">
+                                        <i class="fab fa-google"></i> Maps
+                                    </a>
+                                    <a href="{{ prospect.adresseFacturation.wazeUrl }}" target="_blank" class="btn btn-outline-info btn-sm">
+                                        <i class="fas fa-route"></i> Waze
+                                    </a>
+                                </div>
+                            {% endif %}
+                        {% else %}
+                            <p class="text-muted mb-0">Aucune adresse de facturation</p>
+                        {% endif %}
+                    </div>
+                </div>
+                <div class="col-md-6">
+                    <div class="info-group">
+                        <h6><i class="fas fa-user me-2"></i>Contact de facturation</h6>
+                        {% if prospect.contactFacturation %}
+                            <p class="mb-1"><strong>{{ prospect.contactFacturation.nomComplet }}</strong></p>
+                            {% if prospect.contactFacturation.fonction %}<p class="mb-1">{{ prospect.contactFacturation.fonction }}</p>{% endif %}
+                            {% if prospect.contactFacturation.telephone %}
+                                <div class="d-flex justify-content-between align-items-center mb-1">
+                                    <span><i class="fas fa-phone me-1"></i> {{ prospect.contactFacturation.telephone }}</span>
+                                    <a href="tel:{{ prospect.contactFacturation.telephoneForCall }}" class="btn btn-success btn-sm call-btn">
+                                        <i class="fas fa-phone"></i> Appeler
+                                    </a>
+                                </div>
+                            {% endif %}
+                            {% if prospect.contactFacturation.telephoneMobile %}
+                                <div class="d-flex justify-content-between align-items-center mb-1">
+                                    <span><i class="fas fa-mobile me-1"></i> {{ prospect.contactFacturation.telephoneMobile }}</span>
+                                    <a href="tel:{{ prospect.contactFacturation.telephoneMobileForCall }}" class="btn btn-success btn-sm call-btn">
+                                        <i class="fas fa-phone"></i> Appeler
+                                    </a>
+                                </div>
+                            {% endif %}
+                            {% if prospect.contactFacturation.email %}<p class="mb-1"><i class="fas fa-envelope me-1"></i> {{ prospect.contactFacturation.email }}</p>{% endif %}
+                            {% if prospect.contactFacturation.fax %}<p class="mb-0"><i class="fas fa-fax me-1"></i> {{ prospect.contactFacturation.fax }}</p>{% endif %}
+                        {% else %}
+                            <p class="text-muted mb-0">Aucun contact de facturation</p>
+                        {% endif %}
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Onglet Livraison -->
+        <div class="tab-pane fade" id="livraison" role="tabpanel">
+            <div class="row p-4">
+                <div class="col-md-6">
+                    <div class="info-group">
+                        <h6><i class="fas fa-truck me-2"></i>Adresse de livraison</h6>
+                        {% if prospect.adresseLivraison %}
+                            {% if prospect.adresseLivraison.identiqueFacturation %}
+                                <div class="identique-note">
+                                    <i class="fas fa-link me-2"></i>Identique à l'adresse de facturation
+                                </div>
+                            {% else %}
+                                <address class="mb-2">
+                                    {{ prospect.adresseLivraison.ligne1 }}<br>
+                                    {% if prospect.adresseLivraison.ligne2 %}{{ prospect.adresseLivraison.ligne2 }}<br>{% endif %}
+                                    {% if prospect.adresseLivraison.ligne3 %}{{ prospect.adresseLivraison.ligne3 }}<br>{% endif %}
+                                    {{ prospect.adresseLivraison.codePostal }} {{ prospect.adresseLivraison.ville }}<br>
+                                    {{ prospect.adresseLivraison.pays }}
+                                </address>
+                                {% if prospect.adresseLivraison.isNavigable %}
+                                    <div class="btn-group btn-group-sm">
+                                        <a href="{{ prospect.adresseLivraison.itineraireGoogleMapsUrl }}" target="_blank" class="btn btn-outline-primary btn-sm">
+                                            <i class="fab fa-google"></i> Maps
+                                        </a>
+                                        <a href="{{ prospect.adresseLivraison.wazeUrl }}" target="_blank" class="btn btn-outline-info btn-sm">
+                                            <i class="fas fa-route"></i> Waze
+                                        </a>
+                                    </div>
+                                {% endif %}
+                            {% endif %}
+                        {% else %}
+                            <p class="text-muted mb-0">Aucune adresse de livraison</p>
+                        {% endif %}
+                    </div>
+                </div>
+                <div class="col-md-6">
+                    <div class="info-group">
+                        <h6><i class="fas fa-user me-2"></i>Contact de livraison</h6>
+                        {% if prospect.contactLivraison %}
+                            {% if prospect.contactLivraison.identiqueFacturation %}
+                                <div class="identique-note">
+                                    <i class="fas fa-link me-2"></i>Identique au contact de facturation
+                                </div>
+                            {% else %}
+                                <p class="mb-1"><strong>{{ prospect.contactLivraison.nomComplet }}</strong></p>
+                                {% if prospect.contactLivraison.fonction %}<p class="mb-1">{{ prospect.contactLivraison.fonction }}</p>{% endif %}
+                                {% if prospect.contactLivraison.telephone %}
+                                    <div class="d-flex justify-content-between align-items-center mb-1">
+                                        <span><i class="fas fa-phone me-1"></i> {{ prospect.contactLivraison.telephone }}</span>
+                                        <a href="tel:{{ prospect.contactLivraison.telephoneForCall }}" class="btn btn-success btn-sm call-btn">
+                                            <i class="fas fa-phone"></i> Appeler
+                                        </a>
+                                    </div>
+                                {% endif %}
+                                {% if prospect.contactLivraison.telephoneMobile %}
+                                    <div class="d-flex justify-content-between align-items-center mb-1">
+                                        <span><i class="fas fa-mobile me-1"></i> {{ prospect.contactLivraison.telephoneMobile }}</span>
+                                        <a href="tel:{{ prospect.contactLivraison.telephoneMobileForCall }}" class="btn btn-success btn-sm call-btn">
+                                            <i class="fas fa-phone"></i> Appeler
+                                        </a>
+                                    </div>
+                                {% endif %}
+                                {% if prospect.contactLivraison.email %}<p class="mb-1"><i class="fas fa-envelope me-1"></i> {{ prospect.contactLivraison.email }}</p>{% endif %}
+                                {% if prospect.contactLivraison.fax %}<p class="mb-0"><i class="fas fa-fax me-1"></i> {{ prospect.contactLivraison.fax }}</p>{% endif %}
+                            {% endif %}
+                        {% else %}
+                            <p class="text-muted mb-0">Aucun contact de livraison</p>
+                        {% endif %}
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Onglet Gestion -->
+        <div class="tab-pane fade" id="gestion" role="tabpanel">
+            <div class="row p-4">
+                <div class="col-md-6">
+                    <div class="info-group">
+                        <h6><i class="fas fa-calculator me-2"></i>Paramètres comptables</h6>
+                        <div class="row">
+                            <div class="col-6">
+                                <p class="mb-2"><strong>Régime :</strong><br>{{ prospect.regimeComptable|default('Non défini') }}</p>
+                                <p class="mb-2"><strong>TVA :</strong><br>{{ prospect.assujettiTva ? 'Assujetti' : 'Non assujetti' }}</p>
+                            </div>
+                            <div class="col-6">
+                                <p class="mb-2"><strong>Taux TVA :</strong><br>{{ prospect.tauxTva ? prospect.tauxTva ~ '%' : 'Non défini' }}</p>
+                                <p class="mb-0"><strong>Secteur :</strong><br>{{ prospect.secteur ? prospect.secteur.nomSecteur : 'Non défini' }}</p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                <div class="col-md-6">
+                    <div class="info-group">
+                        <h6><i class="fas fa-credit-card me-2"></i>Conditions de paiement</h6>
+                        <div class="row">
+                            <div class="col-6">
+                                <p class="mb-2"><strong>Mode :</strong><br>{{ prospect.modePaiement|default('Non défini') }}</p>
+                                <p class="mb-0"><strong>Délai :</strong><br>{{ prospect.delaiPaiement ? prospect.delaiPaiement ~ ' jours' : 'Non défini' }}</p>
+                            </div>
+                            <div class="col-6">
+                                <p class="mb-2"><strong>Conditions :</strong><br>{{ prospect.conditionsTarifs|default('Standard') }}</p>
+                                <p class="mb-0"><strong>Commercial :</strong><br>{{ prospect.commercial ? prospect.commercial.fullName : 'Non assigné' }}</p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Onglet Tarifs (client uniquement) -->
+        {% if prospect.isClient %}
+        <div class="tab-pane fade" id="tarifs" role="tabpanel">
+            <div class="p-4">
+                <div class="info-group">
+                    <h6><i class="fas fa-tags me-2"></i>Tarifs spécifiques</h6>
+                    <p class="text-muted">Fonctionnalité à implémenter : gestion des tarifs personnalisés par client.</p>
+                </div>
+            </div>
+        </div>
+
+        <!-- Onglet Compte (client uniquement) -->
+        <div class="tab-pane fade" id="compte" role="tabpanel">
+            <div class="p-4">
+                <div class="row">
+                    <div class="col-md-6">
+                        <div class="info-group">
+                            <h6><i class="fas fa-chart-line me-2"></i>Statistiques</h6>
+                            <p class="text-muted">Historique des commandes et statistiques à venir.</p>
+                        </div>
+                    </div>
+                    <div class="col-md-6">
+                        <div class="info-group">
+                            <h6><i class="fas fa-euro-sign me-2"></i>Solde</h6>
+                            <p class="text-muted">Encours et solde client à implémenter.</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        {% endif %}
+
+        <!-- Onglet Notes -->
+        <div class="tab-pane fade" id="notes" role="tabpanel">
+            <div class="p-4">
+                <div class="info-group">
+                    <h6><i class="fas fa-sticky-note me-2"></i>Notes et remarques</h6>
+                    {% if prospect.notes %}
+                        <p class="mb-0">{{ prospect.notes|nl2br }}</p>
+                    {% else %}
+                        <p class="text-muted mb-0">Aucune note enregistrée.</p>
+                    {% endif %}
+                </div>
+                <div class="info-group">
+                    <h6><i class="fas fa-paperclip me-2"></i>Fichiers joints</h6>
+                    <p class="text-muted mb-0">Fonctionnalité à implémenter : gestion des fichiers joints.</p>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Actions -->
+<div class="action-buttons">
+    <div class="container-fluid">
+        <div class="d-flex justify-content-between align-items-center">
+            <div>
+                <a href="{{ path('app_prospect_index') }}" class="btn btn-secondary">
+                    <i class="fas fa-arrow-left"></i> Retour à la liste
+                </a>
+            </div>
+            <div>
+                <span class="text-muted me-3">
+                    Créé le {{ prospect.createdAt|date('d/m/Y') }}
+                    {% if prospect.dateConversionClient %}
+                        • Client depuis le {{ prospect.dateConversionClient|date('d/m/Y') }}
+                    {% endif %}
+                </span>
+                {% if prospect.isProspect %}
+                    <form method="post" action="{{ path('app_prospect_convert_to_client', {'id': prospect.id}) }}" style="display: inline;" id="convertForm">
+                        <input type="hidden" name="_token" value="{{ csrf_token('convert' ~ prospect.id) }}">
+                    </form>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+</div>
+
+{% block javascripts %}
+<script>
+function convertToClient() {
+    if (confirm('Êtes-vous sûr de vouloir convertir ce prospect en client ?\n\nCette action est irréversible.')) {
+        document.getElementById('convertForm').submit();
+    }
+}
+
+// Activer les tooltips Bootstrap
+var tooltipTriggerList = [].slice.call(document.querySelectorAll('[data-bs-toggle="tooltip"]'))
+var tooltipList = tooltipTriggerList.map(function (tooltipTriggerEl) {
+    return new bootstrap.Tooltip(tooltipTriggerEl)
+});
+
+// Fonction pour confirmer et lancer l'appel
+function confirmCall(phoneNumber) {
+    return confirm(`Voulez-vous appeler le ${phoneNumber} ?\n\nNote: Cette fonction nécessite un appareil compatible (téléphone, logiciel de téléphonie).`);
+}
+
+// Fonction alternative pour les navigateurs qui ne supportent pas tel:
+function initiateCall(phoneNumber) {
+    // Nettoyage du numéro
+    const cleanNumber = phoneNumber.replace(/[^\d+]/g, '');
+    const telUrl = `tel:${cleanNumber}`;
+    
+    console.log('Tentative d\'appel vers:', cleanNumber);
+    
+    // Vérification du support tel: 
+    if (navigator.userAgent.match(/Android|iPhone|iPad|iPod|Windows Phone/i)) {
+        // Sur mobile, utilise le lien tel: direct
+        window.location.href = telUrl;
+    } else {
+        // Sur desktop, affiche le numéro et propose des alternatives
+        const message = `Numéro à appeler: ${phoneNumber}\n\nOptions:\n- Utilisez votre téléphone\n- Copiez le numéro dans votre logiciel de téléphonie\n- Utilisez Skype, Teams, ou un autre service VoIP`;
+        
+        if (confirm(message + '\n\nVoulez-vous copier le numéro dans le presse-papier ?')) {
+            // Copie dans le presse-papier
+            navigator.clipboard.writeText(cleanNumber).then(() => {
+                alert('Numéro copié dans le presse-papier !');
+            }).catch(() => {
+                // Fallback si clipboard n'est pas disponible
+                prompt('Copiez ce numéro:', cleanNumber);
+            });
+        }
+    }
+}
+
+// Gestion des clics sur les boutons d'appel
+document.addEventListener('DOMContentLoaded', function() {
+    document.querySelectorAll('.call-btn').forEach(function(btn) {
+        btn.addEventListener('click', function(e) {
+            e.preventDefault();
+            
+            const href = this.getAttribute('href');
+            const phoneMatch = href.match(/tel:(.+)$/);
+            
+            if (phoneMatch) {
+                const cleanNumber = phoneMatch[1];
+                
+                // Test si tel: est supporté
+                if (window.location.protocol === 'https:' || window.location.hostname === 'localhost') {
+                    // HTTPS ou localhost - les liens tel: fonctionnent mieux
+                    window.location.href = href;
+                } else {
+                    // HTTP - utilise la fonction alternative
+                    initiateCall(cleanNumber);
+                }
+            }
+        });
+    });
+});
+</script>
+{% endblock %}
+{% endblock %}

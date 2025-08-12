@@ -1,0 +1,206 @@
+{% extends 'user_preferences/index.html.twig' %}
+
+{% block title %}Email & Signatures - Paramétrage Utilisateur{% endblock %}
+
+{% block body %}
+<div class="container-fluid mt-4">
+    <div class="row">
+        <div class="col-12">
+            <div class="d-sm-flex align-items-center justify-content-between mb-4">
+                <h1 class="h3 mb-0 text-gray-800">
+                    <i class="fas fa-envelope me-2"></i>Email & Signatures
+                </h1>
+                <a href="{{ path('app_user_preferences_index') }}" class="btn btn-secondary">
+                    <i class="fas fa-arrow-left me-1"></i>Retour
+                </a>
+            </div>
+
+            <!-- Messages flash -->
+            {% for label, messages in app.flashes %}
+                {% for message in messages %}
+                    <div class="alert alert-{{ label == 'error' ? 'danger' : label }} alert-dismissible fade show" role="alert">
+                        {{ message }}
+                        <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+                    </div>
+                {% endfor %}
+            {% endfor %}
+
+            <div class="row">
+                <div class="col-lg-8">
+                    <!-- Configuration signature email -->
+                    <div class="card shadow mb-4">
+                        <div class="card-header py-3">
+                            <h6 class="m-0 font-weight-bold text-primary">Configuration de la signature email</h6>
+                        </div>
+                        <div class="card-body">
+                            <form method="post">
+                                <div class="mb-4">
+                                    <label class="form-label">Type de signature</label>
+                                    <div class="form-check">
+                                        <input class="form-check-input" type="radio" name="email_signature_type" 
+                                               id="signature_company" value="company" 
+                                               {{ preferences.useCompanySignature ? 'checked' : '' }}>
+                                        <label class="form-check-label" for="signature_company">
+                                            <strong>Signature d'entreprise (par défaut)</strong>
+                                            <small class="text-muted d-block">Utilise la signature configurée par l'administrateur</small>
+                                        </label>
+                                    </div>
+                                    <div class="form-check">
+                                        <input class="form-check-input" type="radio" name="email_signature_type" 
+                                               id="signature_personal" value="personal" 
+                                               {{ preferences.usePersonalSignature ? 'checked' : '' }}>
+                                        <label class="form-check-label" for="signature_personal">
+                                            <strong>Signature Gmail personnelle</strong>
+                                            <small class="text-muted d-block">Utilise votre signature Gmail ou une signature personnalisée</small>
+                                        </label>
+                                    </div>
+                                </div>
+
+                                <div class="mb-4" id="custom_signature_section" style="{{ not preferences.usePersonalSignature ? 'display: none;' : '' }}">
+                                    <label for="custom_email_signature" class="form-label">Signature personnalisée (optionnel)</label>
+                                    <textarea class="form-control" id="custom_email_signature" name="custom_email_signature" 
+                                              rows="6" placeholder="Laissez vide pour utiliser votre signature Gmail automatiquement...">{{ preferences.customEmailSignature }}</textarea>
+                                    <small class="form-text text-muted">
+                                        Si vous laissez ce champ vide, votre signature Gmail sera utilisée automatiquement.
+                                        Sinon, cette signature personnalisée sera ajoutée à tous vos emails.
+                                    </small>
+                                </div>
+
+                                <div class="mb-4">
+                                    <div class="form-check">
+                                        <input class="form-check-input" type="checkbox" name="email_notifications" 
+                                               id="email_notifications" {{ preferences.emailNotifications ? 'checked' : '' }}>
+                                        <label class="form-check-label" for="email_notifications">
+                                            Recevoir les notifications par email
+                                        </label>
+                                    </div>
+                                </div>
+
+                                <button type="submit" class="btn btn-primary">
+                                    <i class="fas fa-save me-1"></i>Sauvegarder les modifications
+                                </button>
+                            </form>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="col-lg-4">
+                    <!-- Aperçu de la signature -->
+                    <div class="card shadow mb-4">
+                        <div class="card-header py-3">
+                            <h6 class="m-0 font-weight-bold text-info">Aperçu de la signature</h6>
+                        </div>
+                        <div class="card-body">
+                            <div id="signature_preview">
+                                {% if preferences.usePersonalSignature %}
+                                    {% if preferences.customEmailSignature %}
+                                        <div class="border p-3 bg-light">
+                                            <strong>Signature personnalisée :</strong>
+                                            <div class="mt-2">{{ preferences.customEmailSignature|nl2br }}</div>
+                                        </div>
+                                    {% else %}
+                                        <div class="alert alert-info">
+                                            <i class="fas fa-info-circle"></i>
+                                            Votre signature Gmail sera utilisée automatiquement
+                                        </div>
+                                    {% endif %}
+                                {% else %}
+                                    <div class="alert alert-primary">
+                                        <i class="fas fa-building"></i>
+                                        Signature d'entreprise par défaut
+                                        <small class="d-block mt-1">Configurée par l'administrateur</small>
+                                    </div>
+                                {% endif %}
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Aide -->
+                    <div class="card shadow">
+                        <div class="card-header py-3">
+                            <h6 class="m-0 font-weight-bold text-warning">
+                                <i class="fas fa-question-circle me-1"></i>Aide
+                            </h6>
+                        </div>
+                        <div class="card-body">
+                            <h6>Types de signature :</h6>
+                            <ul class="list-unstyled">
+                                <li class="mb-2">
+                                    <i class="fas fa-building text-primary me-2"></i>
+                                    <strong>Entreprise :</strong> Signature standardisée pour tous les utilisateurs
+                                </li>
+                                <li class="mb-2">
+                                    <i class="fas fa-user text-info me-2"></i>
+                                    <strong>Personnelle :</strong> Votre signature Gmail ou une signature personnalisée
+                                </li>
+                            </ul>
+                            
+                            <hr>
+                            
+                            <small class="text-muted">
+                                <i class="fas fa-lightbulb me-1"></i>
+                                La signature est automatiquement ajoutée lors de l'envoi d'emails depuis TechnoProd.
+                            </small>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    const companyRadio = document.getElementById('signature_company');
+    const personalRadio = document.getElementById('signature_personal');
+    const customSection = document.getElementById('custom_signature_section');
+    const signatureTextarea = document.getElementById('custom_email_signature');
+    const signaturePreview = document.getElementById('signature_preview');
+
+    function updateSignatureSection() {
+        if (personalRadio.checked) {
+            customSection.style.display = 'block';
+        } else {
+            customSection.style.display = 'none';
+        }
+        updatePreview();
+    }
+
+    function updatePreview() {
+        if (personalRadio.checked) {
+            const customText = signatureTextarea.value.trim();
+            if (customText) {
+                signaturePreview.innerHTML = `
+                    <div class="border p-3 bg-light">
+                        <strong>Signature personnalisée :</strong>
+                        <div class="mt-2">${customText.replace(/\n/g, '<br>')}</div>
+                    </div>
+                `;
+            } else {
+                signaturePreview.innerHTML = `
+                    <div class="alert alert-info">
+                        <i class="fas fa-info-circle"></i>
+                        Votre signature Gmail sera utilisée automatiquement
+                    </div>
+                `;
+            }
+        } else {
+            signaturePreview.innerHTML = `
+                <div class="alert alert-primary">
+                    <i class="fas fa-building"></i>
+                    Signature d'entreprise par défaut
+                    <small class="d-block mt-1">Configurée par l'administrateur</small>
+                </div>
+            `;
+        }
+    }
+
+    companyRadio.addEventListener('change', updateSignatureSection);
+    personalRadio.addEventListener('change', updateSignatureSection);
+    signatureTextarea.addEventListener('input', updatePreview);
+
+    // Initial setup
+    updateSignatureSection();
+});
+</script>
+{% endblock %}

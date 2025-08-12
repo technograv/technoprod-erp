@@ -1,0 +1,56 @@
+{# Template de base pour en-tête devis PDF #}
+<div class="invoice-header" style="margin-bottom: 30px; border-bottom: 3px solid {{ couleur_primaire|default('#dc3545') }}; padding-bottom: 20px;">
+    <div style="display: flex; justify-content: space-between; align-items: flex-start;">
+        <div class="company-info">
+            {% if logo_path %}
+                <img src="{{ logo_path }}" alt="Logo {{ societe_nom }}" style="max-height: 80px; margin-bottom: 15px;">
+            {% endif %}
+            <h1 style="color: {{ couleur_primaire|default('#dc3545') }}; font-size: 28px; margin: 0;">
+                {{ societe_display_name|default('TechnoProd') }}
+            </h1>
+            <p style="margin: 5px 0; color: #666;">
+                Votre partenaire technologique de confiance
+            </p>
+        </div>
+        
+        <div class="document-info" style="text-align: right; background: #f8f9fa; padding: 15px; border-radius: 8px;">
+            <h2 style="color: {{ couleur_primaire|default('#dc3545') }}; margin: 0 0 10px 0; font-size: 24px;">
+                DEVIS
+            </h2>
+            <p style="margin: 2px 0;"><strong>N° :</strong> {{ devis.numeroDevis }}</p>
+            <p style="margin: 2px 0;"><strong>Date :</strong> {{ devis.dateCreation|date('d/m/Y') }}</p>
+            {% if devis.validiteDevis %}
+                <p style="margin: 2px 0;"><strong>Validité :</strong> {{ devis.validiteDevis|date('d/m/Y') }}</p>
+            {% endif %}
+        </div>
+    </div>
+</div>
+
+<style>
+    .invoice-header {
+        font-family: 'Arial', sans-serif;
+    }
+    
+    .company-info h1 {
+        font-weight: bold;
+        letter-spacing: -0.5px;
+    }
+    
+    .document-info {
+        min-width: 200px;
+        box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+    }
+    
+    /* Theme-specific styles */
+    .theme-blue .invoice-header {
+        border-color: #007bff;
+    }
+    
+    .theme-green .invoice-header {
+        border-color: #28a745;
+    }
+    
+    .theme-yellow .invoice-header {
+        border-color: #ffc107;
+    }
+</style>

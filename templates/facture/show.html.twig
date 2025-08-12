@@ -1,0 +1,387 @@
+{% extends 'base.html.twig' %}
+
+{% block title %}Facture {{ facture.numeroFacture }}{% endblock %}
+
+{% block stylesheets %}
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
+    <style>
+        .facture-header {
+            background: linear-gradient(135deg, #28a745 0%, #20c997 100%);
+            color: white;
+            padding: 2rem 0;
+            margin-bottom: 2rem;
+        }
+        .status-badge {
+            font-size: 0.875rem;
+            padding: 0.5rem 1rem;
+        }
+        .total-section {
+            background-color: #f8f9fa;
+            border-radius: 8px;
+            padding: 1.5rem;
+        }
+        .line-item {
+            border-bottom: 1px solid #dee2e6;
+            padding: 1rem 0;
+        }
+        .line-item:last-child {
+            border-bottom: none;
+        }
+        .payment-info {
+            background-color: #e9ecef;
+            border-radius: 8px;
+            padding: 1rem;
+        }
+        .table-responsive {
+            box-shadow: 0 0 10px rgba(0,0,0,0.1);
+            border-radius: 8px;
+        }
+        .retard-warning {
+            background-color: #fff3cd;
+            border-left: 4px solid #ffc107;
+            padding: 1rem;
+            margin-bottom: 1rem;
+        }
+    </style>
+{% endblock %}
+
+{% block body %}
+<div class="facture-header">
+    <div class="container">
+        <div class="row align-items-center">
+            <div class="col-md-8">
+                <h1><i class="fas fa-file-invoice-dollar"></i> Facture {{ facture.numeroFacture }}</h1>
+                <p class="mb-0">Client : <strong>{{ facture.client ? facture.client.nomEntreprise : 'Non défini' }}</strong></p>
+                {% if facture.commande %}
+                    <p class="mb-0">Commande d'origine : <a href="{{ path('app_commande_show', {'id': facture.commande.id}) }}" class="text-white">{{ facture.commande.numeroCommande }}</a></p>
+                {% endif %}
+            </div>
+            <div class="col-md-4 text-end">
+                {% set statusClass = {
+                    'brouillon': 'bg-secondary',
+                    'envoyee': 'bg-primary',
+                    'en_relance': 'bg-warning text-dark',
+                    'payee': 'bg-success',
+                    'en_litige': 'bg-danger',
+                    'annulee': 'bg-dark',
+                    'archivee': 'bg-info'
+                } %}
+                <span class="badge {{ statusClass[facture.statut] ?? 'bg-secondary' }} status-badge" id="statut-badge">
+                    {{ facture.statutLabel }}
+                </span>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="container">
+    <!-- Alerte de retard si applicable -->
+    {% if facture.joursRetard > 0 %}
+        <div class="retard-warning">
+            <i class="fas fa-exclamation-triangle"></i>
+            <strong>Facture en retard de {{ facture.joursRetard }} jour(s)</strong>
+            - Échéance dépassée depuis le {{ facture.dateEcheance|date('d/m/Y') }}
+        </div>
+    {% endif %}
+
+    <div class="row">
+        <!-- Informations de la facture -->
+        <div class="col-md-4">
+            <div class="card mb-4">
+                <div class="card-header">
+                    <h5><i class="fas fa-info-circle"></i> Informations</h5>
+                </div>
+                <div class="card-body">
+                    <p><strong>Date de facture :</strong><br>{{ facture.dateFacture ? facture.dateFacture|date('d/m/Y') : 'Non défini' }}</p>
+                    <p><strong>Date d'échéance :</strong><br>{{ facture.dateEcheance ? facture.dateEcheance|date('d/m/Y') : 'Non défini' }}</p>
+                    {% if facture.datePaiement %}
+                        <p><strong>Date de paiement :</strong><br>{{ facture.datePaiement|date('d/m/Y') }}</p>
+                    {% endif %}
+                    <p><strong>Commercial :</strong><br>{{ facture.commercial ? facture.commercial.fullName : 'Non assigné' }}</p>
+                    {% if facture.contact %}
+                        <p><strong>Contact :</strong><br>{{ facture.contact.fullName }}</p>
+                    {% endif %}
+                    {% if facture.modePaiement %}
+                        <p><strong>Mode de paiement :</strong><br>{{ facture.modePaiement }}</p>
+                    {% endif %}
+                </div>
+            </div>
+
+            <!-- Informations de paiement -->
+            <div class="card mb-4">
+                <div class="card-header">
+                    <h5><i class="fas fa-credit-card"></i> Paiement</h5>
+                </div>
+                <div class="card-body payment-info">
+                    <div class="d-flex justify-content-between mb-2">
+                        <span>Montant total :</span>
+                        <strong>{{ facture.totalTtc }} €</strong>
+                    </div>
+                    <div class="d-flex justify-content-between mb-2">
+                        <span>Montant payé :</span>
+                        <strong class="text-success">{{ facture.montantPaye }} €</strong>
+                    </div>
+                    <hr>
+                    <div class="d-flex justify-content-between">
+                        <span><strong>Montant restant :</strong></span>
+                        <strong class="{% if facture.montantRestant > 0 %}text-danger{% else %}text-success{% endif %}">
+                            {{ facture.montantRestant }} €
+                        </strong>
+                    </div>
+                    {% if facture.isPayee %}
+                        <div class="mt-2">
+                            <span class="badge bg-success">
+                                <i class="fas fa-check"></i> Facture payée
+                            </span>
+                        </div>
+                    {% endif %}
+                </div>
+            </div>
+
+            <!-- Totaux -->
+            <div class="card">
+                <div class="card-header">
+                    <h5><i class="fas fa-calculator"></i> Totaux</h5>
+                </div>
+                <div class="card-body total-section">
+                    <div class="d-flex justify-content-between mb-2">
+                        <span>Total HT :</span>
+                        <strong>{{ facture.totalHt }} €</strong>
+                    </div>
+                    <div class="d-flex justify-content-between mb-2">
+                        <span>Total TVA :</span>
+                        <strong>{{ facture.totalTva }} €</strong>
+                    </div>
+                    <hr>
+                    <div class="d-flex justify-content-between">
+                        <span><strong>Total TTC :</strong></span>
+                        <strong class="text-primary fs-5">{{ facture.totalTtc }} €</strong>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Lignes de la facture -->
+        <div class="col-md-8">
+            <div class="card">
+                <div class="card-header">
+                    <h5><i class="fas fa-list"></i> Lignes de facture</h5>
+                </div>
+                <div class="card-body">
+                    {% if facture.factureItems|length > 0 %}
+                        {% for item in facture.factureItems %}
+                            <div class="line-item">
+                                <div class="row align-items-center">
+                                    <div class="col-md-4">
+                                        <strong>{{ item.designation }}</strong>
+                                        {% if item.description %}
+                                            <br><small class="text-muted">{{ item.description }}</small>
+                                        {% endif %}
+                                    </div>
+                                    <div class="col-md-2 text-center">
+                                        <span>{{ item.quantite }}</span>
+                                    </div>
+                                    <div class="col-md-2 text-center">
+                                        <span>{{ item.prixUnitaireHt }} €</span>
+                                    </div>
+                                    <div class="col-md-2 text-center">
+                                        <span>{{ item.tvaPercent }}%</span>
+                                    </div>
+                                    <div class="col-md-2 text-center">
+                                        <span><strong>{{ item.totalLigneHt }} €</strong></span>
+                                    </div>
+                                </div>
+                            </div>
+                        {% endfor %}
+                    {% else %}
+                        <div class="text-center text-muted py-4">
+                            <i class="fas fa-inbox fa-3x mb-3"></i>
+                            <p>Aucune ligne dans cette facture</p>
+                        </div>
+                    {% endif %}
+                </div>
+            </div>
+
+            <!-- Notes -->
+            {% if facture.notesFacturation or facture.notesComptabilite %}
+                <div class="card mt-4">
+                    <div class="card-header">
+                        <h5><i class="fas fa-sticky-note"></i> Notes</h5>
+                    </div>
+                    <div class="card-body">
+                        {% if facture.notesFacturation %}
+                            <div class="mb-3">
+                                <strong>Notes de facturation :</strong>
+                                <p class="mt-1">{{ facture.notesFacturation|nl2br }}</p>
+                            </div>
+                        {% endif %}
+                        {% if facture.notesComptabilite %}
+                            <div>
+                                <strong>Notes comptabilité :</strong>
+                                <p class="mt-1">{{ facture.notesComptabilite|nl2br }}</p>
+                            </div>
+                        {% endif %}
+                    </div>
+                </div>
+            {% endif %}
+        </div>
+    </div>
+
+    <!-- Actions Workflow -->
+    <div class="row mt-4">
+        <div class="col-12">
+            <div class="card">
+                <div class="card-header">
+                    <h5><i class="fas fa-cogs"></i> Actions disponibles</h5>
+                </div>
+                <div class="card-body">
+                    <div id="workflow-actions" class="mb-3">
+                        {% for action in workflow_actions %}
+                            <button class="btn {{ action.css_class }} me-2 mb-2" onclick="executeWorkflowAction('{{ action.action }}')">
+                                <i class="fas fa-play"></i> {{ action.label }}
+                            </button>
+                        {% endfor %}
+                        {% if workflow_actions|length == 0 %}
+                            <p class="text-muted">Aucune action disponible pour ce statut.</p>
+                        {% endif %}
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Actions Factur-X (Conformité 2026) -->
+    <div class="row mt-4">
+        <div class="col-12">
+            <div class="card border-success">
+                <div class="card-header bg-success text-white">
+                    <h5><i class="fas fa-file-pdf"></i> Actions Factur-X - Conformité 2026</h5>
+                    <small>Génération conforme à la norme EN 16931</small>
+                </div>
+                <div class="card-body">
+                    <div class="row">
+                        <div class="col-md-6">
+                            <h6>Génération Factur-X (PDF/A-3 + XML)</h6>
+                            <div class="btn-group mb-2" role="group">
+                                <a href="{{ path('app_facture_facturx', {'id': facture.id, 'profile': 'MINIMUM'}) }}" 
+                                   class="btn btn-outline-success btn-sm">
+                                    <i class="fas fa-download"></i> MINIMUM
+                                </a>
+                                <a href="{{ path('app_facture_facturx', {'id': facture.id, 'profile': 'BASIC_WL'}) }}" 
+                                   class="btn btn-outline-success btn-sm">
+                                    <i class="fas fa-download"></i> BASIC WL
+                                </a>
+                                <a href="{{ path('app_facture_facturx', {'id': facture.id, 'profile': 'BASIC'}) }}" 
+                                   class="btn btn-success btn-sm">
+                                    <i class="fas fa-download"></i> BASIC
+                                </a>
+                                <a href="{{ path('app_facture_facturx', {'id': facture.id, 'profile': 'EN16931'}) }}" 
+                                   class="btn btn-outline-success btn-sm">
+                                    <i class="fas fa-download"></i> EN 16931
+                                </a>
+                            </div>
+                        </div>
+                        <div class="col-md-6">
+                            <h6>Génération XML CII seul</h6>
+                            <div class="btn-group mb-2" role="group">
+                                <a href="{{ path('app_facture_xml_cii', {'id': facture.id, 'profile': 'BASIC'}) }}" 
+                                   class="btn btn-outline-info btn-sm">
+                                    <i class="fas fa-code"></i> XML BASIC
+                                </a>
+                                <a href="{{ path('app_facture_xml_cii', {'id': facture.id, 'profile': 'EN16931'}) }}" 
+                                   class="btn btn-outline-info btn-sm">
+                                    <i class="fas fa-code"></i> XML EN 16931
+                                </a>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="mt-3">
+                        <small class="text-muted">
+                            <i class="fas fa-info-circle"></i>
+                            <strong>Profils Factur-X :</strong>
+                            MINIMUM (données essentielles), BASIC WL (sans lignes), BASIC (complet), EN 16931 (européen).
+                            La facture électronique sera obligatoire en France à partir de 2026.
+                        </small>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Actions Standards -->
+    <div class="row mt-4">
+        <div class="col-12">
+            <a href="{{ path('app_facture_index') }}" class="btn btn-secondary">
+                <i class="fas fa-arrow-left"></i> Retour à la liste
+            </a>
+            <a href="{{ path('app_facture_edit', {'id': facture.id}) }}" class="btn btn-primary">
+                <i class="fas fa-edit"></i> Modifier la facture
+            </a>
+            <button class="btn btn-info" onclick="window.print()">
+                <i class="fas fa-print"></i> Imprimer
+            </button>
+        </div>
+    </div>
+</div>
+
+{% block javascripts %}
+<script>
+var factureId = {{ facture.id }};
+
+// Exécuter une action workflow
+async function executeWorkflowAction(action) {
+    if (!confirm(`Êtes-vous sûr de vouloir exécuter cette action : ${action} ?`)) {
+        return;
+    }
+    
+    try {
+        const response = await fetch(`/workflow/facture/${factureId}/action/${action}`, {
+            method: 'POST',
+            credentials: 'same-origin',
+            headers: {
+                'X-Requested-With': 'XMLHttpRequest'
+            }
+        });
+        
+        const result = await response.json();
+        
+        if (result.success) {
+            showMessage(result.message, 'success');
+            
+            // Recharger la page pour mettre à jour les informations
+            setTimeout(() => {
+                location.reload();
+            }, 1500);
+        } else {
+            showMessage(result.message, 'error');
+        }
+    } catch (error) {
+        console.error('Erreur workflow:', error);
+        showMessage('Erreur de communication', 'error');
+    }
+}
+
+function showMessage(message, type) {
+    // Créer et afficher un message temporaire
+    const alertDiv = document.createElement('div');
+    alertDiv.className = `alert alert-${type === 'success' ? 'success' : 'danger'} alert-dismissible fade show`;
+    alertDiv.innerHTML = `
+        ${message}
+        <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+    `;
+    
+    // Insérer au début du container
+    const container = document.querySelector('.container');
+    container.insertBefore(alertDiv, container.firstChild);
+    
+    // Supprimer automatiquement après 5 secondes
+    setTimeout(() => {
+        if (alertDiv.parentNode) {
+            alertDiv.remove();
+        }
+    }, 5000);
+}
+</script>
+{% endblock %}
+{% endblock %}

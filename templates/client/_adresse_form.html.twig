@@ -1,0 +1,69 @@
+<div class="border border-secondary rounded p-2 bg-light">
+    <div class="d-flex justify-content-between align-items-center mb-2">
+        <small class="text-muted"><i class="fas fa-map-marker-alt me-1"></i>Adresse</small>
+        <button type="button" class="btn btn-outline-danger btn-xs" onclick="removeAdresse(this)">
+            <i class="fas fa-trash"></i>
+        </button>
+    </div>
+    
+    <div class="row">
+        <div class="col-md-12">
+            <div class="mb-2">
+                {{ form_label(adresseForm.nom, null, {'label_attr': {'class': 'form-label small'}}) }}
+                {{ form_widget(adresseForm.nom, {'attr': {'class': 'form-control form-control-sm', 'placeholder': 'Nom de l\'adresse (ex: Siège social, Entrepôt...)'}}) }}
+                {{ form_errors(adresseForm.nom) }}
+            </div>
+        </div>
+    </div>
+    
+    <div class="row">
+        <div class="col-md-12">
+            <div class="mb-2">
+                {{ form_label(adresseForm.ligne1, null, {'label_attr': {'class': 'form-label small'}}) }}
+                {{ form_widget(adresseForm.ligne1, {'attr': {'class': 'form-control form-control-sm'}}) }}
+                {{ form_errors(adresseForm.ligne1) }}
+            </div>
+        </div>
+    </div>
+    
+    <div class="row">
+        <div class="col-md-6">
+            <div class="mb-2">
+                {{ form_label(adresseForm.ligne2, null, {'label_attr': {'class': 'form-label small'}}) }}
+                {{ form_widget(adresseForm.ligne2, {'attr': {'class': 'form-control form-control-sm'}}) }}
+                {{ form_errors(adresseForm.ligne2) }}
+            </div>
+        </div>
+        <div class="col-md-6">
+            <div class="mb-2">
+                {{ form_label(adresseForm.ligne3, null, {'label_attr': {'class': 'form-label small'}}) }}
+                {{ form_widget(adresseForm.ligne3, {'attr': {'class': 'form-control form-control-sm'}}) }}
+                {{ form_errors(adresseForm.ligne3) }}
+            </div>
+        </div>
+    </div>
+    
+    <div class="row">
+        <div class="col-md-3">
+            <div class="mb-2">
+                {{ form_label(adresseForm.codePostal, null, {'label_attr': {'class': 'form-label small'}}) }}
+                {{ form_widget(adresseForm.codePostal, {'attr': {'class': 'form-control form-control-sm'}}) }}
+                {{ form_errors(adresseForm.codePostal) }}
+            </div>
+        </div>
+        <div class="col-md-6">
+            <div class="mb-2">
+                {{ form_label(adresseForm.ville, null, {'label_attr': {'class': 'form-label small'}}) }}
+                {{ form_widget(adresseForm.ville, {'attr': {'class': 'form-control form-control-sm'}}) }}
+                {{ form_errors(adresseForm.ville) }}
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="mb-2">
+                {{ form_label(adresseForm.pays, null, {'label_attr': {'class': 'form-label small'}}) }}
+                {{ form_widget(adresseForm.pays, {'attr': {'class': 'form-control form-control-sm'}}) }}
+                {{ form_errors(adresseForm.pays) }}
+            </div>
+        </div>
+    </div>
+</div>

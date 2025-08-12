@@ -1,0 +1,213 @@
+{% extends 'user_preferences/index.html.twig' %}
+
+{% block title %}Préférences Générales - Paramétrage Utilisateur{% endblock %}
+
+{% block body %}
+<div class="container-fluid mt-4">
+    <div class="row">
+        <div class="col-12">
+            <div class="d-sm-flex align-items-center justify-content-between mb-4">
+                <h1 class="h3 mb-0 text-gray-800">
+                    <i class="fas fa-cog me-2"></i>Préférences Générales
+                </h1>
+                <a href="{{ path('app_user_preferences_index') }}" class="btn btn-secondary">
+                    <i class="fas fa-arrow-left me-1"></i>Retour
+                </a>
+            </div>
+
+            <!-- Messages flash -->
+            {% for label, messages in app.flashes %}
+                {% for message in messages %}
+                    <div class="alert alert-{{ label == 'error' ? 'danger' : label }} alert-dismissible fade show" role="alert">
+                        {{ message }}
+                        <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+                    </div>
+                {% endfor %}
+            {% endfor %}
+
+            <div class="row">
+                <div class="col-lg-8">
+                    <!-- Préférences générales -->
+                    <div class="card shadow mb-4">
+                        <div class="card-header py-3">
+                            <h6 class="m-0 font-weight-bold text-primary">Configuration générale</h6>
+                        </div>
+                        <div class="card-body">
+                            <form method="post">
+                                <div class="row">
+                                    <div class="col-md-6">
+                                        <div class="mb-3">
+                                            <label for="language" class="form-label">Langue</label>
+                                            <select class="form-select" id="language" name="language">
+                                                <option value="fr" {{ preferences.language == 'fr' ? 'selected' : '' }}>Français</option>
+                                                <option value="en" {{ preferences.language == 'en' ? 'selected' : '' }}>English</option>
+                                                <option value="es" {{ preferences.language == 'es' ? 'selected' : '' }}>Español</option>
+                                                <option value="de" {{ preferences.language == 'de' ? 'selected' : '' }}>Deutsch</option>
+                                            </select>
+                                        </div>
+                                    </div>
+
+                                    <div class="col-md-6">
+                                        <div class="mb-3">
+                                            <label for="timezone" class="form-label">Fuseau horaire</label>
+                                            <select class="form-select" id="timezone" name="timezone">
+                                                {% for value, label in timezones %}
+                                                    <option value="{{ value }}" {{ preferences.timezone == value ? 'selected' : '' }}>
+                                                        {{ label }}
+                                                    </option>
+                                                {% endfor %}
+                                            </select>
+                                        </div>
+                                    </div>
+                                </div>
+
+                                <hr>
+
+                                <h6 class="text-secondary mb-3">Notifications</h6>
+                                <div class="row">
+                                    <div class="col-md-6">
+                                        <div class="form-check mb-3">
+                                            <input class="form-check-input" type="checkbox" name="sms_notifications" 
+                                                   id="sms_notifications" {{ preferences.smsNotifications ? 'checked' : '' }}>
+                                            <label class="form-check-label" for="sms_notifications">
+                                                Notifications SMS
+                                                <small class="text-muted d-block">Recevoir des alertes par SMS pour les événements importants</small>
+                                            </label>
+                                        </div>
+                                    </div>
+                                </div>
+
+                                <button type="submit" class="btn btn-primary">
+                                    <i class="fas fa-save me-1"></i>Sauvegarder les modifications
+                                </button>
+                            </form>
+                        </div>
+                    </div>
+
+                    <!-- Fonctionnalités à venir -->
+                    <div class="card shadow">
+                        <div class="card-header py-3">
+                            <h6 class="m-0 font-weight-bold text-info">
+                                <i class="fas fa-lightbulb me-2"></i>Prochainement disponible
+                            </h6>
+                        </div>
+                        <div class="card-body">
+                            <div class="row">
+                                <div class="col-md-6">
+                                    <h6 class="text-secondary">Interface</h6>
+                                    <ul class="text-muted">
+                                        <li>Thème sombre/clair</li>
+                                        <li>Couleurs personnalisées</li>
+                                        <li>Taille des polices</li>
+                                        <li>Widgets dashboard</li>
+                                    </ul>
+                                </div>
+                                <div class="col-md-6">
+                                    <h6 class="text-secondary">Fonctionnalités</h6>
+                                    <ul class="text-muted">
+                                        <li>Raccourcis clavier</li>
+                                        <li>Format dates personnalisé</li>
+                                        <li>Devise par défaut</li>
+                                        <li>Tri automatique des listes</li>
+                                    </ul>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="col-lg-4">
+                    <!-- Résumé des paramètres -->
+                    <div class="card shadow mb-4">
+                        <div class="card-header py-3">
+                            <h6 class="m-0 font-weight-bold text-success">Paramètres actuels</h6>
+                        </div>
+                        <div class="card-body">
+                            <div class="d-flex justify-content-between align-items-center mb-2">
+                                <span class="text-secondary">Langue :</span>
+                                <span class="badge bg-primary">{{ preferences.language|upper }}</span>
+                            </div>
+                            <div class="d-flex justify-content-between align-items-center mb-2">
+                                <span class="text-secondary">Fuseau horaire :</span>
+                                <small class="text-primary">{{ preferences.timezone }}</small>
+                            </div>
+                            <div class="d-flex justify-content-between align-items-center mb-2">
+                                <span class="text-secondary">SMS :</span>
+                                {% if preferences.smsNotifications %}
+                                    <span class="badge bg-success">Activé</span>
+                                {% else %}
+                                    <span class="badge bg-secondary">Désactivé</span>
+                                {% endif %}
+                            </div>
+                            <hr>
+                            <small class="text-muted">
+                                <i class="fas fa-info-circle me-1"></i>
+                                Heure locale actuelle : <br>
+                                <strong id="current_time">--:--</strong>
+                            </small>
+                        </div>
+                    </div>
+
+                    <!-- Aide -->
+                    <div class="card shadow">
+                        <div class="card-header py-3">
+                            <h6 class="m-0 font-weight-bold text-warning">
+                                <i class="fas fa-question-circle me-1"></i>Aide
+                            </h6>
+                        </div>
+                        <div class="card-body">
+                            <h6>À propos des fuseaux horaires</h6>
+                            <p class="small text-muted">
+                                Le fuseau horaire affecte l'affichage des dates et heures dans l'application.
+                                Tous les calculs sont basés sur votre fuseau horaire sélectionné.
+                            </p>
+                            
+                            <h6>Notifications SMS</h6>
+                            <p class="small text-muted">
+                                Les notifications SMS sont envoyées pour :
+                            </p>
+                            <ul class="small text-muted">
+                                <li>Nouveaux devis signés</li>
+                                <li>Commandes urgentes</li>
+                                <li>Rappels d'échéances</li>
+                            </ul>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    const timezoneSelect = document.getElementById('timezone');
+    const currentTimeElement = document.getElementById('current_time');
+
+    function updateCurrentTime() {
+        const timezone = timezoneSelect.value;
+        try {
+            const now = new Date();
+            const formatter = new Intl.DateTimeFormat('fr-FR', {
+                timeZone: timezone,
+                hour: '2-digit',
+                minute: '2-digit',
+                second: '2-digit',
+                day: '2-digit',
+                month: '2-digit',
+                year: 'numeric'
+            });
+            currentTimeElement.textContent = formatter.format(now);
+        } catch (e) {
+            currentTimeElement.textContent = 'Format non supporté';
+        }
+    }
+
+    timezoneSelect.addEventListener('change', updateCurrentTime);
+    
+    // Update every second
+    setInterval(updateCurrentTime, 1000);
+    updateCurrentTime(); // Initial call
+});
+</script>
+{% endblock %}

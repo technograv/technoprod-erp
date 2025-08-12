@@ -1,0 +1,536 @@
+<div class="admin-section">
+    <h3 class="section-title">
+        <i class="fas fa-file-alt me-2"></i>Gestion des Templates
+    </h3>
+    <p class="text-muted mb-4">Configuration des templates de documents par type avec héritage multi-tenant</p>
+
+    <!-- Statistiques rapides -->
+    <div class="row mb-4">
+        <div class="col-md-3">
+            <div class="card text-center">
+                <div class="card-body">
+                    <h4 class="text-primary">{{ templates|length }}</h4>
+                    <small class="text-muted">Templates Total</small>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="card text-center">
+                <div class="card-body">
+                    <h4 class="text-success">{{ templates|filter(t => t.estActif)|length }}</h4>
+                    <small class="text-muted">Actifs</small>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="card text-center">
+                <div class="card-body">
+                    <h4 class="text-warning">{{ templates|filter(t => t.estDefaut)|length }}</h4>
+                    <small class="text-muted">Par Défaut</small>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="card text-center">
+                <div class="card-body">
+                    <h4 class="text-info">{{ types_documents|length }}</h4>
+                    <small class="text-muted">Types Documents</small>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <div>
+            <button type="button" class="btn btn-primary" data-bs-toggle="modal" data-bs-target="#templateModal" onclick="showCreateTemplateModal()">
+                <i class="fas fa-plus me-1"></i>Nouveau Template
+            </button>
+        </div>
+        <div>
+            {% if current_societe and current_societe.isFille %}
+                <span class="badge bg-info">
+                    <i class="fas fa-info-circle me-1"></i>
+                    Hérite des templates de {{ current_societe.societeParent.nom }}
+                </span>
+            {% endif %}
+        </div>
+    </div>
+
+            <!-- Filtres -->
+            <div class="card mb-4">
+                <div class="card-body">
+                    <div class="row">
+                        <div class="col-md-4">
+                            <label class="form-label">Type de document</label>
+                            <select class="form-select" id="filter-type">
+                                <option value="">Tous les types</option>
+                                {% for key, label in types_documents %}
+                                    <option value="{{ key }}">{{ label }}</option>
+                                {% endfor %}
+                            </select>
+                        </div>
+                        <div class="col-md-4">
+                            <label class="form-label">Statut</label>
+                            <select class="form-select" id="filter-status">
+                                <option value="">Tous</option>
+                                <option value="actif">Actifs seulement</option>
+                                <option value="inactif">Inactifs seulement</option>
+                            </select>
+                        </div>
+                        <div class="col-md-4">
+                            <label class="form-label">Défaut</label>
+                            <select class="form-select" id="filter-default">
+                                <option value="">Tous</option>
+                                <option value="defaut">Par défaut seulement</option>
+                                <option value="non-defaut">Non par défaut</option>
+                            </select>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Templates regroupés par type -->
+            <div id="templates-container">
+                {% set templates_by_type = {} %}
+                {% for template in templates %}
+                    {% set type = template.typeDocument %}
+                    {% if type not in templates_by_type.keys %}
+                        {% set templates_by_type = templates_by_type|merge({(type): []}) %}
+                    {% endif %}
+                    {% set templates_by_type = templates_by_type|merge({(type): templates_by_type[type]|merge([template])}) %}
+                {% endfor %}
+
+                {% for type, type_templates in templates_by_type %}
+                    <div class="card mb-4 template-type-card" data-type="{{ type }}">
+                        <div class="card-header bg-light">
+                            <div class="d-flex justify-content-between align-items-center">
+                                <h5 class="card-title mb-0">
+                                    <i class="fas fa-file-alt text-primary me-2"></i>
+                                    {{ types_documents[type] ?? type|title }}
+                                </h5>
+                                <div>
+                                    <span class="badge bg-info">{{ type_templates|length }} template(s)</span>
+                                    <button type="button" class="btn btn-sm btn-outline-primary ms-2" onclick="showCreateTemplateModal('{{ type }}')">
+                                        <i class="fas fa-plus"></i>
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="card-body p-0">
+                            {% if type_templates|length > 0 %}
+                                <div class="table-responsive">
+                                    <table class="table table-hover mb-0">
+                                        <thead>
+                                            <tr>
+                                                <th width="5%">Ordre</th>
+                                                <th width="25%">Nom</th>
+                                                <th width="30%">Chemin</th>
+                                                <th width="15%">Description</th>
+                                                <th width="10%">Société</th>
+                                                <th width="10%">Statut</th>
+                                                <th width="5%">Actions</th>
+                                            </tr>
+                                        </thead>
+                                        <tbody>
+                                            {% for template in type_templates %}
+                                                <tr class="template-row" 
+                                                    data-id="{{ template.id }}" 
+                                                    data-type="{{ template.typeDocument }}"
+                                                    data-status="{{ template.estActif ? 'actif' : 'inactif' }}"
+                                                    data-default="{{ template.estDefaut ? 'defaut' : 'non-defaut' }}">
+                                                    <td>
+                                                        <span class="badge bg-secondary">{{ template.ordre }}</span>
+                                                    </td>
+                                                    <td>
+                                                        <div>
+                                                            <strong>{{ template.nom }}</strong>
+                                                            {% if template.estDefaut %}
+                                                                <span class="badge bg-warning text-dark ms-1">
+                                                                    <i class="fas fa-star"></i> Défaut
+                                                                </span>
+                                                            {% endif %}
+                                                        </div>
+                                                    </td>
+                                                    <td>
+                                                        <code class="small">{{ template.cheminFichier }}</code>
+                                                    </td>
+                                                    <td>
+                                                        <small class="text-muted">{{ template.description ?? '-' }}</small>
+                                                    </td>
+                                                    <td>
+                                                        {% if template.societe %}
+                                                            <span class="badge bg-info">{{ template.societe.nom }}</span>
+                                                        {% else %}
+                                                            <span class="badge bg-secondary">Global</span>
+                                                        {% endif %}
+                                                    </td>
+                                                    <td>
+                                                        <div class="form-check form-switch">
+                                                            <input class="form-check-input" type="checkbox" 
+                                                                   id="status-{{ template.id }}" 
+                                                                   {{ template.estActif ? 'checked' : '' }}
+                                                                   onchange="toggleTemplateStatus({{ template.id }})">
+                                                        </div>
+                                                    </td>
+                                                    <td>
+                                                        <div class="dropdown">
+                                                            <button class="btn btn-sm btn-outline-secondary dropdown-toggle" type="button" data-bs-toggle="dropdown">
+                                                                <i class="fas fa-cog"></i>
+                                                            </button>
+                                                            <ul class="dropdown-menu">
+                                                                <li><a class="dropdown-item" href="#" onclick="editTemplate({{ template.id }})">
+                                                                    <i class="fas fa-edit me-2"></i>Modifier
+                                                                </a></li>
+                                                                {% if not template.estDefaut %}
+                                                                <li><a class="dropdown-item" href="#" onclick="setAsDefault({{ template.id }})">
+                                                                    <i class="fas fa-star me-2"></i>Définir comme défaut
+                                                                </a></li>
+                                                                {% endif %}
+                                                                <li><hr class="dropdown-divider"></li>
+                                                                <li><a class="dropdown-item text-danger" href="#" onclick="deleteTemplate({{ template.id }})">
+                                                                    <i class="fas fa-trash me-2"></i>Supprimer
+                                                                </a></li>
+                                                            </ul>
+                                                        </div>
+                                                    </td>
+                                                </tr>
+                                            {% endfor %}
+                                        </tbody>
+                                    </table>
+                                </div>
+                            {% else %}
+                                <div class="text-center py-4">
+                                    <p class="text-muted mb-0">Aucun template configuré pour ce type de document</p>
+                                </div>
+                            {% endif %}
+                        </div>
+                    </div>
+                {% endfor %}
+
+                {% if templates|length == 0 %}
+                    <div class="card">
+                        <div class="card-body text-center py-5">
+                            <i class="fas fa-file-alt fa-3x text-muted mb-3"></i>
+                            <h5>Aucun template configuré</h5>
+                            <p class="text-muted mb-3">Commencez par créer votre premier template de document</p>
+                            <button type="button" class="btn btn-primary" onclick="showCreateTemplateModal()">
+                                <i class="fas fa-plus me-1"></i>Créer un template
+                            </button>
+                        </div>
+                    </div>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Modal Template -->
+<div class="modal fade" id="templateModal" tabindex="-1" aria-labelledby="templateModalLabel" aria-hidden="true">
+    <div class="modal-dialog modal-lg">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title" id="templateModalLabel">Nouveau Template</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <form id="templateForm">
+                <div class="modal-body">
+                    <input type="hidden" id="template-id">
+                    
+                    <div class="row">
+                        <div class="col-md-6">
+                            <label for="template-type" class="form-label">Type de document <span class="text-danger">*</span></label>
+                            <select class="form-select" id="template-type" required>
+                                <option value="">Sélectionner un type</option>
+                                {% for key, label in types_documents %}
+                                    <option value="{{ key }}">{{ label }}</option>
+                                {% endfor %}
+                            </select>
+                        </div>
+                        <div class="col-md-6">
+                            <label for="template-nom" class="form-label">Nom <span class="text-danger">*</span></label>
+                            <input type="text" class="form-control" id="template-nom" required>
+                        </div>
+                    </div>
+
+                    <div class="row mt-3">
+                        <div class="col-12">
+                            <label for="template-chemin" class="form-label">Chemin du fichier <span class="text-danger">*</span></label>
+                            <input type="text" class="form-control" id="template-chemin" required 
+                                   placeholder="templates/documents/devis/standard.html.twig">
+                            <div class="form-text">
+                                Chemin relatif depuis le dossier templates/ (ex: documents/devis/standard.html.twig)
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="row mt-3">
+                        <div class="col-12">
+                            <label for="template-description" class="form-label">Description</label>
+                            <textarea class="form-control" id="template-description" rows="2"></textarea>
+                        </div>
+                    </div>
+
+                    <div class="row mt-3">
+                        <div class="col-md-4">
+                            <label for="template-ordre" class="form-label">Ordre</label>
+                            <input type="number" class="form-control" id="template-ordre" min="0" value="0">
+                        </div>
+                        <div class="col-md-4">
+                            <div class="form-check mt-4">
+                                <input class="form-check-input" type="checkbox" id="template-actif" checked>
+                                <label class="form-check-label" for="template-actif">
+                                    Actif
+                                </label>
+                            </div>
+                        </div>
+                        <div class="col-md-4">
+                            <div class="form-check mt-4">
+                                <input class="form-check-input" type="checkbox" id="template-defaut">
+                                <label class="form-check-label" for="template-defaut">
+                                    Par défaut
+                                </label>
+                            </div>
+                        </div>
+                    </div>
+
+                    {% if current_societe and current_societe.isFille %}
+                    <div class="row mt-3">
+                        <div class="col-12">
+                            <div class="alert alert-info">
+                                <i class="fas fa-info-circle me-2"></i>
+                                <strong>Héritage des templates :</strong> 
+                                Cette société hérite automatiquement des templates de la société mère 
+                                "{{ current_societe.societeParent.nom }}". 
+                                Les templates que vous créez ici seront spécifiques à cette société.
+                            </div>
+                        </div>
+                    </div>
+                    {% endif %}
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Annuler</button>
+                    <button type="submit" class="btn btn-primary">
+                        <i class="fas fa-save me-1"></i>Enregistrer
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+<script>
+// Variables globales
+let templates = {{ templates|json_encode|raw }};
+let typesDocuments = {{ types_documents|json_encode|raw }};
+
+// Initialisation
+document.addEventListener('DOMContentLoaded', function() {
+    initFilters();
+});
+
+// Initialisation des filtres
+function initFilters() {
+    const filterType = document.getElementById('filter-type');
+    const filterStatus = document.getElementById('filter-status');
+    const filterDefault = document.getElementById('filter-default');
+    
+    [filterType, filterStatus, filterDefault].forEach(filter => {
+        filter.addEventListener('change', applyFilters);
+    });
+}
+
+// Application des filtres
+function applyFilters() {
+    const typeFilter = document.getElementById('filter-type').value;
+    const statusFilter = document.getElementById('filter-status').value;
+    const defaultFilter = document.getElementById('filter-default').value;
+    
+    // Filtrer les cartes par type
+    document.querySelectorAll('.template-type-card').forEach(card => {
+        const cardType = card.dataset.type;
+        const shouldShowCard = !typeFilter || cardType === typeFilter;
+        card.style.display = shouldShowCard ? 'block' : 'none';
+    });
+    
+    // Filtrer les lignes de template
+    document.querySelectorAll('.template-row').forEach(row => {
+        const rowType = row.dataset.type;
+        const rowStatus = row.dataset.status;
+        const rowDefault = row.dataset.default;
+        
+        let visible = true;
+        
+        if (typeFilter && rowType !== typeFilter) visible = false;
+        if (statusFilter && rowStatus !== statusFilter) visible = false;
+        if (defaultFilter && rowDefault !== defaultFilter) visible = false;
+        
+        row.style.display = visible ? '' : 'none';
+    });
+}
+
+// Afficher modal de création
+function showCreateTemplateModal(preselectedType = null) {
+    document.getElementById('templateModalLabel').textContent = 'Nouveau Template';
+    document.getElementById('templateForm').reset();
+    document.getElementById('template-id').value = '';
+    
+    if (preselectedType) {
+        document.getElementById('template-type').value = preselectedType;
+    }
+    
+    new bootstrap.Modal(document.getElementById('templateModal')).show();
+}
+
+// Modifier template
+async function editTemplate(id) {
+    try {
+        const response = await fetch(`/admin/templates/${id}`);
+        const template = await response.json();
+        
+        document.getElementById('templateModalLabel').textContent = 'Modifier Template';
+        document.getElementById('template-id').value = template.id;
+        document.getElementById('template-type').value = template.type_document;
+        document.getElementById('template-nom').value = template.nom;
+        document.getElementById('template-chemin').value = template.chemin_fichier;
+        document.getElementById('template-description').value = template.description || '';
+        document.getElementById('template-ordre').value = template.ordre;
+        document.getElementById('template-actif').checked = template.est_actif;
+        document.getElementById('template-defaut').checked = template.est_defaut;
+        
+        new bootstrap.Modal(document.getElementById('templateModal')).show();
+    } catch (error) {
+        showNotification('Erreur lors du chargement du template', 'error');
+    }
+}
+
+// Basculer le statut actif/inactif
+async function toggleTemplateStatus(id) {
+    const checkbox = document.getElementById(`status-${id}`);
+    
+    try {
+        const response = await fetch(`/admin/templates/${id}`, {
+            method: 'PUT',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ est_actif: checkbox.checked })
+        });
+        
+        const result = await response.json();
+        
+        if (result.success) {
+            showNotification(result.message, 'success');
+            // Mettre à jour l'attribut data
+            const row = document.querySelector(`[data-id="${id}"]`);
+            row.dataset.status = checkbox.checked ? 'actif' : 'inactif';
+        } else {
+            checkbox.checked = !checkbox.checked; // Revenir à l'état précédent
+            showNotification(result.error || 'Erreur lors de la mise à jour', 'error');
+        }
+    } catch (error) {
+        checkbox.checked = !checkbox.checked;
+        showNotification('Erreur lors de la mise à jour du statut', 'error');
+    }
+}
+
+// Définir comme défaut
+async function setAsDefault(id) {
+    if (!confirm('Voulez-vous définir ce template comme défaut pour ce type de document ?')) {
+        return;
+    }
+    
+    try {
+        const response = await fetch(`/admin/templates/${id}/set-default`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' }
+        });
+        
+        const result = await response.json();
+        
+        if (result.success) {
+            showNotification(result.message, 'success');
+            location.reload(); // Recharger pour mettre à jour l'affichage
+        } else {
+            showNotification(result.error || 'Erreur lors de la mise à jour', 'error');
+        }
+    } catch (error) {
+        showNotification('Erreur lors de la mise à jour', 'error');
+    }
+}
+
+// Supprimer template
+async function deleteTemplate(id) {
+    if (!confirm('Êtes-vous sûr de vouloir supprimer ce template ?')) {
+        return;
+    }
+    
+    try {
+        const response = await fetch(`/admin/templates/${id}`, {
+            method: 'DELETE'
+        });
+        
+        const result = await response.json();
+        
+        if (result.success) {
+            showNotification(result.message, 'success');
+            document.querySelector(`[data-id="${id}"]`).remove();
+        } else {
+            showNotification(result.error || 'Erreur lors de la suppression', 'error');
+        }
+    } catch (error) {
+        showNotification('Erreur lors de la suppression', 'error');
+    }
+}
+
+// Soumission du formulaire
+document.getElementById('templateForm').addEventListener('submit', async function(e) {
+    e.preventDefault();
+    
+    const templateId = document.getElementById('template-id').value;
+    const isEdit = !!templateId;
+    
+    const data = {
+        type_document: document.getElementById('template-type').value,
+        nom: document.getElementById('template-nom').value,
+        chemin_fichier: document.getElementById('template-chemin').value,
+        description: document.getElementById('template-description').value,
+        ordre: parseInt(document.getElementById('template-ordre').value) || 0,
+        est_actif: document.getElementById('template-actif').checked,
+        est_defaut: document.getElementById('template-defaut').checked,
+        {% if current_societe %}
+        societe_id: {{ current_societe.id }}
+        {% endif %}
+    };
+    
+    try {
+        const url = isEdit ? `/admin/templates/${templateId}` : '/admin/templates';
+        const method = isEdit ? 'PUT' : 'POST';
+        
+        const response = await fetch(url, {
+            method: method,
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(data)
+        });
+        
+        const result = await response.json();
+        
+        if (result.success) {
+            showNotification(result.message, 'success');
+            bootstrap.Modal.getInstance(document.getElementById('templateModal')).hide();
+            location.reload(); // Recharger pour afficher les changements
+        } else {
+            showNotification(result.error || 'Erreur lors de l\'enregistrement', 'error');
+        }
+    } catch (error) {
+        showNotification('Erreur lors de l\'enregistrement', 'error');
+    }
+});
+
+// Fonction de notification
+function showNotification(message, type = 'info') {
+    // Utiliser Toastr si disponible, sinon alert
+    if (typeof toastr !== 'undefined') {
+        toastr[type](message);
+    } else {
+        alert(message);
+    }
+}
+</script>

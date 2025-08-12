@@ -1,0 +1,210 @@
+{% set isNewClient = client.id is null %}
+
+<div class="row">
+    <div class="col-md-6">
+        <div class="card mb-4">
+            <div class="card-header">
+                <h6 class="mb-0"><i class="fas fa-info-circle me-2"></i>Informations générales</h6>
+            </div>
+            <div class="card-body">
+                <div class="mb-3">
+                    {{ form_label(form.typePersonne, null, {'label_attr': {'class': 'form-label'}}) }}
+                    <div class="mt-2">
+                        {{ form_widget(form.typePersonne) }}
+                    </div>
+                    {{ form_errors(form.typePersonne) }}
+                </div>
+                
+                <div class="mb-3">
+                    {{ form_label(form.nom, null, {'label_attr': {'class': 'form-label'}}) }}
+                    {{ form_widget(form.nom, {'attr': {'class': 'form-control'}}) }}
+                    {{ form_errors(form.nom) }}
+                </div>
+                
+                <div class="mb-3">
+                    {{ form_label(form.famille, null, {'label_attr': {'class': 'form-label'}}) }}
+                    {{ form_widget(form.famille, {'attr': {'class': 'form-select'}}) }}
+                    {{ form_errors(form.famille) }}
+                </div>
+                
+                <div class="mb-3">
+                    {{ form_label(form.formeJuridique, null, {'label_attr': {'class': 'form-label'}}) }}
+                    {{ form_widget(form.formeJuridique, {'attr': {'class': 'form-select'}}) }}
+                    {{ form_errors(form.formeJuridique) }}
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <div class="col-md-6">
+        <div class="card mb-4">
+            <div class="card-header">
+                <h6 class="mb-0"><i class="fas fa-euro-sign me-2"></i>Gestion commerciale</h6>
+            </div>
+            <div class="card-body">
+                <div class="mb-3">
+                    {{ form_label(form.regimeComptable, null, {'label_attr': {'class': 'form-label'}}) }}
+                    {{ form_widget(form.regimeComptable, {'attr': {'class': 'form-select'}}) }}
+                    {{ form_errors(form.regimeComptable) }}
+                </div>
+                
+                <div class="mb-3">
+                    {{ form_label(form.modePaiement, null, {'label_attr': {'class': 'form-label'}}) }}
+                    {{ form_widget(form.modePaiement, {'attr': {'class': 'form-select'}}) }}
+                    {{ form_errors(form.modePaiement) }}
+                </div>
+                
+                <div class="row">
+                    <div class="col-md-6">
+                        <div class="mb-3">
+                            {{ form_label(form.delaiPaiement, null, {'label_attr': {'class': 'form-label'}}) }}
+                            {{ form_widget(form.delaiPaiement, {'attr': {'class': 'form-control'}}) }}
+                            {{ form_errors(form.delaiPaiement) }}
+                        </div>
+                    </div>
+                    <div class="col-md-6">
+                        <div class="mb-3">
+                            {{ form_label(form.tauxTva, null, {'label_attr': {'class': 'form-label'}}) }}
+                            {{ form_widget(form.tauxTva, {'attr': {'class': 'form-control'}}) }}
+                            {{ form_errors(form.tauxTva) }}
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="mb-3">
+                    <div class="form-check">
+                        {{ form_widget(form.assujettiTva, {'attr': {'class': 'form-check-input'}}) }}
+                        {{ form_label(form.assujettiTva, null, {'label_attr': {'class': 'form-check-label'}}) }}
+                    </div>
+                    {{ form_errors(form.assujettiTva) }}
+                </div>
+                
+                <div class="mb-3">
+                    {{ form_label(form.conditionsTarifs, null, {'label_attr': {'class': 'form-label'}}) }}
+                    {{ form_widget(form.conditionsTarifs, {'attr': {'class': 'form-select'}}) }}
+                    {{ form_errors(form.conditionsTarifs) }}
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Section Contacts -->
+<div class="card mb-4">
+    <div class="card-header d-flex justify-content-between align-items-center">
+        <h6 class="mb-0"><i class="fas fa-users me-2"></i>Contacts</h6>
+        <button type="button" class="btn btn-outline-primary btn-sm" onclick="addContact()">
+            <i class="fas fa-plus"></i> Ajouter un contact
+        </button>
+    </div>
+    <div class="card-body">
+        <div id="contacts-container" data-prototype="{{ form_widget(form.contacts.vars.prototype)|e('html_attr') }}">
+            {% for contactForm in form.contacts %}
+                <div class="contact-item mb-4">
+                    {{ include('client/_contact_form.html.twig', {'contactForm': contactForm}) }}
+                </div>
+            {% endfor %}
+        </div>
+        
+        {% if form.contacts|length == 0 %}
+            <div class="text-muted text-center py-4">
+                <i class="fas fa-user-plus fa-2x mb-2"></i>
+                <p>Aucun contact ajouté. Cliquez sur "Ajouter un contact" pour commencer.</p>
+            </div>
+        {% endif %}
+    </div>
+</div>
+
+<!-- Section Sélection des contacts par défaut -->
+<div class="row mb-4">
+    <div class="col-md-6">
+        <div class="card">
+            <div class="card-header">
+                <h6 class="mb-0"><i class="fas fa-file-invoice me-2"></i>Contact facturation par défaut</h6>
+            </div>
+            <div class="card-body">
+                {{ form_label(form.contactFacturationDefault, null, {'label_attr': {'class': 'form-label'}}) }}
+                {{ form_widget(form.contactFacturationDefault, {'attr': {'class': 'form-select'}}) }}
+                {{ form_errors(form.contactFacturationDefault) }}
+                <div class="form-text">
+                    Ce contact sera utilisé par défaut pour la facturation
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <div class="col-md-6">
+        <div class="card">
+            <div class="card-header">
+                <h6 class="mb-0"><i class="fas fa-truck me-2"></i>Contact livraison par défaut</h6>
+            </div>
+            <div class="card-body">
+                {{ form_label(form.contactLivraisonDefault, null, {'label_attr': {'class': 'form-label'}}) }}
+                {{ form_widget(form.contactLivraisonDefault, {'attr': {'class': 'form-select'}}) }}
+                {{ form_errors(form.contactLivraisonDefault) }}
+                <div class="form-text">
+                    Ce contact sera utilisé par défaut pour la livraison
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Section Notes -->
+<div class="card mb-4">
+    <div class="card-header">
+        <h6 class="mb-0"><i class="fas fa-sticky-note me-2"></i>Notes</h6>
+    </div>
+    <div class="card-body">
+        {{ form_label(form.notes, null, {'label_attr': {'class': 'form-label'}}) }}
+        {{ form_widget(form.notes, {'attr': {'class': 'form-control', 'rows': '4', 'placeholder': 'Notes internes sur ce client...'}}) }}
+        {{ form_errors(form.notes) }}
+    </div>
+</div>
+
+<div class="d-flex justify-content-between">
+    <a href="{{ path('app_client_index') }}" class="btn btn-secondary">
+        <i class="fas fa-arrow-left"></i> Annuler
+    </a>
+    <button type="submit" class="btn btn-success">
+        <i class="fas fa-save"></i> {{ isNewClient ? 'Créer' : 'Enregistrer' }}
+    </button>
+</div>
+
+{# Champs cachés nécessaires au fonctionnement du formulaire #}
+<div style="display: none;">
+    {{ form_rest(form) }}
+</div>
+
+<script>
+let contactIndex = {{ form.contacts|length }};
+
+function addContact() {
+    const container = document.getElementById('contacts-container');
+    const prototype = container.dataset.prototype;
+    const newContact = prototype.replace(/__contacts_name__/g, contactIndex);
+    
+    const div = document.createElement('div');
+    div.classList.add('contact-item', 'mb-4');
+    div.innerHTML = newContact;
+    
+    container.appendChild(div);
+    contactIndex++;
+    
+    // Actualiser les sélecteurs de contacts par défaut
+    updateContactSelects();
+}
+
+function removeContact(button) {
+    if (confirm('Êtes-vous sûr de vouloir supprimer ce contact ?')) {
+        button.closest('.contact-item').remove();
+        updateContactSelects();
+    }
+}
+
+function updateContactSelects() {
+    // Cette fonction sera appelée pour mettre à jour les sélecteurs
+    // de contacts par défaut quand on ajoute/supprime des contacts
+    // Pour l'instant, on recharge simplement la page après soumission
+}
+</script>

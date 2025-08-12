@@ -1,0 +1,1503 @@
+{% extends 'base.html.twig' %}
+
+{% block title %}Modifier Client {{ client.code }}{% endblock %}
+
+{% block stylesheets %}
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
+    <style>
+        
+        .compact-section {
+            background: #f8f9fa;
+            border-radius: 8px;
+            padding: 1.5rem;
+            margin-bottom: 1.5rem;
+            border: 1px solid #e9ecef;
+        }
+        
+        .section-title {
+            color: #495057;
+            font-weight: 600;
+            font-size: 1.1rem;
+            margin-bottom: 1rem;
+            border-bottom: 2px solid #28a745;
+            padding-bottom: 0.5rem;
+        }
+        
+        /* Table styles */
+        .table-contacts {
+            background: white;
+            border-radius: 6px;
+            overflow: hidden;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        }
+        
+        .table-contacts th {
+            background: #28a745;
+            color: white;
+            font-weight: 600;
+            font-size: 0.9rem;
+            border: none;
+            padding: 12px 8px;
+            text-align: center;
+        }
+        
+        .table-contacts td {
+            padding: 10px 8px;
+            vertical-align: middle;
+            border-bottom: 1px solid #e9ecef;
+            font-size: 0.9rem;
+        }
+        
+        .table-contacts tbody tr:hover {
+            background-color: #f8f9fa;
+        }
+        
+        /* Form controls in table */
+        .table-contacts .form-control, 
+        .table-contacts .form-select {
+            padding: 6px 8px;
+            font-size: 0.85rem;
+            border: 1px solid #ced4da;
+        }
+        
+        .table-contacts .form-control:focus,
+        .table-contacts .form-select:focus {
+            border-color: #28a745;
+            box-shadow: 0 0 0 0.15rem rgba(40, 167, 69, 0.25);
+        }
+        
+        /* Checkbox styles */
+        .default-checkbox {
+            width: 18px;
+            height: 18px;
+            margin: 0 auto;
+            display: block;
+        }
+        
+        .default-checkbox:checked {
+            background-color: #28a745;
+            border-color: #28a745;
+        }
+        
+        /* Action buttons */
+        .btn-action {
+            padding: 4px 8px;
+            font-size: 0.8rem;
+            border-radius: 4px;
+        }
+        
+        .btn-action.disabled {
+            opacity: 0.3;
+            cursor: not-allowed;
+        }
+        
+        .btn-action.disabled:hover {
+            opacity: 0.3;
+        }
+        
+        .btn-add {
+            background: #28a745;
+            color: white;
+            border: none;
+            padding: 8px 16px;
+            border-radius: 6px;
+            font-size: 0.9rem;
+            font-weight: 500;
+        }
+        
+        .btn-add:hover {
+            background: #218838;
+            color: white;
+        }
+        
+        /* Modal styles */
+        .modal-header {
+            background: #28a745;
+            color: white;
+        }
+        
+        .modal-header .btn-close {
+            filter: invert(1);
+        }
+        
+        /* Empty state */
+        .empty-state {
+            text-align: center;
+            padding: 2rem;
+            color: #6c757d;
+            background: white;
+            border-radius: 6px;
+            border: 2px dashed #dee2e6;
+        }
+        
+        .empty-state i {
+            font-size: 2rem;
+            margin-bottom: 1rem;
+            color: #adb5bd;
+        }
+        
+        /* Commune autocomplete styles */
+        .commune-suggestions {
+            position: absolute;
+            z-index: 1060;
+            background: white;
+            border: 1px solid #ccc;
+            border-radius: 4px;
+            max-height: 200px;
+            overflow-y: auto;
+            box-shadow: 0 2px 5px rgba(0,0,0,0.2);
+            display: none;
+        }
+        
+        /* Autocomplétion dans les modals */
+        .modal .commune-suggestions {
+            z-index: 1070;
+        }
+        
+        .commune-suggestion {
+            padding: 8px 12px;
+            cursor: pointer;
+            border-bottom: 1px solid #eee;
+        }
+        
+        .commune-suggestion:hover {
+            background-color: #f8f9fa;
+        }
+        
+        .commune-suggestion:last-child {
+            border-bottom: none;
+        }
+        
+        /* Input focus for autocomplete */
+        .commune-autocomplete:focus {
+            border-color: #28a745;
+            box-shadow: 0 0 0 0.15rem rgba(40, 167, 69, 0.25);
+        }
+
+        /* Barre d'actions flottante */
+        .floating-action-bar {
+            position: fixed;
+            bottom: 0;
+            left: 0;
+            right: 0;
+            z-index: 1000;
+            background: linear-gradient(135deg, #28a745 0%, #20c997 100%);
+            box-shadow: 0 -4px 20px rgba(0, 0, 0, 0.3);
+            border-top: 1px solid rgba(255, 255, 255, 0.2);
+            backdrop-filter: blur(10px);
+        }
+        
+        .floating-action-content {
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 12px 20px;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+        }
+        
+        .action-left, .action-right {
+            display: flex;
+            align-items: center;
+        }
+        
+        .action-center {
+            flex: 1;
+            text-align: center;
+            margin: 0 20px;
+        }
+        
+        .client-info {
+            font-weight: 600;
+            font-size: 1rem;
+            text-shadow: 0 1px 2px rgba(0, 0, 0, 0.2);
+        }
+        
+        .floating-action-bar .btn {
+            backdrop-filter: blur(5px);
+            border: 1px solid rgba(255, 255, 255, 0.3);
+            transition: all 0.3s ease;
+        }
+        
+        .floating-action-bar .btn:hover {
+            transform: translateY(-1px);
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2);
+        }
+        
+        /* Padding pour une mise en page optimale avec la barre flottante */
+        body {
+            padding-top: 20px;
+            padding-bottom: 80px;
+        }
+
+        /* Responsive adjustments */
+        @media (max-width: 768px) {
+            .table-contacts {
+                font-size: 0.8rem;
+            }
+            
+            .table-contacts th,
+            .table-contacts td {
+                padding: 8px 4px;
+            }
+            
+            .floating-action-content {
+                padding: 10px 15px;
+                flex-direction: column;
+                gap: 10px;
+            }
+            
+            .action-center {
+                margin: 0;
+                order: -1;
+            }
+            
+            .client-info {
+                font-size: 0.9rem;
+            }
+            
+            .action-left, .action-right {
+                justify-content: center;
+                gap: 8px;
+            }
+        }
+    </style>
+{% endblock %}
+
+{% block body %}
+<!-- Messages Flash -->
+{% for type, messages in app.flashes %}
+    {% for message in messages %}
+        <div class="alert alert-{{ type == 'error' ? 'danger' : (type == 'warning' ? 'warning' : (type == 'info' ? 'info' : 'success')) }} alert-dismissible fade show" role="alert">
+            {{ message }}
+            <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+        </div>
+    {% endfor %}
+{% endfor %}
+
+<div class="container-fluid">
+    <form id="client-form" method="post">
+        
+        <!-- Section 1: Informations générales -->
+        <div class="compact-section">
+            <h3 class="section-title"><i class="fas fa-building me-2"></i>Informations générales de l'entreprise</h3>
+            
+            <div class="row">
+                <div class="col-md-4">
+                    <label class="form-label fw-bold">Forme juridique <span class="text-danger">*</span></label>
+                    <select class="form-select" name="forme_juridique" required>
+                        <option value="">Sélectionner une forme juridique...</option>
+                        <!-- Particulier : toujours disponible pour les PP, jamais pour les PM -->
+                        {% if not client.formeJuridique or client.formeJuridique.isPersonnePhysique() %}
+                            <option value="1" {{ client.formeJuridique and client.formeJuridique.id == 1 ? 'selected' : '' }}>Particulier</option>
+                        {% endif %}
+                        <!-- Formes juridiques de personne morale : toujours disponibles -->
+                        <option value="2" {{ client.formeJuridique and client.formeJuridique.id == 2 ? 'selected' : '' }}>Association</option>
+                        <option value="3" {{ client.formeJuridique and client.formeJuridique.id == 3 ? 'selected' : '' }}>SARL</option>
+                        <option value="4" {{ client.formeJuridique and client.formeJuridique.id == 4 ? 'selected' : '' }}>EURL</option>
+                        <option value="5" {{ client.formeJuridique and client.formeJuridique.id == 5 ? 'selected' : '' }}>EI</option>
+                        <option value="6" {{ client.formeJuridique and client.formeJuridique.id == 6 ? 'selected' : '' }}>SAS</option>
+                        <option value="7" {{ client.formeJuridique and client.formeJuridique.id == 7 ? 'selected' : '' }}>SA</option>
+                        <option value="8" {{ client.formeJuridique and client.formeJuridique.id == 8 ? 'selected' : '' }}>SCI</option>
+                    </select>
+                    <small class="text-muted">Sélectionnez la forme juridique pour adapter le formulaire</small>
+                </div>
+                <!-- Template pour personne physique -->
+                <div id="denomination-particulier" class="col-md-8" style="display: none;">
+                    <div class="text-muted fst-italic">
+                        <i class="fas fa-user me-2"></i>
+                        Les particuliers n'ont pas de dénomination sociale.
+                    </div>
+                </div>
+                
+                <!-- Template pour personne morale -->
+                <div id="denomination-morale" class="col-md-8" style="display: none;">
+                    <label class="form-label fw-bold">Dénomination <span class="text-danger">*</span></label>
+                    <input type="text" class="form-control" name="nom" value="{{ client.nom }}" 
+                           placeholder="Nom de l'entreprise, raison sociale..." required>
+                    <small class="text-muted">Obligatoire pour les entreprises</small>
+                </div>
+            </div>
+            
+            <div class="row mt-3">
+                <!-- Champ famille masqué - plus utilisé -->
+                <input type="hidden" name="famille" value="{{ client.famille }}">
+                <div class="col-md-3">
+                    <label class="form-label fw-bold">Délai paiement</label>
+                    <input type="number" class="form-control" name="delai_paiement" value="{{ client.delaiPaiement }}" min="0" max="120">
+                </div>
+                <div class="col-md-3">
+                    <label class="form-label fw-bold">Mode paiement</label>
+                    <select class="form-select" name="mode_paiement">
+                        <option value="virement" {{ client.modePaiement == 'virement' ? 'selected' : '' }}>Virement</option>
+                        <option value="cheque" {{ client.modePaiement == 'cheque' ? 'selected' : '' }}>Chèque</option>
+                        <option value="especes" {{ client.modePaiement == 'especes' ? 'selected' : '' }}>Espèces</option>
+                        <option value="carte" {{ client.modePaiement == 'carte' ? 'selected' : '' }}>Carte bancaire</option>
+                    </select>
+                </div>
+                <div class="col-md-3">
+                    <label class="form-label fw-bold">Conditions tarifaires</label>
+                    <select class="form-select" name="conditions_tarifs">
+                        <option value="standard" {{ client.conditionsTarifs == 'standard' ? 'selected' : '' }}>Standard</option>
+                        <option value="preferentiel" {{ client.conditionsTarifs == 'preferentiel' ? 'selected' : '' }}>Préférentiel</option>
+                        <option value="special" {{ client.conditionsTarifs == 'special' ? 'selected' : '' }}>Spécial</option>
+                    </select>
+                </div>
+                <div class="col-md-3">
+                    <div class="form-check mt-4">
+                        <input class="form-check-input" type="checkbox" name="assujetti_tva" {{ client.assujettiTva ? 'checked' : '' }}>
+                        <label class="form-check-label fw-bold">Assujetti à la TVA</label>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Section 2: Contacts -->
+        <div class="compact-section" id="contacts-section">
+            <div class="d-flex justify-content-between align-items-center mb-3">
+                <h3 class="section-title mb-0"><i class="fas fa-users me-2"></i>Contacts de l'entreprise</h3>
+                <button type="button" class="btn btn-add" onclick="openContactModal()">
+                    <i class="fas fa-plus me-2"></i>Ajouter un contact
+                </button>
+            </div>
+            
+            <div class="table-responsive">
+                <table class="table table-contacts">
+                    <thead>
+                        <tr>
+                            <th width="15%">Nom</th>
+                            <th width="15%">Prénom</th>
+                            <th width="20%">Email</th>
+                            <th width="12%">Téléphone</th>
+                            <th width="20%">Adresse</th>
+                            <th width="8%">Défaut<br>Factur.</th>
+                            <th width="8%">Défaut<br>Livr.</th>
+                            <th width="2%"></th>
+                        </tr>
+                    </thead>
+                    <tbody id="contacts-table-body">
+                        {% if client.contacts|length > 0 %}
+                            {% for contact in client.contacts %}
+                                <tr data-contact-id="{{ contact.id }}">
+                                    <td>
+                                        <input type="text" class="form-control" name="contacts[{{ contact.id }}][nom]" 
+                                               value="{{ contact.nom }}" placeholder="Nom">
+                                    </td>
+                                    <td>
+                                        <input type="text" class="form-control" name="contacts[{{ contact.id }}][prenom]" 
+                                               value="{{ contact.prenom }}" placeholder="Prénom">
+                                    </td>
+                                    <td>
+                                        <input type="email" class="form-control" name="contacts[{{ contact.id }}][email]" 
+                                               value="{{ contact.email }}" placeholder="email@exemple.com">
+                                    </td>
+                                    <td>
+                                        <input type="tel" class="form-control" name="contacts[{{ contact.id }}][telephone]" 
+                                               value="{{ contact.telephone }}" placeholder="01.23.45.67.89">
+                                    </td>
+                                    <td>
+                                        <select class="form-select" name="contacts[{{ contact.id }}][adresse_id]">
+                                            <option value="">-- Choisir une adresse --</option>
+                                            {% for adresse in client.adresses %}
+                                                <option value="{{ adresse.id }}" {{ contact.adresse and contact.adresse.id == adresse.id ? 'selected' : '' }}>{{ adresse.nom }} - {{ adresse.ville }}</option>
+                                            {% endfor %}
+                                        </select>
+                                    </td>
+                                    <td class="text-center">
+                                        {% set isOnlyContact = client.contacts|length == 1 %}
+                                        <input type="checkbox" class="default-checkbox facturation-default" 
+                                               name="contact_facturation_default" value="{{ contact.id }}" 
+                                               {{ (contact.isFacturationDefault or isOnlyContact) ? 'checked' : '' }}
+                                               {{ isOnlyContact ? 'disabled title="Contact unique, automatiquement par défaut"' : '' }}>
+                                    </td>
+                                    <td class="text-center">
+                                        <input type="checkbox" class="default-checkbox livraison-default" 
+                                               name="contact_livraison_default" value="{{ contact.id }}" 
+                                               {{ (contact.isLivraisonDefault or isOnlyContact) ? 'checked' : '' }}
+                                               {{ isOnlyContact ? 'disabled title="Contact unique, automatiquement par défaut"' : '' }}>
+                                    </td>
+                                    <td class="text-center">
+                                        {% set isDefault = contact.isFacturationDefault or contact.isLivraisonDefault %}
+                                        {% set isOnlyContact = client.contacts|length == 1 %}
+                                        <button type="button" class="btn btn-outline-danger btn-action{{ (isDefault or isOnlyContact) ? ' disabled' : '' }}" 
+                                                onclick="removeContact({{ contact.id }})"
+                                                {{ (isDefault or isOnlyContact) ? 'disabled title="' ~ (isOnlyContact ? 'Impossible de supprimer le seul contact' : 'Contact par défaut, impossible de supprimer') ~ '"' : '' }}>
+                                            <i class="fas fa-trash"></i>
+                                        </button>
+                                    </td>
+                                </tr>
+                            {% endfor %}
+                        {% else %}
+                            <tr class="empty-row">
+                                <td colspan="8" class="text-center py-4">
+                                    <div class="empty-state">
+                                        <i class="fas fa-user-plus"></i>
+                                        <h5>Aucun contact ajouté</h5>
+                                        <p class="mb-0">Cliquez sur "Ajouter un contact" pour commencer</p>
+                                    </div>
+                                </td>
+                            </tr>
+                        {% endif %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+
+        <!-- Section 3: Adresses -->
+        <div class="compact-section" id="addresses-section">
+            <div class="d-flex justify-content-between align-items-center mb-3">
+                <h3 class="section-title mb-0"><i class="fas fa-map-marker-alt me-2"></i>Adresses de l'entreprise</h3>
+                <button type="button" class="btn btn-add" onclick="openAddressModal()">
+                    <i class="fas fa-plus me-2"></i>Ajouter une adresse
+                </button>
+            </div>
+            
+            {% if client.adresses|length > 0 %}
+                <div class="table-responsive">
+                    <table class="table table-contacts">
+                        <thead>
+                            <tr>
+                                <th width="20%">Nom/Type</th>
+                                <th width="35%">Adresse</th>
+                                <th width="10%">Code postal</th>
+                                <th width="20%">Ville</th>
+                                <th width="10%">Pays</th>
+                                <th width="5%"></th>
+                            </tr>
+                        </thead>
+                        <tbody id="addresses-table">
+                            {% for adresse in client.adresses %}
+                                <tr data-address-id="{{ adresse.id }}">
+                                    <td>
+                                        <input type="text" class="form-control" name="adresses[{{ adresse.id }}][nom]" 
+                                               value="{{ adresse.nom }}" placeholder="Nom de l'adresse">
+                                    </td>
+                                    <td>
+                                        <input type="text" class="form-control" name="adresses[{{ adresse.id }}][ligne1]" 
+                                               value="{{ adresse.ligne1 }}" placeholder="Numéro et rue">
+                                    </td>
+                                    <td>
+                                        <input type="text" class="form-control commune-autocomplete" name="adresses[{{ adresse.id }}][code_postal]" 
+                                               value="{{ adresse.codePostal }}" placeholder="75000" data-type="postal">
+                                    </td>
+                                    <td>
+                                        <input type="text" class="form-control commune-autocomplete" name="adresses[{{ adresse.id }}][ville]" 
+                                               value="{{ adresse.ville }}" placeholder="Ville" data-type="city">
+                                    </td>
+                                    <td>
+                                        <input type="text" class="form-control" name="adresses[{{ adresse.id }}][pays]" 
+                                               value="{{ adresse.pays }}" placeholder="France">
+                                    </td>
+                                    <td class="text-center">
+                                        {% set isUsed = false %}
+                                        {% for contact in client.contacts %}
+                                            {% if contact.adresse and contact.adresse.id == adresse.id %}
+                                                {% set isUsed = true %}
+                                            {% endif %}
+                                        {% endfor %}
+                                        {% set isOnlyAddress = client.adresses|length == 1 %}
+                                        <button type="button" class="btn btn-outline-danger btn-action{{ (isUsed or isOnlyAddress) ? ' disabled' : '' }}" 
+                                                onclick="removeAddress({{ adresse.id }})"
+                                                {{ (isUsed or isOnlyAddress) ? 'disabled title="' ~ (isOnlyAddress ? 'Impossible de supprimer la seule adresse' : 'Adresse utilisée par un contact, impossible de supprimer') ~ '"' : '' }}>
+                                            <i class="fas fa-trash"></i>
+                                        </button>
+                                    </td>
+                                </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+            {% else %}
+                <div class="empty-state">
+                    <i class="fas fa-map-marker-alt"></i>
+                    <h5>Aucune adresse ajoutée</h5>
+                    <p class="mb-0">Cliquez sur "Ajouter une adresse" pour commencer</p>
+                </div>
+            {% endif %}
+        </div>
+
+        <!-- Section Notes -->
+        <div class="compact-section">
+            <h3 class="section-title"><i class="fas fa-sticky-note me-2"></i>Notes</h3>
+            <textarea class="form-control" name="notes" rows="3" placeholder="Notes internes sur ce client...">{{ client.notes }}</textarea>
+        </div>
+
+    </form>
+</div>
+
+<!-- Barre d'actions flottante -->
+<div class="floating-action-bar">
+    <div class="floating-action-content">
+        <div class="action-left">
+            <a href="{{ path('app_client_index') }}" class="btn btn-outline-light btn-sm">
+                <i class="fas fa-arrow-left me-1"></i>Annuler
+            </a>
+            <a href="{{ path('app_client_show', {'id': client.id}) }}" class="btn btn-outline-light btn-sm ms-2">
+                <i class="fas fa-eye me-1"></i>Voir fiche
+            </a>
+        </div>
+        <div class="action-center">
+            <span class="client-info text-white">
+                <i class="fas fa-edit me-1"></i>Modification {{ client.code }} - {{ client.nomComplet }}
+            </span>
+        </div>
+        <div class="action-right">
+            <button type="button" class="btn btn-warning btn-sm me-2" onclick="archiverClient({{ client.id }})" 
+                    title="Archiver ce client (le rendre inactif)">
+                <i class="fas fa-archive me-1"></i>Archiver
+            </button>
+            <button type="submit" form="client-form" class="btn btn-success btn-sm">
+                <i class="fas fa-save me-1"></i>Enregistrer
+            </button>
+        </div>
+    </div>
+</div>
+
+<!-- Modal Contact -->
+<div class="modal fade" id="contactModal" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title"><i class="fas fa-user-plus me-2"></i>Ajouter un contact</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <form id="contact-form">
+                    <div class="row">
+                        <div class="col-md-6">
+                            <label class="form-label">Nom *</label>
+                            <input type="text" class="form-control" id="contact-nom" required>
+                        </div>
+                        <div class="col-md-6">
+                            <label class="form-label">Prénom</label>
+                            <input type="text" class="form-control" id="contact-prenom">
+                        </div>
+                    </div>
+                    <div class="row mt-3">
+                        <div class="col-md-6">
+                            <label class="form-label">Email</label>
+                            <input type="email" class="form-control" id="contact-email">
+                        </div>
+                        <div class="col-md-6">
+                            <label class="form-label">Téléphone</label>
+                            <input type="tel" class="form-control" id="contact-telephone">
+                        </div>
+                    </div>
+                    <div class="mt-3">
+                        <label class="form-label">Fonction</label>
+                        <input type="text" class="form-control" id="contact-fonction">
+                    </div>
+                </form>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Annuler</button>
+                <button type="button" class="btn btn-success" onclick="addContact()">
+                    <i class="fas fa-plus"></i> Ajouter
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Modal Adresse -->
+<div class="modal fade" id="addressModal" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title"><i class="fas fa-map-marker-alt me-2"></i>Ajouter une adresse</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <form id="address-form">
+                    <div class="mb-3">
+                        <label class="form-label">Nom/Type de l'adresse *</label>
+                        <input type="text" class="form-control" id="address-nom" placeholder="Siège social, Entrepôt, etc." required>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label">Adresse *</label>
+                        <input type="text" class="form-control" id="address-ligne1" placeholder="Numéro et rue" required>
+                    </div>
+                    <div class="row">
+                        <div class="col-md-4">
+                            <label class="form-label">Code postal *</label>
+                            <div class="position-relative">
+                                <input type="text" class="form-control commune-autocomplete" id="address-code-postal" required data-type="postal">
+                            </div>
+                        </div>
+                        <div class="col-md-8">
+                            <label class="form-label">Ville *</label>
+                            <div class="position-relative">
+                                <input type="text" class="form-control commune-autocomplete" id="address-ville" required data-type="city">
+                            </div>
+                        </div>
+                    </div>
+                    <div class="mt-3">
+                        <label class="form-label">Pays</label>
+                        <input type="text" class="form-control" id="address-pays" value="France">
+                    </div>
+                </form>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Annuler</button>
+                <button type="button" class="btn btn-success" onclick="addAddress()">
+                    <i class="fas fa-plus"></i> Ajouter
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+// Variables globales
+let contactIndex = {{ client.contacts|length }};
+let addressIndex = 0;
+
+// Initialiser les adresses disponibles depuis le serveur
+window.availableAddresses = [
+    {% for adresse in client.adresses %}
+    {
+        id: "{{ adresse.id }}",
+        nom: "{{ adresse.nom }}",
+        ville: "{{ adresse.ville }}"
+    }{% if not loop.last %},{% endif %}
+    {% endfor %}
+];
+
+// Fonction pour générer les options d'adresses
+function generateAddressOptions() {
+    if (!window.availableAddresses || window.availableAddresses.length === 0) {
+        return '';
+    }
+    
+    return window.availableAddresses.map(adresse => 
+        `<option value="${adresse.id}">${adresse.nom} - ${adresse.ville}</option>`
+    ).join('');
+}
+
+document.addEventListener('DOMContentLoaded', function() {
+    // Gestion des checkboxes exclusives
+    setupDefaultCheckboxes();
+    
+    // Initialiser l'autocomplétion des communes
+    setupCommuneAutocomplete();
+    
+    // Mettre à jour l'état initial des boutons de suppression
+    updateDeleteButtonStates();
+    updateAddressDeleteButtonStates();
+    
+    // Gestion dynamique du changement de type de personne
+    setupTypePersonneChange();
+    
+    // Configurer les event listeners pour les changements d'adresses
+    setupAddressChangeListeners();
+    
+    // Mettre à jour l'état initial des options vides dans les dropdowns d'adresses
+    updateAllAddressDropdownEmptyOptions();
+});
+
+function setupDefaultCheckboxes() {
+    // Facturation par défaut - une seule checkbox active
+    document.querySelectorAll('.facturation-default:not([disabled])').forEach(checkbox => {
+        checkbox.addEventListener('change', function() {
+            if (this.checked) {
+                document.querySelectorAll('.facturation-default').forEach(other => {
+                    if (other !== this && !other.disabled) other.checked = false;
+                });
+            }
+            // Mettre à jour l'état des boutons de suppression
+            updateDeleteButtonStates();
+        });
+    });
+    
+    // Livraison par défaut - une seule checkbox active
+    document.querySelectorAll('.livraison-default:not([disabled])').forEach(checkbox => {
+        checkbox.addEventListener('change', function() {
+            if (this.checked) {
+                document.querySelectorAll('.livraison-default').forEach(other => {
+                    if (other !== this && !other.disabled) other.checked = false;
+                });
+            }
+            // Mettre à jour l'état des boutons de suppression
+            updateDeleteButtonStates();
+        });
+    });
+}
+
+function setupAddressChangeListeners() {
+    // Écouter les changements dans les dropdowns d'adresses des contacts
+    document.querySelectorAll('select[name*="[adresse_id]"]').forEach(select => {
+        select.addEventListener('change', function() {
+            // Mettre à jour l'état des boutons de suppression d'adresses
+            updateAddressDeleteButtonStates();
+            
+            // Mettre à jour la visibilité de l'option vide
+            updateAddressDropdownEmptyOption(this);
+        });
+    });
+}
+
+function openContactModal() {
+    const modal = new bootstrap.Modal(document.getElementById('contactModal'));
+    // Reset form
+    document.getElementById('contact-form').reset();
+    modal.show();
+}
+
+function openAddressModal() {
+    const modal = new bootstrap.Modal(document.getElementById('addressModal'));
+    // Reset form
+    document.getElementById('address-form').reset();
+    modal.show();
+    
+    // Réinitialiser l'autocomplétion pour les champs du modal
+    setTimeout(() => {
+        setupCommuneAutocomplete();
+    }, 100);
+}
+
+function addContact() {
+    const nom = document.getElementById('contact-nom').value;
+    const prenom = document.getElementById('contact-prenom').value;
+    const email = document.getElementById('contact-email').value;
+    const telephone = document.getElementById('contact-telephone').value;
+    const fonction = document.getElementById('contact-fonction').value;
+    
+    if (!nom.trim()) {
+        alert('Le nom est obligatoire');
+        return;
+    }
+    
+    // Générer un ID temporaire pour le nouveau contact
+    const tempId = 'new_' + contactIndex;
+    
+    // Créer la nouvelle ligne
+    const tbody = document.getElementById('contacts-table-body');
+    
+    // Supprimer la ligne vide s'il n'y a pas encore de contacts
+    const emptyRow = tbody.querySelector('.empty-row');
+    if (emptyRow) {
+        emptyRow.remove();
+    }
+    const tr = document.createElement('tr');
+    tr.dataset.contactId = tempId;
+    tr.innerHTML = `
+        <td>
+            <input type="text" class="form-control" name="contacts[${tempId}][nom]" value="${nom}" placeholder="Nom">
+        </td>
+        <td>
+            <input type="text" class="form-control" name="contacts[${tempId}][prenom]" value="${prenom}" placeholder="Prénom">
+        </td>
+        <td>
+            <input type="email" class="form-control" name="contacts[${tempId}][email]" value="${email}" placeholder="email@exemple.com">
+        </td>
+        <td>
+            <input type="tel" class="form-control" name="contacts[${tempId}][telephone]" value="${telephone}" placeholder="01.23.45.67.89">
+        </td>
+        <td>
+            <select class="form-select" name="contacts[${tempId}][adresse_id]">
+                <option value="">-- Choisir une adresse --</option>
+                ${generateAddressOptions()}
+            </select>
+        </td>
+        <td class="text-center">
+            <input type="checkbox" class="default-checkbox facturation-default" name="contact_facturation_default" value="${tempId}">
+        </td>
+        <td class="text-center">
+            <input type="checkbox" class="default-checkbox livraison-default" name="contact_livraison_default" value="${tempId}">
+        </td>
+        <td class="text-center">
+            <button type="button" class="btn btn-outline-danger btn-action" onclick="removeContact('${tempId}')">
+                <i class="fas fa-trash"></i>
+            </button>
+        </td>
+    `;
+    
+    // Ajouter la ligne au tableau
+    tbody.appendChild(tr);
+    
+    // Si c'est le premier contact, le définir automatiquement comme défaut facturation et livraison
+    const existingContacts = tbody.querySelectorAll('tr:not(.empty-row)');
+    if (existingContacts.length === 1) {
+        // Premier contact : cocher les cases par défaut et les désactiver
+        const factuCheckbox = tr.querySelector('.facturation-default');
+        const livrCheckbox = tr.querySelector('.livraison-default');
+        const deleteBtn = tr.querySelector('.btn-outline-danger');
+        
+        if (factuCheckbox) {
+            factuCheckbox.checked = true;
+            factuCheckbox.disabled = true;
+        }
+        if (livrCheckbox) {
+            livrCheckbox.checked = true;
+            livrCheckbox.disabled = true;
+        }
+        if (deleteBtn) {
+            deleteBtn.disabled = true;
+            deleteBtn.classList.add('disabled');
+        }
+    } else if (existingContacts.length === 2) {
+        // Deuxième contact ajouté : réactiver les contrôles du premier contact
+        const firstContact = existingContacts[0];
+        const firstFactuCheckbox = firstContact.querySelector('.facturation-default');
+        const firstLivrCheckbox = firstContact.querySelector('.livraison-default');
+        const firstDeleteBtn = firstContact.querySelector('.btn-outline-danger');
+        
+        if (firstFactuCheckbox) firstFactuCheckbox.disabled = false;
+        if (firstLivrCheckbox) firstLivrCheckbox.disabled = false;
+        if (firstDeleteBtn) {
+            firstDeleteBtn.disabled = false;
+            firstDeleteBtn.classList.remove('disabled');
+        }
+    }
+    
+    // Réinitialiser les event listeners
+    setupDefaultCheckboxes();
+    
+    // Mettre à jour l'état des boutons de suppression
+    updateDeleteButtonStates();
+    updateAddressDeleteButtonStates();
+    
+    // Reconfigurer les event listeners pour les nouveaux dropdowns d'adresses
+    setupAddressChangeListeners();
+    
+    // Mettre à jour les options vides (le nouveau contact n'a pas d'adresse donc option vide visible)
+    updateAllAddressDropdownEmptyOptions();
+    
+    // Incrémenter l'index et fermer le modal
+    contactIndex++;
+    const modal = bootstrap.Modal.getInstance(document.getElementById('contactModal'));
+    modal.hide();
+}
+
+function addAddress() {
+    const nom = document.getElementById('address-nom').value;
+    const ligne1 = document.getElementById('address-ligne1').value;
+    const codePostal = document.getElementById('address-code-postal').value;
+    const ville = document.getElementById('address-ville').value;
+    const pays = document.getElementById('address-pays').value;
+    
+    if (!nom.trim() || !ligne1.trim() || !codePostal.trim() || !ville.trim()) {
+        alert('Tous les champs marqués * sont obligatoires');
+        return;
+    }
+    
+    // Générer un ID temporaire pour la nouvelle adresse
+    const tempId = 'new_' + addressIndex;
+    
+    // Créer la nouvelle ligne
+    let tbody = document.getElementById('addresses-table');
+    const tr = document.createElement('tr');
+    tr.dataset.addressId = tempId;
+    tr.innerHTML = `
+        <td>
+            <input type="text" class="form-control" name="adresses[${tempId}][nom]" value="${nom}" placeholder="Nom de l'adresse">
+        </td>
+        <td>
+            <input type="text" class="form-control" name="adresses[${tempId}][ligne1]" value="${ligne1}" placeholder="Numéro et rue">
+        </td>
+        <td>
+            <input type="text" class="form-control commune-autocomplete" name="adresses[${tempId}][code_postal]" value="${codePostal}" placeholder="75000" data-type="postal">
+        </td>
+        <td>
+            <input type="text" class="form-control commune-autocomplete" name="adresses[${tempId}][ville]" value="${ville}" placeholder="Ville" data-type="city">
+        </td>
+        <td>
+            <input type="text" class="form-control" name="adresses[${tempId}][pays]" value="${pays}" placeholder="France">
+        </td>
+        <td class="text-center">
+            <button type="button" class="btn btn-outline-danger btn-action" onclick="removeAddress('${tempId}')">
+                <i class="fas fa-trash"></i>
+            </button>
+        </td>
+    `;
+    
+    // Ajouter la ligne au tableau (gestion de l'état vide similaire)
+    if (!tbody) {
+        tbody = createAddressesTable();
+    }
+    
+    if (tbody) {
+        tbody.appendChild(tr);
+    } else {
+        console.error('Impossible de créer le tableau des adresses');
+        return;
+    }
+    
+    // Ajouter l'option à tous les sélecteurs d'adresses des contacts existants
+    const option = `<option value="${tempId}">${nom} - ${ville}</option>`;
+    document.querySelectorAll('select[name*="[adresse_id]"]').forEach(select => {
+        select.insertAdjacentHTML('beforeend', option);
+    });
+    
+    // Conserver la nouvelle adresse en mémoire pour les futurs contacts
+    if (!window.availableAddresses) {
+        window.availableAddresses = [];
+    }
+    window.availableAddresses.push({
+        id: tempId,
+        nom: nom,
+        ville: ville
+    });
+    
+    // Réinitialiser l'autocomplétion pour les nouveaux champs
+    reinitializeCommuneAutocomplete();
+    
+    // Mettre à jour l'état des boutons de suppression d'adresses
+    updateAddressDeleteButtonStates();
+    
+    // Incrémenter l'index et fermer le modal
+    addressIndex++;
+    const modal = bootstrap.Modal.getInstance(document.getElementById('addressModal'));
+    modal.hide();
+}
+
+function createAddressesTable() {
+    // Fonction helper pour créer le tableau des adresses s'il n'existe pas
+    let addressesTable = document.getElementById('addresses-table');
+    
+    if (addressesTable) {
+        return addressesTable;
+    }
+    
+    // Si pas de tableau, chercher l'état vide dans la section adresses
+    const addressSection = document.getElementById('addresses-section');
+    const emptyState = addressSection.querySelector('.empty-state');
+    
+    if (emptyState) {
+        emptyState.outerHTML = `
+            <div class="table-responsive">
+                <table class="table table-contacts">
+                    <thead>
+                        <tr>
+                            <th width="20%">Nom/Type</th>
+                            <th width="35%">Adresse</th>
+                            <th width="10%">Code postal</th>
+                            <th width="20%">Ville</th>
+                            <th width="10%">Pays</th>
+                            <th width="5%"></th>
+                        </tr>
+                    </thead>
+                    <tbody id="addresses-table">
+                    </tbody>
+                </table>
+            </div>
+        `;
+        // Réinitialiser l'autocomplétion après création du tableau
+        setTimeout(() => reinitializeCommuneAutocomplete(), 100);
+        return document.getElementById('addresses-table');
+    }
+    
+    return null;
+}
+
+function removeContact(contactId) {
+    // Vérifier si le bouton est désactivé
+    const button = event.target.closest('button');
+    if (button && button.disabled) {
+        return false;
+    }
+    
+    if (confirm('Êtes-vous sûr de vouloir supprimer ce contact ?')) {
+        document.querySelector(`tr[data-contact-id="${contactId}"]`).remove();
+        
+        // Vérifier l'état après suppression
+        const tbody = document.getElementById('contacts-table-body');
+        const remainingContacts = tbody.querySelectorAll('tr:not(.empty-row)');
+        
+        if (remainingContacts.length === 0) {
+            // Plus aucun contact : afficher la ligne vide
+            tbody.innerHTML = `
+                <tr class="empty-row">
+                    <td colspan="8" class="text-center py-4">
+                        <div class="empty-state">
+                            <i class="fas fa-user-plus"></i>
+                            <h5>Aucun contact ajouté</h5>
+                            <p class="mb-0">Cliquez sur "Ajouter un contact" pour commencer</p>
+                        </div>
+                    </td>
+                </tr>
+            `;
+        } else if (remainingContacts.length === 1) {
+            // Il ne reste qu'un contact : le définir automatiquement comme défaut
+            const lastContact = remainingContacts[0];
+            const factuCheckbox = lastContact.querySelector('.facturation-default');
+            const livrCheckbox = lastContact.querySelector('.livraison-default');
+            const deleteBtn = lastContact.querySelector('.btn-outline-danger');
+            
+            if (factuCheckbox) {
+                factuCheckbox.checked = true;
+                factuCheckbox.disabled = true;
+            }
+            if (livrCheckbox) {
+                livrCheckbox.checked = true;
+                livrCheckbox.disabled = true;
+            }
+            if (deleteBtn) {
+                deleteBtn.disabled = true;
+                deleteBtn.classList.add('disabled');
+            }
+        }
+        
+        // Mettre à jour l'état de tous les boutons après suppression
+        updateDeleteButtonStates();
+        updateAddressDeleteButtonStates();
+    }
+}
+
+function removeAddress(addressId) {
+    // Vérifier si le bouton est désactivé
+    const button = event.target.closest('button');
+    if (button && button.disabled) {
+        return false;
+    }
+    
+    if (confirm('Êtes-vous sûr de vouloir supprimer cette adresse ?')) {
+        document.querySelector(`tr[data-address-id="${addressId}"]`).remove();
+        
+        // Supprimer l'option des sélecteurs de contacts
+        document.querySelectorAll(`option[value="${addressId}"]`).forEach(option => {
+            option.remove();
+        });
+        
+        // Supprimer de la liste des adresses disponibles
+        if (window.availableAddresses) {
+            window.availableAddresses = window.availableAddresses.filter(adresse => adresse.id !== addressId);
+        }
+        
+        // Si c'était la dernière adresse, réafficher l'état vide
+        const tbody = document.getElementById('addresses-table');
+        if (tbody && tbody.children.length === 0) {
+            const addressesSection = document.getElementById('addresses-section');
+            const tableContainer = addressesSection.querySelector('.table-responsive');
+            if (tableContainer) {
+                tableContainer.outerHTML = `
+                    <div class="empty-state">
+                        <i class="fas fa-map-marker-alt"></i>
+                        <h5>Aucune adresse ajoutée</h5>
+                        <p class="mb-0">Cliquez sur "Ajouter une adresse" pour commencer</p>
+                    </div>
+                `;
+            }
+        }
+        
+        // Mettre à jour l'état des boutons de suppression d'adresses
+        updateAddressDeleteButtonStates();
+    }
+}
+
+// Fonction d'autocomplétion des communes françaises (version simplifiée sans Select2)
+function setupCommuneAutocomplete() {
+    // Supprimer les anciens événements
+    $('.commune-autocomplete').off('input focus');
+    
+    // Pour chaque champ d'autocomplétion
+    $('.commune-autocomplete').each(function() {
+        const input = $(this);
+        const inputType = input.data('type');
+        let timeout;
+        
+        // Créer la liste de suggestions si elle n'existe pas
+        let suggestionsList = input.next('.commune-suggestions');
+        if (suggestionsList.length === 0) {
+            // Déterminer si on est dans un modal
+            const isInModal = input.closest('.modal').length > 0;
+            
+            if (isInModal) {
+                // Dans un modal : utiliser le conteneur parent avec position relative
+                const parentContainer = input.parent('.position-relative');
+                if (parentContainer.length > 0) {
+                    suggestionsList = $('<div class="commune-suggestions"></div>').appendTo(parentContainer);
+                } else {
+                    suggestionsList = $('<div class="commune-suggestions"></div>').insertAfter(input);
+                }
+                
+                suggestionsList.css({
+                    'position': 'absolute',
+                    'z-index': '1070',
+                    'background': 'white',
+                    'border': '1px solid #ccc',
+                    'border-radius': '4px',
+                    'max-height': '200px',
+                    'overflow-y': 'auto',
+                    'width': '100%',
+                    'box-shadow': '0 2px 5px rgba(0,0,0,0.2)',
+                    'display': 'none',
+                    'top': '100%',
+                    'left': '0'
+                });
+            } else {
+                // Hors modal : positionnement normal
+                suggestionsList = $('<div class="commune-suggestions"></div>').insertAfter(input);
+                suggestionsList.css({
+                    'position': 'absolute',
+                    'z-index': '1060',
+                    'background': 'white',
+                    'border': '1px solid #ccc',
+                    'border-radius': '4px',
+                    'max-height': '200px',
+                    'overflow-y': 'auto',
+                    'width': input.outerWidth() + 'px',
+                    'box-shadow': '0 2px 5px rgba(0,0,0,0.2)',
+                    'display': 'none'
+                });
+            }
+        }
+        
+        // Événement de saisie
+        input.on('input', function() {
+            const query = $(this).val();
+            
+            clearTimeout(timeout);
+            
+            if (query.length < 2) {
+                suggestionsList.hide();
+                return;
+            }
+            
+            timeout = setTimeout(() => {
+                // Rechercher les communes
+                $.ajax({
+                    url: '{{ path("app_api_communes_search") }}',
+                    method: 'GET',
+                    data: { q: query },
+                    success: function(data) {
+                        suggestionsList.empty();
+                        
+                        if (data.length > 0) {
+                            data.forEach(function(commune) {
+                                const suggestion = $('<div class="commune-suggestion"></div>');
+                                suggestion.css({
+                                    'padding': '8px 12px',
+                                    'cursor': 'pointer',
+                                    'border-bottom': '1px solid #eee'
+                                });
+                                
+                                suggestion.html(
+                                    '<strong>' + commune.codePostal + ' - ' + commune.nomCommune + '</strong>' +
+                                    (commune.departement ? '<br><small class="text-muted">' + commune.departement + '</small>' : '')
+                                );
+                                
+                                suggestion.data('commune', commune);
+                                
+                                suggestion.hover(
+                                    function() { $(this).css('background-color', '#f8f9fa'); },
+                                    function() { $(this).css('background-color', 'white'); }
+                                );
+                                
+                                suggestion.click(function() {
+                                    const selectedCommune = $(this).data('commune');
+                                    selectCommune(input, selectedCommune);
+                                    suggestionsList.hide();
+                                });
+                                
+                                suggestionsList.append(suggestion);
+                            });
+                            
+                            suggestionsList.show();
+                        } else {
+                            suggestionsList.hide();
+                        }
+                    }
+                });
+            }, 300);
+        });
+        
+        // Masquer les suggestions lors du clic à l'extérieur
+        $(document).on('click', function(e) {
+            if (!input.is(e.target) && !suggestionsList.is(e.target) && suggestionsList.has(e.target).length === 0) {
+                suggestionsList.hide();
+            }
+        });
+    });
+}
+
+function selectCommune(inputField, commune) {
+    const inputType = inputField.data('type');
+    const container = inputField.closest('tr').length > 0 ? inputField.closest('tr') : inputField.closest('.modal-body');
+    
+    if (inputType === 'postal') {
+        // Mettre à jour le code postal
+        inputField.val(commune.codePostal);
+        
+        // Remplir automatiquement la ville
+        const villeField = container.find('[data-type="city"]').first();
+        if (villeField.length > 0) {
+            villeField.val(commune.nomCommune);
+            // Masquer ses suggestions aussi
+            villeField.next('.commune-suggestions').hide();
+        }
+    } else if (inputType === 'city') {
+        // Mettre à jour la ville
+        inputField.val(commune.nomCommune);
+        
+        // Remplir automatiquement le code postal
+        const postalField = container.find('[data-type="postal"]').first();
+        if (postalField.length > 0) {
+            postalField.val(commune.codePostal);
+            // Masquer ses suggestions aussi
+            postalField.next('.commune-suggestions').hide();
+        }
+    }
+}
+
+// Fonction pour mettre à jour l'état des boutons de suppression des contacts selon les règles métier
+function updateDeleteButtonStates() {
+    const tbody = document.getElementById('contacts-table-body');
+    const contactRows = tbody.querySelectorAll('tr:not(.empty-row)');
+    
+    contactRows.forEach(row => {
+        const contactId = row.dataset.contactId;
+        const facturationCheckbox = row.querySelector('.facturation-default');
+        const livraisonCheckbox = row.querySelector('.livraison-default');
+        const deleteButton = row.querySelector('.btn-outline-danger');
+        
+        // Règles métier pour la suppression :
+        // 1. Contact unique : impossible de supprimer
+        // 2. Contact par défaut (facturation OU livraison) : impossible de supprimer
+        const isOnlyContact = contactRows.length === 1;
+        const isDefaultContact = (facturationCheckbox && facturationCheckbox.checked) || 
+                                (livraisonCheckbox && livraisonCheckbox.checked);
+        
+        if (deleteButton) {
+            if (isOnlyContact || isDefaultContact) {
+                // Désactiver le bouton
+                deleteButton.disabled = true;
+                deleteButton.classList.add('disabled');
+                
+                // Mettre à jour le titre explicatif
+                if (isOnlyContact) {
+                    deleteButton.title = 'Impossible de supprimer le seul contact';
+                } else if (isDefaultContact) {
+                    deleteButton.title = 'Contact par défaut, impossible de supprimer';
+                }
+            } else {
+                // Activer le bouton
+                deleteButton.disabled = false;
+                deleteButton.classList.remove('disabled');
+                deleteButton.title = '';
+            }
+        }
+    });
+}
+
+// Fonction pour mettre à jour l'état des boutons de suppression des adresses selon les règles métier
+function updateAddressDeleteButtonStates() {
+    const tbody = document.getElementById('addresses-table');
+    if (!tbody) return; // Pas d'adresses encore
+    
+    const addressRows = tbody.querySelectorAll('tr');
+    const contactRows = document.getElementById('contacts-table-body').querySelectorAll('tr:not(.empty-row)');
+    
+    addressRows.forEach(row => {
+        const addressId = row.dataset.addressId;
+        const deleteButton = row.querySelector('.btn-outline-danger');
+        
+        // Règles métier pour la suppression d'adresses :
+        // 1. Adresse unique : impossible de supprimer
+        // 2. Adresse utilisée par un contact : impossible de supprimer
+        const isOnlyAddress = addressRows.length === 1;
+        
+        // Vérifier si l'adresse est utilisée par un contact
+        let isUsedByContact = false;
+        contactRows.forEach(contactRow => {
+            const addressSelect = contactRow.querySelector('select[name*="[adresse_id]"]');
+            if (addressSelect && addressSelect.value === addressId) {
+                isUsedByContact = true;
+            }
+        });
+        
+        if (deleteButton) {
+            if (isOnlyAddress || isUsedByContact) {
+                // Désactiver le bouton
+                deleteButton.disabled = true;
+                deleteButton.classList.add('disabled');
+                
+                // Mettre à jour le titre explicatif
+                if (isOnlyAddress) {
+                    deleteButton.title = 'Impossible de supprimer la seule adresse';
+                } else if (isUsedByContact) {
+                    deleteButton.title = 'Adresse utilisée par un contact, impossible de supprimer';
+                }
+            } else {
+                // Activer le bouton
+                deleteButton.disabled = false;
+                deleteButton.classList.remove('disabled');
+                deleteButton.title = '';
+            }
+        }
+    });
+}
+
+// Fonction pour gérer la visibilité de l'option vide dans les dropdowns d'adresses
+function updateAddressDropdownEmptyOption(selectElement) {
+    const emptyOption = selectElement.querySelector('option[value=""]');
+    const hasValue = selectElement.value !== '';
+    
+    if (hasValue && emptyOption) {
+        // Une adresse est sélectionnée : supprimer l'option vide
+        emptyOption.remove();
+    } else if (!hasValue && !emptyOption) {
+        // Aucune adresse sélectionnée et pas d'option vide : ajouter l'option vide
+        const newEmptyOption = document.createElement('option');
+        newEmptyOption.value = '';
+        newEmptyOption.textContent = '-- Choisir une adresse --';
+        selectElement.insertBefore(newEmptyOption, selectElement.firstChild);
+    }
+}
+
+// Fonction pour mettre à jour toutes les options vides des dropdowns d'adresses
+function updateAllAddressDropdownEmptyOptions() {
+    document.querySelectorAll('select[name*="[adresse_id]"]').forEach(select => {
+        updateAddressDropdownEmptyOption(select);
+    });
+}
+
+// Fonction pour réinitialiser l'autocomplétion sur les nouveaux éléments
+function reinitializeCommuneAutocomplete() {
+    // Réinitialiser l'autocomplétion
+    setupCommuneAutocomplete();
+}
+
+// Fonction pour gérer le changement dynamique de type de personne
+function setupTypePersonneChange() {
+    const typePersonneSelect = document.getElementById('type_personne');
+    const denominationField = document.querySelector('input[name="nom"]');
+    
+    if (!typePersonneSelect || !denominationField) {
+        return; // Sortir si les éléments n'existent pas
+    }
+    
+    function updateDenominationField() {
+        const selectedType = typePersonneSelect.value;
+        const denominationContainer = denominationField.closest('.col-md-6');
+        const denominationLabel = denominationContainer.querySelector('label');
+        let denominationHelp = denominationContainer.querySelector('small');
+        
+        if (selectedType === 'physique') {
+            // Personne physique : champ grisé et non obligatoire
+            denominationField.disabled = true;
+            denominationField.removeAttribute('required');
+            denominationField.placeholder = 'Pas de dénomination pour les particuliers';
+            denominationField.value = '';
+            
+            // Mettre à jour le label
+            denominationLabel.innerHTML = 'Dénomination (non applicable pour personne physique)';
+            
+            // Ajouter l'aide si elle n'existe pas
+            if (!denominationHelp) {
+                denominationHelp = document.createElement('small');
+                denominationHelp.className = 'text-muted';
+                denominationHelp.textContent = 'Les personnes physiques n\'ont pas de dénomination sociale';
+                denominationContainer.appendChild(denominationHelp);
+            }
+            
+        } else if (selectedType === 'morale') {
+            // Personne morale : champ actif et obligatoire
+            denominationField.disabled = false;
+            denominationField.setAttribute('required', 'required');
+            denominationField.placeholder = 'Nom de l\'entreprise, raison sociale...';
+            denominationField.value = '';
+            
+            // Mettre à jour le label
+            denominationLabel.innerHTML = 'Dénomination sociale <span class="text-danger">*</span>';
+            
+            // Supprimer l'aide si elle existe
+            if (denominationHelp) {
+                denominationHelp.remove();
+            }
+        }
+    }
+    
+    // Événement sur changement de type (seulement si le select n'est pas disabled)
+    if (!typePersonneSelect.disabled) {
+        typePersonneSelect.addEventListener('change', updateDenominationField);
+        
+        // Appliquer l'état initial
+        updateDenominationField();
+    }
+}
+
+// Gestion des templates dynamiques par forme juridique
+function setupFormeJuridiqueHandler() {
+    const formeJuridiqueSelect = document.querySelector('select[name="forme_juridique"]');
+    const denominationParticulier = document.getElementById('denomination-particulier');
+    const denominationMorale = document.getElementById('denomination-morale');
+    const denominationInput = document.querySelector('input[name="nom"]');
+    
+    if (!formeJuridiqueSelect || !denominationParticulier || !denominationMorale) {
+        console.error('Éléments requis pour les templates dynamiques non trouvés');
+        return;
+    }
+    
+    function updateTemplate() {
+        const selectedValue = formeJuridiqueSelect.value;
+        console.log('Forme juridique sélectionnée:', selectedValue);
+        
+        // Masquer tous les templates d'abord
+        denominationParticulier.style.display = 'none';
+        denominationMorale.style.display = 'none';
+        
+        if (selectedValue === '1') { // Particulier
+            console.log('Affichage template Particulier');
+            denominationParticulier.style.display = 'block';
+            // Désactiver et vider le champ nom pour les particuliers
+            if (denominationInput) {
+                denominationInput.disabled = true;
+                denominationInput.removeAttribute('required');
+                denominationInput.value = '';
+            }
+        } else if (selectedValue && selectedValue !== '') { // Personne morale
+            console.log('Affichage template Personne Morale');
+            denominationMorale.style.display = 'block';
+            // Activer et rendre requis le champ nom pour les entreprises
+            if (denominationInput) {
+                denominationInput.disabled = false;
+                denominationInput.setAttribute('required', 'required');
+            }
+        } else {
+            console.log('Aucune forme juridique sélectionnée');
+            // Si aucune sélection, masquer les deux templates
+            if (denominationInput) {
+                denominationInput.disabled = true;
+                denominationInput.removeAttribute('required');
+            }
+        }
+    }
+    
+    // Écouter les changements de sélection
+    formeJuridiqueSelect.addEventListener('change', updateTemplate);
+    
+    // Appliquer l'état initial
+    updateTemplate();
+}
+
+// Initialiser au chargement de la page
+document.addEventListener('DOMContentLoaded', function() {
+    setupFormeJuridiqueHandler();
+});
+
+// Fonction d'archivage du client
+function archiverClient(clientId) {
+    if (confirm('Êtes-vous sûr de vouloir archiver ce client ?\n\nUn client archivé devient inactif mais conserve toutes ses données. Cette action peut être annulée ultérieurement.')) {
+        // Créer un formulaire pour envoyer la requête POST
+        const form = document.createElement('form');
+        form.method = 'POST';
+        form.action = `/client/${clientId}/archive`;
+        
+        // Ajouter le token CSRF si nécessaire
+        const csrfToken = document.querySelector('meta[name="_csrf_token"]');
+        if (csrfToken) {
+            const csrfInput = document.createElement('input');
+            csrfInput.type = 'hidden';
+            csrfInput.name = '_csrf_token';
+            csrfInput.value = csrfToken.content;
+            form.appendChild(csrfInput);
+        }
+        
+        document.body.appendChild(form);
+        form.submit();
+    }
+}
+</script>
+{% endblock %}

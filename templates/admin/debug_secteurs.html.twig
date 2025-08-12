@@ -1,0 +1,151 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Debug Secteurs - TechnoProd</title>
+    <style>
+        body { font-family: Arial, sans-serif; margin: 20px; }
+        .debug-section { border: 1px solid #ddd; margin: 10px 0; padding: 15px; }
+        .debug-title { background: #f0f0f0; margin: -15px -15px 10px -15px; padding: 10px; font-weight: bold; }
+        pre { background: #f9f9f9; padding: 10px; overflow-x: auto; }
+        .success { color: green; }
+        .error { color: red; }
+        .warning { color: orange; }
+    </style>
+</head>
+<body>
+    <h1>🔍 Debug Secteurs - Données Géographiques</h1>
+    
+    <div class="debug-section">
+        <div class="debug-title">📊 Test API Secteurs</div>
+        <button onclick="testerAPI()">🧪 Tester l'API /admin/secteurs/all-geo-data</button>
+        <div id="api-result"></div>
+    </div>
+
+    <div class="debug-section">
+        <div class="debug-title">🏘️ Test Géométrie Commune</div>
+        <input type="text" id="codeInsee" placeholder="Code INSEE (ex: 65286)" />
+        <button onclick="testerCommune()">🧪 Tester Géométrie Commune</button>
+        <div id="commune-result"></div>
+    </div>
+
+    <div class="debug-section">
+        <div class="debug-title">💾 Cache EPCI</div>
+        <button onclick="verifierCache()">🧪 Vérifier Cache EPCI</button>
+        <div id="cache-result"></div>
+    </div>
+
+    <script>
+        async function testerAPI() {
+            const result = document.getElementById('api-result');
+            result.innerHTML = '<p>⏳ Chargement...</p>';
+            
+            try {
+                const response = await fetch('/admin/secteurs/all-geo-data');
+                const data = await response.json();
+                
+                let html = '<h3 class="success">✅ API Réussie</h3>';
+                html += `<p><strong>Secteurs trouvés:</strong> ${data.secteurs?.length || 0}</p>`;
+                
+                if (data.secteurs && data.secteurs.length > 0) {
+                    data.secteurs.forEach((secteur, index) => {
+                        html += `<div style="margin: 10px 0; padding: 10px; border-left: 3px solid ${secteur.couleur};">`;
+                        html += `<h4>${secteur.nom} (${secteur.attributions?.length || 0} attributions)</h4>`;
+                        
+                        if (secteur.attributions) {
+                            secteur.attributions.forEach((attr, attrIndex) => {
+                                html += `<div style="margin-left: 20px;">`;
+                                html += `<strong>${attr.type}:</strong> ${attr.nom} `;
+                                
+                                if (attr.type === 'commune' && attr.codeInsee) {
+                                    html += `<span class="success">(INSEE: ${attr.codeInsee})</span>`;
+                                } else if (attr.type === 'commune') {
+                                    html += `<span class="error">(INSEE manquant!)</span>`;
+                                }
+                                
+                                if (attr.boundary_type === 'real') {
+                                    html += ` <span class="success">✅ Frontières réelles (${attr.coordinates?.length || 0} points)</span>`;
+                                } else if (attr.coordinates) {
+                                    html += ` <span class="warning">⚠️ Approximation (${attr.coordinates?.length || 0} points)</span>`;
+                                }
+                                
+                                html += `</div>`;
+                            });
+                        }
+                        html += `</div>`;
+                        
+                        if (index >= 2) {
+                            html += `<p><em>... et ${data.secteurs.length - 3} autres secteurs</em></p>`;
+                            return false;
+                        }
+                    });
+                }
+                
+                html += '<h4>📄 Données complètes:</h4>';
+                html += `<pre>${JSON.stringify(data, null, 2)}</pre>`;
+                
+                result.innerHTML = html;
+                
+            } catch (error) {
+                result.innerHTML = `<h3 class="error">❌ Erreur</h3><pre>${error.message}</pre>`;
+            }
+        }
+
+        async function testerCommune() {
+            const codeInsee = document.getElementById('codeInsee').value;
+            const result = document.getElementById('commune-result');
+            
+            if (!codeInsee) {
+                result.innerHTML = '<p class="error">❌ Veuillez saisir un code INSEE</p>';
+                return;
+            }
+            
+            result.innerHTML = '<p>⏳ Chargement...</p>';
+            
+            try {
+                const response = await fetch(`/admin/commune/${codeInsee}/geometry`);
+                const data = await response.json();
+                
+                if (data.success) {
+                    let html = '<h3 class="success">✅ Géométrie Récupérée</h3>';
+                    html += `<p><strong>Commune:</strong> ${data.commune.nom}</p>`;
+                    html += `<p><strong>Code postal:</strong> ${data.commune.codePostal}</p>`;
+                    html += `<p><strong>Points de frontière:</strong> ${data.commune.geometry.boundaries?.length || 0}</p>`;
+                    html += `<p><strong>Source:</strong> ${data.commune.geometry.source}</p>`;
+                    
+                    if (data.commune.geometry.boundaries && data.commune.geometry.boundaries.length > 0) {
+                        html += '<h4>🗺️ Premiers points:</h4>';
+                        html += '<pre>';
+                        data.commune.geometry.boundaries.slice(0, 5).forEach((point, index) => {
+                            html += `Point ${index + 1}: lat=${point.lat}, lng=${point.lng}\n`;
+                        });
+                        if (data.commune.geometry.boundaries.length > 5) {
+                            html += `... et ${data.commune.geometry.boundaries.length - 5} autres points\n`;
+                        }
+                        html += '</pre>';
+                    }
+                    
+                    result.innerHTML = html;
+                } else {
+                    result.innerHTML = `<h3 class="error">❌ Erreur</h3><p>${data.error}</p>`;
+                }
+                
+            } catch (error) {
+                result.innerHTML = `<h3 class="error">❌ Erreur</h3><pre>${error.message}</pre>`;
+            }
+        }
+
+        async function verifierCache() {
+            const result = document.getElementById('cache-result');
+            result.innerHTML = '<p>⏳ Vérification...</p>';
+            
+            // Cette fonction nécessiterait une route dédiée côté serveur
+            result.innerHTML = '<p class="warning">⚠️ Fonction à implémenter côté serveur</p>';
+        }
+
+        // Auto-test au chargement
+        document.addEventListener('DOMContentLoaded', function() {
+            console.log('🔍 DEBUG: Page de debug chargée');
+        });
+    </script>
+</body>
+</html>

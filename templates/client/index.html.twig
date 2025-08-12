@@ -1,0 +1,953 @@
+{% extends 'base.html.twig' %}
+
+{% block title %}Gestion des Clients{% endblock %}
+
+{% block stylesheets %}
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
+    <style>
+        .page-header {
+            background: linear-gradient(135deg, #28a745 0%, #20c997 100%);
+            color: white;
+            padding: 2rem 0;
+            margin-bottom: 2rem;
+        }
+        .stats-card {
+            border: none;
+            border-radius: 12px;
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+            transition: transform 0.2s ease;
+        }
+        .stats-card:hover {
+            transform: translateY(-2px);
+        }
+        .clients-table {
+            background: white;
+            border-radius: 8px;
+            overflow: hidden;
+            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+        }
+        .clients-table th {
+            background: #28a745;
+            color: white;
+            font-weight: 600;
+            border: none;
+            padding: 12px 8px;
+            font-size: 0.9rem;
+            vertical-align: middle;
+        }
+        .clients-table td {
+            padding: 8px;
+            vertical-align: middle;
+            border-bottom: 1px solid #e9ecef;
+            font-size: 0.85rem;
+        }
+        .clients-table tbody tr:hover {
+            background-color: #f8f9fa;
+        }
+        .client-row:hover {
+            background-color: #e3f2fd !important;
+            transform: translateY(-1px);
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        }
+        
+        /* Resizable columns */
+        .resizable-table {
+            table-layout: fixed;
+            width: 100%;
+        }
+        .resizable-table th {
+            position: relative;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            white-space: nowrap;
+        }
+        .resizable-table td {
+            overflow: hidden;
+            text-overflow: ellipsis;
+        }
+        .column-resizer {
+            position: absolute;
+            top: 0;
+            right: 0;
+            width: 5px;
+            height: 100%;
+            cursor: col-resize;
+            background: transparent;
+            z-index: 1;
+        }
+        .column-resizer:hover {
+            background: rgba(40, 167, 69, 0.3);
+        }
+        .column-resizer.resizing {
+            background: #28a745;
+        }
+        .resize-indicator {
+            position: fixed;
+            top: 0;
+            bottom: 0;
+            width: 2px;
+            background: #28a745;
+            z-index: 1000;
+            pointer-events: none;
+            display: none;
+        }
+        
+        /* Sortable columns */
+        .sortable-header {
+            cursor: pointer;
+            user-select: none;
+            transition: background-color 0.2s;
+        }
+        .sortable-header:hover {
+            background-color: rgba(255, 255, 255, 0.1) !important;
+        }
+        .sort-indicator {
+            margin-left: 8px;
+            font-size: 0.7rem;
+            opacity: 0.6;
+            transition: opacity 0.2s;
+        }
+        .sortable-header.sorted .sort-indicator {
+            opacity: 1;
+        }
+        .sortable-header:not(.sorted) .sort-indicator {
+            opacity: 0.3;
+        }
+        
+        /* Animation pour le tri */
+        .clients-table tbody {
+            transition: opacity 0.15s ease;
+        }
+        .status-badge {
+            font-size: 0.7rem;
+            padding: 0.25rem 0.5rem;
+            border-radius: 12px;
+            font-weight: 600;
+        }
+        .prospect-badge {
+            background-color: #ffc107;
+            color: #212529;
+        }
+        .client-badge {
+            background-color: #28a745;
+            color: white;
+        }
+        .btn-action {
+            padding: 4px 8px;
+            font-size: 0.75rem;
+            border-radius: 4px;
+            margin: 1px;
+        }
+        .contact-info {
+            font-size: 0.8rem;
+            line-height: 1.2;
+        }
+        .address-info {
+            font-size: 0.75rem;
+            color: #6c757d;
+            line-height: 1.1;
+        }
+        
+        /* Responsive table adjustments */
+        @media (max-width: 1200px) {
+            .clients-table th, .clients-table td {
+                padding: 6px 4px;
+                font-size: 0.8rem;
+            }
+            .btn-action {
+                padding: 2px 6px;
+                font-size: 0.7rem;
+            }
+        }
+        
+        @media (max-width: 768px) {
+            .clients-table th, .clients-table td {
+                padding: 4px 2px;
+                font-size: 0.75rem;
+            }
+            .contact-info, .address-info {
+                font-size: 0.7rem;
+            }
+            .btn-action {
+                padding: 2px 4px;
+                font-size: 0.65rem;
+            }
+            /* Masquer certaines colonnes sur mobile */
+            .clients-table th:nth-child(7),
+            .clients-table td:nth-child(7),
+            .clients-table th:nth-child(8),
+            .clients-table td:nth-child(8),
+            .clients-table th:nth-child(9),
+            .clients-table td:nth-child(9) {
+                display: none;
+            }
+        }
+    </style>
+{% endblock %}
+
+{% block body %}
+<!-- Messages Flash -->
+{% for type, messages in app.flashes %}
+    {% for message in messages %}
+        <div class="alert alert-{{ type == 'error' ? 'danger' : (type == 'warning' ? 'warning' : (type == 'info' ? 'info' : 'success')) }} alert-dismissible fade show" role="alert">
+            {{ message }}
+            <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+        </div>
+    {% endfor %}
+{% endfor %}
+
+<!-- En-tête -->
+<div class="page-header">
+    <div class="container-fluid">
+        <div class="row align-items-center">
+            <div class="col-md-8">
+                {% set currentFilter = app.request.query.get('statut') %}
+                {% if currentFilter == 'prospect' %}
+                    <h1 class="mb-1"><i class="fas fa-user-clock me-3"></i>Gestion des Prospects</h1>
+                    <p class="mb-0">Liste des prospects dans TechnoProd</p>
+                {% elseif currentFilter == 'client' %}
+                    <h1 class="mb-1"><i class="fas fa-user-check me-3"></i>Gestion des Clients</h1>
+                    <p class="mb-0">Liste des clients actifs dans TechnoProd</p>
+                {% else %}
+                    <h1 class="mb-1"><i class="fas fa-users me-3"></i>Gestion Prospects/Clients</h1>
+                    <p class="mb-0">Liste complète des prospects et clients dans TechnoProd</p>
+                {% endif %}
+            </div>
+            <div class="col-md-4 text-end">
+                <div class="btn-group">
+                    <a href="{{ path('app_client_new') }}" class="btn btn-light">
+                        <i class="fas fa-plus"></i> Nouveau
+                    </a>
+                    {% if currentFilter == 'prospect' %}
+                        <a href="{{ path('app_client_index', {'statut': 'client'}) }}" class="btn btn-outline-light">
+                            <i class="fas fa-user-check"></i> Voir Clients
+                        </a>
+                        <a href="{{ path('app_client_index') }}" class="btn btn-outline-light">
+                            <i class="fas fa-users"></i> Voir Tous
+                        </a>
+                    {% elseif currentFilter == 'client' %}
+                        <a href="{{ path('app_client_index', {'statut': 'prospect'}) }}" class="btn btn-outline-light">
+                            <i class="fas fa-user-clock"></i> Voir Prospects
+                        </a>
+                        <a href="{{ path('app_client_index') }}" class="btn btn-outline-light">
+                            <i class="fas fa-users"></i> Voir Tous
+                        </a>
+                    {% else %}
+                        <a href="{{ path('app_client_index', {'statut': 'prospect'}) }}" class="btn btn-outline-light">
+                            <i class="fas fa-user-clock"></i> Prospects
+                        </a>
+                        <a href="{{ path('app_client_index', {'statut': 'client'}) }}" class="btn btn-outline-light">
+                            <i class="fas fa-user-check"></i> Clients
+                        </a>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="container-fluid">
+    <!-- Statistiques -->
+    <div class="row mb-4">
+        <div class="col-md-3">
+            <div class="card stats-card">
+                <div class="card-body text-center">
+                    <i class="fas fa-user-clock fa-2x text-info mb-2"></i>
+                    <h3 class="text-info">{{ stats.prospects }}</h3>
+                    <p class="mb-0">Prospects</p>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="card stats-card">
+                <div class="card-body text-center">
+                    <i class="fas fa-user-check fa-2x text-success mb-2"></i>
+                    <h3 class="text-success">{{ stats.clients }}</h3>
+                    <p class="mb-0">Clients</p>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="card stats-card">
+                <div class="card-body text-center">
+                    <i class="fas fa-arrow-up fa-2x text-warning mb-2"></i>
+                    <h3 class="text-warning">{{ stats.conversions }}</h3>
+                    <p class="mb-0">Conversions ce mois</p>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="card stats-card">
+                <div class="card-body text-center">
+                    <i class="fas fa-users fa-2x text-primary mb-2"></i>
+                    <h3 class="text-primary">{{ clients|length }}</h3>
+                    <p class="mb-0">{{ currentFilter == 'prospect' ? 'Prospects affichés' : (currentFilter == 'client' ? 'Clients affichés' : 'Total affiché') }}</p>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Filtres -->
+    <div class="card mb-4">
+        <div class="card-body">
+            <form method="GET" class="row g-3">
+                <div class="col-md-3">
+                    <label for="statut" class="form-label">Statut</label>
+                    <select name="statut" id="statut" class="form-select">
+                        <option value="">Tous (Prospects + Clients)</option>
+                        <option value="prospect" {{ app.request.query.get('statut') == 'prospect' ? 'selected' : '' }}>Prospects uniquement</option>
+                        <option value="client" {{ app.request.query.get('statut') == 'client' ? 'selected' : '' }}>Clients uniquement</option>
+                    </select>
+                </div>
+                <div class="col-md-2">
+                    <label for="actif" class="form-label">État</label>
+                    <select name="actif" id="actif" class="form-select">
+                        <option value="">Tous</option>
+                        <option value="1" {{ app.request.query.get('actif') == '1' ? 'selected' : '' }}>Actifs</option>
+                        <option value="0" {{ app.request.query.get('actif') == '0' ? 'selected' : '' }}>Archivés</option>
+                    </select>
+                </div>
+                <div class="col-md-4">
+                    <label for="secteur" class="form-label">Secteur</label>
+                    <select name="secteur" id="secteur" class="form-select">
+                        <option value="">Tous les secteurs</option>
+                        {% for secteur in secteurs %}
+                            <option value="{{ secteur.id }}" {{ app.request.query.get('secteur') == secteur.id ~ '' ? 'selected' : '' }}>{{ secteur.nomSecteur }}</option>
+                        {% endfor %}
+                    </select>
+                </div>
+                <div class="col-md-3 d-flex align-items-end">
+                    <button type="submit" class="btn btn-primary me-2">
+                        <i class="fas fa-filter"></i> Filtrer
+                    </button>
+                    <a href="{{ path('app_client_index') }}" class="btn btn-outline-secondary">
+                        <i class="fas fa-times"></i> Effacer
+                    </a>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- Tableau des clients -->
+    {% if clients|length > 0 %}
+        <div class="card">
+            <div class="card-header bg-light">
+                <div class="row align-items-center">
+                    <div class="col-md-8">
+                        <h6 class="mb-0">
+                            <i class="fas fa-table me-2"></i>
+                            {{ clients|length }} 
+                            {% if currentFilter == 'prospect' %}
+                                prospect{{ clients|length > 1 ? 's' : '' }}
+                            {% elseif currentFilter == 'client' %}
+                                client{{ clients|length > 1 ? 's' : '' }}
+                            {% else %}
+                                entrée{{ clients|length > 1 ? 's' : '' }}
+                            {% endif %}
+                            {% if app.request.query.all|length > 1 %}
+                                <small class="text-muted">(filtré{{ clients|length > 1 ? 's' : '' }})</small>
+                            {% endif %}
+                        </h6>
+                    </div>
+                    <div class="col-md-4 text-end">
+                        <button type="button" class="btn btn-sm btn-outline-secondary me-2" id="reset-columns" title="Réinitialiser les largeurs de colonnes">
+                            <i class="fas fa-undo me-1"></i>Réinitialiser colonnes
+                        </button>
+                        <small class="text-muted">
+                            <i class="fas fa-info-circle me-1"></i>
+                            Cliquez sur les en-têtes pour trier • Redimensionnez en faisant glisser les bordures
+                        </small>
+                    </div>
+                </div>
+            </div>
+            <div class="card-body p-0">
+                <div class="table-responsive">
+                    <table class="table table-hover clients-table resizable-table mb-0" id="clients-table">
+                        <thead>
+                            <tr>
+                                <th class="text-center sortable-header" data-column="statut" data-sort="isClient" style="width: 80px;">
+                                    Statut
+                                    <i class="fas fa-sort sort-indicator"></i>
+                                    <div class="column-resizer"></div>
+                                </th>
+                                <th class="sortable-header" data-column="entreprise" data-sort="nomComplet" style="width: 200px;">
+                                    Code / Entreprise <small class="text-light">({{ clients|length }})</small>
+                                    <i class="fas fa-sort sort-indicator"></i>
+                                    <div class="column-resizer"></div>
+                                </th>
+                                <th class="sortable-header" data-column="contact" data-sort="contact_nom" style="width: 180px;">
+                                    Contact principal
+                                    <i class="fas fa-sort sort-indicator"></i>
+                                    <div class="column-resizer"></div>
+                                </th>
+                                <th class="sortable-header" data-column="telephone" data-sort="contact_telephone" style="width: 150px;">
+                                    Téléphone
+                                    <i class="fas fa-sort sort-indicator"></i>
+                                    <div class="column-resizer"></div>
+                                </th>
+                                <th class="sortable-header" data-column="email" data-sort="contact_email" style="width: 200px;">
+                                    Email
+                                    <i class="fas fa-sort sort-indicator"></i>
+                                    <div class="column-resizer"></div>
+                                </th>
+                                <th class="sortable-header" data-column="adresse" data-sort="adresse_ville" style="width: 150px;">
+                                    Adresse
+                                    <i class="fas fa-sort sort-indicator"></i>
+                                    <div class="column-resizer"></div>
+                                </th>
+                                <th class="sortable-header" data-column="secteur" data-sort="secteur_nom" style="width: 120px;">
+                                    Secteur
+                                    <i class="fas fa-sort sort-indicator"></i>
+                                    <div class="column-resizer"></div>
+                                </th>
+                                <th class="sortable-header" data-column="conversion" data-sort="dateConversionClient" style="width: 100px;">
+                                    Conversion
+                                    <i class="fas fa-sort sort-indicator"></i>
+                                    <div class="column-resizer"></div>
+                                </th>
+                                <th class="text-center" data-column="actions" style="width: 120px;">
+                                    Actions
+                                </th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for client in clients %}
+                                {% set contactFactu = null %}
+                                {% for contact in client.contacts %}
+                                    {% if contact.isFacturationDefault %}
+                                        {% set contactFactu = contact %}
+                                    {% endif %}
+                                {% endfor %}
+                                {% if contactFactu is null and client.contacts|length > 0 %}
+                                    {% set contactFactu = client.contacts|first %}
+                                {% endif %}
+                                
+                                <tr class="client-row" 
+                                    data-client-url="{{ path('app_client_show', {'id': client.id}) }}" 
+                                    data-is-client="{{ client.isClient ? '1' : '0' }}"
+                                    data-nom-complet="{{ client.nomComplet|lower }}"
+                                    data-contact-nom="{{ contactFactu ? (contactFactu.nom ~ ' ' ~ (contactFactu.prenom ?: ''))|lower : '' }}"
+                                    data-contact-telephone="{{ contactFactu ? contactFactu.telephone : '' }}"
+                                    data-contact-email="{{ contactFactu ? contactFactu.email|lower : '' }}"
+                                    data-adresse-ville="{{ contactFactu and contactFactu.adresse ? contactFactu.adresse.ville|lower : '' }}"
+                                    data-secteur-nom="{{ client.secteur ? client.secteur.nomSecteur|lower : '' }}"
+                                    data-date-conversion="{{ client.dateConversionClient ? client.dateConversionClient|date('Y-m-d') : '' }}"
+                                    style="cursor: pointer;">
+                                    <td class="text-center">
+                                        {% if client.isClient %}
+                                            <span class="badge client-badge">CLIENT</span>
+                                        {% else %}
+                                            {% set isRecent = date().diff(client.createdAt).days < 30 %}
+                                            <span class="badge prospect-badge{{ isRecent ? ' position-relative' : '' }}">
+                                                PROSPECT
+                                                {% if isRecent %}
+                                                    <span class="position-absolute top-0 start-100 translate-middle badge rounded-pill bg-danger" title="Prospect récent (moins de 30 jours)">
+                                                        <i class="fas fa-star" style="font-size: 6px;"></i>
+                                                    </span>
+                                                {% endif %}
+                                            </span>
+                                        {% endif %}
+                                    </td>
+                                    <td>
+                                        <div class="fw-bold text-dark">{{ client.nomComplet }}</div>
+                                        <small class="text-muted">{{ client.code }}</small>
+                                    </td>
+                                    <td>
+                                        {% if contactFactu %}
+                                            <div class="contact-info">
+                                                <div class="fw-bold">{{ contactFactu.nom }}{% if contactFactu.prenom %} {{ contactFactu.prenom }}{% endif %}</div>
+                                                {% if contactFactu.fonction %}
+                                                    <small class="text-muted">{{ contactFactu.fonction }}</small>
+                                                {% endif %}
+                                            </div>
+                                        {% else %}
+                                            <span class="text-muted">Aucun contact</span>
+                                        {% endif %}
+                                    </td>
+                                    <td>
+                                        {% if contactFactu and contactFactu.telephone %}
+                                            <div class="d-flex align-items-center">
+                                                <span class="me-2">{{ contactFactu.telephone }}</span>
+                                                <a href="tel:{{ contactFactu.telephoneForCall }}" class="btn btn-success btn-action call-btn" title="Appeler {{ contactFactu.nom }}{% if contactFactu.prenom %} {{ contactFactu.prenom }}{% endif %}">
+                                                    <i class="fas fa-phone"></i>
+                                                </a>
+                                            </div>
+                                        {% else %}
+                                            <span class="text-muted">-</span>
+                                        {% endif %}
+                                    </td>
+                                    <td>
+                                        {% if contactFactu and contactFactu.email %}
+                                            <a href="mailto:{{ contactFactu.email }}" class="text-decoration-none" title="Envoyer un email à {{ contactFactu.nom }}{% if contactFactu.prenom %} {{ contactFactu.prenom }}{% endif %}">
+                                                {{ contactFactu.email }}
+                                            </a>
+                                        {% else %}
+                                            <span class="text-muted">-</span>
+                                        {% endif %}
+                                    </td>
+                                    <td>
+                                        {% if contactFactu and contactFactu.adresse %}
+                                            <div class="address-info" title="{{ contactFactu.adresse.nom }}{% if contactFactu.adresse.ligne1 %} - {{ contactFactu.adresse.ligne1 }}{% endif %}">
+                                                <div>{{ contactFactu.adresse.ville }}</div>
+                                                <small>{{ contactFactu.adresse.codePostal }}</small>
+                                            </div>
+                                        {% else %}
+                                            <span class="text-muted">-</span>
+                                        {% endif %}
+                                    </td>
+                                    <td>
+                                        {% if client.secteur %}
+                                            <span class="badge bg-info" title="Commercial: {{ client.secteur.commercial ? client.secteur.commercial.fullName : 'Non assigné' }}">
+                                                {{ client.secteur.nomSecteur }}
+                                            </span>
+                                        {% else %}
+                                            <span class="text-muted">-</span>
+                                        {% endif %}
+                                    </td>
+                                    <td>
+                                        {% if client.isClient and client.dateConversionClient %}
+                                            <small>{{ client.dateConversionClient|date('d/m/Y') }}</small>
+                                        {% else %}
+                                            <span class="text-muted">-</span>
+                                        {% endif %}
+                                    </td>
+                                    <td>
+                                        <div class="btn-group">
+                                            <a href="{{ path('app_client_show', {'id': client.id}) }}" class="btn btn-outline-primary btn-action" title="Voir">
+                                                <i class="fas fa-eye"></i>
+                                            </a>
+                                            <a href="{{ path('app_client_edit', {'id': client.id}) }}" class="btn btn-outline-success btn-action" title="Modifier">
+                                                <i class="fas fa-edit"></i>
+                                            </a>
+                                            {% if contactFactu and contactFactu.adresse and contactFactu.adresse.isNavigable %}
+                                                <a href="{{ contactFactu.adresse.itineraireGoogleMapsUrl }}" target="_blank" class="btn btn-outline-info btn-action" title="Itinéraire">
+                                                    <i class="fas fa-route"></i>
+                                                </a>
+                                            {% endif %}
+                                        </div>
+                                    </td>
+                                </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    {% else %}
+        <div class="card">
+            <div class="card-body text-center py-5">
+                <i class="fas fa-user-times fa-3x text-muted mb-3"></i>
+                <h5>Aucun {{ currentFilter == 'prospect' ? 'prospect' : (currentFilter == 'client' ? 'client' : 'prospect/client') }} trouvé</h5>
+                <p class="text-muted">
+                    {% if currentFilter == 'prospect' %}
+                        Aucun prospect ne correspond aux critères de recherche.
+                    {% elseif currentFilter == 'client' %}
+                        Aucun client ne correspond aux critères de recherche.
+                    {% else %}
+                        Commencez par créer des prospects et convertissez-les en clients.
+                    {% endif %}
+                </p>
+                <a href="{{ path('app_client_new') }}" class="btn btn-primary">
+                    <i class="fas fa-plus"></i> Créer un prospect
+                </a>
+            </div>
+        </div>
+    {% endif %}
+</div>
+
+<!-- Indicateur de redimensionnement -->
+<div class="resize-indicator" id="resize-indicator"></div>
+
+{% endblock %}
+
+{% block javascripts %}
+<script>
+// Fonction pour confirmer et lancer l'appel
+function confirmCall(phoneNumber) {
+    return confirm(`Voulez-vous appeler le ${phoneNumber} ?\n\nNote: Cette fonction nécessite un appareil compatible (téléphone, logiciel de téléphonie).`);
+}
+
+// Fonction alternative pour les navigateurs qui ne supportent pas tel:
+function initiateCall(phoneNumber) {
+    // Nettoyage du numéro
+    const cleanNumber = phoneNumber.replace(/[^\d+]/g, '');
+    const telUrl = `tel:${cleanNumber}`;
+    
+    console.log('Tentative d\'appel vers:', cleanNumber);
+    
+    // Vérification du support tel: 
+    if (navigator.userAgent.match(/Android|iPhone|iPad|iPod|Windows Phone/i)) {
+        // Sur mobile, utilise le lien tel: direct
+        window.location.href = telUrl;
+    } else {
+        // Sur desktop, affiche le numéro et propose des alternatives
+        const message = `Numéro à appeler: ${phoneNumber}\n\nOptions:\n- Utilisez votre téléphone\n- Copiez le numéro dans votre logiciel de téléphonie\n- Utilisez Skype, Teams, ou un autre service VoIP`;
+        
+        if (confirm(message + '\n\nVoulez-vous copier le numéro dans le presse-papier ?')) {
+            // Copie dans le presse-papier
+            navigator.clipboard.writeText(cleanNumber).then(() => {
+                alert('Numéro copié dans le presse-papier !');
+            }).catch(() => {
+                // Fallback si clipboard n'est pas disponible
+                prompt('Copiez ce numéro:', cleanNumber);
+            });
+        }
+    }
+}
+
+// Système de redimensionnement des colonnes
+class TableColumnResizer {
+    constructor(tableId) {
+        this.table = document.getElementById(tableId);
+        this.isResizing = false;
+        this.currentColumn = null;
+        this.startX = 0;
+        this.startWidth = 0;
+        this.indicator = document.getElementById('resize-indicator');
+        this.storageKey = 'clients-table-columns';
+        
+        this.init();
+    }
+    
+    init() {
+        if (!this.table) return;
+        
+        // Charger les largeurs sauvegardées
+        this.loadColumnWidths();
+        
+        // Ajouter les event listeners
+        this.attachEventListeners();
+        
+        // Bouton de réinitialisation
+        const resetBtn = document.getElementById('reset-columns');
+        if (resetBtn) {
+            resetBtn.addEventListener('click', () => this.resetColumnWidths());
+        }
+    }
+    
+    attachEventListeners() {
+        const resizers = this.table.querySelectorAll('.column-resizer');
+        
+        resizers.forEach(resizer => {
+            resizer.addEventListener('mousedown', (e) => this.startResize(e));
+        });
+        
+        document.addEventListener('mousemove', (e) => this.doResize(e));
+        document.addEventListener('mouseup', () => this.stopResize());
+    }
+    
+    startResize(e) {
+        e.preventDefault();
+        this.isResizing = true;
+        this.currentColumn = e.target.closest('th');
+        this.startX = e.clientX;
+        this.startWidth = this.currentColumn.offsetWidth;
+        
+        // Afficher l'indicateur
+        this.indicator.style.display = 'block';
+        this.indicator.style.left = e.clientX + 'px';
+        
+        // Ajouter classe CSS
+        e.target.classList.add('resizing');
+        
+        // Désactiver la sélection de texte
+        document.body.style.userSelect = 'none';
+        document.body.style.cursor = 'col-resize';
+    }
+    
+    doResize(e) {
+        if (!this.isResizing || !this.currentColumn) return;
+        
+        const diff = e.clientX - this.startX;
+        const newWidth = Math.max(50, this.startWidth + diff); // Largeur minimale de 50px
+        
+        this.currentColumn.style.width = newWidth + 'px';
+        this.indicator.style.left = e.clientX + 'px';
+    }
+    
+    stopResize() {
+        if (!this.isResizing) return;
+        
+        this.isResizing = false;
+        
+        // Masquer l'indicateur
+        this.indicator.style.display = 'none';
+        
+        // Supprimer classe CSS
+        document.querySelectorAll('.column-resizer.resizing').forEach(el => {
+            el.classList.remove('resizing');
+        });
+        
+        // Restaurer la sélection de texte
+        document.body.style.userSelect = '';
+        document.body.style.cursor = '';
+        
+        // Sauvegarder les largeurs
+        this.saveColumnWidths();
+        
+        this.currentColumn = null;
+    }
+    
+    saveColumnWidths() {
+        const columns = {};
+        this.table.querySelectorAll('th[data-column]').forEach(th => {
+            const column = th.getAttribute('data-column');
+            columns[column] = th.offsetWidth;
+        });
+        
+        localStorage.setItem(this.storageKey, JSON.stringify(columns));
+    }
+    
+    loadColumnWidths() {
+        const saved = localStorage.getItem(this.storageKey);
+        if (!saved) return;
+        
+        try {
+            const columns = JSON.parse(saved);
+            Object.keys(columns).forEach(column => {
+                const th = this.table.querySelector(`th[data-column="${column}"]`);
+                if (th) {
+                    th.style.width = columns[column] + 'px';
+                }
+            });
+        } catch (e) {
+            console.error('Erreur lors du chargement des largeurs de colonnes:', e);
+        }
+    }
+    
+    resetColumnWidths() {
+        // Supprimer les largeurs sauvegardées
+        localStorage.removeItem(this.storageKey);
+        
+        // Réinitialiser les largeurs par défaut
+        const defaultWidths = {
+            'statut': 80,
+            'entreprise': 200,
+            'contact': 180,
+            'telephone': 150,
+            'email': 200,
+            'adresse': 150,
+            'secteur': 120,
+            'conversion': 100,
+            'actions': 120
+        };
+        
+        Object.keys(defaultWidths).forEach(column => {
+            const th = this.table.querySelector(`th[data-column="${column}"]`);
+            if (th) {
+                th.style.width = defaultWidths[column] + 'px';
+            }
+        });
+        
+        // Afficher notification
+        this.showNotification('Largeurs de colonnes réinitialisées');
+    }
+    
+    showNotification(message) {
+        // Créer une notification temporaire
+        const notification = document.createElement('div');
+        notification.className = 'alert alert-success position-fixed';
+        notification.style.cssText = 'top: 20px; right: 20px; z-index: 2000; min-width: 300px;';
+        notification.innerHTML = `
+            <i class="fas fa-check-circle me-2"></i>${message}
+            <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+        `;
+        
+        document.body.appendChild(notification);
+        
+        // Supprimer après 3 secondes
+        setTimeout(() => {
+            if (notification.parentNode) {
+                notification.remove();
+            }
+        }, 3000);
+    }
+}
+
+// Système de tri des colonnes
+class TableSorter {
+    constructor(tableId) {
+        this.table = document.getElementById(tableId);
+        this.tbody = this.table ? this.table.querySelector('tbody') : null;
+        this.currentSort = { column: null, direction: 'asc' };
+        
+        this.init();
+    }
+    
+    init() {
+        if (!this.table) return;
+        
+        // Ajouter les event listeners sur les en-têtes triables
+        this.table.querySelectorAll('.sortable-header').forEach(header => {
+            header.addEventListener('click', (e) => this.handleSort(e));
+        });
+    }
+    
+    handleSort(e) {
+        // Ne pas trier si on clique sur le resizer
+        if (e.target.closest('.column-resizer')) {
+            return;
+        }
+        
+        const header = e.currentTarget;
+        const column = header.getAttribute('data-sort');
+        
+        // Déterminer la direction du tri
+        let direction = 'asc';
+        if (this.currentSort.column === column && this.currentSort.direction === 'asc') {
+            direction = 'desc';
+        }
+        
+        // Effectuer le tri
+        this.sortTable(column, direction);
+        
+        // Mettre à jour l'interface
+        this.updateSortIndicators(header, direction);
+        
+        // Sauvegarder l'état
+        this.currentSort = { column, direction };
+    }
+    
+    sortTable(column, direction) {
+        if (!this.tbody) return;
+        
+        // Récupérer toutes les lignes
+        const rows = Array.from(this.tbody.querySelectorAll('tr'));
+        
+        // Trier les lignes
+        rows.sort((a, b) => {
+            let aValue = this.getValueForSort(a, column);
+            let bValue = this.getValueForSort(b, column);
+            
+            // Gestion des valeurs vides
+            if (aValue === '' && bValue === '') return 0;
+            if (aValue === '') return 1;
+            if (bValue === '') return -1;
+            
+            // Comparaison selon le type
+            if (column === 'isClient') {
+                // Pour les statuts : clients d'abord si asc
+                aValue = parseInt(aValue);
+                bValue = parseInt(bValue);
+            } else if (column === 'dateConversionClient') {
+                // Pour les dates
+                aValue = aValue ? new Date(aValue) : new Date(0);
+                bValue = bValue ? new Date(bValue) : new Date(0);
+            } else {
+                // Pour les textes (déjà en lowercase depuis Twig)
+                aValue = aValue.toString();
+                bValue = bValue.toString();
+            }
+            
+            let result = 0;
+            if (aValue < bValue) result = -1;
+            else if (aValue > bValue) result = 1;
+            
+            return direction === 'desc' ? -result : result;
+        });
+        
+        // Réinsérer les lignes triées
+        rows.forEach(row => this.tbody.appendChild(row));
+        
+        // Animation des lignes
+        this.animateSort();
+    }
+    
+    getValueForSort(row, column) {
+        switch (column) {
+            case 'isClient':
+                return row.getAttribute('data-is-client');
+            case 'nomComplet':
+                return row.getAttribute('data-nom-complet');
+            case 'contact_nom':
+                return row.getAttribute('data-contact-nom');
+            case 'contact_telephone':
+                return row.getAttribute('data-contact-telephone');
+            case 'contact_email':
+                return row.getAttribute('data-contact-email');
+            case 'adresse_ville':
+                return row.getAttribute('data-adresse-ville');
+            case 'secteur_nom':
+                return row.getAttribute('data-secteur-nom');
+            case 'dateConversionClient':
+                return row.getAttribute('data-date-conversion');
+            default:
+                return '';
+        }
+    }
+    
+    updateSortIndicators(activeHeader, direction) {
+        // Réinitialiser tous les indicateurs
+        this.table.querySelectorAll('.sortable-header').forEach(header => {
+            header.classList.remove('sorted');
+            const indicator = header.querySelector('.sort-indicator');
+            if (indicator) {
+                indicator.className = 'fas fa-sort sort-indicator';
+            }
+        });
+        
+        // Mettre à jour l'en-tête actif
+        activeHeader.classList.add('sorted');
+        const indicator = activeHeader.querySelector('.sort-indicator');
+        if (indicator) {
+            indicator.className = `fas fa-sort-${direction === 'asc' ? 'up' : 'down'} sort-indicator`;
+        }
+    }
+    
+    animateSort() {
+        // Petite animation pour indiquer que le tri a eu lieu
+        this.tbody.style.opacity = '0.7';
+        setTimeout(() => {
+            this.tbody.style.opacity = '1';
+        }, 150);
+    }
+}
+
+// Gestion des clics sur les lignes du tableau pour navigation
+document.addEventListener('DOMContentLoaded', function() {
+    // Initialiser le redimensionnement des colonnes
+    new TableColumnResizer('clients-table');
+    
+    // Initialiser le tri des colonnes
+    new TableSorter('clients-table');
+    // Navigation par clic sur les lignes
+    document.querySelectorAll('.client-row').forEach(function(row) {
+        row.addEventListener('click', function(e) {
+            // Ne pas naviguer si on clique sur un bouton ou un lien
+            if (e.target.closest('button') || e.target.closest('a') || e.target.closest('.btn-group')) {
+                return;
+            }
+            
+            const url = this.getAttribute('data-client-url');
+            if (url) {
+                window.location.href = url;
+            }
+        });
+    });
+    
+    // Gestion des clics sur les boutons d'appel
+    document.querySelectorAll('.call-btn').forEach(function(btn) {
+        btn.addEventListener('click', function(e) {
+            e.preventDefault();
+            
+            const href = this.getAttribute('href');
+            const phoneMatch = href.match(/tel:(.+)$/);
+            
+            if (phoneMatch) {
+                const cleanNumber = phoneMatch[1];
+                
+                // Test si tel: est supporté
+                if (window.location.protocol === 'https:' || window.location.hostname === 'localhost') {
+                    // HTTPS ou localhost - les liens tel: fonctionnent mieux
+                    window.location.href = href;
+                } else {
+                    // HTTP - utilise la fonction alternative
+                    initiateCall(cleanNumber);
+                }
+            }
+        });
+    });
+});
+</script>
+{% endblock %}

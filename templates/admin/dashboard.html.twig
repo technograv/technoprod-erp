@@ -1,0 +1,1053 @@
+{% extends 'base.html.twig' %}
+
+{% block title %}Administration - TechnoProd{% endblock %}
+
+{% block stylesheets %}
+    {{ parent() }}
+    <style>
+        .admin-header {
+            background: linear-gradient(135deg, #dc3545 0%, #e83e53 100%);
+            color: white;
+            padding: 2rem 0;
+            margin-bottom: 2rem;
+            box-shadow: 0 4px 12px rgba(220, 53, 69, 0.3);
+        }
+        
+        .admin-nav {
+            background: white;
+            border-radius: 12px;
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+            margin-bottom: 2rem;
+            overflow: hidden;
+        }
+        
+        .admin-nav .nav-link {
+            border: none;
+            border-radius: 0;
+            color: #495057;
+            font-weight: 600;
+            padding: 1rem 1.5rem;
+            transition: all 0.3s ease;
+            border-bottom: 3px solid transparent;
+        }
+        
+        .admin-nav .nav-link:hover,
+        .admin-nav .nav-link.active {
+            background: linear-gradient(135deg, #dc3545 0%, #e83e53 100%);
+            color: white;
+            border-bottom-color: #c82333;
+        }
+        
+        .stats-card {
+            background: white;
+            border-radius: 12px;
+            padding: 2rem;
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+            border-left: 4px solid #dc3545;
+            transition: transform 0.3s ease;
+        }
+        
+        .stats-card:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 8px 16px rgba(0, 0, 0, 0.15);
+        }
+        
+        .stats-number {
+            font-size: 3rem;
+            font-weight: 700;
+            color: #dc3545;
+            line-height: 1;
+            margin-bottom: 0.5rem;
+        }
+        
+        .stats-label {
+            color: #6c757d;
+            font-weight: 600;
+            text-transform: uppercase;
+            font-size: 0.875rem;
+            letter-spacing: 0.5px;
+        }
+        
+        .admin-section {
+            background: white;
+            border-radius: 12px;
+            padding: 2rem;
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+            margin-bottom: 2rem;
+        }
+        
+        .section-title {
+            color: #495057;
+            font-weight: 700;
+            font-size: 1.5rem;
+            margin-bottom: 1.5rem;
+            padding-bottom: 1rem;
+            border-bottom: 2px solid #dc3545;
+        }
+        
+        .quick-action-btn {
+            background: linear-gradient(135deg, #dc3545 0%, #e83e53 100%);
+            border: none;
+            border-radius: 8px;
+            padding: 1rem 1.5rem;
+            color: white;
+            font-weight: 600;
+            transition: all 0.3s ease;
+            text-decoration: none;
+            display: inline-block;
+            margin-right: 1rem;
+            margin-bottom: 1rem;
+        }
+        
+        .quick-action-btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 6px 12px rgba(220, 53, 69, 0.4);
+            color: white;
+            text-decoration: none;
+        }
+        
+        .warning-badge {
+            background: #ffc107;
+            color: #212529;
+            padding: 0.5rem 1rem;
+            border-radius: 20px;
+            font-weight: 600;
+            font-size: 0.875rem;
+        }
+    </style>
+{% endblock %}
+
+{% block body %}
+<!-- En-tête Admin -->
+<div class="admin-header">
+    <div class="container-fluid">
+        <div class="row align-items-center">
+            <div class="col-md-8">
+                <h1 class="mb-1">
+                    <i class="fas fa-cog fa-2x me-3"></i>Administration TechnoProd
+                </h1>
+                <p class="mb-0 opacity-75">
+                    Panneau de configuration et gestion système
+                </p>
+            </div>
+            <div class="col-md-4 text-end">
+                <div class="warning-badge">
+                    <i class="fas fa-shield-alt me-1"></i>Accès Administrateur
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="container-fluid">
+    <!-- Navigation Admin -->
+    <div class="admin-nav">
+        {% if current_societe %}
+            <div class="alert alert-info mb-3">
+                <i class="fas fa-info-circle me-2"></i>
+                <strong>Société active :</strong> {{ current_societe.displayName }}
+                <span class="badge bg-{{ is_societe_mere ? 'primary' : 'success' }} ms-2">
+                    {{ is_societe_mere ? 'Société Mère' : 'Société Fille' }}
+                </span>
+            </div>
+        {% endif %}
+        
+        <ul class="nav nav-tabs" role="tablist" id="main-admin-tabs">
+            <li class="nav-item">
+                <a class="nav-link active" data-bs-toggle="tab" href="#dashboard" role="tab">
+                    <i class="fas fa-tachometer-alt me-2"></i>Dashboard
+                </a>
+            </li>
+            
+            <!-- Onglet Juridique & Comptable (société mère uniquement) -->
+            {% if is_societe_mere %}
+            <li class="nav-item">
+                <a class="nav-link" data-bs-toggle="tab" href="#juridique-comptable" role="tab">
+                    <i class="fas fa-balance-scale me-2"></i>Juridique & Comptable
+                </a>
+            </li>
+            {% endif %}
+            
+            
+            <!-- Onglets Gestion Globale (société mère uniquement) -->
+            {% if is_societe_mere %}
+            <li class="nav-item">
+                <a class="nav-link" data-bs-toggle="tab" href="#gestion-societes" role="tab">
+                    <i class="fas fa-building-user me-2"></i>Société
+                </a>
+            </li>
+            <li class="nav-item">
+                <a class="nav-link" data-bs-toggle="tab" href="#secteurs" role="tab">
+                    <i class="fas fa-map me-2"></i>Secteurs
+                </a>
+            </li>
+            {% else %}
+            <!-- Onglet Paramètres Enseigne pour société fille -->
+            <li class="nav-item">
+                <a class="nav-link" data-bs-toggle="tab" href="#parametres-enseigne" role="tab">
+                    <i class="fas fa-cog me-2"></i>Paramètres Enseigne
+                </a>
+            </li>
+            {% endif %}
+            
+            <li class="nav-item">
+                <a class="nav-link" data-bs-toggle="tab" href="#transporteurs" role="tab">
+                    <i class="fas fa-truck me-2"></i>Transporteurs
+                </a>
+            </li>
+            <li class="nav-item">
+                <a class="nav-link" data-bs-toggle="tab" href="#frais-port" role="tab">
+                    <i class="fas fa-shipping-fast me-2"></i>Frais de Port
+                </a>
+            </li>
+            {% if is_societe_mere %}
+            <li class="nav-item">
+                <a class="nav-link" data-bs-toggle="tab" href="#produits" role="tab">
+                    <i class="fas fa-box me-2"></i>Produits
+                </a>
+            </li>
+            {% endif %}
+            {% if is_societe_mere %}
+            <li class="nav-item">
+                <a class="nav-link" data-bs-toggle="tab" href="#unites" role="tab">
+                    <i class="fas fa-ruler me-2"></i>Unités
+                </a>
+            </li>
+            {% endif %}
+            {% if is_societe_mere %}
+            <li class="nav-item">
+                <a class="nav-link" data-bs-toggle="tab" href="#tags-clients" role="tab">
+                    <i class="fas fa-tags me-2"></i>Tags Clients
+                </a>
+            </li>
+            {% endif %}
+            {% if is_societe_mere %}
+            <li class="nav-item">
+                <a class="nav-link" data-bs-toggle="tab" href="#parametres" role="tab">
+                    <i class="fas fa-server me-2"></i>Configuration Système
+                </a>
+            </li>
+            {% endif %}
+        </ul>
+    </div>
+
+    <div class="tab-content">
+        <!-- Dashboard -->
+        <div class="tab-pane fade show active" id="dashboard" role="tabpanel">
+            <!-- Statistiques -->
+            <div class="row mb-4">
+                <div class="col-md-3 mb-3">
+                    <div class="stats-card">
+                        <div class="stats-number">{{ stats.users }}</div>
+                        <div class="stats-label">Utilisateurs</div>
+                    </div>
+                </div>
+                <div class="col-md-3 mb-3">
+                    <div class="stats-card">
+                        <div class="stats-number">{{ stats.users_actifs }}</div>
+                        <div class="stats-label">Actifs</div>
+                    </div>
+                </div>
+                <div class="col-md-3 mb-3">
+                    <div class="stats-card">
+                        <div class="stats-number">{{ stats.admins }}</div>
+                        <div class="stats-label">Administrateurs</div>
+                    </div>
+                </div>
+                <div class="col-md-3 mb-3">
+                    <div class="stats-card">
+                        <div class="stats-number">{{ stats.groupes_utilisateurs }}</div>
+                        <div class="stats-label">Groupes Utilisateurs</div>
+                    </div>
+                </div>
+            </div>
+            <div class="row mb-4">
+                <div class="col-md-3 mb-3">
+                    <div class="stats-card">
+                        <div class="stats-number">{{ stats.groupes_actifs }}</div>
+                        <div class="stats-label">Groupes Actifs</div>
+                    </div>
+                </div>
+                <div class="col-md-3 mb-3">
+                    <div class="stats-card">
+                        <div class="stats-number">{{ stats.formes_juridiques }}</div>
+                        <div class="stats-label">Formes Juridiques</div>
+                    </div>
+                </div>
+            </div>
+            <div class="row mb-4">
+                <div class="col-md-4 mb-3">
+                    <div class="stats-card">
+                        <div class="stats-number">{{ stats.secteurs }}</div>
+                        <div class="stats-label">Secteurs</div>
+                    </div>
+                </div>
+                <div class="col-md-4 mb-3">
+                    <div class="stats-card">
+                        <div class="stats-number">{{ stats.produits }}</div>
+                        <div class="stats-label">Produits</div>
+                    </div>
+                </div>
+            </div>
+            <div class="row mb-4">
+                <div class="col-md-3 mb-3">
+                    <div class="stats-card">
+                        <div class="stats-number">{{ stats.tags }}</div>
+                        <div class="stats-label">Tags Clients</div>
+                    </div>
+                </div>
+                <div class="col-md-3 mb-3">
+                    <div class="stats-card">
+                        <div class="stats-number">{{ stats.modes_paiement }}</div>
+                        <div class="stats-label">Moyens Paiement</div>
+                    </div>
+                </div>
+                <div class="col-md-3 mb-3">
+                    <div class="stats-card">
+                        <div class="stats-number">{{ stats.modes_reglement }}</div>
+                        <div class="stats-label">Modes Règlement</div>
+                    </div>
+                </div>
+                <div class="col-md-3 mb-3">
+                    <div class="stats-card">
+                        <div class="stats-number">{{ stats.banques }}</div>
+                        <div class="stats-label">Banques</div>
+                    </div>
+                </div>
+            </div>
+            <div class="row mb-4">
+                <div class="col-md-3 mb-3">
+                    <div class="stats-card">
+                        <div class="stats-number">{{ stats.taux_tva }}</div>
+                        <div class="stats-label">Taux TVA</div>
+                    </div>
+                </div>
+                <div class="col-md-3 mb-3">
+                    <div class="stats-card">
+                        <div class="stats-number">{{ stats.unites }}</div>
+                        <div class="stats-label">Unités</div>
+                    </div>
+                </div>
+                <div class="col-md-3 mb-3">
+                    <div class="stats-card">
+                        <div class="stats-number">{{ stats.civilites }}</div>
+                        <div class="stats-label">Civilités</div>
+                    </div>
+                </div>
+            </div>
+            <div class="row mb-4">
+                <div class="col-md-6 mb-3">
+                    <div class="stats-card">
+                        <div class="stats-number">{{ stats.transporteurs }}</div>
+                        <div class="stats-label">Transporteurs</div>
+                    </div>
+                </div>
+                <div class="col-md-6 mb-3">
+                    <div class="stats-card">
+                        <div class="stats-number">{{ stats.frais_port }}</div>
+                        <div class="stats-label">Frais de Port</div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Statistiques Sociétés -->
+            {% if is_societe_mere %}
+            <div class="row mb-4">
+                <div class="col-md-6 mb-3">
+                    <div class="stats-card">
+                        <div class="stats-number">{{ stats.societes_meres }}</div>
+                        <div class="stats-label">Sociétés Mères</div>
+                    </div>
+                </div>
+                <div class="col-md-6 mb-3">
+                    <div class="stats-card">
+                        <div class="stats-number">{{ stats.societes_filles }}</div>
+                        <div class="stats-label">Sociétés Filles / Enseignes</div>
+                    </div>
+                </div>
+            </div>
+            {% endif %}
+
+            <!-- Actions rapides -->
+            <div class="admin-section">
+                <h3 class="section-title">
+                    <i class="fas fa-bolt me-2"></i>Actions Rapides
+                </h3>
+                <div class="row">
+                    <div class="col-md-6">
+                        <h5 class="mb-3">Gestion des Utilisateurs</h5>
+                        <a href="#users" class="quick-action-btn" data-bs-toggle="tab">
+                            <i class="fas fa-users me-2"></i>Gérer les Utilisateurs
+                        </a>
+                        <a href="#" class="quick-action-btn" onclick="alert('Fonctionnalité à venir')">
+                            <i class="fas fa-user-plus me-2"></i>Nouvel Utilisateur
+                        </a>
+                    </div>
+                    <div class="col-md-6">
+                        <h5 class="mb-3">Configuration Métier</h5>
+                        <a href="#formes-juridiques" class="quick-action-btn" data-bs-toggle="tab">
+                            <i class="fas fa-building me-2"></i>Formes Juridiques
+                        </a>
+                        <a href="#secteurs" class="quick-action-btn" data-bs-toggle="tab">
+                            <i class="fas fa-map me-2"></i>Secteurs
+                        </a>
+                        {% if is_societe_mere %}
+                        <a href="#produits" class="quick-action-btn" data-bs-toggle="tab">
+                            <i class="fas fa-box me-2"></i>Produits
+                        </a>
+                        <a href="#unites" class="quick-action-btn" data-bs-toggle="tab">
+                            <i class="fas fa-ruler me-2"></i>Unités
+                        </a>
+                        <a href="#parametres" class="quick-action-btn" data-bs-toggle="tab">
+                            <i class="fas fa-server me-2"></i>Configuration Système
+                        </a>
+                        {% endif %}
+                    </div>
+                </div>
+            </div>
+
+            <!-- Informations système -->
+            <div class="admin-section">
+                <h3 class="section-title">
+                    <i class="fas fa-info-circle me-2"></i>Informations Système
+                </h3>
+                <div class="row">
+                    <div class="col-md-6">
+                        <p><strong>Version PHP :</strong> {{ constant('PHP_VERSION') }}</p>
+                        <p><strong>Version Symfony :</strong> {{ constant('Symfony\\Component\\HttpKernel\\Kernel::VERSION') }}</p>
+                        <p><strong>Environnement :</strong> {{ app.environment }}</p>
+                    </div>
+                    <div class="col-md-6">
+                        <p><strong>Debug :</strong> {{ app.debug ? 'Activé' : 'Désactivé' }}</p>
+                        <p><strong>Utilisateur connecté :</strong> {{ app.user.fullName }}</p>
+                        <p><strong>Rôles :</strong> {{ app.user.roles|join(', ') }}</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Juridique & Comptable (société mère uniquement) -->
+        {% if is_societe_mere %}
+        <div class="tab-pane fade" id="juridique-comptable" role="tabpanel">
+            <div class="admin-section">
+                <h3 class="section-title">
+                    <i class="fas fa-balance-scale me-2"></i>Juridique & Comptable
+                </h3>
+                <p class="text-muted mb-4">Gestion des aspects juridiques et comptables de l'entreprise</p>
+                
+                <!-- Sous-navigation pour Juridique & Comptable -->
+                <div class="row">
+                    <div class="col-12">
+                        <ul class="nav nav-pills mb-4 justify-content-center" role="tablist" id="juridique-sub-tabs">
+                            <li class="nav-item">
+                                <a class="nav-link active" data-bs-toggle="pill" href="#formes-juridiques-content" role="tab">
+                                    <i class="fas fa-building me-2"></i>Formes Juridiques
+                                </a>
+                            </li>
+                            <li class="nav-item">
+                                <a class="nav-link" data-bs-toggle="pill" href="#moyens-paiement-content" role="tab">
+                                    <i class="fas fa-money-check-alt me-2"></i>Moyens de Paiement
+                                </a>
+                            </li>
+                            <li class="nav-item">
+                                <a class="nav-link" data-bs-toggle="pill" href="#modes-reglement-content" role="tab">
+                                    <i class="fas fa-credit-card me-2"></i>Modes de Règlement
+                                </a>
+                            </li>
+                            <li class="nav-item">
+                                <a class="nav-link" data-bs-toggle="pill" href="#banques-content" role="tab">
+                                    <i class="fas fa-university me-2"></i>Banques
+                                </a>
+                            </li>
+                            <li class="nav-item">
+                                <a class="nav-link" data-bs-toggle="pill" href="#taux-tva-content" role="tab">
+                                    <i class="fas fa-percent me-2"></i>Taux TVA
+                                </a>
+                            </li>
+                        </ul>
+                        
+                        <!-- Contenu des sous-onglets juridique-comptable -->
+                        <div class="tab-content">
+                            <div class="tab-pane fade show active" id="formes-juridiques-content" role="tabpanel">
+                                <div class="text-center">
+                                    <div class="spinner-border text-primary" role="status">
+                                        <span class="visually-hidden">Chargement...</span>
+                                    </div>
+                                    <p class="text-muted mt-2">Chargement des formes juridiques...</p>
+                                </div>
+                            </div>
+                            <div class="tab-pane fade" id="moyens-paiement-content" role="tabpanel">
+                                <div class="text-center">
+                                    <div class="spinner-border text-primary" role="status">
+                                        <span class="visually-hidden">Chargement...</span>
+                                    </div>
+                                    <p class="text-muted mt-2">Chargement des moyens de paiement...</p>
+                                </div>
+                            </div>
+                            <div class="tab-pane fade" id="modes-reglement-content" role="tabpanel">
+                                <div class="text-center">
+                                    <div class="spinner-border text-primary" role="status">
+                                        <span class="visually-hidden">Chargement...</span>
+                                    </div>
+                                    <p class="text-muted mt-2">Chargement des modes de règlement...</p>
+                                </div>
+                            </div>
+                            <div class="tab-pane fade" id="banques-content" role="tabpanel">
+                                <div class="text-center">
+                                    <div class="spinner-border text-primary" role="status">
+                                        <span class="visually-hidden">Chargement...</span>
+                                    </div>
+                                    <p class="text-muted mt-2">Chargement des banques...</p>
+                                </div>
+                            </div>
+                            <div class="tab-pane fade" id="taux-tva-content" role="tabpanel">
+                                <div class="text-center">
+                                    <div class="spinner-border text-primary" role="status">
+                                        <span class="visually-hidden">Chargement...</span>
+                                    </div>
+                                    <p class="text-muted mt-2">Chargement des taux TVA...</p>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        {% endif %}
+
+        <!-- Gestion des sociétés -->
+        <div class="tab-pane fade" id="gestion-societes" role="tabpanel">
+            <div class="admin-section">
+                <h3 class="section-title">
+                    <i class="fas fa-building-user me-2"></i>Gestion des sociétés
+                </h3>
+                <p class="text-muted mb-4">Configuration multi-société et gestion des utilisateurs</p>
+                
+                <!-- Sous-navigation pour Gestion des sociétés -->
+                <div class="row">
+                    <div class="col-12">
+                        <ul class="nav nav-pills mb-4 justify-content-center" role="tablist" id="societes-sub-tabs">
+                            <li class="nav-item">
+                                <a class="nav-link active" href="#societes-content" role="tab">
+                                    <i class="fas fa-building me-2"></i>Sociétés
+                                </a>
+                            </li>
+                            <li class="nav-item">
+                                <a class="nav-link" href="#users-content" role="tab">
+                                    <i class="fas fa-users me-2"></i>Utilisateurs
+                                </a>
+                            </li>
+                            <li class="nav-item">
+                                <a class="nav-link" href="#groupes-users-content" role="tab">
+                                    <i class="fas fa-users-cog me-2"></i>Groupes Utilisateurs
+                                </a>
+                            </li>
+                            <li class="nav-item">
+                                <a class="nav-link" href="#themes-couleurs-content" role="tab">
+                                    <i class="fas fa-palette me-2"></i>Thèmes & Couleurs
+                                </a>
+                            </li>
+                            <li class="nav-item">
+                                <a class="nav-link" href="#templates-documents-content" role="tab">
+                                    <i class="fas fa-file-alt me-2"></i>Templates de documents
+                                </a>
+                            </li>
+                        </ul>
+                        
+                        <!-- Contenu des sous-onglets gestion sociétés -->
+                        <div class="tab-content">
+                            <div class="tab-pane fade show active" id="societes-content" role="tabpanel">
+                                <div class="text-center">
+                                    <div class="spinner-border text-primary" role="status">
+                                        <span class="visually-hidden">Chargement...</span>
+                                    </div>
+                                    <p class="text-muted mt-2">Chargement des sociétés...</p>
+                                </div>
+                            </div>
+                            <div class="tab-pane fade" id="users-content" role="tabpanel">
+                                <div class="text-center">
+                                    <div class="spinner-border text-primary" role="status">
+                                        <span class="visually-hidden">Chargement...</span>
+                                    </div>
+                                    <p class="text-muted mt-2">Chargement des utilisateurs...</p>
+                                </div>
+                            </div>
+                            <div class="tab-pane fade" id="groupes-users-content" role="tabpanel">
+                                <div class="text-center">
+                                    <div class="spinner-border text-primary" role="status">
+                                        <span class="visually-hidden">Chargement...</span>
+                                    </div>
+                                    <p class="text-muted mt-2">Chargement des groupes d'utilisateurs...</p>
+                                </div>
+                            </div>
+                            <div class="tab-pane fade" id="themes-couleurs-content" role="tabpanel">
+                                <div class="admin-section">
+                                    <h5 class="section-title">
+                                        <i class="fas fa-palette me-2"></i>Thèmes & Couleurs
+                                    </h5>
+                                            <div class="row">
+                                                <div class="col-md-8">
+                                                    <h5>Configuration des Couleurs</h5>
+                                                    {% if is_societe_mere %}
+                                                        <p class="text-muted">Couleurs par défaut utilisées par toutes les sociétés filles.</p>
+                                                    {% else %}
+                                                        <p class="text-muted">Couleurs spécifiques à cette enseigne. Hérite de la société mère si non défini.</p>
+                                                    {% endif %}
+                                                    
+                                                    <form id="colors-form" class="mb-4">
+                                                        <div class="row">
+                                                            <div class="col-md-4 mb-3">
+                                                                <label for="primary-color" class="form-label">Couleur Primaire</label>
+                                                                <input type="color" class="form-control form-control-color" id="primary-color" name="primary" value="#dc3545" title="Couleur primaire">
+                                                                <div class="form-text">Couleur principale de l'interface</div>
+                                                            </div>
+                                                            <div class="col-md-4 mb-3">
+                                                                <label for="secondary-color" class="form-label">Couleur Secondaire</label>
+                                                                <input type="color" class="form-control form-control-color" id="secondary-color" name="secondary" value="#6c757d" title="Couleur secondaire">
+                                                                <div class="form-text">Couleur pour les éléments secondaires</div>
+                                                            </div>
+                                                            <div class="col-md-4 mb-3">
+                                                                <label for="tertiary-color" class="form-label">Couleur Tertiaire</label>
+                                                                <input type="color" class="form-control form-control-color" id="tertiary-color" name="tertiary" value="#28a745" title="Couleur tertiaire">
+                                                                <div class="form-text">Couleur d'accent et succès</div>
+                                                            </div>
+                                                        </div>
+                                                        
+                                                        <div class="row">
+                                                            <div class="col-md-6 mb-3">
+                                                                <label for="theme-select" class="form-label">Thème Prédéfini</label>
+                                                                <select class="form-select" id="theme-select">
+                                                                    <option value="default">Défaut (Rouge)</option>
+                                                                    <option value="blue">Bleu (TechnoGrav)</option>
+                                                                    <option value="green">Vert (TechnoPrint)</option>
+                                                                    <option value="yellow">Jaune (TechnoBuro)</option>
+                                                                </select>
+                                                                <div class="form-text">Applique un thème prédéfini</div>
+                                                            </div>
+                                                            <div class="col-md-6 mb-3">
+                                                                <label class="form-label">Actions</label><br>
+                                                                <button type="submit" class="btn btn-primary me-2">
+                                                                    <i class="fas fa-save"></i> Enregistrer
+                                                                </button>
+                                                                <button type="button" class="btn btn-outline-secondary" id="reset-colors">
+                                                                    <i class="fas fa-undo"></i> Réinitialiser
+                                                                </button>
+                                                            </div>
+                                                        </div>
+                                                    </form>
+                                                    
+                                                    <h5 class="mt-4">Gestion du Logo</h5>
+                                                    <div id="logo-management">
+                                                        <div class="row">
+                                                            <div class="col-md-6">
+                                                                <div class="border rounded p-3 text-center" id="logo-preview">
+                                                                    <div id="logo-current" style="display: none;">
+                                                                        <img id="logo-image" src="" alt="Logo actuel" class="img-thumbnail mb-2" style="max-height: 100px;">
+                                                                        <br>
+                                                                        <button type="button" class="btn btn-outline-danger btn-sm" id="delete-logo">
+                                                                            <i class="fas fa-trash"></i> Supprimer
+                                                                        </button>
+                                                                    </div>
+                                                                    <div id="logo-placeholder">
+                                                                        <i class="fas fa-image fa-3x text-muted mb-2"></i>
+                                                                        <p class="text-muted">Aucun logo défini</p>
+                                                                    </div>
+                                                                </div>
+                                                            </div>
+                                                            <div class="col-md-6">
+                                                                <div class="mb-3">
+                                                                    <label for="logo-upload" class="form-label">Télécharger un nouveau logo</label>
+                                                                    <input type="file" class="form-control" id="logo-upload" accept="image/*">
+                                                                    <div class="form-text">Formats acceptés: JPG, PNG, GIF (max 2MB)</div>
+                                                                </div>
+                                                                <button type="button" class="btn btn-success" id="upload-logo" disabled>
+                                                                    <i class="fas fa-upload"></i> Télécharger
+                                                                </button>
+                                                            </div>
+                                                        </div>
+                                                    </div>
+                                                </div>
+                                                
+                                                <div class="col-md-4">
+                                                    <h5>Prévisualisation</h5>
+                                                    <div id="theme-preview" class="border rounded p-3">
+                                                        <div class="preview-navbar mb-3" style="background: var(--bs-primary, #dc3545); color: white; padding: 10px; border-radius: 4px;">
+                                                            <strong>Navigation</strong>
+                                                        </div>
+                                                        <div class="preview-content">
+                                                            <button class="btn btn-primary mb-2">Bouton Principal</button><br>
+                                                            <button class="btn btn-secondary mb-2">Bouton Secondaire</button><br>
+                                                            <button class="btn btn-success mb-2">Bouton Succès</button><br>
+                                                            <div class="alert alert-primary" role="alert">Exemple d'alerte primaire</div>
+                                                        </div>
+                                                    </div>
+                                                    
+                                                    <div class="mt-3">
+                                                        <h6>Informations d'héritage</h6>
+                                                        <div id="inheritance-info">
+                                                            <small class="text-muted">Chargement...</small>
+                                                        </div>
+                                                    </div>
+                                                </div>
+                                            </div>
+                                        </div>
+                                </div>
+                            </div>
+                            <div class="tab-pane fade" id="templates-documents-content" role="tabpanel">
+                                <div class="admin-section">
+                                    <h5 class="section-title">
+                                        <i class="fas fa-file-alt me-2"></i>Templates de documents
+                                    </h5>
+                                    <div class="row">
+                                        <div class="col-12">
+                                            {% if is_societe_mere %}
+                                                <p class="text-muted">Templates de base utilisés par défaut par toutes les sociétés.</p>
+                                            {% else %}
+                                                <p class="text-muted">Templates spécifiques à cette enseigne (surcharge optionnelle).</p>
+                                            {% endif %}
+                                            <div id="templates-documents-container" style="position: relative; overflow: hidden;"></div>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+
+        <!-- Transporteurs -->
+        <div class="tab-pane fade" id="transporteurs" role="tabpanel">
+            <div class="admin-section">
+                <h3 class="section-title">
+                    <i class="fas fa-truck me-2"></i>Gestion des Transporteurs
+                </h3>
+                <p class="text-muted">Chargement en cours...</p>
+                <div class="text-center">
+                    <div class="spinner-border text-primary" role="status">
+                        <span class="visually-hidden">Chargement...</span>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Frais de Port -->
+        <div class="tab-pane fade" id="frais-port" role="tabpanel">
+            <div class="admin-section">
+                <h3 class="section-title">
+                    <i class="fas fa-shipping-fast me-2"></i>Gestion des Frais de Port
+                </h3>
+                <p class="text-muted">Chargement en cours...</p>
+                <div class="text-center">
+                    <div class="spinner-border text-primary" role="status">
+                        <span class="visually-hidden">Chargement...</span>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Placeholder pour les autres onglets -->
+        <div class="tab-pane fade" id="formes-juridiques" role="tabpanel">
+            <div class="admin-section">
+                <h3 class="section-title">
+                    <i class="fas fa-building me-2"></i>Gestion des Formes Juridiques
+                </h3>
+                <p class="text-muted">Chargement en cours...</p>
+                <div class="text-center">
+                    <div class="spinner-border text-primary" role="status">
+                        <span class="visually-hidden">Chargement...</span>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+
+        <!-- Configuration Système (société mère uniquement) -->
+        {% if is_societe_mere %}
+        <div class="tab-pane fade" id="parametres" role="tabpanel">
+            <div class="admin-section">
+                <h3 class="section-title">
+                    <i class="fas fa-server me-2"></i>Configuration Système
+                </h3>
+                <p class="text-muted mb-4">Configuration technique et paramètres généraux de l'application</p>
+                <div class="text-center">
+                    <div class="spinner-border text-primary" role="status">
+                        <span class="visually-hidden">Chargement...</span>
+                    </div>
+                </div>
+            </div>
+        </div>
+        {% endif %}
+
+        <div class="tab-pane fade" id="users" role="tabpanel">
+            <div class="admin-section">
+                <h3 class="section-title">
+                    <i class="fas fa-users me-2"></i>Gestion des Utilisateurs
+                </h3>
+                <p class="text-muted">Chargement en cours...</p>
+                <div class="text-center">
+                    <div class="spinner-border text-primary" role="status">
+                        <span class="visually-hidden">Chargement...</span>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="tab-pane fade" id="secteurs" role="tabpanel">
+            {% include 'admin/secteurs.html.twig' with {'google_maps_api_key': google_maps_api_key, 'secteurs': secteurs} %}
+            <script>
+            // Forcer l'initialisation des secteurs après chargement du contenu
+            document.addEventListener('DOMContentLoaded', function() {
+                // Attendre que l'onglet soit activé
+                const secteurTab = document.querySelector('a[href="#secteurs"]');
+                if (secteurTab) {
+                    secteurTab.addEventListener('shown.bs.tab', function() {
+                        console.log('🗺️ Onglet secteurs activé - initialisation forcée');
+                        setTimeout(() => {
+                            if (typeof window.initSecteurs === 'function') {
+                                try {
+                                    window.initSecteurs();
+                                    console.log('✅ initSecteurs forcée réussie');
+                                } catch (error) {
+                                    console.error('❌ Erreur initSecteurs forcée:', error);
+                                }
+                            } else {
+                                console.warn('⚠️ window.initSecteurs non définie');
+                            }
+                        }, 100);
+                    });
+                }
+            });
+            </script>
+        </div>
+
+
+        <!-- Produits (société mère uniquement) -->
+        {% if is_societe_mere %}
+        <div class="tab-pane fade" id="produits" role="tabpanel">
+            <div class="admin-section">
+                <h3 class="section-title">
+                    <i class="fas fa-box me-2"></i>Gestion des Produits
+                </h3>
+                <p class="text-muted">Chargement en cours...</p>
+                <div class="text-center">
+                    <div class="spinner-border text-primary" role="status">
+                        <span class="visually-hidden">Chargement...</span>
+                    </div>
+                </div>
+            </div>
+        </div>
+        {% endif %}
+
+        <!-- Unités (société mère uniquement) -->
+        {% if is_societe_mere %}
+        <div class="tab-pane fade" id="unites" role="tabpanel">
+            <div class="admin-section">
+                <h3 class="section-title">
+                    <i class="fas fa-ruler me-2"></i>Gestion des Unités
+                </h3>
+                <p class="text-muted">Chargement en cours...</p>
+                <div class="text-center">
+                    <div class="spinner-border text-primary" role="status">
+                        <span class="visually-hidden">Chargement...</span>
+                    </div>
+                </div>
+            </div>
+        </div>
+        {% endif %}
+
+        <!-- Tags Clients (société mère uniquement) -->
+        {% if is_societe_mere %}
+        <div class="tab-pane fade" id="tags-clients" role="tabpanel">
+            <div class="admin-section">
+                <h3 class="section-title">
+                    <i class="fas fa-tags me-2"></i>Gestion des Tags Clients
+                </h3>
+                <p class="text-muted">Chargement en cours...</p>
+                <div class="text-center">
+                    <div class="spinner-border text-primary" role="status">
+                        <span class="visually-hidden">Chargement...</span>
+                    </div>
+                </div>
+            </div>
+        </div>
+        {% endif %}
+
+
+        <!-- Moyens de Paiement -->
+        <div class="tab-pane fade" id="moyens-paiement" role="tabpanel">
+            <div class="admin-section">
+                <h3 class="section-title">
+                    <i class="fas fa-money-check-alt me-2"></i>Gestion des Moyens de Paiement
+                </h3>
+                <p class="text-muted">Chargement en cours...</p>
+                <div class="text-center">
+                    <div class="spinner-border text-primary" role="status">
+                        <span class="visually-hidden">Chargement...</span>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Modes de Règlement -->
+        <div class="tab-pane fade" id="modes-reglement" role="tabpanel">
+            <div class="admin-section">
+                <h3 class="section-title">
+                    <i class="fas fa-credit-card me-2"></i>Gestion des Modes de Règlement
+                </h3>
+                <p class="text-muted">Chargement en cours...</p>
+                <div class="text-center">
+                    <div class="spinner-border text-primary" role="status">
+                        <span class="visually-hidden">Chargement...</span>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Banques -->
+        <div class="tab-pane fade" id="banques" role="tabpanel">
+            <div class="admin-section">
+                <h3 class="section-title">
+                    <i class="fas fa-university me-2"></i>Gestion des Banques
+                </h3>
+                <p class="text-muted">Chargement en cours...</p>
+                <div class="text-center">
+                    <div class="spinner-border text-primary" role="status">
+                        <span class="visually-hidden">Chargement...</span>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Taux TVA -->
+        <div class="tab-pane fade" id="taux-tva" role="tabpanel">
+            <div class="admin-section">
+                <h3 class="section-title">
+                    <i class="fas fa-percent me-2"></i>Gestion des Taux TVA
+                </h3>
+                <p class="text-muted">Chargement en cours...</p>
+                <div class="text-center">
+                    <div class="spinner-border text-primary" role="status">
+                        <span class="visually-hidden">Chargement...</span>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+
+        <!-- Civilités -->
+        <div class="tab-pane fade" id="civilites" role="tabpanel">
+            <div class="admin-section">
+                <h3 class="section-title">
+                    <i class="fas fa-user me-2"></i>Gestion des Civilités
+                </h3>
+                <p class="text-muted">Chargement en cours...</p>
+                <div class="text-center">
+                    <div class="spinner-border text-primary" role="status">
+                        <span class="visually-hidden">Chargement...</span>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Transporteurs -->
+        <div class="tab-pane fade" id="transporteurs" role="tabpanel">
+            <div class="admin-section">
+                <h3 class="section-title">
+                    <i class="fas fa-truck me-2"></i>Gestion des Transporteurs
+                </h3>
+                <p class="text-muted">Chargement en cours...</p>
+                <div class="text-center">
+                    <div class="spinner-border text-primary" role="status">
+                        <span class="visually-hidden">Chargement...</span>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Frais de Port -->
+        <div class="tab-pane fade" id="frais-port" role="tabpanel">
+            <div class="admin-section">
+                <h3 class="section-title">
+                    <i class="fas fa-shipping-fast me-2"></i>Gestion des Frais de Port
+                </h3>
+                <p class="text-muted">Chargement en cours...</p>
+                <div class="text-center">
+                    <div class="spinner-border text-primary" role="status">
+                        <span class="visually-hidden">Chargement...</span>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        
+        <!-- Section Paramètres Enseigne (société fille uniquement) -->
+        {% if not is_societe_mere %}
+        <div class="tab-pane fade" id="parametres-enseigne" role="tabpanel">
+            <div class="admin-section">
+                <h3 class="section-title">
+                    <i class="fas fa-cog me-2"></i>Paramètres de l'Enseigne
+                </h3>
+                
+                <div class="row">
+                    <div class="col-md-6">
+                        <h5>Identité Visuelle</h5>
+                        <p class="text-muted">Logo, couleurs et éléments visuels spécifiques à cette enseigne.</p>
+                        <div id="identite-visuelle"></div>
+                    </div>
+                    <div class="col-md-6">
+                        <h5>Communication</h5>
+                        <p class="text-muted">Signature email, coordonnées spécifiques à l'enseigne.</p>
+                        <div id="communication-enseigne"></div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        {% endif %}
+
+        <!-- Section Utilisateurs (société mère uniquement) -->
+        {% if is_societe_mere %}
+        <div class="tab-pane fade" id="utilisateurs" role="tabpanel">
+            <div class="admin-section">
+                <h3 class="section-title">
+                    <i class="fas fa-users me-2"></i>Gestion des Utilisateurs
+                </h3>
+                <div id="utilisateurs-management"></div>
+            </div>
+        </div>
+        {% endif %}
+
+    </div>
+</div>
+
+{% endblock %}
+
+{% block javascripts %}
+    {{ parent() }}
+    <!-- Admin JavaScript Modules -->
+    <script>
+        // Expose Twig routes to JavaScript
+        window.adminRoutes = {
+            formes_juridiques: '{{ path("app_admin_formes_juridiques") }}',
+            users: '{{ path("app_admin_users") }}',
+            societes: '{{ path("app_admin_societes") }}',
+            groupes_utilisateurs: '{{ path("app_admin_groupes_utilisateurs") }}',
+            modes_paiement: '{{ path("app_admin_modes_paiement") }}',
+            modes_reglement: '{{ path("app_admin_modes_reglement") }}',
+            banques: '{{ path("app_admin_banques") }}',
+            taux_tva: '{{ path("app_admin_taux_tva") }}',
+            produits: '{{ path("app_admin_produits") }}',
+            unites: '{{ path("app_admin_unites") }}',
+            tags: '{{ path("app_admin_tags") }}',
+            transporteurs: '{{ path("app_admin_transporteurs") }}',
+            frais_port: '{{ path("app_admin_frais_port") }}'
+        };
+    </script>
+    <script src="{{ asset('js/admin/ajax-loader.js') }}"></script>
+    <script src="{{ asset('js/admin/tab-manager.js') }}"></script>
+    <script src="{{ asset('js/admin/dashboard.js') }}"></script>
+    
+    <!-- Legacy functions for backward compatibility -->
+    <script src="{{ asset('js/admin/legacy-functions.js') }}"></script>
+{% endblock %}
