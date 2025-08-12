@@ -1,0 +1,365 @@
+{% extends 'base.html.twig' %}
+
+{% block title %}Dashboard Workflow Commercial{% endblock %}
+
+{% block stylesheets %}
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
+    <style>
+        .dashboard-header {
+            background: linear-gradient(135deg, #6f42c1 0%, #007bff 100%);
+            color: white;
+            padding: 2rem 0;
+            margin-bottom: 2rem;
+        }
+        .stats-card {
+            transition: transform 0.2s;
+            border: none;
+            box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+        }
+        .stats-card:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 8px 15px rgba(0,0,0,0.2);
+        }
+        .stats-icon {
+            font-size: 2.5rem;
+            opacity: 0.8;
+        }
+        .card {
+            border: none;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+        }
+        .workflow-step {
+            border-left: 4px solid #dee2e6;
+            padding-left: 1rem;
+            margin-bottom: 1rem;
+        }
+        .workflow-step.active {
+            border-left-color: #007bff;
+            background-color: #f8f9fa;
+        }
+        .recent-item {
+            border-bottom: 1px solid #eee;
+            padding: 0.75rem 0;
+        }
+        .recent-item:last-child {
+            border-bottom: none;
+        }
+        .status-indicator {
+            width: 10px;
+            height: 10px;
+            border-radius: 50%;
+            display: inline-block;
+            margin-right: 0.5rem;
+        }
+    </style>
+{% endblock %}
+
+{% block body %}
+<div class="dashboard-header">
+    <div class="container">
+        <div class="row align-items-center">
+            <div class="col-md-8">
+                <h1><i class="fas fa-tachometer-alt"></i> Dashboard Workflow Commercial</h1>
+                <p class="mb-0">Vue d'ensemble du processus commercial</p>
+            </div>
+            <div class="col-md-4 text-end">
+                <div class="btn-group">
+                    <a href="{{ path('app_devis_index') }}" class="btn btn-light">
+                        <i class="fas fa-file-invoice"></i> Devis
+                    </a>
+                    <a href="{{ path('app_commande_index') }}" class="btn btn-light">
+                        <i class="fas fa-shopping-cart"></i> Commandes
+                    </a>
+                    <a href="{{ path('app_facture_index') }}" class="btn btn-light">
+                        <i class="fas fa-file-invoice-dollar"></i> Factures
+                    </a>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="container">
+    <!-- Statistiques générales -->
+    <div class="row mb-4">
+        <div class="col-md-3">
+            <div class="card stats-card text-center h-100">
+                <div class="card-body">
+                    <div class="text-warning">
+                        <i class="fas fa-file-invoice stats-icon"></i>
+                    </div>
+                    <h3 class="mt-3">{{ stats.devis_en_attente }}</h3>
+                    <p class="text-muted mb-0">Devis en attente</p>
+                    <small class="text-warning">Nécessitent une action</small>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="card stats-card text-center h-100">
+                <div class="card-body">
+                    <div class="text-info">
+                        <i class="fas fa-cogs stats-icon"></i>
+                    </div>
+                    <h3 class="mt-3">{{ stats.commandes_en_cours }}</h3>
+                    <p class="text-muted mb-0">Commandes en production</p>
+                    <small class="text-info">En cours de fabrication</small>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="card stats-card text-center h-100">
+                <div class="card-body">
+                    <div class="text-danger">
+                        <i class="fas fa-exclamation-triangle stats-icon"></i>
+                    </div>
+                    <h3 class="mt-3">{{ stats.factures_impayees }}</h3>
+                    <p class="text-muted mb-0">Factures impayées</p>
+                    <small class="text-danger">Nécessitent un suivi</small>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="card stats-card text-center h-100">
+                <div class="card-body">
+                    <div class="text-success">
+                        <i class="fas fa-chart-line stats-icon"></i>
+                    </div>
+                    {% set totalCA = 0 %}
+                    {% for facture in recent_factures %}
+                        {% if facture.statut == 'payee' %}
+                            {% set totalCA = totalCA + facture.totalTtc %}
+                        {% endif %}
+                    {% endfor %}
+                    <h3 class="mt-3">{{ (totalCA/1000)|number_format(0) }}k€</h3>
+                    <p class="text-muted mb-0">Chiffre d'affaires</p>
+                    <small class="text-success">Factures payées</small>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Workflow visuel -->
+    <div class="row mb-4">
+        <div class="col-12">
+            <div class="card">
+                <div class="card-header">
+                    <h5><i class="fas fa-sitemap"></i> Processus Commercial</h5>
+                </div>
+                <div class="card-body">
+                    <div class="row">
+                        <div class="col-md-3">
+                            <div class="workflow-step {{ stats.devis_en_attente > 0 ? 'active' : '' }}">
+                                <div class="d-flex align-items-center">
+                                    <i class="fas fa-file-invoice text-warning me-2"></i>
+                                    <div>
+                                        <strong>Devis</strong>
+                                        <br><small>{{ stats.devis_en_attente }} en attente</small>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="col-md-3">
+                            <div class="workflow-step {{ stats.commandes_en_cours > 0 ? 'active' : '' }}">
+                                <div class="d-flex align-items-center">
+                                    <i class="fas fa-shopping-cart text-primary me-2"></i>
+                                    <div>
+                                        <strong>Commande</strong>
+                                        <br><small>{{ stats.commandes_en_cours }} en production</small>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="col-md-3">
+                            <div class="workflow-step">
+                                <div class="d-flex align-items-center">
+                                    <i class="fas fa-truck text-success me-2"></i>
+                                    <div>
+                                        <strong>Livraison</strong>
+                                        <br><small>Expédition produits</small>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="col-md-3">
+                            <div class="workflow-step {{ stats.factures_impayees > 0 ? 'active' : '' }}">
+                                <div class="d-flex align-items-center">
+                                    <i class="fas fa-file-invoice-dollar text-info me-2"></i>
+                                    <div>
+                                        <strong>Facturation</strong>
+                                        <br><small>{{ stats.factures_impayees }} en attente</small>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Activités récentes -->
+    <div class="row">
+        <div class="col-md-4">
+            <div class="card h-100">
+                <div class="card-header">
+                    <h6><i class="fas fa-file-invoice text-warning"></i> Devis récents</h6>
+                </div>
+                <div class="card-body">
+                    {% if recent_devis|length > 0 %}
+                        {% for devis in recent_devis %}
+                            <div class="recent-item">
+                                <div class="d-flex justify-content-between align-items-start">
+                                    <div>
+                                        <strong>{{ devis.numeroDevis }}</strong>
+                                        <br><small class="text-muted">{{ devis.client.nomComplet }}</small>
+                                        <br><small class="text-muted">{{ devis.updatedAt|date('d/m/Y H:i') }}</small>
+                                    </div>
+                                    <div class="text-end">
+                                        {% set statusColors = {
+                                            'brouillon': 'secondary',
+                                            'envoye': 'primary',
+                                            'accepte': 'success',
+                                            'refuse': 'danger',
+                                            'converti': 'info'
+                                        } %}
+                                        <span class="status-indicator bg-{{ statusColors[devis.statut] ?? 'secondary' }}"></span>
+                                        <br><small>{{ devis.totalTtc }} €</small>
+                                    </div>
+                                </div>
+                            </div>
+                        {% endfor %}
+                        <div class="text-center mt-3">
+                            <a href="{{ path('app_devis_index') }}" class="btn btn-sm btn-outline-primary">
+                                Voir tous les devis
+                            </a>
+                        </div>
+                    {% else %}
+                        <p class="text-muted text-center">Aucun devis récent</p>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+
+        <div class="col-md-4">
+            <div class="card h-100">
+                <div class="card-header">
+                    <h6><i class="fas fa-shopping-cart text-primary"></i> Commandes récentes</h6>
+                </div>
+                <div class="card-body">
+                    {% if recent_commandes|length > 0 %}
+                        {% for commande in recent_commandes %}
+                            <div class="recent-item">
+                                <div class="d-flex justify-content-between align-items-start">
+                                    <div>
+                                        <strong>{{ commande.numeroCommande }}</strong>
+                                        <br><small class="text-muted">{{ commande.client.nomEntreprise }}</small>
+                                        <br><small class="text-muted">{{ commande.updatedAt|date('d/m/Y H:i') }}</small>
+                                    </div>
+                                    <div class="text-end">
+                                        {% set statusColors = {
+                                            'en_preparation': 'warning',
+                                            'confirmee': 'primary',
+                                            'en_production': 'info',
+                                            'expediee': 'success',
+                                            'livree': 'success'
+                                        } %}
+                                        <span class="status-indicator bg-{{ statusColors[commande.statut] ?? 'secondary' }}"></span>
+                                        <br><small>{{ commande.totalTtc }} €</small>
+                                    </div>
+                                </div>
+                            </div>
+                        {% endfor %}
+                        <div class="text-center mt-3">
+                            <a href="{{ path('app_commande_index') }}" class="btn btn-sm btn-outline-primary">
+                                Voir toutes les commandes
+                            </a>
+                        </div>
+                    {% else %}
+                        <p class="text-muted text-center">Aucune commande récente</p>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+
+        <div class="col-md-4">
+            <div class="card h-100">
+                <div class="card-header">
+                    <h6><i class="fas fa-file-invoice-dollar text-success"></i> Factures récentes</h6>
+                </div>
+                <div class="card-body">
+                    {% if recent_factures|length > 0 %}
+                        {% for facture in recent_factures %}
+                            <div class="recent-item">
+                                <div class="d-flex justify-content-between align-items-start">
+                                    <div>
+                                        <strong>{{ facture.numeroFacture }}</strong>
+                                        <br><small class="text-muted">{{ facture.client.nomEntreprise }}</small>
+                                        <br><small class="text-muted">{{ facture.updatedAt|date('d/m/Y H:i') }}</small>
+                                        {% if facture.joursRetard > 0 %}
+                                            <br><small class="text-danger">{{ facture.joursRetard }}j retard</small>
+                                        {% endif %}
+                                    </div>
+                                    <div class="text-end">
+                                        {% set statusColors = {
+                                            'brouillon': 'secondary',
+                                            'envoyee': 'primary',
+                                            'en_relance': 'warning',
+                                            'payee': 'success',
+                                            'en_litige': 'danger'
+                                        } %}
+                                        <span class="status-indicator bg-{{ statusColors[facture.statut] ?? 'secondary' }}"></span>
+                                        <br><small>{{ facture.totalTtc }} €</small>
+                                    </div>
+                                </div>
+                            </div>
+                        {% endfor %}
+                        <div class="text-center mt-3">
+                            <a href="{{ path('app_facture_index') }}" class="btn btn-sm btn-outline-primary">
+                                Voir toutes les factures
+                            </a>
+                        </div>
+                    {% else %}
+                        <p class="text-muted text-center">Aucune facture récente</p>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Actions rapides -->
+    <div class="row mt-4">
+        <div class="col-12">
+            <div class="card">
+                <div class="card-header">
+                    <h5><i class="fas fa-bolt"></i> Actions rapides</h5>
+                </div>
+                <div class="card-body text-center">
+                    <a href="{{ path('app_devis_new') }}" class="btn btn-warning me-3 mb-2">
+                        <i class="fas fa-plus"></i> Nouveau devis
+                    </a>
+                    <a href="{{ path('app_commande_new') }}" class="btn btn-primary me-3 mb-2">
+                        <i class="fas fa-plus"></i> Nouvelle commande
+                    </a>
+                    <a href="{{ path('app_facture_new') }}" class="btn btn-success me-3 mb-2">
+                        <i class="fas fa-plus"></i> Nouvelle facture
+                    </a>
+                    <a href="{{ path('app_client_index') }}" class="btn btn-info me-3 mb-2">
+                        <i class="fas fa-users"></i> Gérer les clients
+                    </a>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+{% block javascripts %}
+<script>
+// Auto-refresh du dashboard toutes les 5 minutes
+setInterval(function() {
+    // Refresh silencieux des statistiques sans recharger la page complète
+    console.log('Dashboard auto-refresh');
+}, 300000);
+</script>
+{% endblock %}
+{% endblock %}

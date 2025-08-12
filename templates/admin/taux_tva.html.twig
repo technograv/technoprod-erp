@@ -1,0 +1,410 @@
+<h3 class="section-title">
+    <i class="fas fa-percent me-2"></i>Gestion des Taux TVA
+</h3>
+
+<div class="row mb-3">
+    <div class="col-md-6">
+        <button type="button" class="btn btn-success" data-bs-toggle="modal" data-bs-target="#modalTauxTva">
+            <i class="fas fa-plus me-2"></i>Nouveau Taux TVA
+        </button>
+    </div>
+    <div class="col-md-6 text-end">
+        <span class="badge bg-info">{{ taux_tva|length }} taux configurés</span>
+    </div>
+</div>
+
+<div class="table-responsive">
+    <table class="table table-hover">
+        <thead class="table-light">
+            <tr>
+                <th>Ordre</th>
+                <th>Nom</th>
+                <th>Taux (%)</th>
+                <th>Statut</th>
+                <th>Par défaut</th>
+                <th>Comptes principaux</th>
+                <th>Actions</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for taux in taux_tva %}
+            <tr>
+                <td>
+                    <span class="badge bg-secondary">{{ taux.ordre }}</span>
+                </td>
+                <td>
+                    <strong>{{ taux.nom }}</strong>
+                </td>
+                <td>
+                    <span class="badge bg-primary">{{ taux.taux }}%</span>
+                </td>
+                <td>
+                    <span class="badge {{ taux.actif ? 'bg-success' : 'bg-danger' }}">
+                        {{ taux.actif ? 'Actif' : 'Inactif' }}
+                    </span>
+                </td>
+                <td>
+                    {% if taux.parDefaut %}
+                        <span class="badge bg-warning text-dark">
+                            <i class="fas fa-star me-1"></i>Défaut
+                        </span>
+                    {% else %}
+                        <span class="text-muted">-</span>
+                    {% endif %}
+                </td>
+                <td>
+                    <small class="text-muted">
+                        {% if taux.venteCompteDebits %}
+                            Vente: {{ taux.venteCompteDebits }}
+                        {% endif %}
+                        {% if taux.achatCompteDebits %}
+                            <br>Achat: {{ taux.achatCompteDebits }}
+                        {% endif %}
+                    </small>
+                </td>
+                <td>
+                    <div class="btn-group btn-group-sm">
+                        <button type="button" class="btn btn-outline-primary btn-edit-taux-tva" 
+                                data-id="{{ taux.id }}"
+                                data-bs-toggle="modal" 
+                                data-bs-target="#modalTauxTva">
+                            <i class="fas fa-edit"></i>
+                        </button>
+                        {% if not taux.parDefaut %}
+                        <button type="button" class="btn btn-outline-danger btn-delete-taux-tva" 
+                                data-id="{{ taux.id }}"
+                                data-nom="{{ taux.nom }}">
+                            <i class="fas fa-trash"></i>
+                        </button>
+                        {% endif %}
+                    </div>
+                </td>
+            </tr>
+            {% else %}
+            <tr>
+                <td colspan="7" class="text-center text-muted py-4">
+                    <i class="fas fa-percent fa-3x mb-3"></i>
+                    <p>Aucun taux de TVA configuré.</p>
+                    <button type="button" class="btn btn-success" data-bs-toggle="modal" data-bs-target="#modalTauxTva">
+                        <i class="fas fa-plus me-2"></i>Créer le premier taux TVA
+                    </button>
+                </td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+</div>
+
+<!-- Modal Taux TVA -->
+<div class="modal fade" id="modalTauxTva" tabindex="-1" aria-labelledby="modalTauxTvaLabel" aria-hidden="true">
+    <div class="modal-dialog modal-xl">
+        <div class="modal-content">
+            <div class="modal-header bg-primary text-white">
+                <h5 class="modal-title" id="modalTauxTvaLabel">
+                    <i class="fas fa-percent me-2"></i>
+                    <span id="modal-title-text">Nouveau Taux TVA</span>
+                </h5>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body">
+                <form id="formTauxTva">
+                    <input type="hidden" id="taux-tva-id" name="id">
+                    
+                    <!-- Informations générales -->
+                    <div class="row mb-4">
+                        <div class="col-12">
+                            <h6 class="text-primary border-bottom pb-2">
+                                <i class="fas fa-info-circle me-2"></i>Informations générales
+                            </h6>
+                        </div>
+                        <div class="col-md-4">
+                            <label for="taux-tva-nom" class="form-label">Nom du taux <span class="text-danger">*</span></label>
+                            <input type="text" class="form-control" id="taux-tva-nom" name="nom" required maxlength="100" 
+                                   placeholder="Ex: TVA Normal, TVA Réduit, TVA Super Réduit">
+                        </div>
+                        <div class="col-md-2">
+                            <label for="taux-tva-taux" class="form-label">Taux (%) <span class="text-danger">*</span></label>
+                            <input type="number" class="form-control" id="taux-tva-taux" name="taux" required 
+                                   step="0.01" min="0" max="99.99" placeholder="20.00">
+                        </div>
+                        <div class="col-md-2">
+                            <label for="taux-tva-ordre" class="form-label">Ordre</label>
+                            <input type="number" class="form-control" id="taux-tva-ordre" name="ordre" min="1" placeholder="1">
+                        </div>
+                        <div class="col-md-2">
+                            <div class="form-check mt-4">
+                                <input class="form-check-input" type="checkbox" id="taux-tva-actif" name="actif" checked>
+                                <label class="form-check-label" for="taux-tva-actif">
+                                    Actif
+                                </label>
+                            </div>
+                        </div>
+                        <div class="col-md-2">
+                            <div class="form-check mt-4">
+                                <input class="form-check-input" type="checkbox" id="taux-tva-par-defaut" name="par_defaut">
+                                <label class="form-check-label" for="taux-tva-par-defaut">
+                                    Par défaut
+                                </label>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- PARTIE VENTE -->
+                    <div class="row mb-4">
+                        <div class="col-12">
+                            <h6 class="text-success border-bottom pb-2">
+                                <i class="fas fa-shopping-cart me-2"></i>Comptes de Vente
+                            </h6>
+                        </div>
+                        <!-- Comptes TVA Vente -->
+                        <div class="col-md-6">
+                            <label for="vente-compte-debits" class="form-label">Compte TVA Débits Vente</label>
+                            <input type="text" class="form-control" id="vente-compte-debits" name="vente_compte_debits" 
+                                   maxlength="20" placeholder="4457100">
+                        </div>
+                        <div class="col-md-6">
+                            <label for="vente-compte-encaissements" class="form-label">Compte TVA Encaissements Vente</label>
+                            <input type="text" class="form-control" id="vente-compte-encaissements" name="vente_compte_encaissements" 
+                                   maxlength="20" placeholder="4458700">
+                        </div>
+                        <!-- Comptes de Gestion Vente -->
+                        <div class="col-md-4">
+                            <label for="vente-compte-biens" class="form-label">Compte Vente Biens</label>
+                            <input type="text" class="form-control" id="vente-compte-biens" name="vente_compte_biens" 
+                                   maxlength="20" placeholder="701000">
+                        </div>
+                        <div class="col-md-4">
+                            <label for="vente-compte-services" class="form-label">Compte Vente Services</label>
+                            <input type="text" class="form-control" id="vente-compte-services" name="vente_compte_services" 
+                                   maxlength="20" placeholder="706000">
+                        </div>
+                        <div class="col-md-4">
+                            <label for="vente-compte-ports" class="form-label">Compte Vente Ports</label>
+                            <input type="text" class="form-control" id="vente-compte-ports" name="vente_compte_ports" 
+                                   maxlength="20" placeholder="708500">
+                        </div>
+                        <div class="col-md-6">
+                            <label for="vente-compte-eco-contribution" class="form-label">Compte Éco-contribution</label>
+                            <input type="text" class="form-control" id="vente-compte-eco-contribution" name="vente_compte_eco_contribution" 
+                                   maxlength="20" placeholder="704100">
+                        </div>
+                        <div class="col-md-6">
+                            <label for="vente-compte-eco-contribution-mobilier" class="form-label">Compte Éco-contribution Mobilier</label>
+                            <input type="text" class="form-control" id="vente-compte-eco-contribution-mobilier" name="vente_compte_eco_contribution_mobilier" 
+                                   maxlength="20" placeholder="704200">
+                        </div>
+                    </div>
+
+                    <!-- PARTIE ACHAT -->
+                    <div class="row mb-4">
+                        <div class="col-12">
+                            <h6 class="text-warning border-bottom pb-2">
+                                <i class="fas fa-shopping-basket me-2"></i>Comptes d'Achat
+                            </h6>
+                        </div>
+                        <!-- Comptes TVA Achat -->
+                        <div class="col-md-6">
+                            <label for="achat-compte-debits" class="form-label">Compte TVA Débits Achat</label>
+                            <input type="text" class="form-control" id="achat-compte-debits" name="achat_compte_debits" 
+                                   maxlength="20" placeholder="4456600">
+                        </div>
+                        <div class="col-md-6">
+                            <label for="achat-compte-encaissements" class="form-label">Compte TVA Encaissements Achat</label>
+                            <input type="text" class="form-control" id="achat-compte-encaissements" name="achat_compte_encaissements" 
+                                   maxlength="20" placeholder="4458600">
+                        </div>
+                        <!-- Comptes Autoliquidation -->
+                        <div class="col-md-6">
+                            <label for="achat-compte-autoliquidation-biens" class="form-label">Compte Autoliquidation Biens</label>
+                            <input type="text" class="form-control" id="achat-compte-autoliquidation-biens" name="achat_compte_autoliquidation_biens" 
+                                   maxlength="20" placeholder="4454400">
+                        </div>
+                        <div class="col-md-6">
+                            <label for="achat-compte-autoliquidation-services" class="form-label">Compte Autoliquidation Services</label>
+                            <input type="text" class="form-control" id="achat-compte-autoliquidation-services" name="achat_compte_autoliquidation_services" 
+                                   maxlength="20" placeholder="4455500">
+                        </div>
+                        <!-- Comptes de Gestion Achat -->
+                        <div class="col-md-4">
+                            <label for="achat-compte-biens" class="form-label">Compte Achat Biens</label>
+                            <input type="text" class="form-control" id="achat-compte-biens" name="achat_compte_biens" 
+                                   maxlength="20" placeholder="601000">
+                        </div>
+                        <div class="col-md-4">
+                            <label for="achat-compte-services" class="form-label">Compte Achat Services</label>
+                            <input type="text" class="form-control" id="achat-compte-services" name="achat_compte_services" 
+                                   maxlength="20" placeholder="606000">
+                        </div>
+                        <div class="col-md-4">
+                            <label for="achat-compte-ports" class="form-label">Compte Achat Ports</label>
+                            <input type="text" class="form-control" id="achat-compte-ports" name="achat_compte_ports" 
+                                   maxlength="20" placeholder="624100">
+                        </div>
+                        <div class="col-md-6">
+                            <label for="achat-compte-eco-contribution" class="form-label">Compte Éco-contribution Achat</label>
+                            <input type="text" class="form-control" id="achat-compte-eco-contribution" name="achat_compte_eco_contribution" 
+                                   maxlength="20" placeholder="608700">
+                        </div>
+                        <div class="col-md-6">
+                            <label for="achat-compte-eco-contribution-mobilier" class="form-label">Compte Éco-contribution Mobilier Achat</label>
+                            <input type="text" class="form-control" id="achat-compte-eco-contribution-mobilier" name="achat_compte_eco_contribution_mobilier" 
+                                   maxlength="20" placeholder="608800">
+                        </div>
+                    </div>
+                </form>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">
+                    <i class="fas fa-times me-2"></i>Annuler
+                </button>
+                <button type="button" class="btn btn-primary" id="btn-save-taux-tva">
+                    <i class="fas fa-save me-2"></i>Enregistrer
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+function initTauxTva() {
+    console.log('Initialisation du module Taux TVA...');
+    
+    // Boutons d'édition
+    document.querySelectorAll('.btn-edit-taux-tva').forEach(btn => {
+        btn.addEventListener('click', function() {
+            const id = this.dataset.id;
+            console.log('Édition taux TVA ID:', id);
+            
+            fetch(`{{ path('app_admin_taux_tva_get') }}?id=${id}`)
+                .then(response => response.json())
+                .then(data => {
+                    console.log('Données taux TVA reçues:', data);
+                    
+                    // Remplir le formulaire
+                    document.getElementById('taux-tva-id').value = data.id;
+                    document.getElementById('taux-tva-nom').value = data.nom;
+                    document.getElementById('taux-tva-taux').value = data.taux;
+                    document.getElementById('taux-tva-ordre').value = data.ordre;
+                    document.getElementById('taux-tva-actif').checked = data.actif;
+                    document.getElementById('taux-tva-par-defaut').checked = data.parDefaut;
+                    
+                    // Comptes vente
+                    document.getElementById('vente-compte-debits').value = data.venteCompteDebits || '';
+                    document.getElementById('vente-compte-encaissements').value = data.venteCompteEncaissements || '';
+                    document.getElementById('vente-compte-biens').value = data.venteCompteBiens || '';
+                    document.getElementById('vente-compte-services').value = data.venteCompteServices || '';
+                    document.getElementById('vente-compte-ports').value = data.venteComptePorts || '';
+                    document.getElementById('vente-compte-eco-contribution').value = data.venteCompteEcoContribution || '';
+                    document.getElementById('vente-compte-eco-contribution-mobilier').value = data.venteCompteEcoContributionMobilier || '';
+                    
+                    // Comptes achat
+                    document.getElementById('achat-compte-debits').value = data.achatCompteDebits || '';
+                    document.getElementById('achat-compte-encaissements').value = data.achatCompteEncaissements || '';
+                    document.getElementById('achat-compte-autoliquidation-biens').value = data.achatCompteAutoliquidationBiens || '';
+                    document.getElementById('achat-compte-autoliquidation-services').value = data.achatCompteAutoliquidationServices || '';
+                    document.getElementById('achat-compte-biens').value = data.achatCompteBiens || '';
+                    document.getElementById('achat-compte-services').value = data.achatCompteServices || '';
+                    document.getElementById('achat-compte-ports').value = data.achatComptePorts || '';
+                    document.getElementById('achat-compte-eco-contribution').value = data.achatCompteEcoContribution || '';
+                    document.getElementById('achat-compte-eco-contribution-mobilier').value = data.achatCompteEcoContributionMobilier || '';
+                    
+                    // Changer le titre
+                    document.getElementById('modal-title-text').textContent = 'Modifier Taux TVA';
+                })
+                .catch(error => {
+                    console.error('Erreur lors du chargement du taux TVA:', error);
+                    alert('Erreur lors du chargement du taux TVA');
+                });
+        });
+    });
+    
+    // Reset du modal à la fermeture
+    document.getElementById('modalTauxTva').addEventListener('hidden.bs.modal', function() {
+        document.getElementById('formTauxTva').reset();
+        document.getElementById('taux-tva-id').value = '';
+        document.getElementById('modal-title-text').textContent = 'Nouveau Taux TVA';
+    });
+    
+    // Bouton d'enregistrement
+    document.getElementById('btn-save-taux-tva').addEventListener('click', function() {
+        const formData = new FormData(document.getElementById('formTauxTva'));
+        const id = document.getElementById('taux-tva-id').value;
+        const url = id ? `{{ path('app_admin_taux_tva_update', {'id': '__ID__'}) }}`.replace('__ID__', id) : `{{ path('app_admin_taux_tva_create') }}`;
+        
+        console.log('Sauvegarde taux TVA...');
+        
+        fetch(url, {
+            method: id ? 'PUT' : 'POST',
+            body: formData,
+            headers: {
+                'X-Requested-With': 'XMLHttpRequest'
+            }
+        })
+        .then(response => response.json())
+        .then(data => {
+            if (data.success) {
+                bootstrap.Modal.getInstance(document.getElementById('modalTauxTva')).hide();
+                
+                // Recharger l'onglet
+                const tabContent = document.querySelector('#taux-tva .admin-section');
+                tabContent.dataset.loaded = 'false';
+                
+                fetch('{{ path("app_admin_taux_tva") }}')
+                    .then(response => response.text())
+                    .then(html => {
+                        tabContent.innerHTML = html;
+                        initTauxTva();
+                    });
+            } else {
+                alert('Erreur: ' + (data.message || 'Erreur inconnue'));
+            }
+        })
+        .catch(error => {
+            console.error('Erreur lors de la sauvegarde:', error);
+            alert('Erreur lors de la sauvegarde');
+        });
+    });
+    
+    // Boutons de suppression
+    document.querySelectorAll('.btn-delete-taux-tva').forEach(btn => {
+        btn.addEventListener('click', function() {
+            const id = this.dataset.id;
+            const nom = this.dataset.nom;
+            
+            if (confirm(`Êtes-vous sûr de vouloir supprimer le taux TVA "${nom}" ?`)) {
+                fetch(`{{ path('app_admin_taux_tva_delete', {'id': '__ID__'}) }}`.replace('__ID__', id), {
+                    method: 'DELETE',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'X-Requested-With': 'XMLHttpRequest'
+                    }
+                })
+                .then(response => response.json())
+                .then(data => {
+                    if (data.success) {
+                        // Recharger l'onglet
+                        const tabContent = document.querySelector('#taux-tva .admin-section');
+                        tabContent.dataset.loaded = 'false';
+                        
+                        fetch('{{ path("app_admin_taux_tva") }}')
+                            .then(response => response.text())
+                            .then(html => {
+                                tabContent.innerHTML = html;
+                                initTauxTva();
+                            });
+                    } else {
+                        alert('Erreur: ' + (data.message || 'Erreur inconnue'));
+                    }
+                })
+                .catch(error => {
+                    console.error('Erreur lors de la suppression:', error);
+                    alert('Erreur lors de la suppression');
+                });
+            }
+        });
+    });
+}
+
+// Rendre la fonction globale
+window.initTauxTva = initTauxTva;
+</script>

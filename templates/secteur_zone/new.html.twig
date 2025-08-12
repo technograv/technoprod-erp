@@ -1,0 +1,11 @@
+{% extends 'base.html.twig' %}
+
+{% block title %}New SecteurZone{% endblock %}
+
+{% block body %}
+    <h1>Create new SecteurZone</h1>
+
+    {{ include('secteur_zone/_form.html.twig') }}
+
+    <a href="{{ path('app_secteur_zone_index') }}">back to list</a>
+{% endblock %}

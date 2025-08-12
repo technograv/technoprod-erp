@@ -1,0 +1,835 @@
+{% extends 'base.html.twig' %}
+
+{% block title %}Modifier {{ prospect.isClient ? 'Client' : 'Prospect' }} {{ prospect.code }}{% endblock %}
+
+{% block stylesheets %}
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
+    <style>
+        .page-header {
+            background: linear-gradient(135deg, {{ prospect.isClient ? '#28a745' : '#17a2b8' }} 0%, {{ prospect.isClient ? '#20c997' : '#138496' }} 100%);
+            color: white;
+            padding: 2rem 0;
+            margin-bottom: 0;
+        }
+        .form-tabs {
+            background-color: #f8f9fa;
+            border-bottom: 1px solid #dee2e6;
+            margin-bottom: 0;
+        }
+        .nav-tabs .nav-link {
+            border: none;
+            border-bottom: 3px solid transparent;
+            background: none;
+            color: #6c757d;
+            padding: 1rem 1.5rem;
+        }
+        .nav-tabs .nav-link:hover {
+            border-bottom-color: #dee2e6;
+            color: #495057;
+        }
+        .nav-tabs .nav-link.active {
+            background: white;
+            color: #495057;
+            border-bottom-color: {{ prospect.isClient ? '#28a745' : '#17a2b8' }};
+            font-weight: 600;
+        }
+        .tab-content {
+            background: white;
+            min-height: 500px;
+        }
+        .form-section {
+            background: #f8f9fa;
+            border-radius: 8px;
+            padding: 1.5rem;
+            margin-bottom: 1.5rem;
+        }
+        .form-section h6 {
+            color: #495057;
+            font-weight: 600;
+            margin-bottom: 1rem;
+            border-bottom: 2px solid #dee2e6;
+            padding-bottom: 0.5rem;
+        }
+        .identique-checkbox {
+            background: #e7f3ff;
+            border: 1px solid #b3d9ff;
+            border-radius: 4px;
+            padding: 0.75rem;
+            margin-bottom: 1rem;
+        }
+        .type-personne-radio {
+            margin-bottom: 1rem;
+        }
+        .type-personne-radio .form-check {
+            background: white;
+            border: 2px solid #dee2e6;
+            border-radius: 8px;
+            padding: 1rem;
+            margin-bottom: 0.5rem;
+        }
+        .type-personne-radio .form-check-input:checked + .form-check-label {
+            color: {{ prospect.isClient ? '#28a745' : '#17a2b8' }};
+            font-weight: 600;
+        }
+        .conditional-field {
+            transition: all 0.3s ease;
+        }
+        .actions-bar {
+            background: #fff;
+            border-top: 1px solid #dee2e6;
+            padding: 1rem;
+            position: sticky;
+            bottom: 0;
+            z-index: 1000;
+        }
+        .field-error {
+            border: 2px solid #dc3545 !important;
+            background-color: #fff5f5 !important;
+            animation: shake 0.5s ease-in-out;
+        }
+        .field-error-message {
+            color: #dc3545;
+            font-size: 0.875rem;
+            margin-top: 0.25rem;
+            display: block;
+        }
+        .error-summary {
+            background: #f8d7da;
+            border: 1px solid #f5c6cb;
+            color: #721c24;
+            padding: 1rem;
+            border-radius: 0.375rem;
+            margin-bottom: 1rem;
+        }
+        @keyframes shake {
+            0%, 20%, 40%, 60%, 80% { transform: translateX(0); }
+            10%, 30%, 50%, 70%, 90% { transform: translateX(-3px); }
+        }
+        .status-badge {
+            font-size: 0.875rem;
+            padding: 0.5rem 1rem;
+            border-radius: 20px;
+        }
+        .prospect-badge {
+            background-color: #17a2b8;
+            color: white;
+        }
+        .client-badge {
+            background-color: #28a745;
+            color: white;
+        }
+    </style>
+{% endblock %}
+
+{% block body %}
+<!-- En-tête -->
+<div class="page-header">
+    <div class="container-fluid">
+        <div class="row align-items-center">
+            <div class="col-md-8">
+                <div class="d-flex align-items-center">
+                    <div class="me-3">
+                        <i class="fas {{ prospect.isClient ? 'fa-user-check' : 'fa-user-edit' }} fa-2x"></i>
+                    </div>
+                    <div>
+                        <h1 class="mb-1">{{ prospect.nomComplet }}</h1>
+                        <p class="mb-0">
+                            <span class="badge {{ prospect.isClient ? 'bg-success' : 'bg-info' }} status-badge">
+                                {{ prospect.isClient ? 'CLIENT' : 'PROSPECT' }}
+                            </span>
+                            <span class="ms-2">{{ prospect.code }}</span>
+                            {% if prospect.famille %}
+                                <span class="ms-2">• {{ prospect.famille }}</span>
+                            {% endif %}
+                        </p>
+                    </div>
+                </div>
+            </div>
+            <div class="col-md-4 text-end">
+                <div class="btn-group">
+                    <a href="{{ path('app_prospect_show', {'id': prospect.id}) }}" class="btn btn-light">
+                        <i class="fas fa-eye"></i> Voir la fiche
+                    </a>
+                    <a href="{{ path('app_prospect_index') }}" class="btn btn-outline-light">
+                        <i class="fas fa-arrow-left"></i> Retour
+                    </a>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Messages Flash -->
+<div class="container-fluid">
+    {% for type, messages in app.flashes %}
+        {% for message in messages %}
+            <div class="alert alert-{{ type == 'error' ? 'danger' : (type == 'warning' ? 'warning' : 'success') }} alert-dismissible fade show" role="alert">
+                {{ message }}
+                <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+            </div>
+        {% endfor %}
+    {% endfor %}
+</div>
+
+{{ form_start(form, {'attr': {'id': 'prospectForm'}}) }}
+
+<!-- Onglets -->
+<div class="form-tabs">
+    <div class="container-fluid">
+        <ul class="nav nav-tabs" id="formTabs" role="tablist">
+            <li class="nav-item" role="presentation">
+                <button class="nav-link active" id="principal-tab" data-bs-toggle="tab" data-bs-target="#principal" type="button" role="tab">
+                    <i class="fas fa-user me-2"></i>Principal
+                </button>
+            </li>
+            <li class="nav-item" role="presentation">
+                <button class="nav-link" id="facturation-tab" data-bs-toggle="tab" data-bs-target="#facturation" type="button" role="tab">
+                    <i class="fas fa-file-invoice me-2"></i>Facturation
+                </button>
+            </li>
+            <li class="nav-item" role="presentation">
+                <button class="nav-link" id="livraison-tab" data-bs-toggle="tab" data-bs-target="#livraison" type="button" role="tab">
+                    <i class="fas fa-truck me-2"></i>Livraison
+                </button>
+            </li>
+            <li class="nav-item" role="presentation">
+                <button class="nav-link" id="gestion-tab" data-bs-toggle="tab" data-bs-target="#gestion" type="button" role="tab">
+                    <i class="fas fa-cogs me-2"></i>Gestion
+                </button>
+            </li>
+            <li class="nav-item" role="presentation">
+                <button class="nav-link" id="notes-tab" data-bs-toggle="tab" data-bs-target="#notes" type="button" role="tab">
+                    <i class="fas fa-sticky-note me-2"></i>Notes
+                </button>
+            </li>
+        </ul>
+    </div>
+</div>
+
+<!-- Contenu des onglets -->
+<div class="container-fluid">
+    <div class="tab-content" id="formTabsContent">
+        <!-- Onglet Principal -->
+        <div class="tab-pane fade show active" id="principal" role="tabpanel">
+            <div class="p-4">
+                <div class="row">
+                    <!-- Identification -->
+                    <div class="col-md-6">
+                        <div class="form-section">
+                            <h6><i class="fas fa-id-card me-2"></i>Identification</h6>
+                            {{ form_row(form.famille) }}
+                            
+                            <div class="type-personne-radio">
+                                {{ form_row(form.typePersonne) }}
+                            </div>
+
+                            {{ form_row(form.nom) }}
+                            
+                            <div id="personne-morale-fields" class="conditional-field">
+                                {{ form_row(form.formeJuridique) }}
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Contact principal -->
+                    <div class="col-md-6">
+                        <div class="form-section">
+                            <h6><i class="fas fa-user me-2"></i>Contact principal</h6>
+                            <div class="row">
+                                <div class="col-4">
+                                    {{ form_widget(form.contactFacturation.civilite) }}
+                                </div>
+                                <div class="col-4">
+                                    {{ form_widget(form.contactFacturation.nom) }}
+                                </div>
+                                <div class="col-4">
+                                    {{ form_widget(form.contactFacturation.prenom) }}
+                                </div>
+                            </div>
+                            {{ form_widget(form.contactFacturation.fonction) }}
+                            <div class="row">
+                                <div class="col-6">
+                                    {{ form_widget(form.contactFacturation.telephone) }}
+                                </div>
+                                <div class="col-6">
+                                    {{ form_widget(form.contactFacturation.email) }}
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="row">
+                    <!-- Adresse principale -->
+                    <div class="col-md-6">
+                        <div class="form-section">
+                            <h6><i class="fas fa-map-marker-alt me-2"></i>Adresse principale</h6>
+                            {{ form_widget(form.adresseFacturation.ligne1) }}
+                            {{ form_widget(form.adresseFacturation.ligne2) }}
+                            {{ form_widget(form.adresseFacturation.ligne3) }}
+                            <div class="row">
+                                <div class="col-4">
+                                    {{ form_widget(form.adresseFacturation.codePostal) }}
+                                </div>
+                                <div class="col-8">
+                                    {{ form_widget(form.adresseFacturation.ville) }}
+                                </div>
+                            </div>
+                            {{ form_widget(form.adresseFacturation.pays) }}
+                        </div>
+                    </div>
+
+                    <!-- Informations complémentaires -->
+                    <div class="col-md-6">
+                        <div class="form-section">
+                            <h6><i class="fas fa-info-circle me-2"></i>Informations</h6>
+                            <div class="alert alert-info">
+                                <i class="fas fa-info-circle me-2"></i>
+                                Les paramètres comptables se trouvent dans l'onglet <strong>Gestion</strong>.
+                            </div>
+                            {% if prospect.isClient %}
+                                <div class="alert alert-success">
+                                    <i class="fas fa-check-circle me-2"></i>
+                                    Ce prospect a été converti en client le {{ prospect.dateConversionClient|date('d/m/Y') }}.
+                                </div>
+                            {% endif %}
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Onglet Facturation -->
+        <div class="tab-pane fade" id="facturation" role="tabpanel">
+            <div class="p-4">
+                <div class="alert alert-info">
+                    <i class="fas fa-info-circle me-2"></i>
+                    Les informations principales de facturation sont renseignées dans l'onglet <strong>Principal</strong>.
+                    Utilisez cet onglet pour des informations complémentaires.
+                </div>
+                <div class="row">
+                    <div class="col-md-6">
+                        <div class="form-section">
+                            <h6><i class="fas fa-phone me-2"></i>Contact complémentaire</h6>
+                            {{ form_widget(form.contactFacturation.telephoneMobile) }}
+                            {{ form_widget(form.contactFacturation.fax) }}
+                        </div>
+                    </div>
+                    <div class="col-md-6">
+                        <div class="form-section">
+                            <h6><i class="fas fa-info-circle me-2"></i>Informations</h6>
+                            <p class="text-muted">Informations complémentaires de facturation.</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Onglet Livraison -->
+        <div class="tab-pane fade" id="livraison" role="tabpanel">
+            <div class="p-4">
+                <div class="row">
+                    <div class="col-md-6">
+                        <div class="form-section">
+                            <h6><i class="fas fa-truck me-2"></i>Adresse de livraison</h6>
+                            <div class="identique-checkbox">
+                                {{ form_widget(form.adresseLivraison.identiqueFacturation) }}
+                            </div>
+                            <div id="adresse-livraison-fields">
+                                {{ form_widget(form.adresseLivraison.ligne1) }}
+                                {{ form_widget(form.adresseLivraison.ligne2) }}
+                                {{ form_widget(form.adresseLivraison.ligne3) }}
+                                <div class="row">
+                                    <div class="col-4">
+                                        {{ form_widget(form.adresseLivraison.codePostal) }}
+                                    </div>
+                                    <div class="col-8">
+                                        {{ form_widget(form.adresseLivraison.ville) }}
+                                    </div>
+                                </div>
+                                {{ form_widget(form.adresseLivraison.pays) }}
+                            </div>
+                        </div>
+                    </div>
+                    <div class="col-md-6">
+                        <div class="form-section">
+                            <h6><i class="fas fa-user me-2"></i>Contact de livraison</h6>
+                            <div class="identique-checkbox">
+                                {{ form_widget(form.contactLivraison.identiqueFacturation) }}
+                            </div>
+                            <div id="contact-livraison-fields">
+                                <div class="row">
+                                    <div class="col-4">
+                                        {{ form_widget(form.contactLivraison.civilite) }}
+                                    </div>
+                                    <div class="col-4">
+                                        {{ form_widget(form.contactLivraison.nom) }}
+                                    </div>
+                                    <div class="col-4">
+                                        {{ form_widget(form.contactLivraison.prenom) }}
+                                    </div>
+                                </div>
+                                {{ form_widget(form.contactLivraison.fonction) }}
+                                <div class="row">
+                                    <div class="col-6">
+                                        {{ form_widget(form.contactLivraison.telephone) }}
+                                    </div>
+                                    <div class="col-6">
+                                        {{ form_widget(form.contactLivraison.telephoneMobile) }}
+                                    </div>
+                                </div>
+                                {{ form_widget(form.contactLivraison.email) }}
+                                {{ form_widget(form.contactLivraison.fax) }}
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Onglet Gestion -->
+        <div class="tab-pane fade" id="gestion" role="tabpanel">
+            <div class="p-4">
+                <div class="row">
+                    <div class="col-md-6">
+                        <div class="form-section">
+                            <h6><i class="fas fa-credit-card me-2"></i>Conditions de paiement</h6>
+                            {{ form_row(form.modePaiement) }}
+                            <div class="row">
+                                <div class="col-6">
+                                    {{ form_row(form.delaiPaiement) }}
+                                </div>
+                                <div class="col-6">
+                                    {{ form_row(form.conditionsTarifs) }}
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="col-md-6">
+                        <div class="form-section">
+                            <h6><i class="fas fa-calculator me-2"></i>Paramètres comptables</h6>
+                            <div class="row">
+                                <div class="col-6">
+                                    {{ form_row(form.regimeComptable) }}
+                                </div>
+                                <div class="col-6">
+                                    {{ form_row(form.assujettiTva) }}
+                                </div>
+                            </div>
+                            {{ form_row(form.tauxTva) }}
+                            
+                            {% if prospect.isClient %}
+                                <div class="alert alert-success mt-3">
+                                    <i class="fas fa-info-circle me-2"></i>
+                                    Ce prospect a été converti en client le {{ prospect.dateConversionClient|date('d/m/Y') }}.
+                                </div>
+                            {% else %}
+                                <div class="alert alert-info mt-3">
+                                    <i class="fas fa-lightbulb me-2"></i>
+                                    Ce prospect peut être converti en client via la fiche de consultation.
+                                </div>
+                            {% endif %}
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Onglet Notes -->
+        <div class="tab-pane fade" id="notes" role="tabpanel">
+            <div class="p-4">
+                <div class="form-section">
+                    <h6><i class="fas fa-sticky-note me-2"></i>Notes et remarques</h6>
+                    {{ form_row(form.notes) }}
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Barre d'actions -->
+<div class="actions-bar">
+    <div class="container-fluid">
+        <div class="d-flex justify-content-between align-items-center">
+            <div>
+                <a href="{{ path('app_prospect_show', {'id': prospect.id}) }}" class="btn btn-secondary">
+                    <i class="fas fa-times"></i> Annuler
+                </a>
+                {% if prospect.isProspect %}
+                    <form method="post" action="{{ path('app_prospect_convert_to_client', {'id': prospect.id}) }}" 
+                          style="display: inline;" id="convertForm">
+                        <input type="hidden" name="_token" value="{{ csrf_token('convert' ~ prospect.id) }}">
+                        <button type="button" class="btn btn-warning ms-2" onclick="convertToClient()">
+                            <i class="fas fa-user-plus"></i> Convertir en client
+                        </button>
+                    </form>
+                {% endif %}
+            </div>
+            <div>
+                <span class="text-muted me-3">
+                    Créé le {{ prospect.createdAt|date('d/m/Y à H:i') }}
+                    {% if prospect.updatedAt %}
+                        • Modifié le {{ prospect.updatedAt|date('d/m/Y à H:i') }}
+                    {% endif %}
+                </span>
+                <button type="submit" class="btn btn-primary btn-lg">
+                    <i class="fas fa-save"></i> Enregistrer les modifications
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+
+{{ form_end(form) }}
+
+{% block javascripts %}
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    // Gestion du type de personne
+    const typePersonneRadios = document.querySelectorAll('input[name="prospect[typePersonne]"]');
+    const personneMoraleFields = document.getElementById('personne-morale-fields');
+    
+    function togglePersonneFields() {
+        const selectedType = document.querySelector('input[name="prospect[typePersonne]"]:checked')?.value;
+        
+        if (selectedType === 'physique') {
+            personneMoraleFields.style.display = 'none';
+        } else {
+            personneMoraleFields.style.display = 'block';
+        }
+    }
+    
+    typePersonneRadios.forEach(radio => {
+        radio.addEventListener('change', togglePersonneFields);
+    });
+    
+    togglePersonneFields(); // Initial state
+    
+    // Gestion "identique facturation" pour adresse livraison
+    const identiqueAdresseCheckbox = document.querySelector('input[name="prospect[adresseLivraison][identiqueFacturation]"]');
+    const adresseLivraisonFields = document.getElementById('adresse-livraison-fields');
+    
+    if (identiqueAdresseCheckbox) {
+        function toggleAdresseLivraisonFields() {
+            if (identiqueAdresseCheckbox.checked) {
+                adresseLivraisonFields.style.display = 'none';
+                copyFacturationToLivraison();
+            } else {
+                adresseLivraisonFields.style.display = 'block';
+            }
+        }
+        
+        identiqueAdresseCheckbox.addEventListener('change', toggleAdresseLivraisonFields);
+        toggleAdresseLivraisonFields(); // Initial state
+    }
+    
+    // Gestion "identique facturation" pour contact livraison
+    const identiqueContactCheckbox = document.querySelector('input[name="prospect[contactLivraison][identiqueFacturation]"]');
+    const contactLivraisonFields = document.getElementById('contact-livraison-fields');
+    
+    if (identiqueContactCheckbox) {
+        function toggleContactLivraisonFields() {
+            if (identiqueContactCheckbox.checked) {
+                contactLivraisonFields.style.display = 'none';
+                copyContactFacturationToLivraison();
+            } else {
+                contactLivraisonFields.style.display = 'block';
+            }
+        }
+        
+        identiqueContactCheckbox.addEventListener('change', toggleContactLivraisonFields);
+        toggleContactLivraisonFields(); // Initial state
+    }
+    
+    function copyFacturationToLivraison() {
+        // Copier les champs d'adresse
+        const facturationFields = ['ligne1', 'ligne2', 'ligne3', 'codePostal', 'ville', 'pays'];
+        facturationFields.forEach(field => {
+            const facturationInput = document.querySelector(`input[name="prospect[adresseFacturation][${field}]"]`);
+            const livraisonInput = document.querySelector(`input[name="prospect[adresseLivraison][${field}]"]`);
+            if (facturationInput && livraisonInput) {
+                livraisonInput.value = facturationInput.value;
+            }
+        });
+    }
+    
+    function copyContactFacturationToLivraison() {
+        // Copier les champs de contact
+        const contactFields = ['civilite', 'nom', 'prenom', 'fonction', 'telephone', 'telephoneMobile', 'email', 'fax'];
+        contactFields.forEach(field => {
+            const facturationInput = document.querySelector(`[name="prospect[contactFacturation][${field}]"]`);
+            const livraisonInput = document.querySelector(`[name="prospect[contactLivraison][${field}]"]`);
+            if (facturationInput && livraisonInput) {
+                livraisonInput.value = facturationInput.value;
+            }
+        });
+    }
+    
+    // Variables pour gérer la soumission
+    let isSubmitting = false;
+    const formDataKey = 'prospect_edit_form_data_' + {{ prospect.id }};
+    
+    // Fonction pour sauvegarder les données du formulaire
+    function saveFormData() {
+        const formData = new FormData(document.getElementById('prospectForm'));
+        const data = {};
+        for (let [key, value] of formData.entries()) {
+            data[key] = value;
+        }
+        sessionStorage.setItem(formDataKey, JSON.stringify(data));
+        console.log('Données du formulaire sauvegardées');
+    }
+    
+    // Fonction pour restaurer les données du formulaire
+    function restoreFormData() {
+        const savedData = sessionStorage.getItem(formDataKey);
+        if (savedData) {
+            const data = JSON.parse(savedData);
+            console.log('Restauration des données du formulaire');
+            
+            for (let [key, value] of Object.entries(data)) {
+                const field = document.querySelector(`[name="${key}"]`);
+                if (field) {
+                    if (field.type === 'checkbox' || field.type === 'radio') {
+                        field.checked = field.value === value;
+                    } else {
+                        field.value = value;
+                    }
+                }
+            }
+            
+            // Supprimer les données sauvegardées après restauration
+            sessionStorage.removeItem(formDataKey);
+            
+            // Afficher un message de restauration
+            const alert = document.createElement('div');
+            alert.className = 'alert alert-info alert-dismissible fade show';
+            alert.innerHTML = `
+                <i class="fas fa-info-circle me-2"></i>
+                Données restaurées après rechargement de session. Vous pouvez maintenant enregistrer.
+                <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+            `;
+            
+            const container = document.querySelector('.container-fluid');
+            if (container) {
+                container.insertBefore(alert, container.firstChild);
+                
+                // Auto-supprimer le message après 5 secondes
+                setTimeout(() => {
+                    if (alert.parentNode) {
+                        alert.remove();
+                    }
+                }, 5000);
+            }
+        }
+    }
+    
+    // Validation avant soumission - nettoyer les erreurs visuelles uniquement
+    document.getElementById('prospectForm').addEventListener('submit', function(e) {
+        // Éviter les doubles soumissions
+        if (isSubmitting) {
+            e.preventDefault();
+            return false;
+        }
+        
+        isSubmitting = true;
+        
+        // Sauvegarder les données avant soumission en cas de rechargement CSRF
+        saveFormData();
+        
+        // Nettoyer les erreurs précédentes visuelles seulement
+        const errorSummary = document.getElementById('error-summary');
+        if (errorSummary) {
+            errorSummary.remove();
+        }
+        document.querySelectorAll('.field-error').forEach(field => {
+            field.classList.remove('field-error');
+        });
+        document.querySelectorAll('.field-error-message').forEach(msg => {
+            msg.remove();
+        });
+        
+        // Désactiver temporairement le bouton pour éviter les doubles clics
+        const submitButton = document.querySelector('button[type="submit"]');
+        if (submitButton) {
+            submitButton.disabled = true;
+            submitButton.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Enregistrement...';
+        }
+        
+        // Permettre la soumission normale - Symfony gère le CSRF et la validation
+        console.log('Soumission du formulaire prospect - données sauvegardées, CSRF et validation gérés par Symfony');
+        return true;
+    });
+    
+    // Réactiver le bouton si la page se recharge à cause d'une erreur
+    window.addEventListener('load', function() {
+        const submitButton = document.querySelector('button[type="submit"]');
+        if (submitButton && submitButton.disabled) {
+            submitButton.disabled = false;
+            submitButton.innerHTML = '<i class="fas fa-save"></i> Enregistrer les modifications';
+        }
+        isSubmitting = false;
+        
+        // Restaurer les données si elles existent (après rechargement CSRF)
+        restoreFormData();
+        
+        // Initialiser le formatage des numéros de téléphone
+        initPhoneFormatting();
+    });
+    
+    // Fonction pour formater automatiquement les numéros de téléphone
+    function initPhoneFormatting() {
+        // Sélectionner tous les champs de téléphone
+        const phoneInputs = document.querySelectorAll('.phone-input, .mobile-input');
+        
+        phoneInputs.forEach(input => {
+            input.addEventListener('input', function(e) {
+                formatPhoneNumber(e.target);
+            });
+            
+            input.addEventListener('blur', function(e) {
+                validatePhoneNumber(e.target);
+            });
+        });
+    }
+    
+    function formatPhoneNumber(input) {
+        let value = input.value.replace(/[^\d+]/g, ''); // Garder seulement les chiffres et +
+        
+        // Si commence par +33, formater différemment
+        if (value.startsWith('+33') || value.startsWith('0033')) {
+            // Format international
+            if (value.startsWith('+33')) {
+                value = value.substring(3);
+            } else if (value.startsWith('0033')) {
+                value = value.substring(4);
+            }
+            
+            if (value.length > 0) {
+                value = '+33 ' + value.charAt(0) + (value.length > 1 ? ' ' + value.substring(1).match(/.{1,2}/g)?.join(' ') || value.substring(1) : '');
+            } else {
+                value = '+33';
+            }
+        } else {
+            // Format national français
+            if (value.startsWith('0')) {
+                value = value.substring(0, 10); // Limiter à 10 chiffres
+                value = value.replace(/(\d{2})(?=\d)/g, '$1 '); // Ajouter espaces tous les 2 chiffres
+            }
+        }
+        
+        input.value = value.trim();
+    }
+    
+    function validatePhoneNumber(input) {
+        const value = input.value.trim();
+        if (value && !input.checkValidity()) {
+            input.classList.add('is-invalid');
+            
+            // Afficher un message d'aide
+            let helpText = input.parentNode.querySelector('.phone-help');
+            if (!helpText) {
+                helpText = document.createElement('small');
+                helpText.className = 'phone-help text-danger';
+                input.parentNode.appendChild(helpText);
+            }
+            
+            if (input.classList.contains('mobile-input')) {
+                helpText.textContent = 'Format attendu: 06 12 34 56 78 ou +33 6 12 34 56 78';
+            } else {
+                helpText.textContent = 'Format attendu: 05 61 23 45 67 ou +33 5 61 23 45 67';
+            }
+        } else {
+            input.classList.remove('is-invalid');
+            const helpText = input.parentNode.querySelector('.phone-help');
+            if (helpText) {
+                helpText.remove();
+            }
+        }
+    });
+    
+    // Validation en temps réel - retirer les erreurs quand l'utilisateur corrige
+    document.addEventListener('input', function(e) {
+        if (e.target.classList.contains('field-error')) {
+            if (e.target.value.trim()) {
+                e.target.classList.remove('field-error');
+                // Supprimer le message d'erreur associé
+                const errorMsg = e.target.parentNode.querySelector('.field-error-message');
+                if (errorMsg) {
+                    errorMsg.remove();
+                }
+                
+                // Si plus d'erreurs, supprimer le résumé
+                if (document.querySelectorAll('.field-error').length === 0) {
+                    const errorSummary = document.getElementById('error-summary');
+                    if (errorSummary) {
+                        errorSummary.remove();
+                    }
+                }
+            }
+        }
+    });
+    
+    // Validation en temps réel pour les selects
+    document.addEventListener('change', function(e) {
+        if (e.target.classList.contains('field-error')) {
+            if (e.target.value.trim()) {
+                e.target.classList.remove('field-error');
+                // Supprimer le message d'erreur associé
+                const errorMsg = e.target.parentNode.querySelector('.field-error-message');
+                if (errorMsg) {
+                    errorMsg.remove();
+                }
+                
+                // Si plus d'erreurs, supprimer le résumé
+                if (document.querySelectorAll('.field-error').length === 0) {
+                    const errorSummary = document.getElementById('error-summary');
+                    if (errorSummary) {
+                        errorSummary.remove();
+                    }
+                }
+            }
+        }
+    });
+    
+    // Gestion automatique du type de personne selon la famille
+    const familleSelect = document.querySelector('select[name="prospect[famille]"]');
+    
+    // Mapping famille -> type de personne par défaut
+    const familleTypeMapping = {
+        'TPE': 'morale',
+        'PME': 'morale', 
+        'ETI': 'morale',
+        'Grand Compte': 'morale',
+        'Administration': 'morale',
+        'Association': 'morale',
+        'Particulier': 'physique'
+    };
+    
+    if (familleSelect) {
+        familleSelect.addEventListener('change', function() {
+            const selectedFamille = this.value;
+            const defaultType = familleTypeMapping[selectedFamille];
+            
+            if (defaultType) {
+                // Sélectionner automatiquement le type de personne correspondant
+                const targetRadio = document.querySelector(`input[name="prospect[typePersonne]"][value="${defaultType}"]`);
+                if (targetRadio) {
+                    targetRadio.checked = true;
+                    // Déclencher l'événement change pour mettre à jour l'affichage
+                    togglePersonneFields();
+                }
+            }
+        });
+    }
+});
+
+function convertToClient() {
+    if (confirm('Êtes-vous sûr de vouloir convertir ce prospect en client ?\n\nCette action est irréversible et vous redirigera vers la fiche client.')) {
+        document.getElementById('convertForm').submit();
+    }
+}
+</script>
+{% endblock %}
+{% endblock %}

@@ -1,0 +1,309 @@
+{# Template pour le chargement AJAX - pas d'extension de base #}
+<div class="admin-section">
+    <h3 class="section-title">
+        <i class="fas fa-cogs me-2"></i>Paramètres Globaux
+    </h3>
+
+    <div class="row">
+        <!-- Configuration Email -->
+        <div class="col-lg-6 mb-4">
+            <div class="card">
+                <div class="card-header bg-primary text-white">
+                    <h5 class="mb-0">
+                        <i class="fas fa-envelope me-2"></i>Configuration Email
+                    </h5>
+                </div>
+                <div class="card-body">
+                    <form id="emailSettingsForm">
+                        <div class="mb-3">
+                            <label for="signature-entreprise" class="form-label">
+                                <strong>Signature d'entreprise générique</strong>
+                            </label>
+                            <textarea class="form-control" id="signature-entreprise" rows="8"
+                                      placeholder="Saisissez la signature d'entreprise par défaut...">{{ signature_entreprise }}</textarea>
+                            <div class="form-text">
+                                Cette signature sera utilisée par défaut pour tous les emails envoyés depuis l'application.
+                            </div>
+                        </div>
+                        
+                        <div class="mb-3">
+                            <div class="form-check">
+                                <input class="form-check-input" type="checkbox" id="allow-personal-signatures" checked>
+                                <label class="form-check-label" for="allow-personal-signatures">
+                                    Autoriser les signatures personnelles
+                                </label>
+                            </div>
+                            <div class="form-text">
+                                Si activé, les utilisateurs peuvent définir leur propre signature dans leurs préférences.
+                            </div>
+                        </div>
+                        
+                        <div class="d-grid">
+                            <button type="button" class="btn btn-primary" id="save-email-settings">
+                                <i class="fas fa-save me-2"></i>Enregistrer la Configuration Email
+                            </button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+
+        <!-- Paramètres Système -->
+        <div class="col-lg-6 mb-4">
+            <div class="card">
+                <div class="card-header bg-success text-white">
+                    <h5 class="mb-0">
+                        <i class="fas fa-server me-2"></i>Paramètres Système
+                    </h5>
+                </div>
+                <div class="card-body">
+                    <form id="systemSettingsForm">
+                        <div class="mb-3">
+                            <label for="app-name" class="form-label">
+                                <strong>Nom de l'application</strong>
+                            </label>
+                            <input type="text" class="form-control" id="app-name" value="TechnoProd ERP/CRM">
+                        </div>
+                        
+                        <div class="mb-3">
+                            <label for="company-name" class="form-label">
+                                <strong>Nom de l'entreprise</strong>
+                            </label>
+                            <input type="text" class="form-control" id="company-name" value="TechnoProd">
+                        </div>
+                        
+                        <div class="mb-3">
+                            <div class="form-check">
+                                <input class="form-check-input" type="checkbox" id="maintenance-mode">
+                                <label class="form-check-label" for="maintenance-mode">
+                                    Mode maintenance
+                                </label>
+                            </div>
+                            <div class="form-text">
+                                Si activé, seuls les administrateurs peuvent accéder à l'application.
+                            </div>
+                        </div>
+                        
+                        <div class="d-grid">
+                            <button type="button" class="btn btn-success" id="save-system-settings">
+                                <i class="fas fa-save me-2"></i>Enregistrer les Paramètres Système
+                            </button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="row">
+        <!-- Sécurité -->
+        <div class="col-lg-6 mb-4">
+            <div class="card">
+                <div class="card-header bg-warning text-dark">
+                    <h5 class="mb-0">
+                        <i class="fas fa-shield-alt me-2"></i>Sécurité
+                    </h5>
+                </div>
+                <div class="card-body">
+                    <div class="mb-3">
+                        <label class="form-label">
+                            <strong>Durée de session (minutes)</strong>
+                        </label>
+                        <input type="number" class="form-control" value="1440" min="30" max="10080">
+                        <div class="form-text">
+                            Durée avant déconnexion automatique (30 min à 7 jours)
+                        </div>
+                    </div>
+                    
+                    <div class="mb-3">
+                        <div class="form-check">
+                            <input class="form-check-input" type="checkbox" id="force-https" checked>
+                            <label class="form-check-label" for="force-https">
+                                Forcer HTTPS
+                            </label>
+                        </div>
+                    </div>
+                    
+                    <div class="mb-3">
+                        <div class="form-check">
+                            <input class="form-check-input" type="checkbox" id="enable-audit-log" checked>
+                            <label class="form-check-label" for="enable-audit-log">
+                                Journalisation des actions (Audit Trail)
+                            </label>
+                        </div>
+                    </div>
+                    
+                    <div class="d-grid">
+                        <button type="button" class="btn btn-warning" id="save-security-settings">
+                            <i class="fas fa-save me-2"></i>Enregistrer la Sécurité
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Actions de maintenance -->
+        <div class="col-lg-6 mb-4">
+            <div class="card">
+                <div class="card-header bg-danger text-white">
+                    <h5 class="mb-0">
+                        <i class="fas fa-tools me-2"></i>Actions de Maintenance
+                    </h5>
+                </div>
+                <div class="card-body">
+                    <div class="alert alert-danger">
+                        <i class="fas fa-exclamation-triangle me-2"></i>
+                        <strong>Attention :</strong> Ces actions peuvent affecter le fonctionnement de l'application.
+                    </div>
+                    
+                    <div class="d-grid gap-2">
+                        <button type="button" class="btn btn-outline-primary" onclick="clearCache()">
+                            <i class="fas fa-broom me-2"></i>Vider le Cache
+                        </button>
+                        
+                        <button type="button" class="btn btn-outline-warning" onclick="rebuildAuditChain()">
+                            <i class="fas fa-chain me-2"></i>Reconstruire la Chaîne d'Audit
+                        </button>
+                        
+                        <button type="button" class="btn btn-outline-info" onclick="testCompliance()">
+                            <i class="fas fa-check-circle me-2"></i>Test de Conformité
+                        </button>
+                        
+                        <button type="button" class="btn btn-outline-success" onclick="exportFEC()">
+                            <i class="fas fa-download me-2"></i>Exporter FEC
+                        </button>
+                        
+                        <button type="button" class="btn btn-outline-danger" onclick="confirmDangerousAction('backup')">
+                            <i class="fas fa-database me-2"></i>Sauvegarde Complète
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    // Sauvegarde des paramètres email
+    document.getElementById('save-email-settings').addEventListener('click', function() {
+        const signatureEntreprise = document.getElementById('signature-entreprise').value;
+        const allowPersonalSignatures = document.getElementById('allow-personal-signatures').checked;
+        
+        const data = {
+            signature_entreprise: signatureEntreprise,
+            allow_personal_signatures: allowPersonalSignatures
+        };
+        
+        saveSettings('email', data);
+    });
+
+    // Sauvegarde des paramètres système
+    document.getElementById('save-system-settings').addEventListener('click', function() {
+        const data = {
+            app_name: document.getElementById('app-name').value,
+            company_name: document.getElementById('company-name').value,
+            maintenance_mode: document.getElementById('maintenance-mode').checked
+        };
+        
+        saveSettings('system', data);
+    });
+
+    // Sauvegarde des paramètres de sécurité
+    document.getElementById('save-security-settings').addEventListener('click', function() {
+        const data = {
+            session_duration: parseInt(document.querySelector('input[type="number"]').value),
+            force_https: document.getElementById('force-https').checked,
+            enable_audit_log: document.getElementById('enable-audit-log').checked
+        };
+        
+        saveSettings('security', data);
+    });
+
+    function saveSettings(category, data) {
+        const btn = event.target;
+        const originalText = btn.innerHTML;
+        
+        btn.innerHTML = '<i class="fas fa-spinner fa-spin me-2"></i>Enregistrement...';
+        btn.disabled = true;
+        
+        fetch('{{ path("app_admin_settings_update") }}', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+            },
+            body: JSON.stringify({
+                category: category,
+                settings: data
+            })
+        })
+        .then(response => response.json())
+        .then(data => {
+            if (data.success) {
+                btn.innerHTML = '<i class="fas fa-check me-2"></i>Enregistré !';
+                btn.classList.remove('btn-primary', 'btn-success', 'btn-warning');
+                btn.classList.add('btn-success');
+                
+                setTimeout(() => {
+                    btn.innerHTML = originalText;
+                    btn.disabled = false;
+                    btn.classList.remove('btn-success');
+                    btn.classList.add(category === 'email' ? 'btn-primary' : (category === 'system' ? 'btn-success' : 'btn-warning'));
+                }, 2000);
+            } else {
+                throw new Error(data.error || 'Erreur inconnue');
+            }
+        })
+        .catch(error => {
+            console.error('Erreur:', error);
+            btn.innerHTML = '<i class="fas fa-times me-2"></i>Erreur !';
+            btn.classList.add('btn-danger');
+            
+            setTimeout(() => {
+                btn.innerHTML = originalText;
+                btn.disabled = false;
+                btn.classList.remove('btn-danger');
+                btn.classList.add(category === 'email' ? 'btn-primary' : (category === 'system' ? 'btn-success' : 'btn-warning'));
+            }, 3000);
+            
+            alert('Erreur lors de la sauvegarde: ' + error.message);
+        });
+    }
+});
+
+// Actions de maintenance
+function clearCache() {
+    if (confirm('Vider le cache peut temporairement ralentir l\'application. Continuer ?')) {
+        alert('Fonctionnalité à implémenter - Vidage du cache');
+    }
+}
+
+function rebuildAuditChain() {
+    if (confirm('Reconstruire la chaîne d\'audit peut prendre plusieurs minutes. Continuer ?')) {
+        alert('Fonctionnalité à implémenter - php bin/console app:rebuild-audit-chain');
+    }
+}
+
+function testCompliance() {
+    if (confirm('Lancer le test de conformité comptable ?')) {
+        alert('Fonctionnalité à implémenter - php bin/console app:test-compliance');
+    }
+}
+
+function exportFEC() {
+    if (confirm('Générer l\'export FEC pour l\'année en cours ?')) {
+        alert('Fonctionnalité à implémenter - Export FEC');
+    }
+}
+
+function confirmDangerousAction(action) {
+    const message = action === 'backup' 
+        ? 'Créer une sauvegarde complète de la base de données ?\n\nCette opération peut prendre plusieurs minutes.'
+        : 'Confirmer cette action dangereuse ?';
+        
+    if (confirm(message)) {
+        alert(`Fonctionnalité à implémenter - ${action}`);
+    }
+}
+</script>
+{# Fin du template AJAX #}

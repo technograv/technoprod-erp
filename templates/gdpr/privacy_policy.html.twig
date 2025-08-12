@@ -1,0 +1,475 @@
+{% extends 'base.html.twig' %}
+
+{% block title %}Politique de Confidentialité - TechnoProd{% endblock %}
+
+{% block stylesheets %}
+    {{ parent() }}
+    <style>
+        .privacy-policy {
+            max-width: 800px;
+            margin: 0 auto;
+            padding: 2rem;
+            line-height: 1.6;
+        }
+        
+        .privacy-header {
+            background: linear-gradient(135deg, #007bff 0%, #0056b3 100%);
+            color: white;
+            padding: 3rem 0;
+            margin-bottom: 2rem;
+            text-align: center;
+        }
+        
+        .privacy-section {
+            margin-bottom: 2rem;
+            padding: 1.5rem;
+            border-left: 4px solid #007bff;
+            background: #f8f9fa;
+            border-radius: 0 8px 8px 0;
+        }
+        
+        .privacy-section h3 {
+            color: #007bff;
+            margin-bottom: 1rem;
+        }
+        
+        .contact-box {
+            background: #e3f2fd;
+            border: 1px solid #2196f3;
+            border-radius: 8px;
+            padding: 1.5rem;
+            margin: 2rem 0;
+        }
+        
+        .data-table {
+            width: 100%;
+            border-collapse: collapse;
+            margin: 1rem 0;
+        }
+        
+        .data-table th,
+        .data-table td {
+            padding: 0.75rem;
+            text-align: left;
+            border-bottom: 1px solid #ddd;
+        }
+        
+        .data-table th {
+            background-color: #007bff;
+            color: white;
+            font-weight: 600;
+        }
+        
+        .legal-basis {
+            font-weight: 600;
+            color: #28a745;
+        }
+        
+        .rights-list {
+            list-style: none;
+            padding: 0;
+        }
+        
+        .rights-list li {
+            padding: 0.5rem 0;
+            border-bottom: 1px solid #eee;
+        }
+        
+        .rights-list li:before {
+            content: "✓";
+            color: #28a745;
+            font-weight: bold;
+            margin-right: 0.5rem;
+        }
+        
+        .toc {
+            background: #f8f9fa;
+            border: 1px solid #dee2e6;
+            border-radius: 8px;
+            padding: 1.5rem;
+            margin-bottom: 2rem;
+        }
+        
+        .toc ul {
+            list-style: none;
+            padding-left: 0;
+        }
+        
+        .toc li {
+            margin: 0.5rem 0;
+        }
+        
+        .toc a {
+            color: #007bff;
+            text-decoration: none;
+        }
+        
+        .toc a:hover {
+            text-decoration: underline;
+        }
+        
+        .update-info {
+            background: #fff3cd;
+            border: 1px solid #ffeeba;
+            border-radius: 8px;
+            padding: 1rem;
+            margin-bottom: 2rem;
+        }
+    </style>
+{% endblock %}
+
+{% block body %}
+<div class="privacy-header">
+    <div class="container">
+        <h1><i class="fas fa-shield-alt me-3"></i>Politique de Confidentialité</h1>
+        <p class="lead">Protection des données personnelles conformément au RGPD</p>
+    </div>
+</div>
+
+<div class="container">
+    <div class="privacy-policy">
+        
+        <div class="update-info">
+            <h4><i class="fas fa-calendar-alt me-2"></i>Dernière mise à jour</h4>
+            <p class="mb-0">Cette politique a été mise à jour le <strong>{{ last_updated.format('d/m/Y') }}</strong> pour être conforme au Règlement Général sur la Protection des Données (RGPD).</p>
+        </div>
+
+        <!-- Table des matières -->
+        <div class="toc">
+            <h4><i class="fas fa-list me-2"></i>Table des matières</h4>
+            <ul>
+                <li><a href="#responsable">1. Responsable du traitement</a></li>
+                <li><a href="#donnees-collectees">2. Données collectées</a></li>
+                <li><a href="#finalites">3. Finalités du traitement</a></li>
+                <li><a href="#base-legale">4. Base légale</a></li>
+                <li><a href="#destinataires">5. Destinataires des données</a></li>
+                <li><a href="#conservation">6. Durée de conservation</a></li>
+                <li><a href="#droits">7. Vos droits</a></li>
+                <li><a href="#securite">8. Sécurité des données</a></li>
+                <li><a href="#cookies">9. Cookies et traceurs</a></li>
+                <li><a href="#modifications">10. Modifications de la politique</a></li>
+                <li><a href="#contact">11. Contact et réclamations</a></li>
+            </ul>
+        </div>
+
+        <!-- 1. Responsable du traitement -->
+        <div class="privacy-section" id="responsable">
+            <h3>1. Responsable du traitement</h3>
+            <p>Le responsable du traitement des données personnelles est :</p>
+            <div class="contact-box">
+                <p><strong>{{ company_name }}</strong><br>
+                [Adresse de l'entreprise]<br>
+                [Code postal] [Ville]<br>
+                Email : {{ contact_email }}<br>
+                Téléphone : [Numéro de téléphone]<br>
+                SIRET : [Numéro SIRET]</p>
+            </div>
+        </div>
+
+        <!-- 2. Données collectées -->
+        <div class="privacy-section" id="donnees-collectees">
+            <h3>2. Données personnelles collectées</h3>
+            <p>Nous collectons les catégories de données personnelles suivantes :</p>
+            
+            <table class="data-table">
+                <thead>
+                    <tr>
+                        <th>Catégorie de données</th>
+                        <th>Exemples</th>
+                        <th>Obligatoire</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr>
+                        <td><strong>Données d'identification</strong></td>
+                        <td>Nom, prénom, email, téléphone</td>
+                        <td>Oui</td>
+                    </tr>
+                    <tr>
+                        <td><strong>Données de connexion</strong></td>
+                        <td>Identifiants, mots de passe (chiffrés)</td>
+                        <td>Oui</td>
+                    </tr>
+                    <tr>
+                        <td><strong>Données d'utilisation</strong></td>
+                        <td>Logs, historique de navigation</td>
+                        <td>Non</td>
+                    </tr>
+                    <tr>
+                        <td><strong>Données techniques</strong></td>
+                        <td>Adresse IP, navigateur, système</td>
+                        <td>Non</td>
+                    </tr>
+                    <tr>
+                        <td><strong>Données de consentement</strong></td>
+                        <td>Choix de consentement, horodatage</td>
+                        <td>Oui (RGPD)</td>
+                    </tr>
+                </tbody>
+            </table>
+        </div>
+
+        <!-- 3. Finalités du traitement -->
+        <div class="privacy-section" id="finalites">
+            <h3>3. Finalités du traitement</h3>
+            <p>Vos données personnelles sont traitées pour les finalités suivantes :</p>
+            
+            <table class="data-table">
+                <thead>
+                    <tr>
+                        <th>Finalité</th>
+                        <th>Description</th>
+                        <th>Base légale</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr>
+                        <td><strong>Gestion du compte</strong></td>
+                        <td>Création, authentification, gestion de votre compte utilisateur</td>
+                        <td class="legal-basis">Exécution du contrat</td>
+                    </tr>
+                    <tr>
+                        <td><strong>Fourniture du service</strong></td>
+                        <td>Accès aux fonctionnalités ERP/CRM, sauvegarde des données</td>
+                        <td class="legal-basis">Exécution du contrat</td>
+                    </tr>
+                    <tr>
+                        <td><strong>Sécurité</strong></td>
+                        <td>Protection contre les fraudes, sécurité informatique</td>
+                        <td class="legal-basis">Intérêts légitimes</td>
+                    </tr>
+                    <tr>
+                        <td><strong>Amélioration du service</strong></td>
+                        <td>Analyses statistiques, optimisation des performances</td>
+                        <td class="legal-basis">Intérêts légitimes</td>
+                    </tr>
+                    <tr>
+                        <td><strong>Communications marketing</strong></td>
+                        <td>Envoi d'informations commerciales, newsletters</td>
+                        <td class="legal-basis">Consentement</td>
+                    </tr>
+                    <tr>
+                        <td><strong>Obligations légales</strong></td>
+                        <td>Conservation des données comptables, audit</td>
+                        <td class="legal-basis">Obligation légale</td>
+                    </tr>
+                </tbody>
+            </table>
+        </div>
+
+        <!-- 4. Base légale -->
+        <div class="privacy-section" id="base-legale">
+            <h3>4. Base légale du traitement</h3>
+            <p>Conformément à l'Article 6 du RGPD, nous traitons vos données sur la base de :</p>
+            <ul>
+                <li><strong>Exécution d'un contrat (Art. 6.1.b)</strong> : Fourniture des services ERP/CRM</li>
+                <li><strong>Consentement (Art. 6.1.a)</strong> : Communications marketing, cookies analytiques</li>
+                <li><strong>Intérêts légitimes (Art. 6.1.f)</strong> : Sécurité, amélioration du service</li>
+                <li><strong>Obligation légale (Art. 6.1.c)</strong> : Conservation des données comptables</li>
+            </ul>
+        </div>
+
+        <!-- 5. Destinataires -->
+        <div class="privacy-section" id="destinataires">
+            <h3>5. Destinataires des données</h3>
+            <p>Vos données personnelles peuvent être communiquées aux destinataires suivants :</p>
+            <ul>
+                <li><strong>Personnel autorisé</strong> : Employés de {{ company_name }} dans le cadre de leurs fonctions</li>
+                <li><strong>Prestataires techniques</strong> : Hébergement, maintenance informatique (sous contrat)</li>
+                <li><strong>Autorités publiques</strong> : En cas d'obligation légale ou réquisition judiciaire</li>
+                <li><strong>Partenaires commerciaux</strong> : Uniquement avec votre consentement explicite</li>
+            </ul>
+            <p><strong>Transferts hors UE</strong> : Aucun transfert vers des pays tiers n'est effectué.</p>
+        </div>
+
+        <!-- 6. Conservation -->
+        <div class="privacy-section" id="conservation">
+            <h3>6. Durée de conservation</h3>
+            <p>Nous conservons vos données personnelles pendant les durées suivantes :</p>
+            
+            <table class="data-table">
+                <thead>
+                    <tr>
+                        <th>Type de données</th>
+                        <th>Durée de conservation</th>
+                        <th>Justification</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr>
+                        <td>Données de compte actif</td>
+                        <td>Durée de la relation contractuelle</td>
+                        <td>Fourniture du service</td>
+                    </tr>
+                    <tr>
+                        <td>Données de compte supprimé</td>
+                        <td>30 jours après suppression</td>
+                        <td>Droit à l'oubli RGPD</td>
+                    </tr>
+                    <tr>
+                        <td>Données comptables</td>
+                        <td>10 ans</td>
+                        <td>Obligation légale fiscale</td>
+                    </tr>
+                    <tr>
+                        <td>Logs de sécurité</td>
+                        <td>1 an</td>
+                        <td>Sécurité informatique</td>
+                    </tr>
+                    <tr>
+                        <td>Données de consentement</td>
+                        <td>3 ans après retrait</td>
+                        <td>Preuve de conformité RGPD</td>
+                    </tr>
+                </tbody>
+            </table>
+        </div>
+
+        <!-- 7. Droits -->
+        <div class="privacy-section" id="droits">
+            <h3>7. Vos droits RGPD</h3>
+            <p>Conformément au RGPD, vous disposez des droits suivants :</p>
+            
+            <ul class="rights-list">
+                <li><strong>Droit d'accès (Art. 15)</strong> : Obtenir la confirmation que vos données sont traitées</li>
+                <li><strong>Droit de rectification (Art. 16)</strong> : Corriger les données inexactes</li>
+                <li><strong>Droit à l'effacement (Art. 17)</strong> : Demander la suppression de vos données</li>
+                <li><strong>Droit à la limitation (Art. 18)</strong> : Limiter le traitement dans certains cas</li>
+                <li><strong>Droit à la portabilité (Art. 20)</strong> : Récupérer vos données dans un format lisible</li>
+                <li><strong>Droit d'opposition (Art. 21)</strong> : Vous opposer au traitement pour motifs légitimes</li>
+                <li><strong>Droit de retrait du consentement</strong> : Retirer votre consentement à tout moment</li>
+            </ul>
+            
+            <div class="alert alert-info">
+                <h5><i class="fas fa-mouse-pointer me-2"></i>Exercer vos droits</h5>
+                <p>Pour exercer vos droits, vous pouvez :</p>
+                <ul>
+                    <li>Accéder à votre <a href="{{ path('app_gdpr_consent') }}">espace de gestion des consentements</a></li>
+                    <li>Utiliser notre <a href="{{ path('app_gdpr_data_export') }}">outil d'export de données</a></li>
+                    <li>Contacter notre <a href="{{ path('app_gdpr_dpo_contact') }}">Délégué à la Protection des Données</a></li>
+                </ul>
+            </div>
+        </div>
+
+        <!-- 8. Sécurité -->
+        <div class="privacy-section" id="securite">
+            <h3>8. Sécurité des données</h3>
+            <p>Nous mettons en œuvre les mesures de sécurité suivantes :</p>
+            <ul>
+                <li><strong>Chiffrement</strong> : Toutes les données sensibles sont chiffrées (RSA-2048, SHA-256)</li>
+                <li><strong>Authentification</strong> : Système d'authentification sécurisé avec bcrypt</li>
+                <li><strong>Accès restreint</strong> : Accès aux données limité aux personnes autorisées</li>
+                <li><strong>Audit trail</strong> : Traçabilité complète des accès et modifications</li>
+                <li><strong>Sauvegarde</strong> : Sauvegardes régulières et sécurisées</li>
+                <li><strong>Monitoring</strong> : Surveillance continue des tentatives d'intrusion</li>
+            </ul>
+        </div>
+
+        <!-- 9. Cookies -->
+        <div class="privacy-section" id="cookies">
+            <h3>9. Cookies et traceurs</h3>
+            <p>Notre site utilise les cookies suivants :</p>
+            
+            <table class="data-table">
+                <thead>
+                    <tr>
+                        <th>Type de cookie</th>
+                        <th>Finalité</th>
+                        <th>Durée</th>
+                        <th>Consentement requis</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr>
+                        <td>Cookies techniques</td>
+                        <td>Fonctionnement de l'application</td>
+                        <td>Session</td>
+                        <td>Non (nécessaires)</td>
+                    </tr>
+                    <tr>
+                        <td>Cookies d'authentification</td>
+                        <td>Maintien de la connexion</td>
+                        <td>30 jours</td>
+                        <td>Non (sécurité)</td>
+                    </tr>
+                    <tr>
+                        <td>Cookies d'analyse</td>
+                        <td>Amélioration de l'expérience</td>
+                        <td>1 an</td>
+                        <td>Oui</td>
+                    </tr>
+                </tbody>
+            </table>
+            
+            <p>Vous pouvez gérer vos préférences de cookies dans votre <a href="{{ path('app_gdpr_consent') }}">espace de gestion des consentements</a>.</p>
+        </div>
+
+        <!-- 10. Modifications -->
+        <div class="privacy-section" id="modifications">
+            <h3>10. Modifications de la politique</h3>
+            <p>Cette politique de confidentialité peut être modifiée pour :</p>
+            <ul>
+                <li>Se conformer aux évolutions légales et réglementaires</li>
+                <li>Refléter les changements dans nos pratiques de traitement</li>
+                <li>Améliorer la clarté et la transparence</li>
+            </ul>
+            <p>En cas de modification substantielle, vous serez informé par email et/ou notification dans l'application au moins 30 jours avant l'entrée en vigueur.</p>
+        </div>
+
+        <!-- 11. Contact -->
+        <div class="privacy-section" id="contact">
+            <h3>11. Contact et réclamations</h3>
+            
+            <div class="row">
+                <div class="col-md-6">
+                    <div class="contact-box">
+                        <h5><i class="fas fa-user-shield me-2"></i>Délégué à la Protection des Données</h5>
+                        <p>
+                            Email : <a href="mailto:{{ dpo_email }}">{{ dpo_email }}</a><br>
+                            Délai de réponse : 30 jours ouvrés<br>
+                            <a href="{{ path('app_gdpr_dpo_contact') }}" class="btn btn-primary btn-sm mt-2">
+                                <i class="fas fa-envelope me-1"></i>Contacter le DPO
+                            </a>
+                        </p>
+                    </div>
+                </div>
+                <div class="col-md-6">
+                    <div class="contact-box">
+                        <h5><i class="fas fa-balance-scale me-2"></i>Autorité de contrôle</h5>
+                        <p>
+                            <strong>CNIL</strong> (Commission Nationale de l'Informatique et des Libertés)<br>
+                            3 Place de Fontenoy - TSA 80715<br>
+                            75334 PARIS CEDEX 07<br>
+                            Tél : 01 53 73 22 22<br>
+                            <a href="https://www.cnil.fr" target="_blank">www.cnil.fr</a>
+                        </p>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Liens utiles -->
+        <div class="alert alert-primary">
+            <h5><i class="fas fa-link me-2"></i>Liens utiles</h5>
+            <div class="row">
+                <div class="col-md-4">
+                    <a href="{{ path('app_gdpr_consent') }}" class="btn btn-outline-primary btn-sm d-block mb-2">
+                        <i class="fas fa-cog me-1"></i>Gérer mes consentements
+                    </a>
+                </div>
+                <div class="col-md-4">
+                    <a href="{{ path('app_gdpr_data_export') }}" class="btn btn-outline-info btn-sm d-block mb-2">
+                        <i class="fas fa-download me-1"></i>Exporter mes données
+                    </a>
+                </div>
+                <div class="col-md-4">
+                    <a href="{{ path('app_gdpr_dpo_contact') }}" class="btn btn-outline-success btn-sm d-block mb-2">
+                        <i class="fas fa-envelope me-1"></i>Contacter le DPO
+                    </a>
+                </div>
+            </div>
+        </div>
+
+    </div>
+</div>
+{% endblock %}

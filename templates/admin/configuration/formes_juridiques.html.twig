@@ -1,0 +1,342 @@
+{# Template pour le chargement AJAX - pas d'extension de base #}
+<div class="admin-section">
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <h3 class="section-title mb-0">
+            <i class="fas fa-building me-2"></i>Gestion des Formes Juridiques
+        </h3>
+        <button class="btn btn-primary" data-bs-toggle="modal" data-bs-target="#formeJuridiqueModal">
+            <i class="fas fa-plus me-2"></i>Nouvelle Forme Juridique
+        </button>
+    </div>
+
+    <div class="table-responsive">
+        <table class="table table-hover" id="formesJuridiquesTable">
+            <thead class="table-dark">
+                <tr>
+                    <th>Ordre</th>
+                    <th>Nom</th>
+                    <th>Template</th>
+                    <th>Type</th>
+                    <th>Statut</th>
+                    <th>Clients</th>
+                    <th>Actions</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for forme in formes_juridiques %}
+                <tr data-id="{{ forme.id }}">
+                    <td>
+                        <span class="badge bg-secondary">{{ forme.ordre }}</span>
+                    </td>
+                    <td>
+                        <strong>{{ forme.nom }}</strong>
+                    </td>
+                    <td>
+                        <span class="badge bg-info">{{ forme.templateFormulaire }}</span>
+                    </td>
+                    <td>
+                        {% if forme.isPersonnePhysique %}
+                            <span class="badge bg-success">
+                                <i class="fas fa-user me-1"></i>Personne Physique
+                            </span>
+                        {% else %}
+                            <span class="badge bg-primary">
+                                <i class="fas fa-building me-1"></i>Personne Morale
+                            </span>
+                        {% endif %}
+                    </td>
+                    <td>
+                        <div class="form-check form-switch">
+                            <input class="form-check-input status-toggle" type="checkbox" 
+                                   data-id="{{ forme.id }}" {{ forme.actif ? 'checked' : '' }}>
+                            <label class="form-check-label">
+                                {{ forme.actif ? 'Actif' : 'Inactif' }}
+                            </label>
+                        </div>
+                    </td>
+                    <td>
+                        <span class="badge bg-secondary" id="clients-count-{{ forme.id }}">
+                            <i class="fas fa-users me-1"></i>-
+                        </span>
+                    </td>
+                    <td>
+                        <div class="btn-group btn-group-sm">
+                            <button class="btn btn-outline-primary edit-btn" 
+                                    data-id="{{ forme.id }}"
+                                    data-nom="{{ forme.nom }}"
+                                    data-template="{{ forme.templateFormulaire }}"
+                                    data-actif="{{ forme.actif ? 'true' : 'false' }}"
+                                    data-ordre="{{ forme.ordre }}">
+                                <i class="fas fa-edit"></i>
+                            </button>
+                            <button class="btn btn-outline-danger delete-btn" 
+                                    data-id="{{ forme.id }}"
+                                    data-nom="{{ forme.nom }}">
+                                <i class="fas fa-trash"></i>
+                            </button>
+                        </div>
+                    </td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+</div>
+
+<!-- Modal Forme Juridique -->
+<div class="modal fade" id="formeJuridiqueModal" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">
+                    <i class="fas fa-building me-2"></i>
+                    <span id="modal-title">Nouvelle Forme Juridique</span>
+                </h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <form id="formeJuridiqueForm">
+                    <input type="hidden" id="forme-id">
+                    
+                    <div class="mb-3">
+                        <label for="forme-nom" class="form-label">Nom de la forme juridique</label>
+                        <input type="text" class="form-control" id="forme-nom" required
+                               placeholder="Ex: SARL, Association, Particulier...">
+                    </div>
+                    
+                    <div class="mb-3">
+                        <label for="forme-template" class="form-label">Template de formulaire</label>
+                        <select class="form-select" id="forme-template" required>
+                            <option value="">Sélectionner un template</option>
+                            <option value="personne_physique">Personne Physique</option>
+                            <option value="personne_morale">Personne Morale</option>
+                        </select>
+                        <div class="form-text">
+                            Détermine quel formulaire utiliser lors de la création de clients
+                        </div>
+                    </div>
+                    
+                    <div class="mb-3">
+                        <label for="forme-ordre" class="form-label">Ordre d'affichage</label>
+                        <input type="number" class="form-control" id="forme-ordre" 
+                               min="1" value="1" step="1" required>
+                        <div class="form-text">Position dans les menus déroulants</div>
+                    </div>
+                    
+                    <div class="mb-3">
+                        <div class="form-check form-switch">
+                            <input class="form-check-input" type="checkbox" id="forme-actif" checked>
+                            <label class="form-check-label" for="forme-actif">
+                                Forme juridique active
+                            </label>
+                        </div>
+                    </div>
+                </form>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Annuler</button>
+                <button type="button" class="btn btn-primary" id="save-forme">
+                    <i class="fas fa-save me-2"></i>Enregistrer
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+function initFormesJuridiquesEvents() {
+    const modal = new bootstrap.Modal(document.getElementById('formeJuridiqueModal'));
+    const form = document.getElementById('formeJuridiqueForm');
+    let isEditing = false;
+
+    // Bouton nouvelle forme juridique
+    document.querySelector('[data-bs-target="#formeJuridiqueModal"]').addEventListener('click', function() {
+        // Nettoyer les backdrops existants avant d'ouvrir le modal
+        const existingBackdrops = document.querySelectorAll('.modal-backdrop');
+        existingBackdrops.forEach(backdrop => backdrop.remove());
+        document.body.classList.remove('modal-open');
+        
+        resetForm();
+        document.getElementById('modal-title').textContent = 'Nouvelle Forme Juridique';
+        isEditing = false;
+    });
+
+    // Boutons d'édition
+    document.querySelectorAll('.edit-btn').forEach(function(btn) {
+        btn.addEventListener('click', function() {
+            const id = this.dataset.id;
+            const nom = this.dataset.nom;
+            const template = this.dataset.template;
+            const actif = this.dataset.actif === 'true';
+            const ordre = this.dataset.ordre;
+
+            document.getElementById('forme-id').value = id;
+            document.getElementById('forme-nom').value = nom;
+            document.getElementById('forme-template').value = template;
+            document.getElementById('forme-ordre').value = ordre;
+            document.getElementById('forme-actif').checked = actif;
+            document.getElementById('modal-title').textContent = 'Modifier ' + nom;
+            
+            // Nettoyer les backdrops existants avant d'ouvrir le modal
+            const existingBackdrops = document.querySelectorAll('.modal-backdrop');
+            existingBackdrops.forEach(backdrop => backdrop.remove());
+            document.body.classList.remove('modal-open');
+            
+            isEditing = true;
+            modal.show();
+        });
+    });
+
+    // Boutons de suppression
+    document.querySelectorAll('.delete-btn').forEach(function(btn) {
+        btn.addEventListener('click', function() {
+            const id = this.dataset.id;
+            const nom = this.dataset.nom;
+            
+            if (confirm(`Êtes-vous sûr de vouloir supprimer la forme juridique "${nom}" ?\n\nCette action est irréversible.`)) {
+                deleteFormeJuridique(id);
+            }
+        });
+    });
+
+    // Toggle statut
+    document.querySelectorAll('.status-toggle').forEach(function(toggle) {
+        toggle.addEventListener('change', function() {
+            const id = this.dataset.id;
+            const actif = this.checked;
+            updateFormeJuridique(id, { actif: actif });
+        });
+    });
+
+    // Sauvegarde
+    document.getElementById('save-forme').addEventListener('click', function() {
+        const formData = {
+            nom: document.getElementById('forme-nom').value,
+            templateFormulaire: document.getElementById('forme-template').value,
+            ordre: parseInt(document.getElementById('forme-ordre').value),
+            actif: document.getElementById('forme-actif').checked
+        };
+
+        if (!formData.nom || !formData.templateFormulaire) {
+            alert('Veuillez remplir tous les champs obligatoires.');
+            return;
+        }
+
+        if (isEditing) {
+            const id = document.getElementById('forme-id').value;
+            updateFormeJuridique(id, formData);
+        } else {
+            createFormeJuridique(formData);
+        }
+    });
+
+    function createFormeJuridique(data) {
+        fetch('{{ path("app_admin_formes_juridiques_create") }}', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+            },
+            body: JSON.stringify(data)
+        })
+        .then(response => response.json())
+        .then(data => {
+            if (data.success) {
+                location.reload();
+            } else {
+                alert('Erreur: ' + (data.error || 'Erreur inconnue'));
+            }
+        })
+        .catch(error => {
+            console.error('Erreur:', error);
+            alert('Erreur lors de la création');
+        });
+    }
+
+    function updateFormeJuridique(id, data) {
+        fetch(`/admin/formes-juridiques/${id}/update`, {
+            method: 'PUT',
+            headers: {
+                'Content-Type': 'application/json',
+            },
+            body: JSON.stringify(data)
+        })
+        .then(response => response.json())
+        .then(data => {
+            if (data.success) {
+                if (isEditing) {
+                    location.reload();
+                } else {
+                    // Mise à jour en place pour les toggles
+                    updateTableRow(id, data);
+                }
+            } else {
+                alert('Erreur: ' + (data.error || 'Erreur inconnue'));
+            }
+        })
+        .catch(error => {
+            console.error('Erreur:', error);
+            alert('Erreur lors de la mise à jour');
+        });
+    }
+
+    function deleteFormeJuridique(id) {
+        fetch(`/admin/formes-juridiques/${id}/delete`, {
+            method: 'DELETE'
+        })
+        .then(response => response.json())
+        .then(data => {
+            if (data.success) {
+                document.querySelector(`tr[data-id="${id}"]`).remove();
+            } else {
+                alert('Erreur: ' + (data.error || 'Erreur inconnue'));
+            }
+        })
+        .catch(error => {
+            console.error('Erreur:', error);
+            alert('Erreur lors de la suppression');
+        });
+    }
+
+    function updateTableRow(id, data) {
+        const row = document.querySelector(`tr[data-id="${id}"]`);
+        if (row) {
+            const toggle = row.querySelector('.status-toggle');
+            const label = toggle.nextElementSibling;
+            toggle.checked = data.actif;
+            label.textContent = data.actif ? 'Actif' : 'Inactif';
+        }
+    }
+
+    function resetForm() {
+        form.reset();
+        document.getElementById('forme-id').value = '';
+        document.getElementById('forme-ordre').value = '1';
+        document.getElementById('forme-actif').checked = true;
+    }
+    
+    // Nettoyage du backdrop à la fermeture du modal
+    document.getElementById('formeJuridiqueModal').addEventListener('hidden.bs.modal', function() {
+        // Nettoyer manuellement le backdrop qui pourrait rester
+        const backdrops = document.querySelectorAll('.modal-backdrop');
+        backdrops.forEach(backdrop => backdrop.remove());
+        
+        // S'assurer que body n'a plus les classes de modal
+        document.body.classList.remove('modal-open');
+        document.body.style.overflow = '';
+        document.body.style.paddingRight = '';
+    });
+}
+
+// Initialisation pour AJAX loading
+if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', initFormesJuridiquesEvents);
+} else {
+    setTimeout(initFormesJuridiquesEvents, 50);
+}
+
+// Fonction globale pour appel depuis dashboard
+window.initFormesJuridiques = function() {
+    setTimeout(initFormesJuridiquesEvents, 100);
+};
+</script>
+{# Fin du template AJAX #}

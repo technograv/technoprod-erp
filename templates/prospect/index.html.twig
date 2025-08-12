@@ -1,0 +1,384 @@
+{% extends 'base.html.twig' %}
+
+{% block title %}Prospects / Clients{% endblock %}
+
+{% block stylesheets %}
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
+    <style>
+        .page-header {
+            background: linear-gradient(135deg, #28a745 0%, #20c997 100%);
+            color: white;
+            padding: 2rem 0;
+            margin-bottom: 0;
+        }
+        .filters-card {
+            background: #f8f9fa;
+            border: none;
+            border-radius: 0;
+            border-bottom: 1px solid #dee2e6;
+        }
+        .table th {
+            background-color: #f8f9fa;
+            border-top: none;
+            font-weight: 600;
+            color: #495057;
+        }
+        .status-badge {
+            font-size: 0.75rem;
+            padding: 0.25rem 0.75rem;
+            border-radius: 20px;
+        }
+        .prospect-badge {
+            background-color: #17a2b8;
+            color: white;
+        }
+        .client-badge {
+            background-color: #28a745;
+            color: white;
+        }
+        .btn-prospect {
+            background: linear-gradient(135deg, #17a2b8 0%, #138496 100%);
+            border: none;
+            color: white;
+        }
+        .btn-prospect:hover {
+            background: linear-gradient(135deg, #138496 0%, #17a2b8 100%);
+            color: white;
+        }
+        .card-stats {
+            background: white;
+            border: none;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        }
+        .stats-icon {
+            width: 60px;
+            height: 60px;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 1.5rem;
+        }
+        .stats-prospects { background: linear-gradient(135deg, #17a2b8, #20c997); }
+        .stats-clients { background: linear-gradient(135deg, #28a745, #20c997); }
+        .stats-conversions { background: linear-gradient(135deg, #ffc107, #fd7e14); }
+    </style>
+{% endblock %}
+
+{% block body %}
+<!-- En-tête de page -->
+<div class="page-header">
+    <div class="container-fluid">
+        <div class="row align-items-center">
+            <div class="col-md-8">
+                <h1 class="mb-1"><i class="fas fa-users me-3"></i>Gestion Prospects / Clients</h1>
+                <p class="mb-0">Gérez vos prospects et clients selon le modèle EBP</p>
+            </div>
+            <div class="col-md-4 text-end">
+                <a href="{{ path('app_prospect_new') }}" class="btn btn-light btn-lg">
+                    <i class="fas fa-plus"></i> Nouveau prospect
+                </a>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Statistiques -->
+<div class="container-fluid py-4">
+    <div class="row">
+        <div class="col-md-4">
+            <div class="card card-stats">
+                <div class="card-body">
+                    <div class="d-flex align-items-center">
+                        <div class="stats-icon stats-prospects text-white me-3">
+                            <i class="fas fa-user-clock"></i>
+                        </div>
+                        <div>
+                            <h3 class="mb-1">{{ stats.prospects|default(0) }}</h3>
+                            <p class="text-muted mb-0">Prospects actifs</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-4">
+            <div class="card card-stats">
+                <div class="card-body">
+                    <div class="d-flex align-items-center">
+                        <div class="stats-icon stats-clients text-white me-3">
+                            <i class="fas fa-user-check"></i>
+                        </div>
+                        <div>
+                            <h3 class="mb-1">{{ stats.clients|default(0) }}</h3>
+                            <p class="text-muted mb-0">Clients</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-4">
+            <div class="card card-stats">
+                <div class="card-body">
+                    <div class="d-flex align-items-center">
+                        <div class="stats-icon stats-conversions text-white me-3">
+                            <i class="fas fa-exchange-alt"></i>
+                        </div>
+                        <div>
+                            <h3 class="mb-1">{{ stats.conversions|default(0) }}</h3>
+                            <p class="text-muted mb-0">Conversions ce mois</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Filtres -->
+<div class="card filters-card">
+    <div class="card-body">
+        <form method="GET" class="row g-3">
+            <div class="col-md-3">
+                <label for="statut" class="form-label">Statut</label>
+                <select name="statut" id="statut" class="form-select">
+                    <option value="">Tous</option>
+                    <option value="prospect" {{ app.request.query.get('statut') == 'prospect' ? 'selected' : '' }}>Prospects uniquement</option>
+                    <option value="client" {{ app.request.query.get('statut') == 'client' ? 'selected' : '' }}>Clients uniquement</option>
+                </select>
+            </div>
+            <div class="col-md-3">
+                <label for="famille" class="form-label">Famille</label>
+                <input type="text" name="famille" id="famille" class="form-control" 
+                       value="{{ app.request.query.get('famille') }}" placeholder="Filtrer par famille...">
+            </div>
+            <div class="col-md-3">
+                <label for="secteur" class="form-label">Secteur</label>
+                <select name="secteur" id="secteur" class="form-select">
+                    <option value="">Tous les secteurs</option>
+                    {% for secteur in secteurs|default([]) %}
+                        <option value="{{ secteur.id }}" {{ app.request.query.get('secteur') == secteur.id ~ '' ? 'selected' : '' }}>
+                            {{ secteur.nomSecteur }}
+                        </option>
+                    {% endfor %}
+                </select>
+            </div>
+            <div class="col-md-3 d-flex align-items-end">
+                <button type="submit" class="btn btn-prospect me-2">
+                    <i class="fas fa-search"></i> Filtrer
+                </button>
+                <a href="{{ path('app_prospect_index') }}" class="btn btn-outline-secondary">
+                    <i class="fas fa-times"></i> Reset
+                </a>
+            </div>
+        </form>
+    </div>
+</div>
+
+<!-- Liste des prospects/clients -->
+<div class="container-fluid">
+    <div class="card">
+        <div class="card-body p-0">
+            {% if prospects is empty %}
+                <div class="text-center py-5">
+                    <i class="fas fa-users fa-3x text-muted mb-3"></i>
+                    <h4 class="text-muted">Aucun prospect trouvé</h4>
+                    <p class="text-muted">Commencez par créer votre premier prospect.</p>
+                    <a href="{{ path('app_prospect_new') }}" class="btn btn-prospect">
+                        <i class="fas fa-plus"></i> Créer un prospect
+                    </a>
+                </div>
+            {% else %}
+                <div class="table-responsive">
+                    <table class="table table-hover mb-0">
+                        <thead>
+                            <tr>
+                                <th style="width: 80px;">Code</th>
+                                <th style="width: 100px;">Statut</th>
+                                <th>Nom / Raison sociale</th>
+                                <th>Famille</th>
+                                <th>Contact</th>
+                                <th>Ville</th>
+                                <th>Commercial</th>
+                                <th>Créé le</th>
+                                <th style="width: 120px;" class="text-center">Actions</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for prospect in prospects %}
+                                <tr>
+                                    <td><strong>{{ prospect.code }}</strong></td>
+                                    <td>
+                                        <span class="status-badge {{ prospect.isClient ? 'client-badge' : 'prospect-badge' }}">
+                                            {{ prospect.isClient ? 'CLIENT' : 'PROSPECT' }}
+                                        </span>
+                                    </td>
+                                    <td>
+                                        <div>
+                                            <strong>{{ prospect.nomComplet }}</strong>
+                                            {% if prospect.typePersonne == 'physique' %}
+                                                <small class="text-muted d-block">Particulier</small>
+                                            {% endif %}
+                                        </div>
+                                    </td>
+                                    <td>{{ prospect.famille|default('—') }}</td>
+                                    <td>
+                                        {% if prospect.contactFacturation %}
+                                            <div>{{ prospect.contactFacturation.nomComplet }}</div>
+                                            {% if prospect.contactFacturation.email %}
+                                                <small class="text-muted">{{ prospect.contactFacturation.email }}</small>
+                                            {% endif %}
+                                            {% if prospect.contactFacturation.telephone %}
+                                                <div class="mt-1">
+                                                    <a href="tel:{{ prospect.contactFacturation.telephoneForCall }}" class="btn btn-success btn-sm call-btn">
+                                                        <i class="fas fa-phone"></i> {{ prospect.contactFacturation.telephone }}
+                                                    </a>
+                                                </div>
+                                            {% endif %}
+                                        {% else %}
+                                            <span class="text-muted">—</span>
+                                        {% endif %}
+                                    </td>
+                                    <td>
+                                        {% if prospect.adresseFacturation %}
+                                            {{ prospect.adresseFacturation.ville }}
+                                            <small class="text-muted d-block">{{ prospect.adresseFacturation.codePostal }}</small>
+                                        {% else %}
+                                            <span class="text-muted">—</span>
+                                        {% endif %}
+                                    </td>
+                                    <td>
+                                        {% if prospect.commercial %}
+                                            {{ prospect.commercial.fullName }}
+                                        {% else %}
+                                            <span class="text-muted">Non assigné</span>
+                                        {% endif %}
+                                    </td>
+                                    <td>
+                                        {{ prospect.createdAt|date('d/m/Y') }}
+                                        {% if prospect.dateConversionClient %}
+                                            <small class="text-success d-block">
+                                                <i class="fas fa-user-check"></i> {{ prospect.dateConversionClient|date('d/m/Y') }}
+                                            </small>
+                                        {% endif %}
+                                    </td>
+                                    <td class="text-center">
+                                        <div class="btn-group btn-group-sm">
+                                            <a href="{{ path('app_prospect_show', {'id': prospect.id}) }}" 
+                                               class="btn btn-outline-primary" title="Voir">
+                                                <i class="fas fa-eye"></i>
+                                            </a>
+                                            <a href="{{ path('app_prospect_edit', {'id': prospect.id}) }}" 
+                                               class="btn btn-outline-secondary" title="Modifier">
+                                                <i class="fas fa-edit"></i>
+                                            </a>
+                                            {% if prospect.adresseFacturation and prospect.adresseFacturation.isNavigable %}
+                                                <a href="{{ prospect.adresseFacturation.itineraireGoogleMapsUrl }}" target="_blank" 
+                                                   class="btn btn-outline-info" title="Itinéraire Google Maps">
+                                                    <i class="fas fa-route"></i>
+                                                </a>
+                                            {% endif %}
+                                            {% if prospect.isProspect %}
+                                                <button type="button" class="btn btn-outline-success" 
+                                                        onclick="convertToClient({{ prospect.id }})" title="Convertir en client">
+                                                    <i class="fas fa-user-plus"></i>
+                                                </button>
+                                            {% endif %}
+                                        </div>
+                                    </td>
+                                </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+            {% endif %}
+        </div>
+    </div>
+</div>
+
+<!-- Formulaires cachés pour conversion -->
+{% for prospect in prospects %}
+    {% if prospect.isProspect %}
+        <form method="post" action="{{ path('app_prospect_convert_to_client', {'id': prospect.id}) }}" 
+              style="display: none;" id="convertForm{{ prospect.id }}">
+            <input type="hidden" name="_token" value="{{ csrf_token('convert' ~ prospect.id) }}">
+        </form>
+    {% endif %}
+{% endfor %}
+
+{% block javascripts %}
+<script>
+function convertToClient(prospectId) {
+    if (confirm('Êtes-vous sûr de vouloir convertir ce prospect en client ?\n\nCette action est irréversible.')) {
+        document.getElementById('convertForm' + prospectId).submit();
+    }
+}
+
+// Fonction pour confirmer et lancer l'appel
+function confirmCall(phoneNumber) {
+    return confirm(`Voulez-vous appeler le ${phoneNumber} ?\n\nNote: Cette fonction nécessite un appareil compatible (téléphone, logiciel de téléphonie).`);
+}
+
+// Fonction alternative pour les navigateurs qui ne supportent pas tel:
+function initiateCall(phoneNumber) {
+    // Nettoyage du numéro
+    const cleanNumber = phoneNumber.replace(/[^\d+]/g, '');
+    const telUrl = `tel:${cleanNumber}`;
+    
+    console.log('Tentative d\'appel vers:', cleanNumber);
+    
+    // Vérification du support tel: 
+    if (navigator.userAgent.match(/Android|iPhone|iPad|iPod|Windows Phone/i)) {
+        // Sur mobile, utilise le lien tel: direct
+        window.location.href = telUrl;
+    } else {
+        // Sur desktop, affiche le numéro et propose des alternatives
+        const message = `Numéro à appeler: ${phoneNumber}\n\nOptions:\n- Utilisez votre téléphone\n- Copiez le numéro dans votre logiciel de téléphonie\n- Utilisez Skype, Teams, ou un autre service VoIP`;
+        
+        if (confirm(message + '\n\nVoulez-vous copier le numéro dans le presse-papier ?')) {
+            // Copie dans le presse-papier
+            navigator.clipboard.writeText(cleanNumber).then(() => {
+                alert('Numéro copié dans le presse-papier !');
+            }).catch(() => {
+                // Fallback si clipboard n'est pas disponible
+                prompt('Copiez ce numéro:', cleanNumber);
+            });
+        }
+    }
+}
+
+// Auto-submit du formulaire de filtre sur changement
+document.addEventListener('DOMContentLoaded', function() {
+    const selects = document.querySelectorAll('#statut, #secteur');
+    selects.forEach(select => {
+        select.addEventListener('change', function() {
+            this.form.submit();
+        });
+    });
+    
+    // Gestion des clics sur les boutons d'appel
+    document.querySelectorAll('.call-btn').forEach(function(btn) {
+        btn.addEventListener('click', function(e) {
+            e.preventDefault();
+            
+            const href = this.getAttribute('href');
+            const phoneMatch = href.match(/tel:(.+)$/);
+            
+            if (phoneMatch) {
+                const cleanNumber = phoneMatch[1];
+                
+                // Test si tel: est supporté
+                if (window.location.protocol === 'https:' || window.location.hostname === 'localhost') {
+                    // HTTPS ou localhost - les liens tel: fonctionnent mieux
+                    window.location.href = href;
+                } else {
+                    // HTTP - utilise la fonction alternative
+                    initiateCall(cleanNumber);
+                }
+            }
+        });
+    });
+});
+</script>
+{% endblock %}
+{% endblock %}

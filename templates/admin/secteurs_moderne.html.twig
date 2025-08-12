@@ -1,0 +1,1114 @@
+<!-- Secteurs Géographiques Modernisés -->
+<div class="admin-section">
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <h2 class="section-title mb-0">
+            <i class="fas fa-globe-europe me-2"></i>
+            Secteurs Géographiques Modernisés
+        </h2>
+        <div class="btn-group">
+            <button class="btn btn-outline-primary" onclick="showDivisionsTab()">
+                <i class="fas fa-database me-1"></i>Divisions Administratives
+            </button>
+            <button class="btn btn-outline-info" onclick="showTypesTab()">
+                <i class="fas fa-cogs me-1"></i>Types de Secteur
+            </button>
+            <button class="btn btn-warning" onclick="migrerAncienSysteme()">
+                <i class="fas fa-exchange-alt me-1"></i>Migrer Ancien Système
+            </button>
+        </div>
+    </div>
+
+    <!-- Statistiques système -->
+    <div class="row mb-4">
+        <div class="col-md-3">
+            <div class="card text-center border-primary">
+                <div class="card-body">
+                    <h3 class="text-primary">{{ stats.divisions_administratives ?? 0 }}</h3>
+                    <small class="text-muted">Divisions Administratives</small>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="card text-center border-info">
+                <div class="card-body">
+                    <h3 class="text-info">{{ stats.types_secteur ?? 0 }}</h3>
+                    <small class="text-muted">Types de Secteur</small>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="card text-center border-success">
+                <div class="card-body">
+                    <h3 class="text-success">{{ stats.attributions_secteur ?? 0 }}</h3>
+                    <small class="text-muted">Attributions Actives</small>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="card text-center border-warning">
+                <div class="card-body">
+                    <h3 class="text-warning">{{ stats.secteurs ?? 0 }}</h3>
+                    <small class="text-muted">Secteurs Commerciaux</small>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Navigation sous-onglets -->
+    <ul class="nav nav-pills nav-fill mb-4" id="secteurs-tabs">
+        <li class="nav-item">
+            <a class="nav-link active" id="secteurs-list-tab" data-bs-toggle="pill" href="#secteurs-list">
+                <i class="fas fa-list me-1"></i>Liste des Secteurs
+            </a>
+        </li>
+        <li class="nav-item">
+            <a class="nav-link" id="divisions-admin-tab" data-bs-toggle="pill" href="#divisions-admin">
+                <i class="fas fa-map-marked-alt me-1"></i>Divisions Administratives
+            </a>
+        </li>
+        <li class="nav-item">
+            <a class="nav-link" id="types-secteur-tab" data-bs-toggle="pill" href="#types-secteur">
+                <i class="fas fa-layer-group me-1"></i>Types de Secteur
+            </a>
+        </li>
+        <li class="nav-item">
+            <a class="nav-link" id="rapport-couverture-tab" data-bs-toggle="pill" href="#rapport-couverture">
+                <i class="fas fa-chart-area me-1"></i>Rapport de Couverture
+            </a>
+        </li>
+    </ul>
+
+    <!-- Contenu des sous-onglets -->
+    <div class="tab-content">
+        <!-- Liste des secteurs -->
+        <div class="tab-pane fade show active" id="secteurs-list">
+            <div class="d-flex justify-content-between align-items-center mb-3">
+                <h4>Liste des Secteurs Commerciaux</h4>
+                <button class="btn btn-primary" onclick="creerNouveauSecteur()">
+                    <i class="fas fa-plus me-1"></i>Nouveau Secteur
+                </button>
+            </div>
+
+            <div class="table-responsive">
+                <table class="table table-striped">
+                    <thead class="table-dark">
+                        <tr>
+                            <th>Secteur</th>
+                            <th>Commercial</th>
+                            <th>Type</th>
+                            <th>Système</th>
+                            <th>Attributions</th>
+                            <th>Clients</th>
+                            <th>Actions</th>
+                        </tr>
+                    </thead>
+                    <tbody id="secteurs-table-body">
+                        {% for secteur in secteurs %}
+                        <tr>
+                            <td>
+                                <div class="d-flex align-items-center">
+                                    {% if secteur.couleurHex %}
+                                        <span class="color-indicator me-2" style="background-color: {{ secteur.couleurHex }}"></span>
+                                    {% endif %}
+                                    <div>
+                                        <strong>{{ secteur.nomSecteur }}</strong>
+                                        {% if not secteur.isActive %}
+                                            <span class="badge bg-secondary ms-1">Inactif</span>
+                                        {% endif %}
+                                    </div>
+                                </div>
+                            </td>
+                            <td>
+                                {% if secteur.commercial %}
+                                    <span class="badge bg-info">{{ secteur.commercial.nom }} {{ secteur.commercial.prenom }}</span>
+                                {% else %}
+                                    <span class="badge bg-warning">Non assigné</span>
+                                {% endif %}
+                            </td>
+                            <td>
+                                {% if secteur.typeSecteur %}
+                                    <span class="badge bg-primary">{{ secteur.typeSecteur.nom }}</span>
+                                {% else %}
+                                    <span class="badge bg-secondary">Non défini</span>
+                                {% endif %}
+                            </td>
+                            <td>
+                                {% if secteur.utiliseNouveauSysteme %}
+                                    {% if secteur.utiliseAncienSysteme %}
+                                        <span class="badge bg-warning">Mixte</span>
+                                    {% else %}
+                                        <span class="badge bg-success">Nouveau</span>
+                                    {% endif %}
+                                {% elseif secteur.utiliseAncienSysteme %}
+                                    <span class="badge bg-danger">Ancien</span>
+                                {% else %}
+                                    <span class="badge bg-secondary">Aucun</span>
+                                {% endif %}
+                            </td>
+                            <td>
+                                <span class="badge bg-info">{{ secteur.nombreDivisionsCouvertes }}</span>
+                            </td>
+                            <td>
+                                <span class="badge bg-success">{{ secteur.clients|length }}</span>
+                            </td>
+                            <td>
+                                <div class="btn-group btn-group-sm" role="group">
+                                    <a href="{{ path('app_secteur_edit', {'id': secteur.id}) }}" 
+                                       class="btn btn-outline-primary" 
+                                       title="Modifier et gérer les attributions">
+                                        <i class="fas fa-edit"></i>
+                                    </a>
+                                    <a href="{{ path('app_secteur_show', {'id': secteur.id}) }}" 
+                                       class="btn btn-outline-info" 
+                                       title="Voir les détails">
+                                        <i class="fas fa-eye"></i>
+                                    </a>
+                                </div>
+                            </td>
+                        </tr>
+                        {% else %}
+                        <tr>
+                            <td colspan="7" class="text-center text-muted">
+                                <i class="fas fa-info-circle me-1"></i>Aucun secteur trouvé
+                            </td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+
+        <!-- Divisions administratives -->
+        <div class="tab-pane fade" id="divisions-admin">
+            <div class="d-flex justify-content-between align-items-center mb-3">
+                <h4>Divisions Administratives Françaises</h4>
+                <div class="d-flex gap-2">
+                    <input type="text" class="form-control" id="search-divisions" placeholder="Rechercher..." style="width: 300px;">
+                    <select class="form-select" id="filter-type-division" style="width: 200px;">
+                        <option value="">Tous types</option>
+                        <option value="code_postal">Code postal</option>
+                        <option value="commune">Commune</option>
+                        <option value="canton">Canton</option>
+                        <option value="epci">EPCI</option>
+                        <option value="departement">Département</option>
+                        <option value="region">Région</option>
+                    </select>
+                </div>
+            </div>
+
+            <div id="divisions-container">
+                <div class="table-responsive">
+                    <table class="table table-striped">
+                        <thead class="table-dark">
+                            <tr>
+                                <th>Code Postal</th>
+                                <th>Commune</th>
+                                <th>Département</th>
+                                <th>Région</th>
+                                <th>EPCI</th>
+                                <th>Population</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for division in divisions|default([]) %}
+                            <tr>
+                                <td><span class="badge bg-primary">{{ division.codePostal }}</span></td>
+                                <td><strong>{{ division.nomCommune }}</strong></td>
+                                <td>{{ division.nomDepartement }} ({{ division.codeDepartement }})</td>
+                                <td>{{ division.nomRegion }}</td>
+                                <td>{{ division.nomEpci|default('Non défini') }}</td>
+                                <td>{{ division.population ? (division.population|number_format) : 'N/A' }}</td>
+                            </tr>
+                            {% else %}
+                            <tr>
+                                <td colspan="6" class="text-center text-muted">
+                                    <i class="fas fa-info-circle me-1"></i>Aucune division administrative trouvée
+                                </td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+
+        <!-- Types de secteur -->
+        <div class="tab-pane fade" id="types-secteur">
+            <div class="d-flex justify-content-between align-items-center mb-3">
+                <h4>Types de Secteur Disponibles</h4>
+                <button class="btn btn-primary" onclick="creerTypeSecteur()">
+                    <i class="fas fa-plus me-1"></i>Nouveau Type
+                </button>
+            </div>
+
+            <div id="types-secteur-container">
+                <div class="table-responsive">
+                    <table class="table table-striped">
+                        <thead class="table-dark">
+                            <tr>
+                                <th>Code</th>
+                                <th>Nom</th>
+                                <th>Type</th>
+                                <th>Description</th>
+                                <th>Ordre</th>
+                                <th>Secteurs utilisant</th>
+                                <th>Actions</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for type in types_secteurs|default([]) %}
+                            <tr>
+                                <td><code>{{ type.code }}</code></td>
+                                <td><strong>{{ type.nom }}</strong></td>
+                                <td><span class="badge bg-info">{{ type.typeLibelle }}</span></td>
+                                <td>{{ type.description|default('Aucune description') }}</td>
+                                <td><span class="badge bg-secondary">{{ type.ordre }}</span></td>
+                                <td><span class="badge bg-success">0</span></td>
+                                <td>
+                                    <div class="btn-group btn-group-sm">
+                                        <button class="btn btn-outline-primary" onclick="modifierTypeSecteur({{ type.id }})">
+                                            <i class="fas fa-edit"></i>
+                                        </button>
+                                        <button class="btn btn-outline-danger" onclick="supprimerTypeSecteur({{ type.id }})">
+                                            <i class="fas fa-trash"></i>
+                                        </button>
+                                    </div>
+                                </td>
+                            </tr>
+                            {% else %}
+                            <tr>
+                                <td colspan="7" class="text-center text-muted">
+                                    <i class="fas fa-info-circle me-1"></i>Aucun type de secteur trouvé
+                                </td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+
+        <!-- Rapport de couverture -->
+        <div class="tab-pane fade" id="rapport-couverture">
+            <h4 class="mb-3">Rapport de Couverture Géographique</h4>
+            
+            <div id="rapport-container">
+                <div class="row">
+                    <div class="col-md-6">
+                        <div class="card">
+                            <div class="card-header">
+                                <h5><i class="fas fa-chart-pie me-2"></i>Répartition par Type</h5>
+                            </div>
+                            <div class="card-body">
+                                <p class="text-muted">Statistiques de répartition des attributions par type de critère.</p>
+                                <div class="alert alert-info">
+                                    <i class="fas fa-info-circle me-1"></i>
+                                    {{ stats.attributions_secteur ?? 0 }} attributions actives réparties sur {{ stats.secteurs ?? 0 }} secteurs commerciaux
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="col-md-6">
+                        <div class="card">
+                            <div class="card-header">
+                                <h5><i class="fas fa-users me-2"></i>Par Commercial</h5>
+                            </div>
+                            <div class="card-body">
+                                <p class="text-muted">Répartition des secteurs par commercial.</p>
+                                <ul class="list-unstyled">
+                                    {% for secteur in secteurs %}
+                                        {% if secteur.commercial %}
+                                            <li><strong>{{ secteur.commercial.nom }} {{ secteur.commercial.prenom }}</strong> : {{ secteur.nomSecteur }}</li>
+                                        {% endif %}
+                                    {% endfor %}
+                                </ul>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+
+<style>
+.color-indicator {
+    width: 12px;
+    height: 12px;
+    border-radius: 50%;
+    border: 1px solid #dee2e6;
+}
+
+.nav-pills .nav-link {
+    border-radius: 8px;
+    font-weight: 500;
+}
+
+.nav-pills .nav-link.active {
+    background-color: #0d6efd;
+}
+
+.table th {
+    font-weight: 600;
+    font-size: 0.875rem;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+}
+
+.badge {
+    font-size: 0.75rem;
+}
+
+#attributions-list .attribution-item {
+    padding: 0.5rem;
+    border: 1px solid #dee2e6;
+    border-radius: 6px;
+    margin-bottom: 0.5rem;
+    background: #f8f9fa;
+}
+
+#attributions-list .attribution-item:hover {
+    background: #e9ecef;
+}
+
+.suggestions-item {
+    cursor: pointer;
+    padding: 0.5rem;
+    border-bottom: 1px solid #dee2e6;
+}
+
+.suggestions-item:hover {
+    background-color: #f8f9fa;
+}
+</style>
+
+<script>
+// Fonction d'initialisation pour le dashboard admin
+function initSecteursModerne() {
+    console.log('🎯 Initialisation secteurs modernisés');
+    
+    // Ré-initialiser les event listeners si nécessaire
+    setupFormListeners();
+    
+    console.log('✅ Secteurs modernisés initialisés avec succès');
+}
+
+// Rendre la fonction disponible globalement
+window.initSecteursModerne = initSecteursModerne;
+
+// Alias pour compatibilité avec le dashboard admin
+window.initSecteurs = initSecteursModerne;
+
+function setupFormListeners() {
+    // Configuration de la recherche des divisions pour attribution
+    const searchInput = document.getElementById('search-division-attribution');
+    if (searchInput) {
+        // Supprimer les anciens listeners pour éviter les doublons
+        searchInput.removeEventListener('input', handleSearchInput);
+        
+        let searchTimeout;
+        function handleSearchInput() {
+            clearTimeout(searchTimeout);
+            searchTimeout = setTimeout(() => {
+                rechercherDivisionsAttribution(this.value);
+            }, 300);
+        }
+        
+        searchInput.addEventListener('input', handleSearchInput);
+    }
+
+    // Soumission du formulaire d'attribution
+    const formAttribution = document.getElementById('form-nouvelle-attribution');
+    if (formAttribution) {
+        // Supprimer les anciens listeners pour éviter les doublons
+        formAttribution.removeEventListener('submit', handleFormSubmit);
+        
+        function handleFormSubmit(e) {
+            e.preventDefault();
+            ajouterAttribution();
+        }
+        
+        formAttribution.addEventListener('submit', handleFormSubmit);
+    }
+}
+
+// Navigation entre les sous-onglets - Version simplifiée sans boucles
+document.addEventListener('DOMContentLoaded', function() {
+    // Initialisation unique au chargement
+    setupFormListeners();
+    console.log('🎯 Secteurs modernisés: DOMContentLoaded initialisé');
+});
+
+function showDivisionsTab() {
+    const tab = document.getElementById('divisions-admin-tab');
+    tab.click();
+}
+
+function showTypesTab() {
+    const tab = document.getElementById('types-secteur-tab');
+    tab.click();
+}
+
+function gererAttributions(secteurId) {
+    currentSecteurId = secteurId;
+    
+    console.log('Gestion attributions secteur ID:', secteurId);
+    
+    if (!secteurId || secteurId === 'null') {
+        showToast('Erreur : ID du secteur invalide', 'error');
+        return;
+    }
+    
+    // Trouver le nom du secteur
+    const row = document.querySelector(`button[onclick="gererAttributions(${secteurId})"]`).closest('tr');
+    const secteurNom = row.querySelector('strong').textContent;
+    document.getElementById('secteur-nom').textContent = secteurNom;
+    
+    // Charger les attributions existantes
+    chargerAttributionsSecteur(secteurId);
+    
+    // Afficher le modal
+    const modal = new bootstrap.Modal(document.getElementById('modalAttributions'));
+    modal.show();
+}
+
+function chargerAttributionsSecteur(secteurId) {
+    const container = document.getElementById('attributions-list');
+    container.innerHTML = '<div class="text-center text-muted py-3"><div class="spinner-border spinner-border-sm"></div><p class="mt-2 mb-0">Chargement...</p></div>';
+
+    fetch(`/admin/secteur/${secteurId}/attributions`)
+        .then(response => response.json())
+        .then(data => {
+            if (data.length === 0) {
+                container.innerHTML = '<div class="text-center text-muted py-3"><i class="fas fa-info-circle me-1"></i>Aucune attribution trouvée</div>';
+                return;
+            }
+
+            let html = '';
+            data.forEach(attribution => {
+                html += `
+                    <div class="attribution-item d-flex justify-content-between align-items-start">
+                        <div>
+                            <strong>${attribution.affichage}</strong>
+                            <br><small class="text-muted">${attribution.type_critere}</small>
+                            ${attribution.notes ? `<br><small class="text-info">${attribution.notes}</small>` : ''}
+                        </div>
+                        <button class="btn btn-outline-danger btn-sm" onclick="supprimerAttribution(${attribution.id})">
+                            <i class="fas fa-trash"></i>
+                        </button>
+                    </div>
+                `;
+            });
+            container.innerHTML = html;
+        })
+        .catch(error => {
+            console.error('Erreur:', error);
+            container.innerHTML = '<div class="text-center text-danger py-3"><i class="fas fa-exclamation-triangle me-1"></i>Erreur de chargement</div>';
+        });
+}
+
+function rechercherDivisionsAttribution(terme) {
+    if (terme.length < 2) {
+        document.getElementById('suggestions-divisions').style.display = 'none';
+        return;
+    }
+
+    fetch(`/admin/divisions-administratives/search?terme=${encodeURIComponent(terme)}&limit=20`)
+        .then(response => response.json())
+        .then(data => {
+            const container = document.getElementById('suggestions-divisions');
+            if (data.length === 0) {
+                container.style.display = 'none';
+                return;
+            }
+
+            let html = '';
+            data.forEach(division => {
+                html += `
+                    <div class="list-group-item list-group-item-action suggestions-item" 
+                         onclick="selectionnerDivision(${division.id}, '${division.affichage_complet}')">
+                        ${division.affichage_complet}
+                    </div>
+                `;
+            });
+            container.innerHTML = html;
+            container.style.display = 'block';
+        })
+        .catch(error => {
+            console.error('Erreur recherche:', error);
+        });
+}
+
+function selectionnerDivision(id, affichage) {
+    document.getElementById('search-division-attribution').value = affichage;
+    document.querySelector('input[name="division_id"]').value = id;
+    document.getElementById('suggestions-divisions').style.display = 'none';
+}
+
+function ajouterAttribution() {
+    if (!currentSecteurId || currentSecteurId === 'null') {
+        showToast('Erreur : Aucun secteur sélectionné', 'error');
+        return;
+    }
+    
+    const formData = new FormData(document.getElementById('form-nouvelle-attribution'));
+    const data = Object.fromEntries(formData);
+    
+    console.log('Création attribution pour secteur:', currentSecteurId, 'data:', data);
+
+    fetch(`/admin/secteur/${currentSecteurId}/attributions/create`, {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(data)
+    })
+    .then(response => response.json())
+    .then(result => {
+        if (result.success) {
+            // Recharger les attributions
+            chargerAttributionsSecteur(currentSecteurId);
+            // Réinitialiser le formulaire
+            document.getElementById('form-nouvelle-attribution').reset();
+            document.getElementById('search-division-attribution').value = '';
+            document.getElementById('suggestions-divisions').style.display = 'none';
+            
+            showToast('Attribution ajoutée avec succès', 'success');
+        } else {
+            showToast(result.error || 'Erreur lors de l\'ajout', 'error');
+        }
+    })
+    .catch(error => {
+        console.error('Erreur:', error);
+        showToast('Erreur de communication', 'error');
+    });
+}
+
+function supprimerAttribution(attributionId) {
+    if (!confirm('Êtes-vous sûr de vouloir supprimer cette attribution ?')) {
+        return;
+    }
+
+    fetch(`/admin/attributions/${attributionId}`, {
+        method: 'DELETE'
+    })
+    .then(response => response.json())
+    .then(result => {
+        if (result.success) {
+            chargerAttributionsSecteur(currentSecteurId);
+            showToast('Attribution supprimée', 'success');
+        } else {
+            showToast(result.error || 'Erreur lors de la suppression', 'error');
+        }
+    })
+    .catch(error => {
+        console.error('Erreur:', error);
+        showToast('Erreur de communication', 'error');
+    });
+}
+
+function chargerDivisionsAdministratives() {
+    console.log('🔍 DEBUG: chargerDivisionsAdministratives appelée - contenu déjà chargé statiquement');
+    // Plus besoin de charger via AJAX, le contenu est déjà présent dans le template
+    // Cette fonction ne fait plus rien pour éviter la boucle infinie
+}
+
+function chargerTypesSecteur() {
+    console.log('🔍 DEBUG: chargerTypesSecteur appelée - contenu déjà chargé statiquement');
+    // Plus besoin de charger via AJAX, le contenu est déjà présent dans le template
+    // Cette fonction ne fait plus rien pour éviter la boucle infinie
+}
+
+function chargerRapportCouverture() {
+    console.log('🔍 DEBUG: chargerRapportCouverture appelée - contenu déjà chargé statiquement');
+    // Plus besoin de charger via AJAX, le contenu est déjà présent dans le template
+    // Cette fonction ne fait plus rien pour éviter la boucle infinie
+}
+
+// Fonctions pour types de secteur
+function creerTypeSecteur() {
+    const nom = prompt('Nom du nouveau type de secteur:');
+    if (!nom) return;
+    
+    const type = prompt('Type (code_postal, commune, canton, epci, departement, region):');
+    if (!type) return;
+    
+    const description = prompt('Description (optionnel):') || '';
+    
+    fetch('/admin/types-secteur/create', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ nom, type, description, actif: true })
+    })
+    .then(response => response.json())
+    .then(result => {
+        if (result.success) {
+            showToast('Type de secteur créé avec succès', 'success');
+            setTimeout(() => location.reload(), 1500);
+        } else {
+            showToast(result.message || 'Erreur lors de la création', 'error');
+        }
+    })
+    .catch(error => {
+        console.error('Erreur:', error);
+        showToast('Erreur de communication', 'error');
+    });
+}
+
+function modifierTypeSecteur(id) {
+    const newName = prompt('Nouveau nom:');
+    if (!newName) return;
+    
+    fetch(`/admin/types-secteur/${id}`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ nom: newName })
+    })
+    .then(response => response.json())
+    .then(result => {
+        if (result.success) {
+            showToast('Type modifié avec succès', 'success');
+            setTimeout(() => location.reload(), 1500);
+        } else {
+            showToast(result.message || 'Erreur lors de la modification', 'error');
+        }
+    })
+    .catch(error => {
+        console.error('Erreur:', error);
+        showToast('Erreur de communication', 'error');
+    });
+}
+
+function supprimerTypeSecteur(id) {
+    if (!confirm('Êtes-vous sûr de vouloir supprimer ce type de secteur ?')) return;
+    
+    fetch(`/admin/types-secteur/${id}`, {
+        method: 'DELETE'
+    })
+    .then(response => response.json())
+    .then(result => {
+        if (result.success) {
+            showToast('Type supprimé avec succès', 'success');
+            setTimeout(() => location.reload(), 1500);
+        } else {
+            showToast(result.error || 'Erreur lors de la suppression', 'error');
+        }
+    })
+    .catch(error => {
+        console.error('Erreur:', error);
+        showToast('Erreur de communication', 'error');
+    });
+}
+
+function creerNouveauSecteur() {
+    console.log('🎯 Création nouveau secteur');
+    showToast('Redirection vers la création d\'un nouveau secteur...', 'info');
+    window.location.href = '{{ path("app_secteur_new") }}';
+}
+
+function voirDetailsSecteur(id) {
+    console.log('🎯 Affichage détails secteur:', id);
+    if (!id) {
+        showToast('Erreur : ID secteur invalide', 'error');
+        return;
+    }
+    showToast('Redirection vers les détails du secteur...', 'info');
+    window.location.href = `/secteur/${id}`;
+}
+
+function modifierSecteur(id) {
+    console.log('🎯 Modification secteur:', id);
+    if (!id) {
+        showToast('Erreur : ID secteur invalide', 'error');
+        return;
+    }
+    showToast('Redirection vers l\'édition du secteur...', 'info');
+    window.location.href = `/secteur/${id}/edit`;
+}
+
+// Attacher les fonctions à l'objet window pour les rendre globalement accessibles
+window.voirDetailsSecteur = voirDetailsSecteur;
+window.modifierSecteur = modifierSecteur;
+window.creerNouveauSecteur = creerNouveauSecteur;
+window.creerTypeSecteur = creerTypeSecteur;
+window.modifierTypeSecteur = modifierTypeSecteur;
+window.supprimerTypeSecteur = supprimerTypeSecteur;
+
+function migrerAncienSysteme() {
+    if (!confirm('Cette opération va migrer les zones de l\'ancien système vers le nouveau système de divisions administratives. Continuer ?')) {
+        return;
+    }
+
+    fetch('/admin/secteurs/migration-ancien-systeme', {
+        method: 'POST'
+    })
+    .then(response => response.json())
+    .then(result => {
+        if (result.success) {
+            showToast(`Migration terminée : ${result.data.statistiques.reussies} migrations réussies`, 'success');
+            // Recharger la page pour voir les changements
+            setTimeout(() => location.reload(), 2000);
+        } else {
+            showToast(result.message || 'Erreur lors de la migration', 'error');
+        }
+    })
+    .catch(error => {
+        console.error('Erreur:', error);
+        showToast('Erreur de communication', 'error');
+    });
+}
+
+// Fonction utilitaire pour afficher des notifications
+function showToast(message, type = 'info') {
+    // Utiliser une librairie de toast ou implémenter un système simple
+    const alertClass = type === 'success' ? 'alert-success' : type === 'error' ? 'alert-danger' : 'alert-info';
+    const toastHtml = `
+        <div class="alert ${alertClass} alert-dismissible fade show position-fixed" 
+             style="top: 20px; right: 20px; z-index: 9999; min-width: 300px;" role="alert">
+            ${message}
+            <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+        </div>
+    `;
+    document.body.insertAdjacentHTML('beforeend', toastHtml);
+    
+    // Auto-dismiss après 5 secondes
+    setTimeout(() => {
+        const alerts = document.querySelectorAll('.alert');
+        alerts.forEach(alert => {
+            if (alert.textContent.includes(message)) {
+                alert.remove();
+            }
+        });
+    }, 5000);
+}
+
+// Variables globales pour la gestion des attributions (éviter redéclaration)
+if (typeof currentSecteurId === 'undefined') {
+    var currentSecteurId = null;
+}
+if (typeof entiteSelectionnee === 'undefined') {
+    var entiteSelectionnee = null;
+}
+if (typeof attributionsModifiees === 'undefined') {
+    var attributionsModifiees = false;
+}
+
+// Ouvrir le modal de gestion des attributions
+function gererAttributions(secteurId) {
+    currentSecteurId = secteurId;
+    
+    console.log('🔍 Gestion attributions secteur ID:', secteurId);
+    
+    if (!secteurId || secteurId === 'null') {
+        showToast('Erreur : ID du secteur invalide', 'error');
+        return;
+    }
+    
+    // Trouver le nom du secteur
+    const row = document.querySelector(`button[onclick="gererAttributions(${secteurId})"]`).closest('tr');
+    const secteurNom = row.querySelector('strong').textContent;
+    document.getElementById('secteur-nom').textContent = secteurNom;
+    
+    // Réinitialiser le modal
+    reinitialiserModal();
+    
+    // Charger les attributions existantes
+    chargerAttributionsExistantes(secteurId);
+    
+    // Ouvrir le modal
+    const modal = new bootstrap.Modal(document.getElementById('attributionsModal'));
+    modal.show();
+}
+
+// Charger les attributions existantes d'un secteur
+function chargerAttributionsExistantes(secteurId) {
+    const container = document.getElementById('attributions-existantes');
+    container.innerHTML = '<div class="text-center text-muted"><i class="fas fa-spinner fa-spin"></i> Chargement...</div>';
+    
+    fetch(`/admin/secteur/${secteurId}/attributions`)
+        .then(response => response.json())
+        .then(data => {
+            if (data.success) {
+                afficherAttributionsExistantes(data.attributions);
+            } else {
+                container.innerHTML = '<div class="alert alert-warning">Erreur lors du chargement des attributions</div>';
+            }
+        })
+        .catch(error => {
+            console.error('Erreur:', error);
+            container.innerHTML = '<div class="alert alert-danger">Erreur de communication</div>';
+        });
+}
+
+// Afficher les attributions existantes
+function afficherAttributionsExistantes(attributions) {
+    const container = document.getElementById('attributions-existantes');
+    
+    if (attributions.length === 0) {
+        container.innerHTML = `
+            <div class="text-center text-muted">
+                <i class="fas fa-map-pin fa-2x mb-2"></i>
+                <p>Aucune attribution géographique configurée</p>
+                <small>Utilisez la colonne de droite pour ajouter des zones</small>
+            </div>
+        `;
+        return;
+    }
+    
+    let html = '';
+    attributions.forEach(attribution => {
+        const typeIcon = getTypeIcon(attribution.typeCritere);
+        const typeLabel = getTypeLabel(attribution.typeCritere);
+        
+        html += `
+            <div class="attribution-item mb-2 p-2 border rounded bg-light">
+                <div class="d-flex justify-content-between align-items-start">
+                    <div>
+                        <div class="fw-bold">
+                            ${typeIcon} ${attribution.divisionAdministrative.nom}
+                        </div>
+                        <small class="text-muted">${typeLabel} - ${attribution.valeurCritere}</small>
+                        ${attribution.notes ? `<div class="text-info small mt-1"><i class="fas fa-sticky-note"></i> ${attribution.notes}</div>` : ''}
+                    </div>
+                    <button class="btn btn-sm btn-outline-danger" onclick="supprimerAttribution(${attribution.id})" 
+                            title="Supprimer cette attribution">
+                        <i class="fas fa-trash"></i>
+                    </button>
+                </div>
+            </div>
+        `;
+    });
+    
+    container.innerHTML = html;
+}
+
+// Fonctions utilitaires
+function getTypeIcon(type) {
+    const icons = {
+        'code_postal': '📮',
+        'commune': '🏘️',
+        'canton': '🗺️',
+        'epci': '🏛️',
+        'departement': '🏞️',
+        'region': '🌍'
+    };
+    return icons[type] || '📍';
+}
+
+function getTypeLabel(type) {
+    const labels = {
+        'code_postal': 'Code postal',
+        'commune': 'Commune',
+        'canton': 'Canton',
+        'epci': 'Intercommunalité',
+        'departement': 'Département',
+        'region': 'Région'
+    };
+    return labels[type] || type;
+}
+
+function getPlaceholderForType(type) {
+    const placeholders = {
+        'code_postal': 'Ex: 31000, 65370...',
+        'commune': 'Ex: Toulouse, Tournay...',
+        'canton': 'Ex: Canton de Toulouse...',
+        'epci': 'Ex: Pyrénées haut Garonnaises...',
+        'departement': 'Ex: Haute-Garonne, Hautes-Pyrénées...',
+        'region': 'Ex: Occitanie...'
+    };
+    return placeholders[type] || 'Tapez pour rechercher...';
+}
+
+function reinitialiserModal() {
+    document.getElementById('type-division').value = '';
+    document.getElementById('zone-recherche').style.display = 'none';
+    document.getElementById('recherche-entite').value = '';
+    document.getElementById('notes-attribution').value = '';
+    deselectionnerEntite();
+    attributionsModifiees = false;
+}
+
+// Changer le type de division administrative
+function changerTypeDivision() {
+    const typeSelect = document.getElementById('type-division');
+    const zoneRecherche = document.getElementById('zone-recherche');
+    const rechercheInput = document.getElementById('recherche-entite');
+    
+    if (typeSelect.value) {
+        zoneRecherche.style.display = 'block';
+        rechercheInput.placeholder = getPlaceholderForType(typeSelect.value);
+        rechercheInput.focus();
+        
+        // Réinitialiser la recherche
+        document.getElementById('resultats-recherche').innerHTML = '';
+        deselectionnerEntite();
+    } else {
+        zoneRecherche.style.display = 'none';
+    }
+}
+
+// Rechercher des entités selon le type sélectionné
+function rechercherEntites() {
+    const type = document.getElementById('type-division').value;
+    const terme = document.getElementById('recherche-entite').value.trim();
+    const resultsContainer = document.getElementById('resultats-recherche');
+    
+    if (!type || terme.length < 2) {
+        resultsContainer.innerHTML = '';
+        return;
+    }
+    
+    resultsContainer.innerHTML = '<div class="text-center"><i class="fas fa-spinner fa-spin"></i> Recherche...</div>';
+    
+    fetch(`/admin/divisions-administratives/recherche?type=${type}&terme=${encodeURIComponent(terme)}`)
+        .then(response => response.json())
+        .then(data => {
+            if (data.success) {
+                afficherResultatsRecherche(data.results, type);
+            } else {
+                resultsContainer.innerHTML = '<div class="alert alert-warning">Aucun résultat trouvé</div>';
+            }
+        })
+        .catch(error => {
+            console.error('Erreur:', error);
+            resultsContainer.innerHTML = '<div class="alert alert-danger">Erreur de recherche</div>';
+        });
+}
+
+// Afficher les résultats de recherche
+function afficherResultatsRecherche(results, type) {
+    const container = document.getElementById('resultats-recherche');
+    
+    if (results.length === 0) {
+        container.innerHTML = '<div class="text-muted text-center">Aucun résultat trouvé</div>';
+        return;
+    }
+    
+    let html = '<div class="list-group">';
+    results.forEach(result => {
+        const icon = getTypeIcon(type);
+        html += `
+            <button type="button" class="list-group-item list-group-item-action" 
+                    onclick="selectionnerEntite('${result.id}', '${result.nom}', '${result.valeur}', '${type}')">
+                <div class="d-flex justify-content-between align-items-center">
+                    <div>
+                        <strong>${icon} ${result.nom}</strong>
+                        <br><small class="text-muted">${result.details || result.valeur}</small>
+                    </div>
+                    <i class="fas fa-chevron-right"></i>
+                </div>
+            </button>
+        `;
+    });
+    html += '</div>';
+    
+    container.innerHTML = html;
+}
+
+// Sélectionner une entité
+function selectionnerEntite(id, nom, valeur, type) {
+    entiteSelectionnee = { id, nom, valeur, type };
+    
+    document.getElementById('entite-selectionnee').style.display = 'block';
+    document.getElementById('entite-selectionnee-nom').textContent = `${getTypeIcon(type)} ${nom}`;
+    document.getElementById('resultats-recherche').innerHTML = '';
+    document.getElementById('btn-ajouter-attribution').disabled = false;
+}
+
+// Désélectionner l'entité
+function deselectionnerEntite() {
+    entiteSelectionnee = null;
+    document.getElementById('entite-selectionnee').style.display = 'none';
+    document.getElementById('btn-ajouter-attribution').disabled = true;
+}
+
+// Ajouter une attribution
+function ajouterAttribution() {
+    if (!entiteSelectionnee || !currentSecteurId) {
+        showToast('Erreur : données manquantes', 'error');
+        return;
+    }
+    
+    const notes = document.getElementById('notes-attribution').value.trim();
+    
+    const data = {
+        secteurId: currentSecteurId,
+        divisionId: entiteSelectionnee.id,
+        typeCritere: entiteSelectionnee.type,
+        valeurCritere: entiteSelectionnee.valeur,
+        notes: notes
+    };
+    
+    fetch('/admin/secteur/attribution/create', {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(data)
+    })
+    .then(response => response.json())
+    .then(result => {
+        if (result.success) {
+            showToast('Attribution ajoutée avec succès !', 'success');
+            chargerAttributionsExistantes(currentSecteurId);
+            reinitialiserFormulaire();
+            attributionsModifiees = true;
+        } else {
+            showToast(result.message || 'Erreur lors de l\'ajout', 'error');
+        }
+    })
+    .catch(error => {
+        console.error('Erreur:', error);
+        showToast('Erreur de communication', 'error');
+    });
+}
+
+// Supprimer une attribution
+function supprimerAttribution(attributionId) {
+    if (!confirm('Êtes-vous sûr de vouloir supprimer cette attribution ?')) {
+        return;
+    }
+    
+    fetch(`/admin/secteur/attribution/${attributionId}`, {
+        method: 'DELETE'
+    })
+    .then(response => response.json())
+    .then(result => {
+        if (result.success) {
+            showToast('Attribution supprimée avec succès !', 'success');
+            chargerAttributionsExistantes(currentSecteurId);
+            attributionsModifiees = true;
+        } else {
+            showToast(result.message || 'Erreur lors de la suppression', 'error');
+        }
+    })
+    .catch(error => {
+        console.error('Erreur:', error);
+        showToast('Erreur de communication', 'error');
+    });
+}
+
+function reinitialiserFormulaire() {
+    document.getElementById('type-division').value = '';
+    document.getElementById('zone-recherche').style.display = 'none';
+    document.getElementById('recherche-entite').value = '';
+    document.getElementById('notes-attribution').value = '';
+    deselectionnerEntite();
+}
+
+function sauvegarderAttributions() {
+    if (attributionsModifiees) {
+        showToast('Modifications sauvegardées !', 'success');
+        // Recharger la liste des secteurs pour voir les changements
+        setTimeout(() => location.reload(), 1500);
+    }
+    
+    // Fermer le modal
+    const modal = bootstrap.Modal.getInstance(document.getElementById('attributionsModal'));
+    modal.hide();
+}
+
+
+</script>
+

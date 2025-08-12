@@ -1,0 +1,200 @@
+{# Template pour le chargement AJAX - pas d'extension de base #}
+<div class="admin-section">
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <h3 class="section-title mb-0">
+            <i class="fas fa-file-alt me-2"></i>Gestion des Modèles de Document
+        </h3>
+        <button class="btn btn-primary" data-bs-toggle="modal" data-bs-target="#modeleDocumentModal">
+            <i class="fas fa-plus me-2"></i>Nouveau Modèle de Document
+        </button>
+    </div>
+
+    <div class="table-responsive">
+        <table class="table table-hover" id="modelesDocumentTable">
+            <thead class="table-dark">
+                <tr>
+                    <th>Ordre</th>
+                    <th>Nom</th>
+                    <th>Description</th>
+                    <th>Type Document</th>
+                    <th>Template File</th>
+                    <th>Défaut</th>
+                    <th>Statut</th>
+                    <th>Actions</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for modele in modeles_document %}
+                <tr data-id="{{ modele.id }}">
+                    <td>
+                        <span class="badge bg-secondary">{{ modele.ordre }}</span>
+                    </td>
+                    <td>
+                        <strong>{{ modele.nom }}</strong>
+                    </td>
+                    <td>
+                        <span class="text-muted">{{ modele.description ?? '-' }}</span>
+                    </td>
+                    <td>
+                        <span class="badge bg-info">{{ modele.typeDocument }}</span>
+                    </td>
+                    <td>
+                        {% if modele.templateFile %}
+                            <code class="small">{{ modele.templateFile }}</code>
+                        {% else %}
+                            <span class="text-muted">-</span>
+                        {% endif %}
+                    </td>
+                    <td>
+                        {% if modele.modeleParDefaut %}
+                            <span class="badge bg-warning text-dark">
+                                <i class="fas fa-star me-1"></i>Défaut
+                            </span>
+                        {% else %}
+                            <span class="text-muted">-</span>
+                        {% endif %}
+                    </td>
+                    <td>
+                        <div class="form-check form-switch">
+                            <input class="form-check-input status-toggle" type="checkbox" 
+                                   data-id="{{ modele.id }}" {{ modele.actif ? 'checked' : '' }}>
+                            <label class="form-check-label">
+                                {{ modele.actif ? 'Actif' : 'Inactif' }}
+                            </label>
+                        </div>
+                    </td>
+                    <td>
+                        <div class="btn-group btn-group-sm">
+                            <button class="btn btn-outline-primary edit-btn" 
+                                    data-id="{{ modele.id }}"
+                                    data-nom="{{ modele.nom }}"
+                                    data-description="{{ modele.description ?? '' }}"
+                                    data-type-document="{{ modele.typeDocument }}"
+                                    data-template-file="{{ modele.templateFile ?? '' }}"
+                                    data-css="{{ modele.css ?? '' }}"
+                                    data-actif="{{ modele.actif ? 'true' : 'false' }}"
+                                    data-defaut="{{ modele.modeleParDefaut ? 'true' : 'false' }}"
+                                    data-ordre="{{ modele.ordre }}">
+                                <i class="fas fa-edit"></i>
+                            </button>
+                            <button class="btn btn-outline-danger delete-btn" 
+                                    data-id="{{ modele.id }}"
+                                    data-nom="{{ modele.nom }}">
+                                <i class="fas fa-trash"></i>
+                            </button>
+                        </div>
+                    </td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+</div>
+
+<!-- Modal Modèle de Document -->
+<div class="modal fade" id="modeleDocumentModal" tabindex="-1">
+    <div class="modal-dialog modal-lg">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">
+                    <i class="fas fa-file-alt me-2"></i>
+                    <span id="modal-title">Nouveau Modèle de Document</span>
+                </h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <form id="modeleDocumentForm">
+                    <input type="hidden" id="modele-id">
+                    
+                    <div class="row">
+                        <div class="col-md-8">
+                            <div class="mb-3">
+                                <label for="modele-nom" class="form-label">Nom du modèle</label>
+                                <input type="text" class="form-control" id="modele-nom" required
+                                       placeholder="Ex: Devis standard, Facture simplifiée...">
+                            </div>
+                        </div>
+                        <div class="col-md-4">
+                            <div class="mb-3">
+                                <label for="modele-ordre" class="form-label">Ordre d'affichage</label>
+                                <input type="number" class="form-control" id="modele-ordre" 
+                                       min="1" value="1" step="1" required>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div class="mb-3">
+                        <label for="modele-description" class="form-label">Description</label>
+                        <textarea class="form-control" id="modele-description" rows="2"
+                                  placeholder="Description détaillée du modèle de document..."></textarea>
+                    </div>
+
+                    <div class="row">
+                        <div class="col-md-6">
+                            <div class="mb-3">
+                                <label for="modele-type-document" class="form-label">Type de document</label>
+                                <select class="form-select" id="modele-type-document" required>
+                                    <option value="">Sélectionner un type</option>
+                                    <option value="DEVIS">Devis</option>
+                                    <option value="FACTURE">Facture</option>
+                                    <option value="BON_COMMANDE">Bon de commande</option>
+                                    <option value="BON_LIVRAISON">Bon de livraison</option>
+                                    <option value="AVOIR">Avoir</option>
+                                    <option value="PROFORMA">Proforma</option>
+                                </select>
+                            </div>
+                        </div>
+                        <div class="col-md-6">
+                            <div class="mb-3">
+                                <label for="modele-template-file" class="form-label">Fichier template</label>
+                                <input type="text" class="form-control" id="modele-template-file"
+                                       placeholder="Ex: devis_standard.html.twig">
+                                <div class="form-text">
+                                    Nom du fichier Twig dans templates/documents/
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="mb-3">
+                        <label for="modele-css" class="form-label">CSS personnalisé</label>
+                        <textarea class="form-control" id="modele-css" rows="4" 
+                                  placeholder="/* CSS spécifique au modèle */&#10;.header { color: blue; }&#10;.footer { font-size: 12px; }"></textarea>
+                        <div class="form-text">
+                            Styles CSS qui seront appliqués spécifiquement à ce modèle
+                        </div>
+                    </div>
+                    
+                    <div class="mb-3">
+                        <div class="form-check form-switch">
+                            <input class="form-check-input" type="checkbox" id="modele-defaut">
+                            <label class="form-check-label" for="modele-defaut">
+                                <strong>Modèle par défaut pour ce type</strong>
+                            </label>
+                            <div class="form-text">
+                                Sélectionné automatiquement pour ce type de document
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div class="mb-3">
+                        <div class="form-check form-switch">
+                            <input class="form-check-input" type="checkbox" id="modele-actif" checked>
+                            <label class="form-check-label" for="modele-actif">
+                                Modèle actif
+                            </label>
+                        </div>
+                    </div>
+                </form>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Annuler</button>
+                <button type="button" class="btn btn-primary" id="save-modele">
+                    <i class="fas fa-save me-2"></i>Enregistrer
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+
+{# Fin du template AJAX #}

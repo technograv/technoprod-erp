@@ -1,0 +1,466 @@
+{% extends 'base.html.twig' %}
+
+{% block title %}Devis {{ devis.numeroDevis }}{% endblock %}
+
+{% block stylesheets %}
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
+    <style>
+        .devis-header {
+            background: linear-gradient(135deg, #6f42c1 0%, #e83e8c 100%);
+            color: white;
+            padding: 1.5rem 0;
+            margin-bottom: 0;
+        }
+        .devis-tabs {
+            background-color: #f8f9fa;
+            border-bottom: 1px solid #dee2e6;
+            margin-bottom: 0;
+        }
+        .nav-tabs .nav-link {
+            border: none;
+            border-bottom: 3px solid transparent;
+            background: none;
+            color: #6c757d;
+            padding: 1rem 1.5rem;
+        }
+        .nav-tabs .nav-link:hover {
+            border-bottom-color: #dee2e6;
+            color: #495057;
+        }
+        .nav-tabs .nav-link.active {
+            background: white;
+            color: #495057;
+            border-bottom-color: #6f42c1;
+            font-weight: 600;
+        }
+        .tab-content {
+            background: white;
+            min-height: 400px;
+        }
+        .info-group {
+            background: #f8f9fa;
+            border-radius: 8px;
+            padding: 1rem;
+            margin-bottom: 1rem;
+        }
+        .info-group h6 {
+            color: #495057;
+            font-weight: 600;
+            margin-bottom: 0.75rem;
+            border-bottom: 2px solid #dee2e6;
+            padding-bottom: 0.5rem;
+        }
+        .action-buttons {
+            background: #fff;
+            border-top: 1px solid #dee2e6;
+            padding: 1rem;
+        }
+        .status-badge {
+            font-size: 0.875rem;
+            padding: 0.5rem 1rem;
+        }
+        .devis-items-table th {
+            background-color: #f8f9fa;
+            border-top: none;
+            font-weight: 600;
+            color: #495057;
+        }
+        .timeline {
+            position: relative;
+            padding-left: 30px;
+        }
+        .timeline::before {
+            content: '';
+            position: absolute;
+            left: 15px;
+            top: 0;
+            bottom: 0;
+            width: 2px;
+            background: #dee2e6;
+        }
+        .timeline-item {
+            position: relative;
+            margin-bottom: 20px;
+        }
+        .timeline-item::before {
+            content: '';
+            position: absolute;
+            left: -8px;
+            top: 5px;
+            width: 16px;
+            height: 16px;
+            border-radius: 50%;
+            background: white;
+            border: 3px solid #6f42c1;
+        }
+        .timeline-item.completed::before {
+            background: #28a745;
+            border-color: #28a745;
+        }
+    </style>
+{% endblock %}
+
+{% block body %}
+<!-- Messages Flash -->
+{% for type, messages in app.flashes %}
+    {% for message in messages %}
+        <div class="alert alert-{{ type == 'error' ? 'danger' : (type == 'warning' ? 'warning' : (type == 'info' ? 'info' : 'success')) }} alert-dismissible fade show" role="alert">
+            {{ message }}
+            <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+        </div>
+    {% endfor %}
+{% endfor %}
+
+<!-- En-tête devis -->
+<div class="devis-header">
+    <div class="container-fluid">
+        <div class="row align-items-center">
+            <div class="col-md-8">
+                <div class="d-flex align-items-center">
+                    <div class="me-3">
+                        <i class="fas fa-file-invoice fa-2x"></i>
+                    </div>
+                    <div>
+                        <h1 class="mb-1">{{ devis.numeroDevis }}</h1>
+                        <p class="mb-0">
+                            <span class="badge bg-{{ devis.statutCouleur }} status-badge">{{ devis.statutLibelle }}</span>
+                            {% if devis.client %}
+                                <span class="ms-2">{{ devis.client.nomComplet }}</span>
+                            {% endif %}
+                        </p>
+                    </div>
+                </div>
+            </div>
+            <div class="col-md-4 text-end">
+                <div class="btn-group">
+                    <a href="{{ path('app_devis_edit', {'id': devis.id}) }}" class="btn btn-light">
+                        <i class="fas fa-edit"></i> Modifier
+                    </a>
+                    <a href="{{ path('app_devis_pdf', {'id': devis.id}) }}" target="_blank" class="btn btn-outline-light">
+                        <i class="fas fa-file-pdf"></i> PDF
+                    </a>
+                    <button type="button" class="btn btn-outline-light" data-bs-toggle="modal" data-bs-target="#envoyerModal">
+                        <i class="fas fa-paper-plane"></i> 
+                        {% if devis.statut == 'envoye' %}Renvoyer{% else %}Envoyer{% endif %}
+                    </button>
+                    <button type="button" class="btn btn-outline-light">
+                        <i class="fas fa-history"></i> Historique
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Onglets -->
+<div class="devis-tabs">
+    <div class="container-fluid">
+        <ul class="nav nav-tabs" id="devisTabs" role="tablist">
+            <li class="nav-item" role="presentation">
+                <button class="nav-link active" id="details-tab" data-bs-toggle="tab" data-bs-target="#details" type="button" role="tab">
+                    <i class="fas fa-info-circle me-2"></i>Détails
+                </button>
+            </li>
+            <li class="nav-item" role="presentation">
+                <button class="nav-link" id="lignes-tab" data-bs-toggle="tab" data-bs-target="#lignes" type="button" role="tab">
+                    <i class="fas fa-list me-2"></i>Lignes de devis
+                </button>
+            </li>
+            <li class="nav-item" role="presentation">
+                <button class="nav-link" id="suivi-tab" data-bs-toggle="tab" data-bs-target="#suivi" type="button" role="tab">
+                    <i class="fas fa-tasks me-2"></i>Suivi
+                </button>
+            </li>
+            {% if devis.dateSignature %}
+            <li class="nav-item" role="presentation">
+                <button class="nav-link" id="signature-tab" data-bs-toggle="tab" data-bs-target="#signature" type="button" role="tab">
+                    <i class="fas fa-signature me-2"></i>Signature
+                </button>
+            </li>
+            {% endif %}
+        </ul>
+    </div>
+</div>
+
+<!-- Contenu des onglets -->
+<div class="container-fluid">
+    <div class="tab-content" id="devisTabsContent">
+        <!-- Onglet Détails -->
+        <div class="tab-pane fade show active" id="details" role="tabpanel">
+            <div class="row p-4">
+                <div class="col-md-6">
+                    <div class="info-group">
+                        <h6><i class="fas fa-building me-2"></i>Informations client</h6>
+                        {% if devis.client %}
+                            <p class="mb-1"><strong>{{ devis.client.nomComplet }}</strong></p>
+                            {% if devis.client.formeJuridique %}
+                                <p class="mb-1">{{ devis.client.formeJuridique.isPersonnePhysique() ? 'Particulier' : 'Entreprise' }}</p>
+                            {% endif %}
+                            {% if devis.client.secteur %}
+                                <p class="mb-0">Secteur : {{ devis.client.secteur.nomSecteur }}</p>
+                            {% endif %}
+                        {% endif %}
+                    </div>
+
+                    <div class="info-group">
+                        <h6><i class="fas fa-user me-2"></i>Contact facturation</h6>
+                        {% if devis.contactFacturation %}
+                            <p class="mb-1"><strong>{{ devis.contactFacturation.nomComplet }}</strong></p>
+                            {% if devis.contactFacturation.fonction %}<p class="mb-1">{{ devis.contactFacturation.fonction }}</p>{% endif %}
+                            {% if devis.contactFacturation.email %}<p class="mb-1"><i class="fas fa-envelope me-1"></i> {{ devis.contactFacturation.email }}</p>{% endif %}
+                            {% if devis.contactFacturation.telephone %}<p class="mb-0"><i class="fas fa-phone me-1"></i> {{ devis.contactFacturation.telephone }}</p>{% endif %}
+                        {% else %}
+                            <p class="text-muted mb-0">Aucun contact de facturation</p>
+                        {% endif %}
+                    </div>
+                </div>
+
+                <div class="col-md-6">
+                    <div class="info-group">
+                        <h6><i class="fas fa-calendar me-2"></i>Informations devis</h6>
+                        <div class="row">
+                            <div class="col-6">
+                                <p class="mb-2"><strong>Créé :</strong><br>{{ devis.dateCreation|date('d/m/Y') }}</p>
+                                <p class="mb-0"><strong>Validité :</strong><br>{{ devis.dateValidite|date('d/m/Y') }}</p>
+                            </div>
+                            <div class="col-6">
+                                {% if devis.dateEnvoi %}<p class="mb-2"><strong>Envoyé :</strong><br>{{ devis.dateEnvoi|date('d/m/Y') }}</p>{% endif %}
+                                {% if devis.dateSignature %}<p class="mb-0"><strong>Signé :</strong><br>{{ devis.dateSignature|date('d/m/Y') }}</p>{% endif %}
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="info-group">
+                        <h6><i class="fas fa-calculator me-2"></i>Montants</h6>
+                        <div class="row text-center">
+                            <div class="col-4">
+                                <div class="h4 text-primary mb-1">{{ devis.totalHt }}€</div>
+                                <small class="text-muted">Total HT</small>
+                            </div>
+                            <div class="col-4">
+                                <div class="h4 text-info mb-1">{{ devis.totalTva }}€</div>
+                                <small class="text-muted">TVA</small>
+                            </div>
+                            <div class="col-4">
+                                <div class="h4 text-success mb-1">{{ devis.totalTtc }}€</div>
+                                <small class="text-muted">Total TTC</small>
+                            </div>
+                        </div>
+                        {% if devis.acomptePercent or devis.acompteMontant %}
+                            <hr>
+                            <p class="mb-0"><strong>Acompte :</strong> 
+                                {% if devis.acomptePercent %}{{ devis.acomptePercent }}%{% endif %}
+                                {% if devis.acompteMontant %}{{ devis.acompteMontant }}€{% endif %}
+                                = {{ devis.calculateAcompte }}€
+                            </p>
+                        {% endif %}
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Onglet Lignes de devis -->
+        <div class="tab-pane fade" id="lignes" role="tabpanel">
+            <div class="p-4">
+                <div class="table-responsive">
+                    <table class="table table-hover devis-items-table">
+                        <thead>
+                            <tr>
+                                <th>Désignation</th>
+                                <th>Description</th>
+                                <th class="text-center">Qté</th>
+                                <th class="text-end">Prix unit. HT</th>
+                                <th class="text-center">TVA</th>
+                                <th class="text-end">Total HT</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for item in devis.devisItems %}
+                                <tr>
+                                    <td>
+                                        <strong>{{ item.designation }}</strong>
+                                        {% if item.produit %}
+                                            <br><small class="text-muted">Réf: {{ item.produit.reference }}</small>
+                                        {% endif %}
+                                    </td>
+                                    <td>{{ item.description }}</td>
+                                    <td class="text-center">{{ item.quantite }}</td>
+                                    <td class="text-end">{{ item.prixUnitaireHt }}€</td>
+                                    <td class="text-center">{{ item.tvaPercent }}%</td>
+                                    <td class="text-end"><strong>{{ item.totalLigneHt }}€</strong></td>
+                                </tr>
+                            {% else %}
+                                <tr>
+                                    <td colspan="6" class="text-center text-muted">Aucune ligne de devis</td>
+                                </tr>
+                            {% endfor %}
+                        </tbody>
+                        <tfoot>
+                            <tr>
+                                <th colspan="5" class="text-end">Total HT :</th>
+                                <th class="text-end">{{ devis.totalHt }}€</th>
+                            </tr>
+                            <tr>
+                                <th colspan="5" class="text-end">TVA :</th>
+                                <th class="text-end">{{ devis.totalTva }}€</th>
+                            </tr>
+                            <tr class="table-success">
+                                <th colspan="5" class="text-end">Total TTC :</th>
+                                <th class="text-end">{{ devis.totalTtc }}€</th>
+                            </tr>
+                        </tfoot>
+                    </table>
+                </div>
+            </div>
+        </div>
+
+        <!-- Onglet Suivi -->
+        <div class="tab-pane fade" id="suivi" role="tabpanel">
+            <div class="p-4">
+                <div class="timeline">
+                    <div class="timeline-item completed">
+                        <div class="d-flex">
+                            <div>
+                                <h6 class="mb-1">Devis créé</h6>
+                                <p class="text-muted mb-0">{{ devis.dateCreation|date('d/m/Y à H:i') }}</p>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    {% if devis.dateEnvoi %}
+                    <div class="timeline-item completed">
+                        <div class="d-flex">
+                            <div>
+                                <h6 class="mb-1">Devis envoyé</h6>
+                                <p class="text-muted mb-0">{{ devis.dateEnvoi|date('d/m/Y à H:i') }}</p>
+                                {% if devis.urlAccesClient %}
+                                    <small><a href="{{ devis.urlAccesClient }}" target="_blank">Lien d'accès client</a></small>
+                                {% endif %}
+                            </div>
+                        </div>
+                    </div>
+                    {% endif %}
+
+                    {% if devis.dateSignature %}
+                    <div class="timeline-item completed">
+                        <div class="d-flex">
+                            <div>
+                                <h6 class="mb-1">Devis signé</h6>
+                                <p class="text-muted mb-0">{{ devis.dateSignature|date('d/m/Y à H:i') }}</p>
+                                {% if devis.signatureNom %}
+                                    <small>Signé par : {{ devis.signatureNom }} ({{ devis.signatureEmail }})</small>
+                                {% endif %}
+                            </div>
+                        </div>
+                    </div>
+                    {% endif %}
+
+                    {% if devis.datePaiementAcompte %}
+                    <div class="timeline-item completed">
+                        <div class="d-flex">
+                            <div>
+                                <h6 class="mb-1">Acompte réglé</h6>
+                                <p class="text-muted mb-0">{{ devis.datePaiementAcompte|date('d/m/Y à H:i') }}</p>
+                                {% if devis.modePaiement %}
+                                    <small>Mode : {{ devis.modePaiement }} - Transaction : {{ devis.transactionId }}</small>
+                                {% endif %}
+                            </div>
+                        </div>
+                    </div>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+
+        <!-- Onglet Signature -->
+        {% if devis.dateSignature %}
+        <div class="tab-pane fade" id="signature" role="tabpanel">
+            <div class="p-4">
+                <div class="info-group">
+                    <h6><i class="fas fa-signature me-2"></i>Signature électronique</h6>
+                    <div class="row">
+                        <div class="col-md-6">
+                            <p class="mb-1"><strong>Signataire :</strong> {{ devis.signatureNom }}</p>
+                            <p class="mb-1"><strong>Email :</strong> {{ devis.signatureEmail }}</p>
+                            <p class="mb-0"><strong>Date :</strong> {{ devis.dateSignature|date('d/m/Y à H:i:s') }}</p>
+                        </div>
+                        <div class="col-md-6">
+                            {% if devis.signatureData %}
+                                <div class="border rounded p-2">
+                                    <img src="{{ devis.signatureData }}" alt="Signature" class="img-fluid" style="max-height: 100px;">
+                                </div>
+                            {% endif %}
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        {% endif %}
+    </div>
+</div>
+
+<!-- Actions -->
+<div class="action-buttons">
+    <div class="container-fluid">
+        <div class="d-flex justify-content-between align-items-center">
+            <div>
+                <a href="{{ path('app_devis_index') }}" class="btn btn-secondary">
+                    <i class="fas fa-arrow-left"></i> Retour à la liste
+                </a>
+            </div>
+            <div>
+                <span class="text-muted me-3">
+                    Créé le {{ devis.createdAt|date('d/m/Y') }}
+                    {% if devis.updatedAt %}
+                        • Modifié le {{ devis.updatedAt|date('d/m/Y') }}
+                    {% endif %}
+                </span>
+                {{ include('devis/_delete_form.html.twig') }}
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Modal d'envoi -->
+<div class="modal fade" id="envoyerModal" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <form method="POST" action="{{ path('app_devis_envoyer', {'id': devis.id}) }}">
+                <div class="modal-header">
+                    <h5 class="modal-title">Envoyer le devis par email</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body">
+                    <div class="mb-3">
+                        <label for="email" class="form-label">Adresse email *</label>
+                        <input type="email" class="form-control" id="email" name="email" 
+                               value="{{ devis.contactFacturation ? devis.contactFacturation.email : '' }}" required>
+                    </div>
+                    <div class="mb-3">
+                        <label for="message" class="form-label">Message personnalisé</label>
+                        <textarea class="form-control" id="message" name="message" rows="4" 
+                                  placeholder="Message d'accompagnement (optionnel)"></textarea>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Annuler</button>
+                    <button type="submit" class="btn btn-primary">
+                        <i class="fas fa-paper-plane"></i> Envoyer
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+{% block javascripts %}
+<script>
+// Activer les tooltips Bootstrap
+var tooltipTriggerList = [].slice.call(document.querySelectorAll('[data-bs-toggle="tooltip"]'))
+var tooltipList = tooltipTriggerList.map(function (tooltipTriggerEl) {
+    return new bootstrap.Tooltip(tooltipTriggerEl)
+});
+</script>
+{% endblock %}
+{% endblock %}

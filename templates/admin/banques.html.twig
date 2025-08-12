@@ -1,0 +1,592 @@
+{# Template pour le chargement AJAX - pas d'extension de base #}
+<div class="admin-section">
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <h3 class="section-title mb-0">
+            <i class="fas fa-university me-2"></i>Gestion des Banques
+        </h3>
+        <button class="btn btn-primary" data-bs-toggle="modal" data-bs-target="#banqueModal">
+            <i class="fas fa-plus me-2"></i>Nouvelle Banque
+        </button>
+    </div>
+
+    <div class="table-responsive">
+        <table class="table table-hover" id="banquesTable">
+            <thead class="table-dark">
+                <tr>
+                    <th>Ordre</th>
+                    <th>Code</th>
+                    <th>Nom</th>
+                    <th>Ville</th>
+                    <th>IBAN</th>
+                    <th>BIC</th>
+                    <th>Identifiants</th>
+                    <th>Statut</th>
+                    <th>Actions</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for banque in banques %}
+                <tr data-id="{{ banque.id }}">
+                    <td>
+                        <span class="badge bg-secondary">{{ banque.ordre }}</span>
+                    </td>
+                    <td>
+                        <code class="small">{{ banque.code }}</code>
+                    </td>
+                    <td>
+                        <strong>{{ banque.nom }}</strong>
+                        {% if banque.notes %}
+                            <i class="fas fa-sticky-note ms-1 text-warning" 
+                               title="{{ banque.notes }}" data-bs-toggle="tooltip"></i>
+                        {% endif %}
+                    </td>
+                    <td>
+                        {% if banque.ville %}
+                            {{ banque.ville }}
+                            {% if banque.codePostal %}
+                                <small class="text-muted">({{ banque.codePostal }})</small>
+                            {% endif %}
+                        {% else %}
+                            <span class="text-muted">-</span>
+                        {% endif %}
+                    </td>
+                    <td>
+                        {% if banque.iban %}
+                            <span class="font-monospace small">{{ banque.iban|slice(0, 4) }}...{{ banque.iban|slice(-4) }}</span>
+                        {% else %}
+                            <span class="text-muted">-</span>
+                        {% endif %}
+                    </td>
+                    <td>
+                        {% if banque.bic %}
+                            <span class="font-monospace small">{{ banque.bic }}</span>
+                        {% else %}
+                            <span class="text-muted">-</span>
+                        {% endif %}
+                    </td>
+                    <td>
+                        <div class="d-flex gap-1">
+                            {% if banque.numeroNationalEmetteur %}
+                                <span class="badge bg-info small" title="Numéro National Émetteur CFONB">
+                                    NNS: {{ banque.numeroNationalEmetteur }}
+                                </span>
+                            {% endif %}
+                            {% if banque.identifiantCreancierSepa %}
+                                <span class="badge bg-success small" title="Identifiant Créancier SEPA">
+                                    ICS: {{ banque.identifiantCreancierSepa|slice(0, 8) }}...
+                                </span>
+                            {% endif %}
+                        </div>
+                        {% if not banque.numeroNationalEmetteur and not banque.identifiantCreancierSepa %}
+                            <span class="text-muted">-</span>
+                        {% endif %}
+                    </td>
+                    <td>
+                        <div class="form-check form-switch">
+                            <input class="form-check-input status-toggle" type="checkbox" 
+                                   data-id="{{ banque.id }}" {{ banque.actif ? 'checked' : '' }}>
+                            <label class="form-check-label">
+                                {{ banque.actif ? 'Active' : 'Inactive' }}
+                            </label>
+                        </div>
+                    </td>
+                    <td>
+                        <div class="btn-group btn-group-sm">
+                            <button class="btn btn-outline-primary edit-btn" 
+                                    data-id="{{ banque.id }}"
+                                    data-code="{{ banque.code }}"
+                                    data-nom="{{ banque.nom }}"
+                                    data-adresse="{{ banque.adresse ?? '' }}"
+                                    data-code-postal="{{ banque.codePostal ?? '' }}"
+                                    data-ville="{{ banque.ville ?? '' }}"
+                                    data-pays="{{ banque.pays ?? '' }}"
+                                    data-telephone="{{ banque.telephone ?? '' }}"
+                                    data-fax="{{ banque.fax ?? '' }}"
+                                    data-email="{{ banque.email ?? '' }}"
+                                    data-site-web="{{ banque.siteWeb ?? '' }}"
+                                    data-code-journal="{{ banque.codeJournal ?? '' }}"
+                                    data-compte-comptable="{{ banque.compteComptable ?? '' }}"
+                                    data-code-journal-remise="{{ banque.codeJournalRemise ?? '' }}"
+                                    data-compte-paiements-encaisser="{{ banque.comptePaiementsEncaisser ?? '' }}"
+                                    data-rib-bban="{{ banque.ribBban ?? '' }}"
+                                    data-iban="{{ banque.iban ?? '' }}"
+                                    data-bic="{{ banque.bic ?? '' }}"
+                                    data-numero-national-emetteur="{{ banque.numeroNationalEmetteur ?? '' }}"
+                                    data-identifiant-creancier-sepa="{{ banque.identifiantCreancierSepa ?? '' }}"
+                                    data-notes="{{ banque.notes ?? '' }}"
+                                    data-actif="{{ banque.actif ? 'true' : 'false' }}"
+                                    data-ordre="{{ banque.ordre }}">
+                                <i class="fas fa-edit"></i>
+                            </button>
+                            <button class="btn btn-outline-danger delete-btn" 
+                                    data-id="{{ banque.id }}"
+                                    data-nom="{{ banque.nom }}">
+                                <i class="fas fa-trash"></i>
+                            </button>
+                        </div>
+                    </td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+</div>
+
+<!-- Modal Banque -->
+<div class="modal fade" id="banqueModal" tabindex="-1">
+    <div class="modal-dialog modal-xl">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">
+                    <i class="fas fa-university me-2"></i>
+                    <span id="modal-title">Nouvelle Banque</span>
+                </h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <form id="banqueForm">
+                    <input type="hidden" id="banque-id">
+                    
+                    <!-- Informations générales -->
+                    <div class="row">
+                        <div class="col-md-12">
+                            <h6 class="border-bottom pb-2 mb-3">
+                                <i class="fas fa-info-circle me-2"></i>Informations générales
+                            </h6>
+                        </div>
+                    </div>
+
+                    <div class="row">
+                        <div class="col-md-3">
+                            <div class="mb-3">
+                                <label for="banque-code" class="form-label">Code *</label>
+                                <input type="text" class="form-control" id="banque-code" required
+                                       maxlength="10" placeholder="Ex: BNP, LCL">
+                            </div>
+                        </div>
+                        <div class="col-md-9">
+                            <div class="mb-3">
+                                <label for="banque-nom" class="form-label">Nom de la banque *</label>
+                                <input type="text" class="form-control" id="banque-nom" required
+                                       placeholder="Ex: BNP Paribas, Crédit Lyonnais">
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Adresse -->
+                    <div class="row">
+                        <div class="col-md-12">
+                            <h6 class="border-bottom pb-2 mb-3">
+                                <i class="fas fa-map-marker-alt me-2"></i>Adresse
+                            </h6>
+                        </div>
+                    </div>
+
+                    <div class="row">
+                        <div class="col-md-12">
+                            <div class="mb-3">
+                                <label for="banque-adresse" class="form-label">Adresse</label>
+                                <input type="text" class="form-control" id="banque-adresse"
+                                       placeholder="Numéro et nom de rue">
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="row">
+                        <div class="col-md-3">
+                            <div class="mb-3">
+                                <label for="banque-code-postal" class="form-label">Code postal</label>
+                                <input type="text" class="form-control" id="banque-code-postal"
+                                       maxlength="10" placeholder="75000">
+                            </div>
+                        </div>
+                        <div class="col-md-6">
+                            <div class="mb-3">
+                                <label for="banque-ville" class="form-label">Ville</label>
+                                <input type="text" class="form-control" id="banque-ville"
+                                       placeholder="Paris">
+                            </div>
+                        </div>
+                        <div class="col-md-3">
+                            <div class="mb-3">
+                                <label for="banque-pays" class="form-label">Pays</label>
+                                <input type="text" class="form-control" id="banque-pays"
+                                       value="France" placeholder="France">
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Contact -->
+                    <div class="row">
+                        <div class="col-md-12">
+                            <h6 class="border-bottom pb-2 mb-3">
+                                <i class="fas fa-phone me-2"></i>Contact
+                            </h6>
+                        </div>
+                    </div>
+
+                    <div class="row">
+                        <div class="col-md-4">
+                            <div class="mb-3">
+                                <label for="banque-telephone" class="form-label">Téléphone</label>
+                                <input type="tel" class="form-control" id="banque-telephone"
+                                       placeholder="01 23 45 67 89">
+                            </div>
+                        </div>
+                        <div class="col-md-4">
+                            <div class="mb-3">
+                                <label for="banque-fax" class="form-label">Fax</label>
+                                <input type="tel" class="form-control" id="banque-fax"
+                                       placeholder="01 23 45 67 90">
+                            </div>
+                        </div>
+                        <div class="col-md-4">
+                            <div class="mb-3">
+                                <label for="banque-email" class="form-label">Email</label>
+                                <input type="email" class="form-control" id="banque-email"
+                                       placeholder="contact@banque.fr">
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="row">
+                        <div class="col-md-12">
+                            <div class="mb-3">
+                                <label for="banque-site-web" class="form-label">Site web</label>
+                                <input type="url" class="form-control" id="banque-site-web"
+                                       placeholder="https://www.banque.fr">
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Coordonnées bancaires -->
+                    <div class="row">
+                        <div class="col-md-12">
+                            <h6 class="border-bottom pb-2 mb-3">
+                                <i class="fas fa-credit-card me-2"></i>Coordonnées bancaires
+                            </h6>
+                        </div>
+                    </div>
+
+                    <div class="row">
+                        <div class="col-md-6">
+                            <div class="mb-3">
+                                <label for="banque-iban" class="form-label">IBAN</label>
+                                <input type="text" class="form-control font-monospace" id="banque-iban"
+                                       maxlength="34" placeholder="FR76 3000 2005 5000 0015 7845 Z02">
+                            </div>
+                        </div>
+                        <div class="col-md-3">
+                            <div class="mb-3">
+                                <label for="banque-bic" class="form-label">BIC/SWIFT</label>
+                                <input type="text" class="form-control font-monospace" id="banque-bic"
+                                       maxlength="11" placeholder="BNPAFRPP">
+                            </div>
+                        </div>
+                        <div class="col-md-3">
+                            <div class="mb-3">
+                                <label for="banque-rib-bban" class="form-label">RIB/BBAN</label>
+                                <input type="text" class="form-control font-monospace" id="banque-rib-bban"
+                                       maxlength="23" placeholder="30002 00550 0001578452">
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Identifiants CFONB/SEPA -->
+                    <div class="row">
+                        <div class="col-md-12">
+                            <h6 class="border-bottom pb-2 mb-3">
+                                <i class="fas fa-barcode me-2"></i>Identifiants CFONB/SEPA
+                            </h6>
+                        </div>
+                    </div>
+
+                    <div class="row">
+                        <div class="col-md-6">
+                            <div class="mb-3">
+                                <label for="banque-numero-national-emetteur" class="form-label">
+                                    Numéro National Émetteur (NNS)
+                                </label>
+                                <input type="text" class="form-control font-monospace" id="banque-numero-national-emetteur"
+                                       maxlength="6" placeholder="123456">
+                            </div>
+                        </div>
+                        <div class="col-md-6">
+                            <div class="mb-3">
+                                <label for="banque-identifiant-creancier-sepa" class="form-label">
+                                    Identifiant Créancier SEPA (ICS)
+                                </label>
+                                <input type="text" class="form-control font-monospace" id="banque-identifiant-creancier-sepa"
+                                       maxlength="35" placeholder="FR12ZZZ123456">
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Comptabilité -->
+                    <div class="row">
+                        <div class="col-md-12">
+                            <h6 class="border-bottom pb-2 mb-3">
+                                <i class="fas fa-calculator me-2"></i>Comptabilité
+                            </h6>
+                        </div>
+                    </div>
+
+                    <div class="row">
+                        <div class="col-md-6">
+                            <div class="mb-3">
+                                <label for="banque-code-journal" class="form-label">Code journal banque</label>
+                                <select class="form-select" id="banque-code-journal">
+                                    <option value="">Sélectionner un journal</option>
+                                    <option value="placeholder">Journaux à gérer plus tard</option>
+                                </select>
+                            </div>
+                        </div>
+                        <div class="col-md-6">
+                            <div class="mb-3">
+                                <label for="banque-compte-comptable" class="form-label">Compte comptable</label>
+                                <select class="form-select" id="banque-compte-comptable">
+                                    <option value="">Sélectionner un compte</option>
+                                    <option value="placeholder">Comptes à gérer plus tard</option>
+                                </select>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="row">
+                        <div class="col-md-6">
+                            <div class="mb-3">
+                                <label for="banque-code-journal-remise" class="form-label">Code journal remise</label>
+                                <select class="form-select" id="banque-code-journal-remise">
+                                    <option value="">Sélectionner un journal</option>
+                                    <option value="placeholder">Journaux à gérer plus tard</option>
+                                </select>
+                            </div>
+                        </div>
+                        <div class="col-md-6">
+                            <div class="mb-3">
+                                <label for="banque-compte-paiements-encaisser" class="form-label">Paiements à encaisser</label>
+                                <select class="form-select" id="banque-compte-paiements-encaisser">
+                                    <option value="">Sélectionner un compte</option>
+                                    <option value="placeholder">Comptes à gérer plus tard</option>
+                                </select>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Notes et ordre -->
+                    <div class="row">
+                        <div class="col-md-8">
+                            <div class="mb-3">
+                                <label for="banque-notes" class="form-label">Notes</label>
+                                <textarea class="form-control" id="banque-notes" rows="3"
+                                          placeholder="Commentaires ou informations complémentaires..."></textarea>
+                            </div>
+                        </div>
+                        <div class="col-md-4">
+                            <div class="mb-3">
+                                <label for="banque-ordre" class="form-label">Ordre d'affichage</label>
+                                <input type="number" class="form-control" id="banque-ordre" 
+                                       min="1" value="1" step="1" required>
+                            </div>
+                            <div class="mb-3">
+                                <div class="form-check form-switch">
+                                    <input class="form-check-input" type="checkbox" id="banque-actif" checked>
+                                    <label class="form-check-label" for="banque-actif">
+                                        Banque active
+                                    </label>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </form>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Annuler</button>
+                <button type="button" class="btn btn-primary" id="save-banque">
+                    <i class="fas fa-save me-2"></i>Enregistrer
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+function initBanquesEvents() {
+    // Gestion du bouton "Nouveau"
+    const newButton = document.querySelector('[data-bs-target="#banqueModal"]');
+    if (newButton) {
+        newButton.addEventListener('click', function() {
+            // Nettoyer les backdrops existants avant d'ouvrir le modal
+            const existingBackdrops = document.querySelectorAll('.modal-backdrop');
+            existingBackdrops.forEach(backdrop => backdrop.remove());
+            document.body.classList.remove('modal-open');
+        });
+    }
+    
+    // Gestion des boutons d'édition
+    document.querySelectorAll('.edit-btn').forEach(btn => {
+        btn.addEventListener('click', function() {
+            const id = this.dataset.id;
+            document.getElementById('banque-id').value = id;
+            document.getElementById('banque-code').value = this.dataset.code;
+            document.getElementById('banque-nom').value = this.dataset.nom;
+            document.getElementById('banque-adresse').value = this.dataset.adresse || '';
+            document.getElementById('banque-code-postal').value = this.dataset.codePostal || '';
+            document.getElementById('banque-ville').value = this.dataset.ville || '';
+            document.getElementById('banque-pays').value = this.dataset.pays || '';
+            document.getElementById('banque-telephone').value = this.dataset.telephone || '';
+            document.getElementById('banque-fax').value = this.dataset.fax || '';
+            document.getElementById('banque-email').value = this.dataset.email || '';
+            document.getElementById('banque-site-web').value = this.dataset.siteWeb || '';
+            document.getElementById('banque-iban').value = this.dataset.iban || '';
+            document.getElementById('banque-bic').value = this.dataset.bic || '';
+            document.getElementById('banque-rib-bban').value = this.dataset.ribBban || '';
+            document.getElementById('banque-numero-national-emetteur').value = this.dataset.numeroNationalEmetteur || '';
+            document.getElementById('banque-identifiant-creancier-sepa').value = this.dataset.identifiantCreancierSepa || '';
+            document.getElementById('banque-code-journal').value = this.dataset.codeJournal || '';
+            document.getElementById('banque-compte-comptable').value = this.dataset.compteComptable || '';
+            document.getElementById('banque-code-journal-remise').value = this.dataset.codeJournalRemise || '';
+            document.getElementById('banque-compte-paiements-encaisser').value = this.dataset.comptePaiementsEncaisser || '';
+            document.getElementById('banque-notes').value = this.dataset.notes || '';
+            document.getElementById('banque-ordre').value = this.dataset.ordre;
+            document.getElementById('banque-actif').checked = this.dataset.actif === 'true';
+            
+            document.getElementById('modal-title').textContent = 'Modifier la Banque';
+            
+            // Nettoyer les backdrops existants avant d'ouvrir le modal
+            const existingBackdrops = document.querySelectorAll('.modal-backdrop');
+            existingBackdrops.forEach(backdrop => backdrop.remove());
+            document.body.classList.remove('modal-open');
+            
+            new bootstrap.Modal(document.getElementById('banqueModal')).show();
+        });
+    });
+
+    // Sauvegarde
+    document.getElementById('save-banque').addEventListener('click', function() {
+        const id = document.getElementById('banque-id').value;
+        const data = {
+            code: document.getElementById('banque-code').value,
+            nom: document.getElementById('banque-nom').value,
+            adresse: document.getElementById('banque-adresse').value,
+            code_postal: document.getElementById('banque-code-postal').value,
+            ville: document.getElementById('banque-ville').value,
+            pays: document.getElementById('banque-pays').value,
+            telephone: document.getElementById('banque-telephone').value,
+            fax: document.getElementById('banque-fax').value,
+            email: document.getElementById('banque-email').value,
+            site_web: document.getElementById('banque-site-web').value,
+            iban: document.getElementById('banque-iban').value,
+            bic: document.getElementById('banque-bic').value,
+            rib_bban: document.getElementById('banque-rib-bban').value,
+            numero_national_emetteur: document.getElementById('banque-numero-national-emetteur').value,
+            identifiant_creancier_sepa: document.getElementById('banque-identifiant-creancier-sepa').value,
+            code_journal: document.getElementById('banque-code-journal').value,
+            compte_comptable: document.getElementById('banque-compte-comptable').value,
+            code_journal_remise: document.getElementById('banque-code-journal-remise').value,
+            compte_paiements_encaisser: document.getElementById('banque-compte-paiements-encaisser').value,
+            notes: document.getElementById('banque-notes').value,
+            ordre: parseInt(document.getElementById('banque-ordre').value),
+            actif: document.getElementById('banque-actif').checked
+        };
+
+        const url = id ? `/admin/banques/${id}/update` : '/admin/banques/create';
+        const method = id ? 'PUT' : 'POST';
+
+        fetch(url, {
+            method: method,
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(data)
+        })
+        .then(response => response.json())
+        .then(result => {
+            if (result.success) {
+                location.reload();
+            } else {
+                alert('Erreur : ' + (result.message || result.error));
+            }
+        })
+        .catch(error => {
+            console.error('Error:', error);
+            alert('Erreur lors de la sauvegarde');
+        });
+    });
+
+    // Suppression
+    document.querySelectorAll('.delete-btn').forEach(btn => {
+        btn.addEventListener('click', function() {
+            if (confirm(`Êtes-vous sûr de vouloir supprimer la banque "${this.dataset.nom}" ?`)) {
+                fetch(`/admin/banques/${this.dataset.id}/delete`, { method: 'DELETE' })
+                .then(response => response.json())
+                .then(result => {
+                    if (result.success) {
+                        location.reload();
+                    } else {
+                        alert('Erreur : ' + (result.message || result.error));
+                    }
+                })
+                .catch(error => {
+                    console.error('Error:', error);
+                    alert('Erreur lors de la suppression');
+                });
+            }
+        });
+    });
+
+    // Toggle statut
+    document.querySelectorAll('.status-toggle').forEach(toggle => {
+        toggle.addEventListener('change', function() {
+            const id = this.dataset.id;
+            const actif = this.checked;
+            
+            fetch(`/admin/banques/${id}/update`, {
+                method: 'PUT',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ actif: actif })
+            })
+            .then(response => response.json())
+            .then(result => {
+                if (!result.success) {
+                    this.checked = !actif; // Revert
+                    alert('Erreur : ' + (result.message || result.error));
+                }
+            })
+            .catch(error => {
+                console.error('Error:', error);
+                this.checked = !actif; // Revert
+            });
+        });
+    });
+
+    // Reset du modal
+    document.getElementById('banqueModal').addEventListener('hidden.bs.modal', function() {
+        document.getElementById('banqueForm').reset();
+        document.getElementById('banque-id').value = '';
+        document.getElementById('modal-title').textContent = 'Nouvelle Banque';
+        document.getElementById('banque-pays').value = 'France';
+        
+        // Nettoyer manuellement le backdrop qui pourrait rester
+        const backdrops = document.querySelectorAll('.modal-backdrop');
+        backdrops.forEach(backdrop => backdrop.remove());
+        
+        // S'assurer que body n'a plus les classes de modal
+        document.body.classList.remove('modal-open');
+        document.body.style.overflow = '';
+        document.body.style.paddingRight = '';
+    });
+}
+
+// Initialisation pour AJAX loading
+if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', initBanquesEvents);
+} else {
+    setTimeout(initBanquesEvents, 50);
+}
+
+// Fonction globale pour appel depuis dashboard
+window.initBanques = function() {
+    setTimeout(initBanquesEvents, 100);
+};
+</script>
+
+{# Fin du template AJAX #}

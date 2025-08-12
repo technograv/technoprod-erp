@@ -1,0 +1,571 @@
+<h3 class="section-title">
+    <i class="fas fa-shipping-fast me-2"></i>Gestion des Frais de Port
+</h3>
+
+<div class="row mb-3">
+    <div class="col-md-6">
+        <button type="button" class="btn btn-success" data-bs-toggle="modal" data-bs-target="#modalFraisPort">
+            <i class="fas fa-plus me-2"></i>Nouveaux Frais de Port
+        </button>
+    </div>
+    <div class="col-md-6 text-end">
+        <span class="badge bg-info">{{ frais_port|length }} frais de port configurés</span>
+    </div>
+</div>
+
+<div class="table-responsive">
+    <table class="table table-hover">
+        <thead class="table-light">
+            <tr>
+                <th>Ordre</th>
+                <th>Code</th>
+                <th>Nom</th>
+                <th>Mode de calcul</th>
+                <th>Valeur</th>
+                <th>Taux TVA</th>
+                <th>Transporteur</th>
+                <th>Paliers</th>
+                <th>Statut</th>
+                <th>Actions</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for frais in frais_port %}
+            <tr>
+                <td>
+                    <span class="badge bg-secondary">{{ frais.ordre }}</span>
+                </td>
+                <td>
+                    <code class="bg-light px-2 py-1">{{ frais.code }}</code>
+                </td>
+                <td>
+                    <strong>{{ frais.nom }}</strong>
+                </td>
+                <td>
+                    <span class="badge bg-primary">{{ frais.modeCalculLibelle }}</span>
+                </td>
+                <td>
+                    {% if frais.valeur %}
+                        {% if frais.modeCalcul == 'pourcentage_ht' %}
+                            {{ frais.valeur }}%
+                        {% else %}
+                            {{ frais.valeur }}€
+                        {% endif %}
+                    {% else %}
+                        <span class="text-muted">-</span>
+                    {% endif %}
+                </td>
+                <td>
+                    <span class="badge bg-info">{{ frais.tauxTva.nom }}</span>
+                </td>
+                <td>
+                    {% if frais.transporteur %}
+                        <span class="badge bg-warning text-dark">{{ frais.transporteur.nom }}</span>
+                    {% else %}
+                        <span class="text-muted">Aucun</span>
+                    {% endif %}
+                </td>
+                <td>
+                    {% if frais.utiliserPaliers %}
+                        <span class="badge bg-success">{{ frais.paliers|length }} paliers</span>
+                    {% else %}
+                        <span class="text-muted">-</span>
+                    {% endif %}
+                </td>
+                <td>
+                    <span class="badge {{ frais.actif ? 'bg-success' : 'bg-danger' }}">
+                        {{ frais.actif ? 'Actif' : 'Inactif' }}
+                    </span>
+                </td>
+                <td>
+                    <div class="btn-group btn-group-sm">
+                        <button type="button" class="btn btn-outline-primary btn-edit-frais-port" 
+                                data-id="{{ frais.id }}"
+                                data-bs-toggle="modal" 
+                                data-bs-target="#modalFraisPort">
+                            <i class="fas fa-edit"></i>
+                        </button>
+                        <button type="button" class="btn btn-outline-danger btn-delete-frais-port" 
+                                data-id="{{ frais.id }}"
+                                data-nom="{{ frais.nom }}">
+                            <i class="fas fa-trash"></i>
+                        </button>
+                    </div>
+                </td>
+            </tr>
+            {% else %}
+            <tr>
+                <td colspan="10" class="text-center text-muted py-4">
+                    <i class="fas fa-shipping-fast fa-3x mb-3"></i>
+                    <p>Aucun frais de port configuré.</p>
+                    <button type="button" class="btn btn-success" data-bs-toggle="modal" data-bs-target="#modalFraisPort">
+                        <i class="fas fa-plus me-2"></i>Créer les premiers frais de port
+                    </button>
+                </td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+</div>
+
+<!-- Modal Frais de Port -->
+<div class="modal fade" id="modalFraisPort" tabindex="-1" aria-labelledby="modalFraisPortLabel" aria-hidden="true">
+    <div class="modal-dialog modal-xl">
+        <div class="modal-content">
+            <div class="modal-header bg-primary text-white">
+                <h5 class="modal-title" id="modalFraisPortLabel">
+                    <i class="fas fa-shipping-fast me-2"></i>
+                    <span id="modal-title-text">Nouveaux Frais de Port</span>
+                </h5>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body">
+                <form id="formFraisPort">
+                    <input type="hidden" id="frais-port-id" name="id">
+                    
+                    <!-- Informations générales -->
+                    <div class="row mb-4">
+                        <div class="col-12">
+                            <h6 class="text-primary border-bottom pb-2">
+                                <i class="fas fa-info-circle me-2"></i>Informations générales
+                            </h6>
+                        </div>
+                        <div class="col-md-3">
+                            <label for="frais-port-code" class="form-label">Code <span class="text-danger">*</span></label>
+                            <input type="text" class="form-control" id="frais-port-code" name="code" required maxlength="20" 
+                                   placeholder="Ex: PORT-STD, PORT-EXP">
+                        </div>
+                        <div class="col-md-6">
+                            <label for="frais-port-nom" class="form-label">Nom <span class="text-danger">*</span></label>
+                            <input type="text" class="form-control" id="frais-port-nom" name="nom" required maxlength="100" 
+                                   placeholder="Ex: Port standard, Port express">
+                        </div>
+                        <div class="col-md-3">
+                            <label for="frais-port-ordre" class="form-label">Ordre</label>
+                            <input type="number" class="form-control" id="frais-port-ordre" name="ordre" min="1" placeholder="1">
+                        </div>
+                    </div>
+
+                    <!-- Mode de calcul -->
+                    <div class="row mb-4">
+                        <div class="col-12">
+                            <h6 class="text-success border-bottom pb-2">
+                                <i class="fas fa-calculator me-2"></i>Mode de calcul
+                            </h6>
+                        </div>
+                        <div class="col-md-6">
+                            <label for="frais-port-mode-calcul" class="form-label">Mode de calcul <span class="text-danger">*</span></label>
+                            <select class="form-select" id="frais-port-mode-calcul" name="modeCalcul" required>
+                                <option value="montant_fixe">Montant fixe</option>
+                                <option value="pourcentage_ht">% du montant HT</option>
+                                <option value="palier_montant_ht">Palier sur montant HT facturé</option>
+                                <option value="palier_quantite">Palier sur quantité totale facturée</option>
+                                <option value="palier_poids">Palier sur poids total brut</option>
+                                <option value="palier_colis">Palier sur nombre total de colis</option>
+                                <option value="palier_volume">Palier sur volume total</option>
+                            </select>
+                        </div>
+                        <div class="col-md-6" id="valeur-section">
+                            <label for="frais-port-valeur" class="form-label">Valeur</label>
+                            <div class="input-group">
+                                <input type="number" class="form-control" id="frais-port-valeur" name="valeur" step="0.01" min="0" 
+                                       placeholder="0.00">
+                                <span class="input-group-text" id="valeur-unite">€</span>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Relations -->
+                    <div class="row mb-4">
+                        <div class="col-12">
+                            <h6 class="text-info border-bottom pb-2">
+                                <i class="fas fa-link me-2"></i>Relations
+                            </h6>
+                        </div>
+                        <div class="col-md-6">
+                            <label for="frais-port-taux-tva" class="form-label">Taux TVA <span class="text-danger">*</span></label>
+                            <select class="form-select" id="frais-port-taux-tva" name="tauxTvaId" required>
+                                <option value="">Sélectionner un taux TVA</option>
+                                {% for taux in taux_tva %}
+                                <option value="{{ taux.id }}">{{ taux.nom }} ({{ taux.taux }}%)</option>
+                                {% endfor %}
+                            </select>
+                        </div>
+                        <div class="col-md-6">
+                            <label for="frais-port-transporteur" class="form-label">Transporteur</label>
+                            <select class="form-select" id="frais-port-transporteur" name="transporteurId">
+                                <option value="">Aucun transporteur</option>
+                                {% for transporteur in transporteurs %}
+                                <option value="{{ transporteur.id }}">{{ transporteur.nom }}</option>
+                                {% endfor %}
+                            </select>
+                        </div>
+                    </div>
+
+                    <!-- Gestion des paliers -->
+                    <div class="row mb-4" id="paliers-section" style="display: none;">
+                        <div class="col-12">
+                            <h6 class="text-warning border-bottom pb-2">
+                                <i class="fas fa-layer-group me-2"></i>Configuration des paliers
+                            </h6>
+                        </div>
+                        <div class="col-12">
+                            <div id="paliers-container">
+                                <!-- Les paliers seront ajoutés dynamiquement ici -->
+                            </div>
+                            <button type="button" class="btn btn-outline-success btn-sm" id="btn-add-palier">
+                                <i class="fas fa-plus me-2"></i>Ajouter un palier
+                            </button>
+                        </div>
+                    </div>
+
+                    <!-- Notes -->
+                    <div class="row mb-4">
+                        <div class="col-12">
+                            <label for="frais-port-notes" class="form-label">Notes</label>
+                            <textarea class="form-control" id="frais-port-notes" name="notes" rows="3" 
+                                      placeholder="Notes et remarques sur ces frais de port..."></textarea>
+                        </div>
+                    </div>
+
+                    <!-- Statut -->
+                    <div class="row mb-3">
+                        <div class="col-md-6">
+                            <div class="form-check form-switch">
+                                <input class="form-check-input" type="checkbox" id="frais-port-actif" name="actif" checked>
+                                <label class="form-check-label" for="frais-port-actif">
+                                    Frais de port actifs
+                                </label>
+                            </div>
+                        </div>
+                    </div>
+                </form>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">
+                    <i class="fas fa-times me-2"></i>Annuler
+                </button>
+                <button type="button" class="btn btn-primary" id="btn-save-frais-port">
+                    <i class="fas fa-save me-2"></i>Enregistrer
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+let palierCounter = 0;
+
+function initFraisPort() {
+    console.log('Initialisation du module Frais de Port...');
+    
+    // Gestion du changement de mode de calcul
+    document.getElementById('frais-port-mode-calcul').addEventListener('change', function() {
+        updateModeCalculInterface();
+    });
+    
+    function updateModeCalculInterface() {
+        const modeCalcul = document.getElementById('frais-port-mode-calcul').value;
+        const valeurSection = document.getElementById('valeur-section');
+        const paliersSection = document.getElementById('paliers-section');
+        const valeurUnite = document.getElementById('valeur-unite');
+        
+        // Réinitialiser
+        valeurSection.style.display = 'block';
+        paliersSection.style.display = 'none';
+        
+        if (modeCalcul === 'pourcentage_ht') {
+            valeurUnite.textContent = '%';
+        } else if (modeCalcul.startsWith('palier_')) {
+            valeurSection.style.display = 'none';
+            paliersSection.style.display = 'block';
+            updatePaliersLabels(modeCalcul);
+        } else {
+            valeurUnite.textContent = '€';
+        }
+    }
+    
+    function updatePaliersLabels(modeCalcul) {
+        let unite = '';
+        let label = '';
+        
+        switch(modeCalcul) {
+            case 'palier_montant_ht':
+                unite = '€';
+                label = 'montant HT';
+                break;
+            case 'palier_quantite':
+                unite = 'unités';
+                label = 'quantité';
+                break;
+            case 'palier_poids':
+                unite = 'kg';
+                label = 'poids';
+                break;
+            case 'palier_colis':
+                unite = 'colis';
+                label = 'colis';
+                break;
+            case 'palier_volume':
+                unite = 'm³';
+                label = 'volume';
+                break;
+        }
+        
+        // Mettre à jour les labels des paliers existants
+        document.querySelectorAll('.palier-item .palier-unite').forEach(span => {
+            span.textContent = unite;
+        });
+        document.querySelectorAll('.palier-item .palier-label').forEach(span => {
+            span.textContent = label;
+        });
+    }
+    
+    // Ajouter un palier
+    document.getElementById('btn-add-palier').addEventListener('click', function() {
+        addPalier();
+    });
+    
+    function addPalier(data = null) {
+        const modeCalcul = document.getElementById('frais-port-mode-calcul').value;
+        let unite = '';
+        let label = '';
+        
+        switch(modeCalcul) {
+            case 'palier_montant_ht':
+                unite = '€';
+                label = 'montant HT';
+                break;
+            case 'palier_quantite':
+                unite = 'unités';
+                label = 'quantité';
+                break;
+            case 'palier_poids':
+                unite = 'kg';
+                label = 'poids';
+                break;
+            case 'palier_colis':
+                unite = 'colis';
+                label = 'colis';
+                break;
+            case 'palier_volume':
+                unite = 'm³';
+                label = 'volume';
+                break;
+        }
+        
+        const palierHtml = `
+            <div class="palier-item border p-3 mb-2 rounded">
+                <div class="row">
+                    <div class="col-md-4">
+                        <label class="form-label">Jusqu'à <span class="palier-label">${label}</span></label>
+                        <div class="input-group">
+                            <input type="number" class="form-control palier-limite" step="0.001" min="0" 
+                                   placeholder="1000" value="${data ? data.limiteJusqua : ''}">
+                            <span class="input-group-text palier-unite">${unite}</span>
+                        </div>
+                    </div>
+                    <div class="col-md-4">
+                        <label class="form-label">Frais de port</label>
+                        <div class="input-group">
+                            <input type="number" class="form-control palier-valeur" step="0.01" min="0" 
+                                   placeholder="15.00" value="${data ? data.valeur : ''}">
+                            <span class="input-group-text">€</span>
+                        </div>
+                    </div>
+                    <div class="col-md-3">
+                        <label class="form-label">Description</label>
+                        <input type="text" class="form-control palier-description" 
+                               placeholder="Optionnel" value="${data ? data.description || '' : ''}">
+                    </div>
+                    <div class="col-md-1 d-flex align-items-end">
+                        <button type="button" class="btn btn-outline-danger btn-sm btn-remove-palier">
+                            <i class="fas fa-trash"></i>
+                        </button>
+                    </div>
+                </div>
+            </div>
+        `;
+        
+        document.getElementById('paliers-container').insertAdjacentHTML('beforeend', palierHtml);
+        
+        // Ajouter l'event listener pour supprimer
+        const newPalier = document.getElementById('paliers-container').lastElementChild;
+        newPalier.querySelector('.btn-remove-palier').addEventListener('click', function() {
+            newPalier.remove();
+        });
+        
+        palierCounter++;
+    }
+    
+    // Boutons d'édition
+    document.querySelectorAll('.btn-edit-frais-port').forEach(btn => {
+        btn.addEventListener('click', function() {
+            const id = this.dataset.id;
+            console.log('Édition frais de port ID:', id);
+            
+            fetch(`{{ path('app_admin_frais_port_get') }}?id=${id}`)
+                .then(response => response.json())
+                .then(data => {
+                    console.log('Données frais de port reçues:', data);
+                    
+                    // Remplir le formulaire
+                    document.getElementById('frais-port-id').value = data.id;
+                    document.getElementById('frais-port-code').value = data.code;
+                    document.getElementById('frais-port-nom').value = data.nom;
+                    document.getElementById('frais-port-mode-calcul').value = data.modeCalcul;
+                    document.getElementById('frais-port-valeur').value = data.valeur || '';
+                    document.getElementById('frais-port-taux-tva').value = data.tauxTvaId;
+                    document.getElementById('frais-port-transporteur').value = data.transporteurId || '';
+                    document.getElementById('frais-port-notes').value = data.notes || '';
+                    document.getElementById('frais-port-ordre').value = data.ordre;
+                    document.getElementById('frais-port-actif').checked = data.actif;
+                    
+                    // Mettre à jour l'interface selon le mode
+                    updateModeCalculInterface();
+                    
+                    // Charger les paliers
+                    document.getElementById('paliers-container').innerHTML = '';
+                    if (data.paliers && data.paliers.length > 0) {
+                        data.paliers.forEach(palier => {
+                            addPalier(palier);
+                        });
+                    }
+                    
+                    // Changer le titre
+                    document.getElementById('modal-title-text').textContent = 'Modifier Frais de Port';
+                })
+                .catch(error => {
+                    console.error('Erreur lors du chargement des frais de port:', error);
+                    alert('Erreur lors du chargement des frais de port');
+                });
+        });
+    });
+    
+    // Reset du modal à la fermeture
+    document.getElementById('modalFraisPort').addEventListener('hidden.bs.modal', function() {
+        document.getElementById('formFraisPort').reset();
+        document.getElementById('frais-port-id').value = '';
+        document.getElementById('frais-port-actif').checked = true;
+        document.getElementById('paliers-container').innerHTML = '';
+        document.getElementById('modal-title-text').textContent = 'Nouveaux Frais de Port';
+        updateModeCalculInterface();
+    });
+    
+    // Bouton d'enregistrement
+    document.getElementById('btn-save-frais-port').addEventListener('click', function() {
+        const formData = new FormData(document.getElementById('formFraisPort'));
+        const id = document.getElementById('frais-port-id').value;
+        const url = id ? `{{ path('app_admin_frais_port_update', {'id': '__ID__'}) }}`.replace('__ID__', id) : `{{ path('app_admin_frais_port_create') }}`;
+        
+        // Collecter les paliers
+        const paliers = [];
+        document.querySelectorAll('.palier-item').forEach(palier => {
+            const limite = palier.querySelector('.palier-limite').value;
+            const valeur = palier.querySelector('.palier-valeur').value;
+            const description = palier.querySelector('.palier-description').value;
+            
+            if (limite && valeur) {
+                paliers.push({
+                    limiteJusqua: limite,
+                    valeur: valeur,
+                    description: description || null
+                });
+            }
+        });
+        
+        // Préparer les données JSON
+        const data = {
+            code: formData.get('code'),
+            nom: formData.get('nom'),
+            modeCalcul: formData.get('modeCalcul'),
+            valeur: formData.get('valeur') || null,
+            tauxTvaId: parseInt(formData.get('tauxTvaId')),
+            transporteurId: formData.get('transporteurId') ? parseInt(formData.get('transporteurId')) : null,
+            notes: formData.get('notes'),
+            ordre: parseInt(formData.get('ordre')) || 1,
+            actif: document.getElementById('frais-port-actif').checked,
+            paliers: paliers
+        };
+        
+        console.log('Sauvegarde frais de port...', data);
+        
+        fetch(url, {
+            method: id ? 'PUT' : 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'X-Requested-With': 'XMLHttpRequest'
+            },
+            body: JSON.stringify(data)
+        })
+        .then(response => response.json())
+        .then(data => {
+            if (data.success) {
+                bootstrap.Modal.getInstance(document.getElementById('modalFraisPort')).hide();
+                
+                // Recharger l'onglet
+                const tabContent = document.querySelector('#frais-port .admin-section');
+                tabContent.dataset.loaded = 'false';
+                
+                fetch('{{ path("app_admin_frais_port") }}')
+                    .then(response => response.text())
+                    .then(html => {
+                        tabContent.innerHTML = html;
+                        initFraisPort();
+                    });
+            } else {
+                alert('Erreur: ' + (data.message || 'Erreur inconnue'));
+            }
+        })
+        .catch(error => {
+            console.error('Erreur lors de la sauvegarde:', error);
+            alert('Erreur lors de la sauvegarde');
+        });
+    });
+    
+    // Boutons de suppression
+    document.querySelectorAll('.btn-delete-frais-port').forEach(btn => {
+        btn.addEventListener('click', function() {
+            const id = this.dataset.id;
+            const nom = this.dataset.nom;
+            
+            if (confirm(`Êtes-vous sûr de vouloir supprimer les frais de port "${nom}" ?`)) {
+                fetch(`{{ path('app_admin_frais_port_delete', {'id': '__ID__'}) }}`.replace('__ID__', id), {
+                    method: 'DELETE',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'X-Requested-With': 'XMLHttpRequest'
+                    }
+                })
+                .then(response => response.json())
+                .then(data => {
+                    if (data.success) {
+                        // Recharger l'onglet
+                        const tabContent = document.querySelector('#frais-port .admin-section');
+                        tabContent.dataset.loaded = 'false';
+                        
+                        fetch('{{ path("app_admin_frais_port") }}')
+                            .then(response => response.text())
+                            .then(html => {
+                                tabContent.innerHTML = html;
+                                initFraisPort();
+                            });
+                    } else {
+                        alert('Erreur: ' + (data.message || 'Erreur inconnue'));
+                    }
+                })
+                .catch(error => {
+                    console.error('Erreur lors de la suppression:', error);
+                    alert('Erreur lors de la suppression');
+                });
+            }
+        });
+    });
+    
+    // Initialiser l'interface
+    updateModeCalculInterface();
+}
+
+// Rendre la fonction globale
+window.initFraisPort = initFraisPort;
+</script>

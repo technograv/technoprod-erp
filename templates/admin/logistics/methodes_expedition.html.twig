@@ -1,0 +1,192 @@
+{# Template pour le chargement AJAX - pas d'extension de base #}
+<div class="admin-section">
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <h3 class="section-title mb-0">
+            <i class="fas fa-shipping-fast me-2"></i>Gestion des Méthodes d'Expédition
+        </h3>
+        <button class="btn btn-primary" data-bs-toggle="modal" data-bs-target="#methodeExpeditionModal">
+            <i class="fas fa-plus me-2"></i>Nouvelle Méthode d'Expédition
+        </button>
+    </div>
+
+    <div class="table-responsive">
+        <table class="table table-hover" id="methodesExpeditionTable">
+            <thead class="table-dark">
+                <tr>
+                    <th>Ordre</th>
+                    <th>Nom</th>
+                    <th>Description</th>
+                    <th>Tarif Base</th>
+                    <th>Délai Moyen</th>
+                    <th>Défaut</th>
+                    <th>Statut</th>
+                    <th>Actions</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for methode in methodes_expedition %}
+                <tr data-id="{{ methode.id }}">
+                    <td>
+                        <span class="badge bg-secondary">{{ methode.ordre }}</span>
+                    </td>
+                    <td>
+                        <strong>{{ methode.nom }}</strong>
+                    </td>
+                    <td>
+                        <span class="text-muted">{{ methode.description ?? '-' }}</span>
+                    </td>
+                    <td>
+                        {% if methode.tarifBase %}
+                            <span class="badge bg-info">{{ methode.tarifBase }}€</span>
+                        {% else %}
+                            <span class="text-muted">-</span>
+                        {% endif %}
+                    </td>
+                    <td>
+                        {% if methode.delaiMoyen %}
+                            <span class="badge bg-success">{{ methode.delaiMoyen }}</span>
+                        {% else %}
+                            <span class="text-muted">-</span>
+                        {% endif %}
+                    </td>
+                    <td>
+                        {% if methode.methodeParDefaut %}
+                            <span class="badge bg-warning text-dark">
+                                <i class="fas fa-star me-1"></i>Défaut
+                            </span>
+                        {% else %}
+                            <span class="text-muted">-</span>
+                        {% endif %}
+                    </td>
+                    <td>
+                        <div class="form-check form-switch">
+                            <input class="form-check-input status-toggle" type="checkbox" 
+                                   data-id="{{ methode.id }}" {{ methode.actif ? 'checked' : '' }}>
+                            <label class="form-check-label">
+                                {{ methode.actif ? 'Actif' : 'Inactif' }}
+                            </label>
+                        </div>
+                    </td>
+                    <td>
+                        <div class="btn-group btn-group-sm">
+                            <button class="btn btn-outline-primary edit-btn" 
+                                    data-id="{{ methode.id }}"
+                                    data-nom="{{ methode.nom }}"
+                                    data-description="{{ methode.description ?? '' }}"
+                                    data-tarif-base="{{ methode.tarifBase ?? '' }}"
+                                    data-delai-moyen="{{ methode.delaiMoyen ?? '' }}"
+                                    data-actif="{{ methode.actif ? 'true' : 'false' }}"
+                                    data-defaut="{{ methode.methodeParDefaut ? 'true' : 'false' }}"
+                                    data-ordre="{{ methode.ordre }}">
+                                <i class="fas fa-edit"></i>
+                            </button>
+                            <button class="btn btn-outline-danger delete-btn" 
+                                    data-id="{{ methode.id }}"
+                                    data-nom="{{ methode.nom }}">
+                                <i class="fas fa-trash"></i>
+                            </button>
+                        </div>
+                    </td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+</div>
+
+<!-- Modal Méthode d'Expédition -->
+<div class="modal fade" id="methodeExpeditionModal" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">
+                    <i class="fas fa-shipping-fast me-2"></i>
+                    <span id="modal-title">Nouvelle Méthode d'Expédition</span>
+                </h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <form id="methodeExpeditionForm">
+                    <input type="hidden" id="methode-id">
+                    
+                    <div class="mb-3">
+                        <label for="methode-nom" class="form-label">Nom de la méthode</label>
+                        <input type="text" class="form-control" id="methode-nom" required
+                               placeholder="Ex: Colissimo, Chronopost, Retrait sur site...">
+                    </div>
+                    
+                    <div class="mb-3">
+                        <label for="methode-description" class="form-label">Description</label>
+                        <textarea class="form-control" id="methode-description" rows="2"
+                                  placeholder="Description détaillée de la méthode d'expédition..."></textarea>
+                    </div>
+
+                    <div class="row">
+                        <div class="col-md-6">
+                            <div class="mb-3">
+                                <label for="methode-tarif-base" class="form-label">Tarif de base</label>
+                                <div class="input-group">
+                                    <input type="number" class="form-control" id="methode-tarif-base" 
+                                           min="0" step="0.01"
+                                           placeholder="Ex: 8.50">
+                                    <span class="input-group-text">€</span>
+                                </div>
+                                <div class="form-text">
+                                    Prix de base avant calculs spécifiques
+                                </div>
+                            </div>
+                        </div>
+                        <div class="col-md-6">
+                            <div class="mb-3">
+                                <label for="methode-delai-moyen" class="form-label">Délai moyen</label>
+                                <input type="text" class="form-control" id="methode-delai-moyen"
+                                       placeholder="Ex: 48h, 2-3 jours, Immédiat">
+                                <div class="form-text">
+                                    Délai indicatif de livraison
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="mb-3">
+                        <label for="methode-ordre" class="form-label">Ordre d'affichage</label>
+                        <input type="number" class="form-control" id="methode-ordre" 
+                               min="1" value="1" step="1" required>
+                        <div class="form-text">
+                            Position dans les menus déroulants
+                        </div>
+                    </div>
+                    
+                    <div class="mb-3">
+                        <div class="form-check form-switch">
+                            <input class="form-check-input" type="checkbox" id="methode-defaut">
+                            <label class="form-check-label" for="methode-defaut">
+                                <strong>Méthode par défaut</strong>
+                            </label>
+                            <div class="form-text">
+                                Sélectionnée automatiquement dans les nouveaux devis
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div class="mb-3">
+                        <div class="form-check form-switch">
+                            <input class="form-check-input" type="checkbox" id="methode-actif" checked>
+                            <label class="form-check-label" for="methode-actif">
+                                Méthode active
+                            </label>
+                        </div>
+                    </div>
+                </form>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Annuler</button>
+                <button type="button" class="btn btn-primary" id="save-methode">
+                    <i class="fas fa-save me-2"></i>Enregistrer
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+
+{# Fin du template AJAX #}

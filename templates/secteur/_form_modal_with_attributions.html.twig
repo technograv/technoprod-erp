@@ -1,0 +1,158 @@
+{{ form_start(form, {'attr': {'id': 'secteur-modal-form'}}) }}
+
+<div class="row">
+    <div class="col-md-7">
+        <!-- Informations principales -->
+        <div class="mb-4">
+            <h6><i class="fas fa-info-circle text-info me-2"></i>Informations du secteur</h6>
+            <div class="table-responsive">
+                <table class="table table-sm table-borderless">
+                    <tr>
+                        <td style="width: 30%;"><strong>Nom du secteur :</strong></td>
+                        <td>{{ form_widget(form.nomSecteur, {'attr': {'class': 'form-control form-control-sm'}}) }}</td>
+                    </tr>
+                    <tr>
+                        <td><strong>Commercial assigné :</strong></td>
+                        <td>{{ form_widget(form.commercial, {'attr': {'class': 'form-select form-select-sm'}}) }}</td>
+                    </tr>
+                    <tr>
+                        <td><strong>Couleur :</strong></td>
+                        <td>
+                            <div class="d-flex align-items-center">
+                                {{ form_widget(form.couleurHex, {'attr': {'class': 'form-control form-control-sm', 'style': 'width: 80px; height: 32px;', 'type': 'color'}}) }}
+                                <span class="ms-2 text-muted small">Choisir une couleur</span>
+                            </div>
+                        </td>
+                    </tr>
+                    <tr>
+                        <td><strong>Statut :</strong></td>
+                        <td>
+                            <div class="form-check">
+                                {{ form_widget(form.isActive, {'attr': {'class': 'form-check-input'}}) }}
+                                {{ form_label(form.isActive, 'Secteur actif', {'attr': {'class': 'form-check-label'}}) }}
+                            </div>
+                        </td>
+                    </tr>
+                    <tr>
+                        <td><strong>Description :</strong></td>
+                        <td>{{ form_widget(form.description, {'attr': {'class': 'form-control form-control-sm', 'rows': '3'}}) }}</td>
+                    </tr>
+                </table>
+            </div>
+                
+                {% if is_edit and secteur.id %}
+                    <!-- Statistiques -->
+                    <h6 class="mt-4"><i class="fas fa-chart-bar text-success me-2"></i>Statistiques</h6>
+                    <div class="table-responsive">
+                        <table class="table table-sm table-borderless">
+                            <tr>
+                                <td style="width: 30%;"><strong>Clients assignés :</strong></td>
+                                <td>
+                                    <span class="badge bg-primary">{{ secteur.clients|length }}</span>
+                                    <small class="text-muted ms-2">clients dans ce secteur</small>
+                                </td>
+                            </tr>
+                            <tr>
+                                <td><strong>Zones géographiques :</strong></td>
+                                <td>
+                                    <span class="badge bg-info" id="stats-attributions">{{ secteur.attributions|length }}</span>
+                                    <small class="text-muted ms-2">zones définies</small>
+                                </td>
+                            </tr>
+                            <tr>
+                                <td><strong>Créé le :</strong></td>
+                                <td class="text-muted">{{ secteur.createdAt ? secteur.createdAt|date('d/m/Y à H:i') : 'N/A' }}</td>
+                            </tr>
+                            <tr>
+                                <td><strong>Modifié le :</strong></td>
+                                <td class="text-muted">{{ secteur.updatedAt ? secteur.updatedAt|date('d/m/Y à H:i') : 'N/A' }}</td>
+                            </tr>
+                        </table>
+                    </div>
+                {% endif %}
+        </div>
+    </div>
+    
+    <div class="col-md-5">
+        <!-- Gestion des attributions -->
+        <div class="mb-4">
+            <div class="d-flex justify-content-between align-items-center mb-3">
+                <h6><i class="fas fa-map-marked-alt text-warning me-2"></i>Zones géographiques</h6>
+                {% if is_edit and secteur.id %}
+                    <button type="button" class="btn btn-sm btn-success" id="btn-toggle-ajout">
+                        <i class="fas fa-plus me-1"></i>Ajouter une zone
+                    </button>
+                {% endif %}
+            </div>
+            
+            {% if is_edit and secteur.id %}
+                    <!-- Liste des attributions existantes -->
+                    <div id="attributions-liste-modal">
+                        <!-- Liste sera chargée dynamiquement -->
+                    </div>
+                    
+                    <!-- Interface d'ajout (cachée par défaut) -->
+                    <div id="ajout-attribution-modal" class="border-top pt-3 mt-3" style="display: none;">
+                        <div class="mb-2">
+                            <select class="form-select form-select-sm" id="type-attribution-modal">
+                                <option value="">-- Choisir un type --</option>
+                                <option value="code_postal">📮 Code postal</option>
+                                <option value="commune">🏘️ Commune</option>
+                                <!-- Options temporairement masquées - TODO: réactiver plus tard
+                                <option value="canton">🗺️ Canton</option>
+                                -->
+                                <option value="epci">🏛️ EPCI</option>
+                                <!-- Options temporairement masquées - TODO: réactiver plus tard
+                                <option value="departement">🏞️ Département</option>
+                                <option value="region">🌍 Région</option>
+                                -->
+                            </select>
+                        </div>
+                        
+                        <div id="zone-recherche-modal" style="display: none;">
+                            <div class="mb-2">
+                                <input type="text" class="form-control form-control-sm" 
+                                       id="recherche-attribution-modal" 
+                                       placeholder="Tapez pour rechercher...">
+                            </div>
+                            
+                            <div id="resultats-attribution-modal" class="mb-2" style="max-height: 120px; overflow-y: auto;">
+                                <!-- Résultats de recherche -->
+                            </div>
+                            
+                            <div id="division-selectionnee-modal" style="display: none;" class="alert alert-success p-2 mb-2">
+                                <small><strong>Sélectionné :</strong> <span id="division-selectionnee-nom-modal"></span></small>
+                                <button type="button" class="btn btn-sm btn-outline-danger float-end" id="btn-deselectionner">
+                                    <i class="fas fa-times"></i>
+                                </button>
+                            </div>
+                            
+                            <div class="mb-2">
+                                <textarea class="form-control form-control-sm" id="notes-attribution-modal" 
+                                          rows="2" placeholder="Notes (optionnel)"></textarea>
+                            </div>
+                            
+                            <div class="d-grid gap-2 d-md-flex">
+                                <button type="button" class="btn btn-sm btn-secondary" id="btn-annuler-ajout">
+                                    Annuler
+                                </button>
+                                <button type="button" class="btn btn-sm btn-success" 
+                                        id="btn-ajouter-attribution-modal" disabled>
+                                    <i class="fas fa-plus me-1"></i>Ajouter
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                {% else %}
+                    <div class="alert alert-info">
+                        <i class="fas fa-info-circle me-1"></i>
+                        <small>Les zones géographiques pourront être définies après la création du secteur.</small>
+                    </div>
+                {% endif %}
+        </div>
+    </div>
+</div>
+
+{{ form_end(form) }}
+
+<!-- JavaScript géré par le template admin principal -->
