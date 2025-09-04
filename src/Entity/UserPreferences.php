@@ -46,6 +46,9 @@ class UserPreferences
     #[ORM\Column(type: Types::TEXT, nullable: true)]
     private ?string $notes = null; // Notes personnelles pour futures fonctionnalités
 
+    #[ORM\Column(type: Types::JSON, nullable: true)]
+    private ?array $calendarSettings = null; // Calendriers Google sélectionnés
+
     #[ORM\Column]
     private ?\DateTimeImmutable $createdAt = null;
 
@@ -227,5 +230,78 @@ class UserPreferences
         }
 
         return $companySignature; // Signature d'entreprise par défaut
+    }
+
+    public function getCalendarSettings(): ?array
+    {
+        return $this->calendarSettings;
+    }
+
+    public function setCalendarSettings(?array $calendarSettings): static
+    {
+        $this->calendarSettings = $calendarSettings;
+        return $this;
+    }
+
+    /**
+     * Retourne les IDs des calendriers sélectionnés
+     */
+    public function getSelectedCalendarIds(): array
+    {
+        $settings = $this->getCalendarSettings();
+        if (!$settings || !isset($settings['selected_calendars'])) {
+            return ['primary']; // Par défaut, utiliser le calendrier principal
+        }
+        
+        return $settings['selected_calendars'];
+    }
+
+    /**
+     * Définit les calendriers sélectionnés
+     */
+    public function setSelectedCalendarIds(array $calendarIds): static
+    {
+        $settings = $this->getCalendarSettings() ?? [];
+        $settings['selected_calendars'] = $calendarIds;
+        $this->setCalendarSettings($settings);
+        return $this;
+    }
+
+    /**
+     * Retourne les calendriers d'écriture configurés
+     */
+    public function getWriteCalendarIds(): array
+    {
+        $settings = $this->getCalendarSettings();
+        if (!$settings || !isset($settings['write_calendars'])) {
+            return [
+                'rdv_commerciaux' => 'primary',
+                'reunions' => 'primary',
+                'livraisons' => 'primary',
+                'facturations' => 'primary'
+            ];
+        }
+        
+        return $settings['write_calendars'];
+    }
+
+    /**
+     * Définit les calendriers d'écriture
+     */
+    public function setWriteCalendarIds(array $writeCalendarIds): static
+    {
+        $settings = $this->getCalendarSettings() ?? [];
+        $settings['write_calendars'] = $writeCalendarIds;
+        $this->setCalendarSettings($settings);
+        return $this;
+    }
+
+    /**
+     * Retourne le calendrier d'écriture pour un type d'événement
+     */
+    public function getWriteCalendarForType(string $eventType): string
+    {
+        $writeCalendars = $this->getWriteCalendarIds();
+        return $writeCalendars[$eventType] ?? 'primary';
     }
 }

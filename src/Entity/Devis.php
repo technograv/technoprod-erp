@@ -50,6 +50,9 @@ class Devis
     #[ORM\Column(type: Types::DATE_MUTABLE)]
     private ?\DateTimeInterface $dateValidite = null;
 
+    #[ORM\Column(type: Types::DATETIME_MUTABLE, nullable: true)]
+    private ?\DateTimeInterface $dateEnvoi = null;
+
     #[ORM\Column(length: 20)]
     private ?string $statut = 'brouillon';
 
@@ -80,8 +83,6 @@ class Devis
     #[ORM\Column(type: Types::DECIMAL, precision: 10, scale: 2, nullable: true)]
     private ?string $acompteMontant = null;
 
-    #[ORM\Column(type: Types::DATE_MUTABLE, nullable: true)]
-    private ?\DateTimeInterface $dateEnvoi = null;
 
     #[ORM\Column(type: Types::DATE_MUTABLE, nullable: true)]
     private ?\DateTimeInterface $dateSignature = null;
@@ -263,7 +264,14 @@ class Devis
 
     public function setStatut(string $statut): static
     {
+        $oldStatut = $this->statut;
         $this->statut = $statut;
+        
+        // Si passage en statut "envoye", enregistrer la date d'envoi
+        if ($oldStatut !== 'envoye' && $statut === 'envoye') {
+            $this->dateEnvoi = new \DateTime();
+        }
+        
         return $this;
     }
 
@@ -702,4 +710,5 @@ class Devis
         $this->tiersModeReglement = $tiersModeReglement;
         return $this;
     }
+
 }

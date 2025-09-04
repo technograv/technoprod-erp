@@ -311,6 +311,12 @@ function chargerPermissionsUtilisateur(userId) {
         }
         
         container.innerHTML = html;
+        
+        // Ajouter la logique hiérarchique société mère/fille
+        setupSocieteHierarchy();
+        
+        // Appliquer l'état hiérarchique initial
+        applyInitialHierarchy();
     })
     .catch(error => {
         console.error('Erreur:', error);
@@ -337,7 +343,10 @@ function renderSocietePermissionCard(societe, permission, isChild = false) {
                            type="checkbox" 
                            id="societe_perm_${societe.id}" 
                            ${isActive ? 'checked' : ''}
-                           data-societe-id="${societe.id}">
+                           data-societe-id="${societe.id}"
+                           data-societe-type="${societe.type}"
+                           data-parent-id="${societe.parent_id || ''}"
+                           ${isChild ? 'data-is-child="true"' : ''}>
                     <label class="form-check-label" for="societe_perm_${societe.id}">
                         <i class="${typeIcon} me-2"></i>
                         <strong>${societe.display_name}</strong>
@@ -496,6 +505,162 @@ function sauvegarderPermissionsUtilisateur(userId) {
     });
 }
 
+function setupSocieteHierarchy() {
+    // Ajouter des event listeners pour la logique mère/fille
+    document.querySelectorAll('.societe-permission-toggle').forEach(toggle => {
+        toggle.addEventListener('change', function() {
+            const societeId = this.dataset.societeId;
+            const societeType = this.dataset.societeType;
+            const isChecked = this.checked;
+            
+            if (societeType === 'mere') {
+                // Si société mère cochée, cocher et verrouiller les filles
+                const filles = document.querySelectorAll(`.societe-permission-toggle[data-parent-id="${societeId}"]`);
+                filles.forEach(fille => {
+                    fille.checked = isChecked;
+                    fille.disabled = isChecked;
+                    
+                    // Activer/désactiver les détails et niveaux des filles
+                    const filleDetails = document.querySelector(`[data-societe-id="${fille.dataset.societeId}"].permission-details`);
+                    const filleNiveau = document.querySelector(`[data-societe-id="${fille.dataset.societeId}"].permission-niveau`);
+                    
+                    if (filleDetails) {
+                        filleDetails.style.display = isChecked ? 'block' : 'none';
+                        
+                        // Si on coche la mère, copier et verrouiller les permissions des filles
+                        if (isChecked) {
+                            // Récupérer les permissions cochées de la mère
+                            const mereDetails = document.querySelector(`[data-societe-id="${societeId}"].permission-details`);
+                            const permissionsCocheesMere = [];
+                            if (mereDetails) {
+                                mereDetails.querySelectorAll('.permission-checkbox:checked').forEach(checkbox => {
+                                    permissionsCocheesMere.push(checkbox.value);
+                                });
+                            }
+                            
+                            // Appliquer aux filles - SEULEMENT verrouiller celles cochées dans la mère
+                            const fillePermissions = filleDetails.querySelectorAll('.permission-checkbox');
+                            fillePermissions.forEach(perm => {
+                                if (permissionsCocheesMere.includes(perm.value)) {
+                                    perm.checked = true;
+                                    perm.disabled = true; // Verrouiller seulement celles héritées
+                                } else {
+                                    // Les autres restent modifiables même quand la société mère est cochée
+                                    perm.disabled = false;
+                                }
+                            });
+                        } else {
+                            // Si on décoche la mère, libérer les permissions des filles
+                            const fillePermissions = filleDetails.querySelectorAll('.permission-checkbox');
+                            fillePermissions.forEach(perm => {
+                                perm.disabled = false;
+                            });
+                        }
+                    }
+                    if (filleNiveau) {
+                        filleNiveau.disabled = !isChecked;
+                    }
+                });
+            }
+            
+            // Gérer l'affichage des détails de permissions
+            const details = document.querySelector(`[data-societe-id="${societeId}"].permission-details`);
+            const niveau = document.querySelector(`[data-societe-id="${societeId}"].permission-niveau`);
+            
+            if (details) {
+                details.style.display = isChecked ? 'block' : 'none';
+            }
+            if (niveau) {
+                niveau.disabled = !isChecked;
+            }
+        });
+    });
+    
+    // Ajouter des event listeners pour l'héritage des permissions spécifiques
+    document.querySelectorAll('.permission-checkbox').forEach(checkbox => {
+        checkbox.addEventListener('change', function() {
+            const societeId = this.closest('.permission-details').dataset.societeId;
+            const permissionName = this.value;
+            const isChecked = this.checked;
+            
+            // Vérifier si c'est une société mère ET si sa société est cochée
+            const societeToggle = document.querySelector(`[data-societe-id="${societeId}"].societe-permission-toggle`);
+            if (societeToggle && societeToggle.dataset.societeType === 'mere' && societeToggle.checked) {
+                // Propager cette permission aux sociétés filles seulement si la mère est cochée
+                const filles = document.querySelectorAll(`.societe-permission-toggle[data-parent-id="${societeId}"]`);
+                filles.forEach(fille => {
+                    const filleId = fille.dataset.societeId;
+                    const fillePermissionCheckbox = document.querySelector(
+                        `[data-societe-id="${filleId}"].permission-details .permission-checkbox[value="${permissionName}"]`
+                    );
+                    
+                    if (fillePermissionCheckbox) {
+                        if (isChecked) {
+                            // Si on coche dans la mère, cocher et verrouiller dans les filles
+                            fillePermissionCheckbox.checked = true;
+                            fillePermissionCheckbox.disabled = true;
+                        } else {
+                            // Si on décoche dans la mère, décocher et libérer dans les filles
+                            fillePermissionCheckbox.checked = false;
+                            fillePermissionCheckbox.disabled = false;
+                        }
+                    }
+                });
+            }
+        });
+    });
+}
+
+function applyInitialHierarchy() {
+    // Appliquer la logique hiérarchique à l'état initial
+    document.querySelectorAll('.societe-permission-toggle[data-societe-type="mere"]:checked').forEach(mereToggle => {
+        const societeId = mereToggle.dataset.societeId;
+        
+        // Récupérer les permissions cochées de la société mère
+        const mereDetails = document.querySelector(`[data-societe-id="${societeId}"].permission-details`);
+        const permissionsCocheesMere = [];
+        
+        if (mereDetails) {
+            mereDetails.querySelectorAll('.permission-checkbox:checked').forEach(checkbox => {
+                permissionsCocheesMere.push(checkbox.value);
+            });
+        }
+        
+        // Appliquer aux filles
+        const filles = document.querySelectorAll(`.societe-permission-toggle[data-parent-id="${societeId}"]`);
+        filles.forEach(fille => {
+            const filleId = fille.dataset.societeId;
+            
+            // Désactiver le toggle de la fille
+            fille.disabled = true;
+            fille.checked = true;
+            
+            // Afficher et verrouiller les détails de la fille
+            const filleDetails = document.querySelector(`[data-societe-id="${filleId}"].permission-details`);
+            const filleNiveau = document.querySelector(`[data-societe-id="${filleId}"].permission-niveau`);
+            
+            if (filleDetails) {
+                filleDetails.style.display = 'block';
+                
+                // Cocher et verrouiller SEULEMENT les permissions cochées dans la mère
+                const fillePermissions = filleDetails.querySelectorAll('.permission-checkbox');
+                fillePermissions.forEach(perm => {
+                    if (permissionsCocheesMere.includes(perm.value)) {
+                        perm.checked = true;
+                        perm.disabled = true; // Verrouiller seulement celles héritées
+                    } else {
+                        perm.disabled = false; // Laisser les autres modifiables
+                    }
+                });
+            }
+            
+            if (filleNiveau) {
+                filleNiveau.disabled = true;
+            }
+        });
+    });
+}
+
 function updatePermissionsDisplay(userId, permissions) {
     const container = document.querySelector(`.permissions-container[data-user-id="${userId}"]`);
     
@@ -525,13 +690,14 @@ function ouvrirModalSocietePrincipale(userId, societeId) {
     
     const modal = new bootstrap.Modal(document.getElementById('societePrincipaleModal'));
     document.getElementById('modalSocietePrincipaleLabel').textContent = 'Société Principale - Utilisateur #' + userId;
-    document.getElementById('societeSelect').value = societeId || '';
     document.getElementById('btnSauvegarderSociete').onclick = function() {
         sauvegarderSocietePrincipale(userId);
     };
     
-    // Charger les sociétés disponibles
-    chargerSocietesDisponibles();
+    // Charger les sociétés disponibles PUIS définir la valeur sélectionnée
+    chargerSocietesDisponibles().then(() => {
+        document.getElementById('societeSelect').value = societeId || '';
+    });
     modal.show();
 }
 
@@ -617,7 +783,7 @@ function createGroupesModal() {
 }
 
 function chargerSocietesDisponibles() {
-    fetch('/admin/api/societes-tree')
+    return fetch('/admin/api/societes-tree')
         .then(response => response.json())
         .then(societes => {
             const select = document.getElementById('societeSelect');
@@ -650,33 +816,27 @@ function chargerGroupesUtilisateur(userId) {
     
     Promise.all([
         fetch(`/admin/users/${userId}/groupes`).then(r => r.json()),
-        fetch('/admin/groupes-utilisateurs').then(r => r.text())
+        fetch('/admin/api/groupes-disponibles').then(r => r.json())
     ])
-    .then(([userGroups, groupesHtml]) => {
-        // Parser le HTML pour extraire les groupes
-        const parser = new DOMParser();
-        const doc = parser.parseFromString(groupesHtml, 'text/html');
-        const groupesRows = doc.querySelectorAll('#tableGroupes tbody tr');
-        
+    .then(([userGroups, groupesDisponibles]) => {
         let html = '';
-        groupesRows.forEach(row => {
-            const groupeId = row.dataset.groupeId;
-            const groupeNom = row.querySelector('strong').textContent;
-            const groupeDescription = row.querySelector('.text-muted').textContent;
-            const isChecked = userGroups.groupes.some(g => g.id == groupeId);
+        
+        groupesDisponibles.forEach(groupe => {
+            const isChecked = userGroups.groupes.some(g => g.id == groupe.id);
             
             html += `
                 <div class="form-check mb-2">
-                    <input class="form-check-input" type="checkbox" id="groupe_${groupeId}" value="${groupeId}" ${isChecked ? 'checked' : ''}>
-                    <label class="form-check-label d-flex align-items-center" for="groupe_${groupeId}">
-                        <strong>${groupeNom}</strong>
-                        ${groupeDescription !== 'Aucune description' ? `<span class="text-muted ms-2">${groupeDescription}</span>` : ''}
+                    <input class="form-check-input" type="checkbox" id="groupe_${groupe.id}" value="${groupe.id}" ${isChecked ? 'checked' : ''}>
+                    <label class="form-check-label d-flex align-items-center" for="groupe_${groupe.id}">
+                        <strong>${groupe.nom}</strong>
+                        ${groupe.description && groupe.description !== 'Aucune description' ? `<span class="text-muted ms-2"> - ${groupe.description}</span>` : ''}
+                        <span class="badge ms-2" style="background-color: ${groupe.couleur}">Niveau ${groupe.niveau}</span>
                     </label>
                 </div>
             `;
         });
         
-        groupesList.innerHTML = html;
+        groupesList.innerHTML = html || '<div class="alert alert-info">Aucun groupe disponible</div>';
     })
     .catch(error => {
         console.error('Erreur:', error);
@@ -692,7 +852,7 @@ function sauvegarderSocietePrincipale(userId) {
         headers: {
             'Content-Type': 'application/json',
         },
-        body: JSON.stringify({ societe_principale_id: societeId })
+        body: JSON.stringify({ societe_id: societeId })
     })
     .then(response => response.json())
     .then(data => {

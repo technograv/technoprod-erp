@@ -1,0 +1,303 @@
+{# Template pour le chargement AJAX - pas d'extension de base #}
+<div class="admin-section">
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <h3 class="section-title mb-0">
+            <i class="fas fa-server me-2"></i>Configuration Système
+        </h3>
+    </div>
+
+    {% if is_societe_mere %}
+        <div class="alert alert-info mb-4">
+            <i class="fas fa-info-circle me-2"></i>
+            <strong>Société Mère :</strong> Ces paramètres s'appliquent à toutes les sociétés du groupe sauf si elles définissent leurs propres valeurs.
+        </div>
+    {% else %}
+        <div class="alert alert-warning mb-4">
+            <i class="fas fa-exclamation-triangle me-2"></i>
+            <strong>Société Fille :</strong> Laissez les champs vides pour hériter des paramètres de la société mère.
+        </div>
+    {% endif %}
+
+    <!-- Section Délais Workflow Commercial -->
+    <div class="card mb-4">
+        <div class="card-header bg-primary text-white">
+            <h5 class="mb-0"><i class="fas fa-clock me-2"></i>Délais Workflow Commercial</h5>
+        </div>
+        <div class="card-body">
+            <div class="row">
+                <div class="col-md-6">
+                    <div class="mb-3">
+                        <label for="delai-relance-devis" class="form-label">
+                            <i class="fas fa-file-invoice me-1"></i>Délai relance devis (jours)
+                        </label>
+                        <input type="number" class="form-control" id="delai-relance-devis" 
+                               min="1" max="365" 
+                               value="{{ current_societe.delaiRelanceDevis }}"
+                               placeholder="{{ is_societe_mere ? '14' : 'Hériter de la société mère (' ~ (current_societe.societeParent ? current_societe.societeParent.delaiRelanceDevis : 14) ~ ' jours)' }}">
+                        <small class="form-text text-muted">
+                            Nombre de jours après envoi d'un devis avant qu'il apparaisse dans "Devis à relancer"
+                            {% if not is_societe_mere and current_societe.societeParent %}
+                                <br><strong>Valeur héritée :</strong> {{ current_societe.societeParent.delaiRelanceDevis }} jours
+                            {% endif %}
+                        </small>
+                    </div>
+                </div>
+                <div class="col-md-6">
+                    <div class="mb-3">
+                        <label for="delai-facturation" class="form-label">
+                            <i class="fas fa-file-invoice-dollar me-1"></i>Délai facturation (jours)
+                        </label>
+                        <input type="number" class="form-control" id="delai-facturation" 
+                               min="0" max="30" 
+                               value="{{ current_societe.delaiFacturation }}"
+                               placeholder="{{ is_societe_mere ? '1' : 'Hériter de la société mère (' ~ (current_societe.societeParent ? current_societe.societeParent.delaiFacturation : 1) ~ ' jour)' }}">
+                        <small class="form-text text-muted">
+                            Nombre de jours après livraison réelle avant qu'une commande apparaisse dans "Commandes à facturer"
+                            {% if not is_societe_mere and current_societe.societeParent %}
+                                <br><strong>Valeur héritée :</strong> {{ current_societe.societeParent.delaiFacturation }} jour{{ current_societe.societeParent.delaiFacturation > 1 ? 's' : '' }}
+                            {% endif %}
+                        </small>
+                    </div>
+                </div>
+            </div>
+            
+            <div class="row">
+                <div class="col-md-6">
+                    <div class="mb-3">
+                        <label for="frequence-visite-clients" class="form-label">
+                            <i class="fas fa-calendar-check me-1"></i>Fréquence visite clients (jours)
+                        </label>
+                        <input type="number" class="form-control" id="frequence-visite-clients" 
+                               min="30" max="730" 
+                               value="{{ current_societe.frequenceVisiteClients }}"
+                               placeholder="{{ is_societe_mere ? '365' : 'Hériter de la société mère (' ~ (current_societe.societeParent ? current_societe.societeParent.frequenceVisiteClients : 365) ~ ' jours)' }}">
+                        <small class="form-text text-muted">
+                            Fréquence recommandée pour visiter chaque client (365 jours = 1 an, 180 jours = 6 mois)
+                            {% if not is_societe_mere and current_societe.societeParent %}
+                                <br><strong>Valeur héritée :</strong> {{ current_societe.societeParent.frequenceVisiteClients }} jour{{ current_societe.societeParent.frequenceVisiteClients > 1 ? 's' : '' }}
+                            {% endif %}
+                        </small>
+                    </div>
+                </div>
+                <div class="col-md-6">
+                    <!-- Espace pour futurs paramètres -->
+                </div>
+            </div>
+            
+            <div class="row">
+                <div class="col-12">
+                    <button type="button" class="btn btn-primary" onclick="sauvegarderDelaisWorkflow()">
+                        <i class="fas fa-save me-2"></i>Enregistrer les délais
+                    </button>
+                    {% if not is_societe_mere %}
+                    <button type="button" class="btn btn-outline-secondary ms-2" onclick="reinitialiserDelaisWorkflow()">
+                        <i class="fas fa-undo me-2"></i>Hériter de la société mère
+                    </button>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+    </div>
+
+    {% if is_societe_mere %}
+    <!-- Section Paramètres Email -->
+    <div class="card mb-4">
+        <div class="card-header bg-success text-white">
+            <h5 class="mb-0"><i class="fas fa-envelope me-2"></i>Configuration Email</h5>
+        </div>
+        <div class="card-body">
+            <div class="row">
+                <div class="col-md-12">
+                    <div class="mb-3">
+                        <label for="signature-entreprise" class="form-label">Signature d'entreprise par défaut</label>
+                        <textarea class="form-control" id="signature-entreprise" rows="6" 
+                                  placeholder="--&#10;{{ current_societe.nom }}&#10;{{ current_societe.telephone }}&#10;{{ current_societe.email }}&#10;{{ current_societe.adresse }}&#10;{{ current_societe.codePostal }} {{ current_societe.ville }}">{{ signature_entreprise }}</textarea>
+                        <small class="form-text text-muted">Cette signature sera utilisée par défaut pour tous les emails envoyés depuis l'application</small>
+                    </div>
+                </div>
+            </div>
+            
+            <div class="row">
+                <div class="col-12">
+                    <button type="button" class="btn btn-success" onclick="sauvegarderSignatureEntreprise()">
+                        <i class="fas fa-save me-2"></i>Enregistrer la signature
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Section Actions de Maintenance -->
+    <div class="card mb-4">
+        <div class="card-header bg-warning text-dark">
+            <h5 class="mb-0"><i class="fas fa-tools me-2"></i>Actions de Maintenance</h5>
+        </div>
+        <div class="card-body">
+            <div class="row">
+                <div class="col-md-3 mb-3">
+                    <button class="btn btn-outline-warning w-100" onclick="viderCache()">
+                        <i class="fas fa-trash me-2"></i>Vider le cache
+                    </button>
+                </div>
+                <div class="col-md-3 mb-3">
+                    <button class="btn btn-outline-info w-100" onclick="verifierAuditTrail()">
+                        <i class="fas fa-shield-alt me-2"></i>Vérifier Audit Trail
+                    </button>
+                </div>
+                <div class="col-md-3 mb-3">
+                    <button class="btn btn-outline-success w-100" onclick="genererFEC()">
+                        <i class="fas fa-file-export me-2"></i>Générer FEC
+                    </button>
+                </div>
+                <div class="col-md-3 mb-3">
+                    <button class="btn btn-outline-secondary w-100" onclick="sauvegarderBDD()">
+                        <i class="fas fa-database me-2"></i>Sauvegarde BDD
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+    {% endif %}
+</div>
+
+<script>
+// Fonction pour sauvegarder les délais workflow
+function sauvegarderDelaisWorkflow() {
+    const delaiRelance = document.getElementById('delai-relance-devis').value;
+    const delaiFacturation = document.getElementById('delai-facturation').value;
+    const frequenceVisite = document.getElementById('frequence-visite-clients').value;
+    
+    const data = {
+        delaiRelanceDevis: delaiRelance ? parseInt(delaiRelance) : null,
+        delaiFacturation: delaiFacturation ? parseInt(delaiFacturation) : null,
+        frequenceVisiteClients: frequenceVisite ? parseInt(frequenceVisite) : null
+    };
+    
+    fetch('/admin/parametres/delais-workflow', {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(data)
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.success) {
+            showNotification(data.message, 'success');
+        } else {
+            showNotification(data.error || 'Erreur lors de la sauvegarde', 'error');
+        }
+    })
+    .catch(error => {
+        console.error('Erreur:', error);
+        showNotification('Erreur de communication avec le serveur', 'error');
+    });
+}
+
+// Fonction pour réinitialiser les délais (sociétés filles uniquement)
+function reinitialiserDelaisWorkflow() {
+    document.getElementById('delai-relance-devis').value = '';
+    document.getElementById('delai-facturation').value = '';
+    document.getElementById('frequence-visite-clients').value = '';
+    sauvegarderDelaisWorkflow();
+}
+
+{% if is_societe_mere %}
+// Fonction pour sauvegarder la signature d'entreprise
+function sauvegarderSignatureEntreprise() {
+    const signature = document.getElementById('signature-entreprise').value;
+    
+    fetch('/admin/parametres/signature-entreprise', {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+            signature: signature
+        })
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.success) {
+            showNotification(data.message, 'success');
+        } else {
+            showNotification(data.error || 'Erreur lors de la sauvegarde', 'error');
+        }
+    })
+    .catch(error => {
+        console.error('Erreur:', error);
+        showNotification('Erreur de communication avec le serveur', 'error');
+    });
+}
+
+// Actions de maintenance
+function viderCache() {
+    if (confirm('Êtes-vous sûr de vouloir vider le cache de l\'application ?')) {
+        fetch('/admin/parametres/clear-cache', { method: 'POST' })
+            .then(response => response.json())
+            .then(data => {
+                showNotification(data.message, data.success ? 'success' : 'error');
+            });
+    }
+}
+
+function verifierAuditTrail() {
+    fetch('/admin/parametres/verify-audit', { method: 'POST' })
+        .then(response => response.json())
+        .then(data => {
+            showNotification(data.message, data.success ? 'success' : 'warning');
+        });
+}
+
+function genererFEC() {
+    fetch('/admin/parametres/generate-fec', { method: 'POST' })
+        .then(response => response.json())
+        .then(data => {
+            if (data.success && data.download_url) {
+                showNotification('FEC généré avec succès', 'success');
+                window.open(data.download_url, '_blank');
+            } else {
+                showNotification(data.error || 'Erreur lors de la génération', 'error');
+            }
+        });
+}
+
+function sauvegarderBDD() {
+    if (confirm('Lancer une sauvegarde de la base de données ?')) {
+        fetch('/admin/parametres/backup-database', { method: 'POST' })
+            .then(response => response.json())
+            .then(data => {
+                showNotification(data.message, data.success ? 'success' : 'error');
+            });
+    }
+}
+{% endif %}
+
+// Fonction d'initialisation globale pour les paramètres
+window.initParametres = function() {
+    console.log('⚙️ Initializing Parametres module');
+    // Charger les alertes
+    if (typeof initAlertes === 'function') {
+        initAlertes();
+    }
+};
+</script>
+
+<!-- Section Gestion des Alertes -->
+<div class="card mb-4">
+    <div class="card-header bg-warning text-dark">
+        <h5 class="mb-0">
+            <i class="fas fa-bell me-2"></i>Gestion des Alertes Système
+        </h5>
+    </div>
+    <div class="card-body">
+        <div class="alert alert-info mb-3">
+            <i class="fas fa-info-circle me-2"></i>
+            Les alertes permettent d'afficher des messages importants aux utilisateurs sur leur dashboard.
+        </div>
+        
+        {% include 'admin/alertes.html.twig' %}
+    </div>
+</div>
+
+{# Fin du template AJAX #}

@@ -46,22 +46,22 @@ class ThemeService
 
         $variables = [
             // Couleurs principales avec héritage automatique
-            'primary_color' => $colors['primary'],
-            'secondary_color' => $colors['secondary'],
-            'tertiary_color' => $colors['tertiary'],
+            'primary_color' => $colors['primary'] ?? '#dc3545',
+            'secondary_color' => $colors['secondary'] ?? '#6c757d',
+            'tertiary_color' => $colors['tertiary'] ?? '#28a745',
             
             // Couleurs dérivées
-            'primary_rgb' => $this->hexToRgb($colors['primary']),
-            'secondary_rgb' => $this->hexToRgb($colors['secondary']),
-            'tertiary_rgb' => $this->hexToRgb($colors['tertiary']),
+            'primary_rgb' => $this->hexToRgb($colors['primary'] ?? '#dc3545'),
+            'secondary_rgb' => $this->hexToRgb($colors['secondary'] ?? '#6c757d'),
+            'tertiary_rgb' => $this->hexToRgb($colors['tertiary'] ?? '#28a745'),
             
             // Variantes de couleurs
-            'primary_light' => $this->lightenColor($colors['primary'], 0.2),
-            'primary_dark' => $this->darkenColor($colors['primary'], 0.2),
-            'secondary_light' => $this->lightenColor($colors['secondary'], 0.2),
-            'secondary_dark' => $this->darkenColor($colors['secondary'], 0.2),
-            'tertiary_light' => $this->lightenColor($colors['tertiary'], 0.2),
-            'tertiary_dark' => $this->darkenColor($colors['tertiary'], 0.2),
+            'primary_light' => $this->lightenColor($colors['primary'] ?? '#dc3545', 0.2),
+            'primary_dark' => $this->darkenColor($colors['primary'] ?? '#dc3545', 0.2),
+            'secondary_light' => $this->lightenColor($colors['secondary'] ?? '#6c757d', 0.2),
+            'secondary_dark' => $this->darkenColor($colors['secondary'] ?? '#6c757d', 0.2),
+            'tertiary_light' => $this->lightenColor($colors['tertiary'] ?? '#28a745', 0.2),
+            'tertiary_dark' => $this->darkenColor($colors['tertiary'] ?? '#28a745', 0.2),
             
             // Informations société avec héritage
             'societe_name' => $societe->getNom(),
@@ -264,12 +264,16 @@ a:hover {
         return [
             'primary_color' => '#dc3545',
             'secondary_color' => '#6c757d',
+            'tertiary_color' => '#28a745',
             'primary_rgb' => '220, 53, 69',
             'secondary_rgb' => '108, 117, 125',
+            'tertiary_rgb' => '40, 167, 69',
             'primary_light' => '#e85a6a',
             'primary_dark' => '#b02a34',
             'secondary_light' => '#868e96',
             'secondary_dark' => '#4a5156',
+            'tertiary_light' => '#5cb85c',
+            'tertiary_dark' => '#1e7e34',
             'societe_name' => 'TechnoProd',
             'logo_url' => null,
             'theme_name' => 'default',

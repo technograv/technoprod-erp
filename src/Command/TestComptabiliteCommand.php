@@ -897,10 +897,12 @@ Cette commande effectue un test complet du système comptable français :
         $item = new FactureItem();
         $item->setFacture($facture);
         $item->setDesignation($this->testData['produit']->getDesignation());
-        $item->setQuantite(1);
+        $item->setQuantite('1.00');
         $item->setPrixUnitaireHt('100.00');
         $item->setTvaPercent('20.00');
         $item->setTotalLigneHt('100.00');
+        
+        $facture->addFactureItem($item);
         
         $this->em->persist($facture);
         $this->em->persist($item);

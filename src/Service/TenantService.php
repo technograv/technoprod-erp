@@ -129,20 +129,38 @@ class TenantService
             // Super admin : toutes les sociétés
             $societes = $this->societeRepository->findActiveSocietes();
         } else {
-            // Utilisateur normal : selon ses rôles ET ses groupes
+            // Utilisateur normal : selon ses rôles, groupes ET permissions individuelles
             $societes = [];
             
-            // 1. Sociétés accessibles via les rôles directs
-            $societesViaRoles = $this->userSocieteRoleRepository->findAccessibleSocietesByUser($user);
-            foreach ($societesViaRoles as $societe) {
-                $societes[$societe->getId()] = $societe;
-            }
+            // 1. Sociétés accessibles via les rôles directs (ancien système)
+            // Temporairement désactivé à cause d'erreur DQL - Jean Martin n'a pas d'anciens rôles
+            // $societesViaRoles = $this->userSocieteRoleRepository->findAccessibleSocietesByUser($user);
+            // foreach ($societesViaRoles as $societe) {
+            //     $societes[$societe->getId()] = $societe;
+            // }
             
             // 2. Sociétés accessibles via les groupes
-            $societesViaGroupes = $user->getSocietesViaGroupes();
+            $societesViaGroupes = $user->getAccessibleSocietesFromGroupes();
             foreach ($societesViaGroupes as $societe) {
                 if ($societe->isActive()) {
                     $societes[$societe->getId()] = $societe;
+                }
+            }
+            
+            // 3. Sociétés accessibles via les permissions individuelles (nouveau système)
+            foreach ($user->getPermissions() as $permission) {
+                if ($permission->isActif() && $permission->getSociete()->isActive()) {
+                    $societe = $permission->getSociete();
+                    $societes[$societe->getId()] = $societe;
+                    
+                    // Si c'est une société mère, ajouter automatiquement les sociétés filles
+                    if ($societe->isMere()) {
+                        $enfants = $this->entityManager->getRepository(Societe::class)
+                            ->findBy(['societeParent' => $societe, 'active' => true]);
+                        foreach ($enfants as $enfant) {
+                            $societes[$enfant->getId()] = $enfant;
+                        }
+                    }
                 }
             }
             

@@ -52,6 +52,136 @@
             display: inline-block;
             margin-right: 0.5rem;
         }
+        .calendar-widget {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            border-radius: 15px;
+            margin-bottom: 2rem;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.1);
+            overflow: hidden;
+        }
+        .calendar-header {
+            background: rgba(255,255,255,0.1);
+            backdrop-filter: blur(10px);
+            padding: 1.5rem;
+            border-bottom: 1px solid rgba(255,255,255,0.2);
+        }
+        .day-column {
+            border-right: 1px solid rgba(255,255,255,0.15);
+            min-height: 140px;
+            transition: background-color 0.2s;
+        }
+        .day-column:last-child {
+            border-right: none;
+        }
+        .day-column:hover {
+            background: rgba(255,255,255,0.05);
+        }
+        .day-header {
+            background: rgba(255,255,255,0.1);
+            padding: 12px 8px;
+            text-align: center;
+            font-weight: 600;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            font-size: 0.9rem;
+        }
+        .day-header.today {
+            background: rgba(255,255,255,0.3);
+            box-shadow: inset 0 0 0 2px rgba(255,255,255,0.5);
+        }
+        .day-number {
+            font-size: 1.2rem;
+            font-weight: 700;
+        }
+        .event-item {
+            background: rgba(255,255,255,0.95);
+            color: #333;
+            border-radius: 8px;
+            padding: 8px 10px;
+            margin: 6px;
+            font-size: 0.8rem;
+            border-left: 4px solid var(--event-color, #007bff);
+            box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+            transition: all 0.2s;
+            cursor: pointer;
+            position: relative;
+        }
+        .event-item .calendar-indicator {
+            position: absolute;
+            top: 4px;
+            right: 4px;
+            width: 8px;
+            height: 8px;
+            border-radius: 50%;
+            background: var(--calendar-color, #007bff);
+        }
+        .event-item:hover {
+            transform: translateY(-1px);
+            box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+        }
+        .event-time {
+            font-weight: 600;
+            color: #007bff;
+        }
+        .event-title {
+            font-weight: 500;
+            margin-top: 2px;
+        }
+        .event-location {
+            color: #666;
+            font-size: 0.75rem;
+            margin-top: 2px;
+        }
+        .event-calendar {
+            color: #666;
+            font-size: 0.75rem;
+            margin-top: 2px;
+            font-style: italic;
+        }
+        .week-navigation {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 1.5rem;
+        }
+        .week-nav-btn {
+            background: rgba(255,255,255,0.2);
+            border: none;
+            color: white;
+            border-radius: 50%;
+            width: 45px;
+            height: 45px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            transition: all 0.3s;
+            font-size: 1.1rem;
+        }
+        .week-nav-btn:hover {
+            background: rgba(255,255,255,0.4);
+            color: white;
+            transform: scale(1.1);
+            box-shadow: 0 4px 12px rgba(0,0,0,0.2);
+        }
+        .week-nav-btn:disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+        }
+        .week-title {
+            font-size: 1.1rem;
+            font-weight: 600;
+            text-shadow: 0 1px 3px rgba(0,0,0,0.3);
+        }
+        .calendar-loading {
+            display: none;
+            text-align: center;
+            padding: 2rem;
+        }
+        .spinner-border-sm {
+            width: 1rem;
+            height: 1rem;
+        }
     </style>
 {% endblock %}
 
@@ -81,114 +211,399 @@
 </div>
 
 <div class="container">
-    <!-- Statistiques générales -->
-    <div class="row mb-4">
-        <div class="col-md-3">
-            <div class="card stats-card text-center h-100">
-                <div class="card-body">
-                    <div class="text-warning">
-                        <i class="fas fa-file-invoice stats-icon"></i>
-                    </div>
-                    <h3 class="mt-3">{{ stats.devis_en_attente }}</h3>
-                    <p class="text-muted mb-0">Devis en attente</p>
-                    <small class="text-warning">Nécessitent une action</small>
+    <!-- Debug Calendar -->
+
+    <!-- Widget Agenda Google Calendar -->
+    {% if calendar_available %}
+    <div class="calendar-widget" id="calendar-widget">
+        <div class="calendar-header">
+            <div class="d-flex justify-content-between align-items-center">
+                <h5 class="mb-0 week-title"><i class="fas fa-calendar-alt me-2"></i>Mon agenda - Semaine du <span id="week-date">{{ start_of_week|date('d/m/Y') }}</span></h5>
+                <div class="week-navigation">
+                    <button class="week-nav-btn" onclick="changeWeekAjax({{ current_week_offset - 1 }})" title="Semaine précédente" id="btn-prev-week">
+                        <i class="fas fa-chevron-left"></i>
+                    </button>
+                    <span class="mx-3" id="week-indicator">Semaine {{ current_week_offset == 0 ? 'en cours' : (current_week_offset > 0 ? '+' ~ current_week_offset : current_week_offset) }}</span>
+                    <button class="week-nav-btn" onclick="changeWeekAjax({{ current_week_offset + 1 }})" title="Semaine suivante" id="btn-next-week">
+                        <i class="fas fa-chevron-right"></i>
+                    </button>
                 </div>
             </div>
         </div>
-        <div class="col-md-3">
-            <div class="card stats-card text-center h-100">
-                <div class="card-body">
-                    <div class="text-info">
-                        <i class="fas fa-cogs stats-icon"></i>
-                    </div>
-                    <h3 class="mt-3">{{ stats.commandes_en_cours }}</h3>
-                    <p class="text-muted mb-0">Commandes en production</p>
-                    <small class="text-info">En cours de fabrication</small>
-                </div>
-            </div>
+        
+        <div class="calendar-loading">
+            <div class="spinner-border spinner-border-sm me-2" role="status"></div>
+            Chargement...
         </div>
-        <div class="col-md-3">
-            <div class="card stats-card text-center h-100">
-                <div class="card-body">
-                    <div class="text-danger">
-                        <i class="fas fa-exclamation-triangle stats-icon"></i>
-                    </div>
-                    <h3 class="mt-3">{{ stats.factures_impayees }}</h3>
-                    <p class="text-muted mb-0">Factures impayées</p>
-                    <small class="text-danger">Nécessitent un suivi</small>
+        
+        <div class="row g-0" id="calendar-content">
+            {% for day in week_days %}
+            <div class="col day-column">
+                <div class="day-header {{ day.is_today ? 'today' : '' }}">
+                    <div>{{ day.day_short_fr }}</div>
+                    <div class="day-number">{{ day.day_number }}</div>
                 </div>
-            </div>
-        </div>
-        <div class="col-md-3">
-            <div class="card stats-card text-center h-100">
-                <div class="card-body">
-                    <div class="text-success">
-                        <i class="fas fa-chart-line stats-icon"></i>
-                    </div>
-                    {% set totalCA = 0 %}
-                    {% for facture in recent_factures %}
-                        {% if facture.statut == 'payee' %}
-                            {% set totalCA = totalCA + facture.totalTtc %}
+                <div class="p-2">
+                    {% set dayEvents = [] %}
+                    {% for event in week_events %}
+                        {% if event.start|date('Y-m-d') == day.date|date('Y-m-d') %}
+                            {% set dayEvents = dayEvents|merge([event]) %}
                         {% endif %}
                     {% endfor %}
-                    <h3 class="mt-3">{{ (totalCA/1000)|number_format(0) }}k€</h3>
-                    <p class="text-muted mb-0">Chiffre d'affaires</p>
-                    <small class="text-success">Factures payées</small>
+                    
+                    {% if dayEvents|length > 0 %}
+                        {% for event in dayEvents %}
+                        <div class="event-item" 
+                             style="--event-color: {{ event.background_color }}; --calendar-color: {{ event.background_color }}; color: {{ event.foreground_color ?: '#333' }};"
+                             title="{{ event.title }}{% if event.location %} - {{ event.location }}{% endif %}{% if event.calendar_name %} ({{ event.calendar_name }}){% endif %}">
+                            <div class="calendar-indicator"></div>
+                            <div class="event-time">{{ event.start_formatted }}</div>
+                            <div class="event-title">{{ event.title|length > 20 ? event.title|slice(0, 20) ~ '...' : event.title }}</div>
+                            {% if event.location and event.location|length < 15 %}
+                            <div class="event-location"><i class="fas fa-map-marker-alt me-1"></i>{{ event.location }}</div>
+                            {% endif %}
+                            {% if event.calendar_name and event.calendar_name != 'primary' %}
+                            <div class="event-calendar"><i class="fas fa-calendar me-1"></i>{{ event.calendar_name|length > 15 ? event.calendar_name|slice(0, 15) ~ '...' : event.calendar_name }}</div>
+                            {% endif %}
+                        </div>
+                        {% endfor %}
+                    {% else %}
+                        <small class="opacity-50 d-block text-center mt-3">Aucun événement</small>
+                    {% endif %}
+                </div>
+            </div>
+            {% endfor %}
+        </div>
+    </div>
+    {% endif %}
+
+    <!-- Actions commerciales prioritaires -->
+    <div class="row mb-4">
+        <!-- Devis brouillons à terminer -->
+        <div class="col-xl-3 col-md-6 mb-4">
+            <div class="card border-left-warning shadow h-100 py-2">
+                <div class="card-body">
+                    <div class="row no-gutters align-items-center">
+                        <div class="col mr-2">
+                            <div class="text-xs font-weight-bold text-warning text-uppercase mb-1">
+                                Devis à Terminer
+                            </div>
+                            <div class="h5 mb-0 font-weight-bold text-gray-800" id="count-devis-brouillons">
+                                {{ stats.devis_brouillons|default(0) }}
+                            </div>
+                            <div class="mt-2" id="devis-brouillons-preview">
+                                <small class="text-muted">Devis en mode brouillon</small>
+                            </div>
+                        </div>
+                        <div class="col-auto">
+                            <i class="fas fa-edit fa-2x text-warning"></i>
+                        </div>
+                    </div>
+                    <div class="mt-2">
+                        <button class="btn btn-warning btn-sm w-100 btn-voir-brouillons" onclick="voirDevisBrouillons()">
+                            <i class="fas fa-eye me-1"></i>Voir les brouillons
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Devis à relancer (2 semaines) -->
+        <div class="col-xl-3 col-md-6 mb-4">
+            <div class="card border-left-danger shadow h-100 py-2">
+                <div class="card-body">
+                    <div class="row no-gutters align-items-center">
+                        <div class="col mr-2">
+                            <div class="text-xs font-weight-bold text-danger text-uppercase mb-1">
+                                Relances Devis
+                            </div>
+                            <div class="h5 mb-0 font-weight-bold text-gray-800" id="count-devis-relance">
+                                {{ stats.devis_a_relancer|default(0) }}
+                            </div>
+                            <div class="mt-2" id="devis-relance-preview">
+                                <small class="text-muted">Envoyés il y a + de 2 semaines</small>
+                            </div>
+                        </div>
+                        <div class="col-auto">
+                            <i class="fas fa-phone fa-2x text-danger"></i>
+                        </div>
+                    </div>
+                    <div class="mt-2">
+                        <button class="btn btn-danger btn-sm w-100 btn-voir-relances" onclick="voirDevisARelancer()">
+                            <i class="fas fa-phone me-1"></i>Voir à relancer
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Commandes sans date de livraison -->
+        <div class="col-xl-3 col-md-6 mb-4">
+            <div class="card border-left-info shadow h-100 py-2">
+                <div class="card-body">
+                    <div class="row no-gutters align-items-center">
+                        <div class="col mr-2">
+                            <div class="text-xs font-weight-bold text-info text-uppercase mb-1">
+                                Livraisons à Programmer
+                            </div>
+                            <div class="h5 mb-0 font-weight-bold text-gray-800" id="count-commandes-sans-livraison">
+                                {{ stats.commandes_sans_livraison|default(0) }}
+                            </div>
+                            <div class="mt-2" id="commandes-livraison-preview">
+                                <small class="text-muted">Commandes sans date prévue</small>
+                            </div>
+                        </div>
+                        <div class="col-auto">
+                            <i class="fas fa-truck fa-2x text-info"></i>
+                        </div>
+                    </div>
+                    <div class="mt-2">
+                        <button class="btn btn-info btn-sm w-100 btn-voir-livraisons" onclick="voirCommandesSansLivraison()">
+                            <i class="fas fa-calendar-plus me-1"></i>Programmer livraisons
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Livraisons non facturées -->
+        <div class="col-xl-3 col-md-6 mb-4">
+            <div class="card border-left-success shadow h-100 py-2">
+                <div class="card-body">
+                    <div class="row no-gutters align-items-center">
+                        <div class="col mr-2">
+                            <div class="text-xs font-weight-bold text-success text-uppercase mb-1">
+                                Livraisons à Facturer
+                            </div>
+                            <div class="h5 mb-0 font-weight-bold text-gray-800" id="count-livraisons-non-facturees">
+                                {{ stats.livraisons_non_facturees|default(0) }}
+                            </div>
+                            <div class="mt-2" id="livraisons-facturer-preview">
+                                <small class="text-muted">Produits livrés non facturés</small>
+                            </div>
+                        </div>
+                        <div class="col-auto">
+                            <i class="fas fa-file-invoice-dollar fa-2x text-success"></i>
+                        </div>
+                    </div>
+                    <div class="mt-2">
+                        <button class="btn btn-success btn-sm w-100 btn-voir-facturer" onclick="voirLivraisonsAFacturer()">
+                            <i class="fas fa-file-invoice me-1"></i>Créer factures
+                        </button>
+                    </div>
                 </div>
             </div>
         </div>
     </div>
 
-    <!-- Workflow visuel -->
+    <!-- Outils de Prospection et Suivi Commercial -->
     <div class="row mb-4">
-        <div class="col-12">
-            <div class="card">
-                <div class="card-header">
-                    <h5><i class="fas fa-sitemap"></i> Processus Commercial</h5>
-                </div>
+        <!-- Lancer prospection téléphonique -->
+        <div class="col-xl-3 col-md-6 mb-4">
+            <div class="card border-left-primary shadow h-100 py-2">
                 <div class="card-body">
+                    <div class="row no-gutters align-items-center">
+                        <div class="col mr-2">
+                            <div class="text-xs font-weight-bold text-primary text-uppercase mb-1">
+                                Prospection Téléphonique
+                            </div>
+                            <div class="h6 mb-2 font-weight-bold text-gray-800">
+                                Lancer une session
+                            </div>
+                            <div class="mb-2">
+                                <input type="text" class="form-control form-control-sm mb-2 commune-autocomplete" 
+                                       id="phone-prospection-zone" placeholder="Code postal ou ville..." 
+                                       data-type="mixed">
+                            </div>
+                        </div>
+                        <div class="col-auto">
+                            <i class="fas fa-phone fa-2x text-primary"></i>
+                        </div>
+                    </div>
+                    <div class="mt-2">
+                        <button class="btn btn-primary btn-sm w-100" onclick="lancerProspectionTelephonique()" disabled id="btn-phone-prospection">
+                            <i class="fas fa-play me-1"></i>Lancer session
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Préparer prospection terrain -->
+        <div class="col-xl-3 col-md-6 mb-4">
+            <div class="card border-left-success shadow h-100 py-2">
+                <div class="card-body">
+                    <div class="row no-gutters align-items-center">
+                        <div class="col mr-2">
+                            <div class="text-xs font-weight-bold text-success text-uppercase mb-1">
+                                Prospection Terrain
+                            </div>
+                            <div class="h6 mb-2 font-weight-bold text-gray-800">
+                                Optimiser circuit
+                            </div>
+                            <div class="mb-2">
+                                <input type="text" class="form-control form-control-sm mb-2 commune-autocomplete" 
+                                       id="field-prospection-zone" placeholder="Code postal ou ville..." 
+                                       data-type="mixed">
+                            </div>
+                        </div>
+                        <div class="col-auto">
+                            <i class="fas fa-route fa-2x text-success"></i>
+                        </div>
+                    </div>
+                    <div class="mt-2">
+                        <button class="btn btn-success btn-sm w-100" onclick="preparerProspectionTerrain()" disabled id="btn-field-prospection">
+                            <i class="fas fa-map-marked-alt me-1"></i>Générer circuit
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Échéances contrat -->
+        <div class="col-xl-3 col-md-6 mb-4">
+            <div class="card border-left-warning shadow h-100 py-2">
+                <div class="card-body">
+                    <div class="row no-gutters align-items-center">
+                        <div class="col mr-2">
+                            <div class="text-xs font-weight-bold text-warning text-uppercase mb-1">
+                                Échéances Contrat
+                            </div>
+                            <div class="h5 mb-0 font-weight-bold text-gray-800" id="count-contract-deadlines">
+                                0
+                            </div>
+                            <div class="mt-2" id="contract-deadlines-preview">
+                                <small class="text-muted">Aucune échéance proche</small>
+                            </div>
+                        </div>
+                        <div class="col-auto">
+                            <i class="fas fa-calendar-times fa-2x text-warning"></i>
+                        </div>
+                    </div>
+                    <div class="mt-2">
+                        <button class="btn btn-warning btn-sm w-100" onclick="voirEcheancesContrat()">
+                            <i class="fas fa-eye me-1"></i>Voir toutes
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Visites à venir -->
+        <div class="col-xl-3 col-md-6 mb-4">
+            <div class="card border-left-info shadow h-100 py-2">
+                <div class="card-body">
+                    <div class="row no-gutters align-items-center">
+                        <div class="col mr-2">
+                            <div class="text-xs font-weight-bold text-info text-uppercase mb-1">
+                                Visites à Planifier
+                            </div>
+                            <div class="h5 mb-0 font-weight-bold text-gray-800" id="count-visits-due">
+                                0
+                            </div>
+                            <div class="mt-2" id="visits-due-preview">
+                                <small class="text-muted">Calcul en cours...</small>
+                            </div>
+                        </div>
+                        <div class="col-auto">
+                            <i class="fas fa-handshake fa-2x text-info"></i>
+                        </div>
+                    </div>
+                    <div class="mt-2">
+                        <button class="btn btn-info btn-sm w-100" onclick="voirVisitesAPlanifier()">
+                            <i class="fas fa-calendar-plus me-1"></i>Planifier visites
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Espace Commercial - Onglets Mon Secteur et Mes Performances -->
+    <div class="card mb-4">
+        <div class="card-header">
+            <ul class="nav nav-tabs card-header-tabs" id="commercial-tabs" role="tablist">
+                <li class="nav-item" role="presentation">
+                    <button class="nav-link active" id="mon-secteur-tab" data-bs-toggle="tab" data-bs-target="#mon-secteur" type="button" role="tab">
+                        <i class="fas fa-map-marked-alt me-2"></i>Mon secteur
+                    </button>
+                </li>
+                <li class="nav-item" role="presentation">
+                    <button class="nav-link" id="mes-performances-tab" data-bs-toggle="tab" data-bs-target="#mes-performances" type="button" role="tab">
+                        <i class="fas fa-chart-bar me-2"></i>Mes performances
+                    </button>
+                </li>
+            </ul>
+        </div>
+        <div class="card-body">
+            <div class="tab-content" id="commercial-tab-content">
+                <!-- Onglet Mon Secteur -->
+                <div class="tab-pane fade show active" id="mon-secteur" role="tabpanel">
                     <div class="row">
-                        <div class="col-md-3">
-                            <div class="workflow-step {{ stats.devis_en_attente > 0 ? 'active' : '' }}">
-                                <div class="d-flex align-items-center">
-                                    <i class="fas fa-file-invoice text-warning me-2"></i>
-                                    <div>
-                                        <strong>Devis</strong>
-                                        <br><small>{{ stats.devis_en_attente }} en attente</small>
-                                    </div>
+                        <div class="col-md-8">
+                            <div class="card">
+                                <div class="card-header bg-primary text-white">
+                                    <h6 class="mb-0"><i class="fas fa-map me-2"></i>Carte de mon secteur</h6>
+                                </div>
+                                <div class="card-body p-0">
+                                    <div id="map-secteur-commercial" style="height: 400px; width: 100%;"></div>
                                 </div>
                             </div>
                         </div>
-                        <div class="col-md-3">
-                            <div class="workflow-step {{ stats.commandes_en_cours > 0 ? 'active' : '' }}">
-                                <div class="d-flex align-items-center">
-                                    <i class="fas fa-shopping-cart text-primary me-2"></i>
-                                    <div>
-                                        <strong>Commande</strong>
-                                        <br><small>{{ stats.commandes_en_cours }} en production</small>
+                        <div class="col-md-4">
+                            <div class="card h-100">
+                                <div class="card-header bg-info text-white">
+                                    <h6 class="mb-0"><i class="fas fa-handshake me-2"></i>Contrats actifs</h6>
+                                </div>
+                                <div class="card-body" style="max-height: 400px; overflow-y: auto;">
+                                    <div id="contrats-actifs-loading" class="text-center">
+                                        <div class="spinner-border spinner-border-sm me-2"></div>
+                                        Chargement des contrats...
                                     </div>
+                                    <div id="contrats-actifs-liste" style="display: none;"></div>
                                 </div>
                             </div>
                         </div>
-                        <div class="col-md-3">
-                            <div class="workflow-step">
-                                <div class="d-flex align-items-center">
-                                    <i class="fas fa-truck text-success me-2"></i>
-                                    <div>
-                                        <strong>Livraison</strong>
-                                        <br><small>Expédition produits</small>
-                                    </div>
+                    </div>
+                </div>
+                
+                <!-- Onglet Mes Performances -->
+                <div class="tab-pane fade" id="mes-performances" role="tabpanel">
+                    <div class="row">
+                        <div class="col-md-6">
+                            <div class="card">
+                                <div class="card-header bg-success text-white">
+                                    <h6 class="mb-0"><i class="fas fa-chart-line me-2"></i>Ventes par mois</h6>
+                                </div>
+                                <div class="card-body">
+                                    <canvas id="chart-ventes-mois" width="400" height="200"></canvas>
                                 </div>
                             </div>
                         </div>
-                        <div class="col-md-3">
-                            <div class="workflow-step {{ stats.factures_impayees > 0 ? 'active' : '' }}">
-                                <div class="d-flex align-items-center">
-                                    <i class="fas fa-file-invoice-dollar text-info me-2"></i>
-                                    <div>
-                                        <strong>Facturation</strong>
-                                        <br><small>{{ stats.factures_impayees }} en attente</small>
+                        <div class="col-md-6">
+                            <div class="card">
+                                <div class="card-header bg-warning text-dark">
+                                    <h6 class="mb-0"><i class="fas fa-target me-2"></i>Objectifs vs Réalisé</h6>
+                                </div>
+                                <div class="card-body">
+                                    <canvas id="chart-objectifs" width="400" height="200"></canvas>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div class="row mt-3">
+                        <div class="col-md-12">
+                            <div class="card">
+                                <div class="card-header bg-info text-white">
+                                    <h6 class="mb-0"><i class="fas fa-calendar me-2"></i>Performance par semestre</h6>
+                                </div>
+                                <div class="card-body">
+                                    <div id="performances-loading" class="text-center">
+                                        <div class="spinner-border spinner-border-sm me-2"></div>
+                                        Chargement des performances...
                                     </div>
+                                    <div id="performances-tableau" style="display: none;"></div>
                                 </div>
                             </div>
                         </div>
@@ -198,168 +613,2473 @@
         </div>
     </div>
 
-    <!-- Activités récentes -->
-    <div class="row">
-        <div class="col-md-4">
-            <div class="card h-100">
-                <div class="card-header">
-                    <h6><i class="fas fa-file-invoice text-warning"></i> Devis récents</h6>
-                </div>
-                <div class="card-body">
-                    {% if recent_devis|length > 0 %}
-                        {% for devis in recent_devis %}
-                            <div class="recent-item">
-                                <div class="d-flex justify-content-between align-items-start">
-                                    <div>
-                                        <strong>{{ devis.numeroDevis }}</strong>
-                                        <br><small class="text-muted">{{ devis.client.nomComplet }}</small>
-                                        <br><small class="text-muted">{{ devis.updatedAt|date('d/m/Y H:i') }}</small>
-                                    </div>
-                                    <div class="text-end">
-                                        {% set statusColors = {
-                                            'brouillon': 'secondary',
-                                            'envoye': 'primary',
-                                            'accepte': 'success',
-                                            'refuse': 'danger',
-                                            'converti': 'info'
-                                        } %}
-                                        <span class="status-indicator bg-{{ statusColors[devis.statut] ?? 'secondary' }}"></span>
-                                        <br><small>{{ devis.totalTtc }} €</small>
-                                    </div>
-                                </div>
-                            </div>
-                        {% endfor %}
-                        <div class="text-center mt-3">
-                            <a href="{{ path('app_devis_index') }}" class="btn btn-sm btn-outline-primary">
-                                Voir tous les devis
-                            </a>
-                        </div>
-                    {% else %}
-                        <p class="text-muted text-center">Aucun devis récent</p>
-                    {% endif %}
-                </div>
-            </div>
+    <!-- Section Mes Alertes -->
+    <div class="card mb-4">
+        <div class="card-header bg-warning text-dark">
+            <h5 class="mb-0">
+                <i class="fas fa-bell me-2"></i>Mes alertes
+                <span id="badge-alertes-count" class="badge bg-danger ms-2" style="display: none;">0</span>
+            </h5>
         </div>
-
-        <div class="col-md-4">
-            <div class="card h-100">
-                <div class="card-header">
-                    <h6><i class="fas fa-shopping-cart text-primary"></i> Commandes récentes</h6>
+        <div class="card-body">
+            <div id="alertes-loading" class="text-center py-4">
+                <div class="spinner-border text-warning" role="status">
+                    <span class="visually-hidden">Chargement...</span>
                 </div>
-                <div class="card-body">
-                    {% if recent_commandes|length > 0 %}
-                        {% for commande in recent_commandes %}
-                            <div class="recent-item">
-                                <div class="d-flex justify-content-between align-items-start">
-                                    <div>
-                                        <strong>{{ commande.numeroCommande }}</strong>
-                                        <br><small class="text-muted">{{ commande.client.nomEntreprise }}</small>
-                                        <br><small class="text-muted">{{ commande.updatedAt|date('d/m/Y H:i') }}</small>
-                                    </div>
-                                    <div class="text-end">
-                                        {% set statusColors = {
-                                            'en_preparation': 'warning',
-                                            'confirmee': 'primary',
-                                            'en_production': 'info',
-                                            'expediee': 'success',
-                                            'livree': 'success'
-                                        } %}
-                                        <span class="status-indicator bg-{{ statusColors[commande.statut] ?? 'secondary' }}"></span>
-                                        <br><small>{{ commande.totalTtc }} €</small>
-                                    </div>
-                                </div>
-                            </div>
-                        {% endfor %}
-                        <div class="text-center mt-3">
-                            <a href="{{ path('app_commande_index') }}" class="btn btn-sm btn-outline-primary">
-                                Voir toutes les commandes
-                            </a>
-                        </div>
-                    {% else %}
-                        <p class="text-muted text-center">Aucune commande récente</p>
-                    {% endif %}
-                </div>
+                <div class="mt-2 text-muted">Chargement des alertes...</div>
             </div>
-        </div>
-
-        <div class="col-md-4">
-            <div class="card h-100">
-                <div class="card-header">
-                    <h6><i class="fas fa-file-invoice-dollar text-success"></i> Factures récentes</h6>
-                </div>
-                <div class="card-body">
-                    {% if recent_factures|length > 0 %}
-                        {% for facture in recent_factures %}
-                            <div class="recent-item">
-                                <div class="d-flex justify-content-between align-items-start">
-                                    <div>
-                                        <strong>{{ facture.numeroFacture }}</strong>
-                                        <br><small class="text-muted">{{ facture.client.nomEntreprise }}</small>
-                                        <br><small class="text-muted">{{ facture.updatedAt|date('d/m/Y H:i') }}</small>
-                                        {% if facture.joursRetard > 0 %}
-                                            <br><small class="text-danger">{{ facture.joursRetard }}j retard</small>
-                                        {% endif %}
-                                    </div>
-                                    <div class="text-end">
-                                        {% set statusColors = {
-                                            'brouillon': 'secondary',
-                                            'envoyee': 'primary',
-                                            'en_relance': 'warning',
-                                            'payee': 'success',
-                                            'en_litige': 'danger'
-                                        } %}
-                                        <span class="status-indicator bg-{{ statusColors[facture.statut] ?? 'secondary' }}"></span>
-                                        <br><small>{{ facture.totalTtc }} €</small>
-                                    </div>
-                                </div>
-                            </div>
-                        {% endfor %}
-                        <div class="text-center mt-3">
-                            <a href="{{ path('app_facture_index') }}" class="btn btn-sm btn-outline-primary">
-                                Voir toutes les factures
-                            </a>
-                        </div>
-                    {% else %}
-                        <p class="text-muted text-center">Aucune facture récente</p>
-                    {% endif %}
-                </div>
+            <div id="alertes-container" style="display: none;"></div>
+            <div id="alertes-empty" style="display: none;" class="text-center py-4 text-muted">
+                <i class="fas fa-check-circle fa-3x text-success mb-3"></i>
+                <h6>Aucune alerte</h6>
+                <p class="mb-0">Toutes vos alertes ont été traitées !</p>
             </div>
         </div>
     </div>
 
-    <!-- Actions rapides -->
-    <div class="row mt-4">
-        <div class="col-12">
-            <div class="card">
-                <div class="card-header">
-                    <h5><i class="fas fa-bolt"></i> Actions rapides</h5>
-                </div>
-                <div class="card-body text-center">
-                    <a href="{{ path('app_devis_new') }}" class="btn btn-warning me-3 mb-2">
-                        <i class="fas fa-plus"></i> Nouveau devis
-                    </a>
-                    <a href="{{ path('app_commande_new') }}" class="btn btn-primary me-3 mb-2">
-                        <i class="fas fa-plus"></i> Nouvelle commande
-                    </a>
-                    <a href="{{ path('app_facture_new') }}" class="btn btn-success me-3 mb-2">
-                        <i class="fas fa-plus"></i> Nouvelle facture
-                    </a>
-                    <a href="{{ path('app_client_index') }}" class="btn btn-info me-3 mb-2">
-                        <i class="fas fa-users"></i> Gérer les clients
-                    </a>
-                </div>
-            </div>
-        </div>
-    </div>
 </div>
 
 {% block javascripts %}
+<!-- Google Maps API - Chargement conditionnel pour éviter les doublons -->
 <script>
+window.googleMapsLoaded = window.googleMapsLoaded || false;
+if (!window.googleMapsLoaded && (typeof google === 'undefined' || typeof google.maps === 'undefined')) {
+    window.googleMapsLoaded = true;
+    const script = document.createElement('script');
+    script.src = 'https://maps.googleapis.com/maps/api/js?key={{ google_maps_api_key|default('') }}&libraries=geometry&callback=initGoogleMapsCallback';
+    script.defer = true;
+    script.async = true;
+    document.head.appendChild(script);
+    console.log('🗺️ Google Maps API chargée pour le dashboard commercial');
+} else {
+    console.log('🔄 Google Maps API déjà chargée, réutilisation');
+}
+
+// Callback global pour l'initialisation Google Maps
+window.initGoogleMapsCallback = function() {
+    console.log('✅ Google Maps API prête, initialisation différée');
+    // La carte sera initialisée par les fonctions d'onglet
+};
+</script>
+<!-- Chart.js -->
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+
+<script>
+window.currentWeekOffset = window.currentWeekOffset || {{ current_week_offset }};
+
+// Navigation AJAX entre les semaines
+function changeWeekAjax(offset) {
+    // Afficher le loading
+    document.querySelector('.calendar-loading').style.display = 'block';
+    document.querySelector('#calendar-content').style.opacity = '0.5';
+    
+    // Désactiver les boutons pendant le chargement
+    document.querySelector('#btn-prev-week').disabled = true;
+    document.querySelector('#btn-next-week').disabled = true;
+    
+    fetch('{{ path('workflow_dashboard_calendar_ajax') }}?week=' + offset)
+        .then(response => response.json())
+        .then(data => {
+            if (data.success) {
+                updateCalendarDisplay(data);
+                window.currentWeekOffset = offset;
+                
+                // Mettre à jour l'URL sans recharger la page
+                const newUrl = new URL(window.location);
+                newUrl.searchParams.set('week', offset);
+                window.history.pushState({}, '', newUrl);
+            } else {
+                console.error('Erreur lors du chargement du calendrier');
+            }
+        })
+        .catch(error => {
+            console.error('Erreur AJAX:', error);
+        })
+        .finally(() => {
+            // Cacher le loading
+            document.querySelector('.calendar-loading').style.display = 'none';
+            document.querySelector('#calendar-content').style.opacity = '1';
+            
+            // Réactiver les boutons
+            document.querySelector('#btn-prev-week').disabled = false;
+            document.querySelector('#btn-next-week').disabled = false;
+        });
+}
+
+// Mettre à jour l'affichage du calendrier avec les nouvelles données
+function updateCalendarDisplay(data) {
+    // Mettre à jour la variable globale avec l'offset reçu
+    window.currentWeekOffset = data.current_week_offset;
+    
+    // Mettre à jour le titre de la semaine
+    document.querySelector('#week-date').textContent = data.start_of_week;
+    
+    // Mettre à jour l'indicateur de semaine
+    const weekIndicator = window.currentWeekOffset === 0 ? 'en cours' : 
+                         (window.currentWeekOffset > 0 ? '+' + window.currentWeekOffset : window.currentWeekOffset);
+    document.querySelector('#week-indicator').textContent = 'Semaine ' + weekIndicator;
+    
+    // Mettre à jour les attributs onclick des boutons (pas les event listeners)
+    document.querySelector('#btn-prev-week').setAttribute('onclick', `changeWeekAjax(${window.currentWeekOffset - 1})`);
+    document.querySelector('#btn-next-week').setAttribute('onclick', `changeWeekAjax(${window.currentWeekOffset + 1})`);
+    
+    // Reconstruire le contenu du calendrier
+    const calendarContent = document.querySelector('#calendar-content');
+    calendarContent.innerHTML = '';
+    
+    data.week_days.forEach(day => {
+        const dayColumn = document.createElement('div');
+        dayColumn.className = 'col day-column';
+        
+        const dayHeader = document.createElement('div');
+        dayHeader.className = 'day-header' + (day.is_today ? ' today' : '');
+        dayHeader.innerHTML = `
+            <div>${day.day_short_fr}</div>
+            <div class="day-number">${day.day_number}</div>
+        `;
+        
+        const dayContent = document.createElement('div');
+        dayContent.className = 'p-2';
+        
+        // Filtrer les événements pour ce jour
+        const dayEvents = data.week_events.filter(event => 
+            event.start.substring(0, 10) === day.date
+        );
+        
+        if (dayEvents.length > 0) {
+            dayEvents.forEach(event => {
+                const eventItem = document.createElement('div');
+                eventItem.className = 'event-item';
+                eventItem.title = event.title + (event.location ? ' - ' + event.location : '') + (event.calendar_name ? ' (' + event.calendar_name + ')' : '');
+                
+                // Appliquer les couleurs
+                eventItem.style.setProperty('--event-color', event.background_color || '#007bff');
+                eventItem.style.setProperty('--calendar-color', event.background_color || '#007bff');
+                eventItem.style.color = event.foreground_color || '#333';
+                
+                let eventHtml = `
+                    <div class="calendar-indicator"></div>
+                    <div class="event-time">${event.start_formatted}</div>
+                    <div class="event-title">${event.title.length > 20 ? event.title.substring(0, 20) + '...' : event.title}</div>
+                `;
+                
+                if (event.location && event.location.length < 15) {
+                    eventHtml += `<div class="event-location"><i class="fas fa-map-marker-alt me-1"></i>${event.location}</div>`;
+                }
+                
+                if (event.calendar_name && event.calendar_name !== 'primary') {
+                    const calendarName = event.calendar_name.length > 15 ? event.calendar_name.substring(0, 15) + '...' : event.calendar_name;
+                    eventHtml += `<div class="event-calendar"><i class="fas fa-calendar me-1"></i>${calendarName}</div>`;
+                }
+                
+                eventItem.innerHTML = eventHtml;
+                dayContent.appendChild(eventItem);
+            });
+        } else {
+            const noEvents = document.createElement('small');
+            noEvents.className = 'opacity-50 d-block text-center mt-3';
+            noEvents.textContent = 'Aucun événement';
+            dayContent.appendChild(noEvents);
+        }
+        
+        dayColumn.appendChild(dayHeader);
+        dayColumn.appendChild(dayContent);
+        calendarContent.appendChild(dayColumn);
+    });
+}
+
+// Fonction de fallback pour compatibilité
+function changeWeek(offset) {
+    changeWeekAjax(offset);
+}
+
 // Auto-refresh du dashboard toutes les 5 minutes
 setInterval(function() {
     // Refresh silencieux des statistiques sans recharger la page complète
     console.log('Dashboard auto-refresh');
 }, 300000);
+
+// Prospection téléphonique
+function lancerProspectionTelephonique() {
+    const codePostal = document.getElementById('prospection_code_postal').value.trim();
+    const ville = document.getElementById('prospection_ville').value.trim();
+    
+    if (!codePostal && !ville) {
+        alert('Veuillez saisir un code postal ou une ville');
+        return;
+    }
+    
+    const button = document.querySelector('.btn-lancer-prospection');
+    const originalText = button.innerHTML;
+    button.innerHTML = '<i class="fas fa-spinner fa-spin me-2"></i>Recherche...';
+    button.disabled = true;
+    
+    fetch('{{ path('workflow_prospection_telephonique') }}', {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json',
+            'X-Requested-With': 'XMLHttpRequest'
+        },
+        body: JSON.stringify({
+            code_postal: codePostal,
+            ville: ville
+        })
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.success) {
+            afficherSessionProspection(data.prospects, data.zone);
+        } else {
+            alert('Erreur: ' + data.message);
+        }
+    })
+    .catch(error => {
+        console.error('Erreur prospection:', error);
+        alert('Erreur lors de la recherche de prospects');
+    })
+    .finally(() => {
+        button.innerHTML = originalText;
+        button.disabled = false;
+    });
+}
+
+function afficherSessionProspection(prospects, zone) {
+    if (prospects.length === 0) {
+        alert(`Aucun prospect trouvé dans la zone ${zone}`);
+        return;
+    }
+    
+    // Créer une modal pour la session de prospection
+    const modalHtml = `
+        <div class="modal fade" id="sessionProspectionModal" tabindex="-1">
+            <div class="modal-dialog modal-xl">
+                <div class="modal-content">
+                    <div class="modal-header bg-primary text-white">
+                        <h5 class="modal-title">
+                            <i class="fas fa-phone me-2"></i>Session Prospection - ${zone}
+                        </h5>
+                        <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+                    </div>
+                    <div class="modal-body">
+                        <div class="row">
+                            <div class="col-md-8">
+                                <div id="prospect-current" class="text-center">
+                                    <div class="loading-session">
+                                        <i class="fas fa-phone fa-3x text-primary mb-3"></i>
+                                        <h4>Préparation de la session...</h4>
+                                        <p class="text-muted">${prospects.length} prospects trouvés dans ${zone}</p>
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="col-md-4">
+                                <div class="card h-100">
+                                    <div class="card-header bg-light">
+                                        <h6 class="mb-0"><i class="fas fa-list me-2"></i>Progression</h6>
+                                    </div>
+                                    <div class="card-body">
+                                        <div class="mb-3">
+                                            <div class="d-flex justify-content-between mb-1">
+                                                <small>Progression</small>
+                                                <small id="progress-text">0/${prospects.length}</small>
+                                            </div>
+                                            <div class="progress">
+                                                <div id="progress-bar" class="progress-bar" style="width: 0%"></div>
+                                            </div>
+                                        </div>
+                                        <div id="session-stats">
+                                            <p class="mb-1"><strong>Contactés:</strong> <span id="stat-contactes">0</span></p>
+                                            <p class="mb-1"><strong>Intéressés:</strong> <span id="stat-interesses">0</span></p>
+                                            <p class="mb-1"><strong>RDV fixés:</strong> <span id="stat-rdv">0</span></p>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="modal-footer">
+                        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Fermer</button>
+                        <button type="button" id="btn-demarrer-session" class="btn btn-primary" onclick="demarrerSessionProspection()">
+                            <i class="fas fa-play me-2"></i>Démarrer la session
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    `;
+    
+    // Nettoyer les modals existantes
+    const existingModal = document.getElementById('sessionProspectionModal');
+    if (existingModal) {
+        existingModal.remove();
+    }
+    
+    // Ajouter la modal
+    document.body.insertAdjacentHTML('beforeend', modalHtml);
+    
+    // Stocker les données de prospection
+    window.sessionProspectionData = {
+        prospects: prospects,
+        zone: zone,
+        currentIndex: 0,
+        stats: {
+            contactes: 0,
+            interesses: 0,
+            rdv: 0
+        }
+    };
+    
+    // Afficher la modal
+    const modal = new bootstrap.Modal(document.getElementById('sessionProspectionModal'));
+    modal.show();
+}
+
+function demarrerSessionProspection() {
+    if (!window.sessionProspectionData) return;
+    
+    const data = window.sessionProspectionData;
+    const prospects = data.prospects;
+    
+    if (prospects.length === 0) {
+        alert('Aucun prospect disponible');
+        return;
+    }
+    
+    // Masquer le bouton démarrer
+    document.getElementById('btn-demarrer-session').style.display = 'none';
+    
+    // Afficher le premier prospect
+    afficherProspectCourant();
+}
+
+function afficherProspectCourant() {
+    const data = window.sessionProspectionData;
+    const prospect = data.prospects[data.currentIndex];
+    
+    if (!prospect) {
+        terminerSession();
+        return;
+    }
+    
+    const prospectHtml = `
+        <div class="prospect-card text-start">
+            <div class="row">
+                <div class="col-12 mb-3">
+                    <h4 class="text-primary">${prospect.nom_complet}</h4>
+                    <p class="text-muted mb-2">${prospect.adresse}</p>
+                </div>
+            </div>
+            
+            <div class="row">
+                <div class="col-md-6">
+                    <div class="card h-100">
+                        <div class="card-header bg-info text-white">
+                            <h6 class="mb-0"><i class="fas fa-user me-2"></i>Contact</h6>
+                        </div>
+                        <div class="card-body">
+                            <p><strong>Nom:</strong> ${prospect.contact_nom || 'Non renseigné'}</p>
+                            <p><strong>Téléphone:</strong> 
+                                ${prospect.telephone ? `<a href="tel:${prospect.telephone}" class="btn btn-sm btn-success ms-2"><i class="fas fa-phone me-1"></i>${prospect.telephone}</a>` : 'Non renseigné'}
+                            </p>
+                            <p><strong>Email:</strong> 
+                                ${prospect.email ? `<a href="mailto:${prospect.email}" class="text-decoration-none">${prospect.email}</a>` : 'Non renseigné'}
+                            </p>
+                        </div>
+                    </div>
+                </div>
+                <div class="col-md-6">
+                    <div class="card h-100">
+                        <div class="card-header bg-warning text-dark">
+                            <h6 class="mb-0"><i class="fas fa-info-circle me-2"></i>Informations</h6>
+                        </div>
+                        <div class="card-body">
+                            <p><strong>Famille:</strong> ${prospect.famille || 'Non classé'}</p>
+                            <p><strong>Dernière interaction:</strong> ${prospect.derniere_interaction || 'Jamais'}</p>
+                            <p><strong>Statut:</strong> <span class="badge bg-secondary">Prospect</span></p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            
+            <div class="row mt-4">
+                <div class="col-12">
+                    <div class="card">
+                        <div class="card-header bg-success text-white">
+                            <h6 class="mb-0"><i class="fas fa-clipboard me-2"></i>Résultat de l'appel</h6>
+                        </div>
+                        <div class="card-body">
+                            <div class="row">
+                                <div class="col-md-4">
+                                    <button class="btn btn-outline-danger w-100 mb-2" onclick="marquerResultat('pas_repondu')">
+                                        <i class="fas fa-phone-slash me-2"></i>Pas de réponse
+                                    </button>
+                                </div>
+                                <div class="col-md-4">
+                                    <button class="btn btn-outline-warning w-100 mb-2" onclick="marquerResultat('refuse')">
+                                        <i class="fas fa-times-circle me-2"></i>Refus / Pas intéressé
+                                    </button>
+                                </div>
+                                <div class="col-md-4">
+                                    <button class="btn btn-outline-success w-100 mb-2" onclick="marquerResultat('interesse')">
+                                        <i class="fas fa-check-circle me-2"></i>Intéressé
+                                    </button>
+                                </div>
+                            </div>
+                            <div class="row">
+                                <div class="col-md-6">
+                                    <button class="btn btn-success w-100" onclick="marquerResultat('rdv_fixe')">
+                                        <i class="fas fa-calendar-plus me-2"></i>RDV fixé
+                                    </button>
+                                </div>
+                                <div class="col-md-6">
+                                    <button class="btn btn-primary w-100" onclick="voirFicheClient(${prospect.id})">
+                                        <i class="fas fa-eye me-2"></i>Voir fiche complète
+                                    </button>
+                                </div>
+                            </div>
+                            
+                            <div class="mt-3">
+                                <label class="form-label">Notes de l'appel (optionnel):</label>
+                                <textarea id="notes-appel" class="form-control" rows="2" placeholder="Ajouter des notes sur cet appel..."></textarea>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    `;
+    
+    document.getElementById('prospect-current').innerHTML = prospectHtml;
+    
+    // Mettre à jour la progression
+    const currentProgress = data.currentIndex + 1;
+    const total = data.prospects.length;
+    const progressPercent = (currentProgress / total) * 100;
+    
+    document.getElementById('progress-text').textContent = `${currentProgress}/${total}`;
+    document.getElementById('progress-bar').style.width = `${progressPercent}%`;
+    
+    // Mettre à jour les statistiques
+    document.getElementById('stat-contactes').textContent = data.stats.contactes;
+    document.getElementById('stat-interesses').textContent = data.stats.interesses;
+    document.getElementById('stat-rdv').textContent = data.stats.rdv;
+}
+
+function marquerResultat(resultat) {
+    const data = window.sessionProspectionData;
+    const notes = document.getElementById('notes-appel').value.trim();
+    
+    // Mettre à jour les statistiques
+    if (resultat !== 'pas_repondu') {
+        data.stats.contactes++;
+    }
+    if (resultat === 'interesse' || resultat === 'rdv_fixe') {
+        data.stats.interesses++;
+    }
+    if (resultat === 'rdv_fixe') {
+        data.stats.rdv++;
+    }
+    
+    // Sauvegarder le résultat (optionnel - peut être ajouté plus tard)
+    console.log('Résultat prospect', data.prospects[data.currentIndex].id, ':', resultat, notes);
+    
+    // Passer au prospect suivant
+    data.currentIndex++;
+    
+    if (data.currentIndex < data.prospects.length) {
+        afficherProspectCourant();
+    } else {
+        terminerSession();
+    }
+}
+
+function terminerSession() {
+    const data = window.sessionProspectionData;
+    
+    const sessionHtml = `
+        <div class="session-terminee text-center">
+            <i class="fas fa-check-circle fa-4x text-success mb-4"></i>
+            <h3 class="text-success">Session terminée !</h3>
+            <div class="row mt-4">
+                <div class="col-md-4">
+                    <div class="card bg-light">
+                        <div class="card-body text-center">
+                            <h5 class="text-primary">${data.stats.contactes}</h5>
+                            <small class="text-muted">Prospects contactés</small>
+                        </div>
+                    </div>
+                </div>
+                <div class="col-md-4">
+                    <div class="card bg-light">
+                        <div class="card-body text-center">
+                            <h5 class="text-success">${data.stats.interesses}</h5>
+                            <small class="text-muted">Prospects intéressés</small>
+                        </div>
+                    </div>
+                </div>
+                <div class="col-md-4">
+                    <div class="card bg-light">
+                        <div class="card-body text-center">
+                            <h5 class="text-warning">${data.stats.rdv}</h5>
+                            <small class="text-muted">RDV fixés</small>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <div class="mt-4">
+                <p class="text-muted">Zone prospectée: <strong>${data.zone}</strong></p>
+                <p class="text-muted">Total prospects traités: <strong>${data.prospects.length}</strong></p>
+            </div>
+        </div>
+    `;
+    
+    document.getElementById('prospect-current').innerHTML = sessionHtml;
+    
+    // Masquer la barre de progression
+    const progressCard = document.querySelector('#sessionProspectionModal .col-md-4');
+    if (progressCard) {
+        progressCard.style.display = 'none';
+    }
+}
+
+function voirFicheClient(clientId) {
+    window.open(`{{ path('app_client_show', {'id': 'PLACEHOLDER'}) }}`.replace('PLACEHOLDER', clientId), '_blank');
+}
+
+// Prospection terrain
+function preparerProspectionTerrain() {
+    const codePostal = document.getElementById('terrain_code_postal').value.trim();
+    const ville = document.getElementById('terrain_ville').value.trim();
+    
+    if (!codePostal && !ville) {
+        alert('Veuillez saisir un code postal ou une ville');
+        return;
+    }
+    
+    const button = document.querySelector('.btn-preparer-terrain');
+    const originalText = button.innerHTML;
+    button.innerHTML = '<i class="fas fa-spinner fa-spin me-2"></i>Optimisation...';
+    button.disabled = true;
+    
+    fetch('{{ path('workflow_prospection_terrain') }}', {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json',
+            'X-Requested-With': 'XMLHttpRequest'
+        },
+        body: JSON.stringify({
+            code_postal: codePostal,
+            ville: ville
+        })
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.success) {
+            afficherCircuitProspection(data.prospects, data.zone, data.circuit_optimise);
+        } else {
+            alert('Erreur: ' + data.message);
+        }
+    })
+    .catch(error => {
+        console.error('Erreur prospection terrain:', error);
+        alert('Erreur lors de l\'optimisation du circuit');
+    })
+    .finally(() => {
+        button.innerHTML = originalText;
+        button.disabled = false;
+    });
+}
+
+function afficherCircuitProspection(prospects, zone, circuitOptimise) {
+    if (prospects.length === 0) {
+        alert(`Aucun prospect trouvé dans la zone ${zone}`);
+        return;
+    }
+    
+    // Créer une modal pour le circuit de prospection
+    const modalHtml = `
+        <div class="modal fade" id="circuitProspectionModal" tabindex="-1">
+            <div class="modal-dialog modal-xl">
+                <div class="modal-content">
+                    <div class="modal-header bg-success text-white">
+                        <h5 class="modal-title">
+                            <i class="fas fa-route me-2"></i>Circuit Prospection Terrain - ${zone}
+                        </h5>
+                        <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+                    </div>
+                    <div class="modal-body">
+                        <div class="row">
+                            <div class="col-md-7">
+                                <div class="card mb-3">
+                                    <div class="card-header bg-primary text-white">
+                                        <h6 class="mb-0"><i class="fas fa-map me-2"></i>Carte du circuit</h6>
+                                    </div>
+                                    <div class="card-body p-0">
+                                        <div id="map-circuit" style="height: 400px; width: 100%;"></div>
+                                    </div>
+                                </div>
+                                ${circuitOptimise ? '<div class="alert alert-success"><i class="fas fa-check me-2"></i>Circuit optimisé pour minimiser les déplacements</div>' : ''}
+                            </div>
+                            <div class="col-md-5">
+                                <div class="card">
+                                    <div class="card-header bg-info text-white">
+                                        <h6 class="mb-0"><i class="fas fa-list-ol me-2"></i>Liste des prospects (${prospects.length})</h6>
+                                    </div>
+                                    <div class="card-body p-0" style="max-height: 400px; overflow-y: auto;">
+                                        <div id="liste-prospects-terrain"></div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="modal-footer">
+                        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Fermer</button>
+                        <button type="button" class="btn btn-primary" onclick="exporterCircuit()">
+                            <i class="fas fa-download me-2"></i>Exporter la liste
+                        </button>
+                        <button type="button" class="btn btn-success" onclick="ouvrirGoogleMaps()">
+                            <i class="fas fa-map-marked-alt me-2"></i>Ouvrir dans Google Maps
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    `;
+    
+    // Nettoyer les modals existantes
+    const existingModal = document.getElementById('circuitProspectionModal');
+    if (existingModal) {
+        existingModal.remove();
+    }
+    
+    // Ajouter la modal
+    document.body.insertAdjacentHTML('beforeend', modalHtml);
+    
+    // Stocker les données du circuit
+    window.circuitProspectionData = {
+        prospects: prospects,
+        zone: zone,
+        circuitOptimise: circuitOptimise
+    };
+    
+    // Afficher la modal
+    const modal = new bootstrap.Modal(document.getElementById('circuitProspectionModal'));
+    modal.show();
+    
+    // Afficher la liste des prospects
+    afficherListeProspectsTerrain(prospects);
+    
+    // Initialiser la carte après que la modal soit visible
+    setTimeout(() => {
+        initialiserCarteCircuit(prospects);
+    }, 500);
+}
+
+function afficherListeProspectsTerrain(prospects) {
+    const listeContainer = document.getElementById('liste-prospects-terrain');
+    let listeHtml = '';
+    
+    prospects.forEach((prospect, index) => {
+        const ordreCircuit = prospect.ordre_circuit || (index + 1);
+        listeHtml += `
+            <div class="prospect-terrain-item d-flex align-items-center p-3 border-bottom" data-prospect-id="${prospect.id}">
+                <div class="ordre-circuit me-3">
+                    <span class="badge bg-primary rounded-circle" style="width: 30px; height: 30px; display: flex; align-items: center; justify-content: center;">
+                        ${ordreCircuit}
+                    </span>
+                </div>
+                <div class="flex-grow-1">
+                    <h6 class="mb-1">${prospect.nom_complet}</h6>
+                    <small class="text-muted d-block">${prospect.contact_nom}</small>
+                    <small class="text-info d-block">${prospect.adresse_courte}</small>
+                </div>
+                <div class="actions-prospect">
+                    ${prospect.telephone ? `<a href="tel:${prospect.telephone}" class="btn btn-sm btn-outline-success me-1" title="Appeler"><i class="fas fa-phone"></i></a>` : ''}
+                    <button class="btn btn-sm btn-outline-primary" onclick="centrerCarteProspect(${prospect.latitude}, ${prospect.longitude})" title="Localiser">
+                        <i class="fas fa-map-marker-alt"></i>
+                    </button>
+                </div>
+            </div>
+        `;
+    });
+    
+    listeContainer.innerHTML = listeHtml;
+}
+
+function initialiserCarteCircuit(prospects) {
+    // Vérifier si Google Maps est disponible
+    if (typeof google === 'undefined') {
+        document.getElementById('map-circuit').innerHTML = `
+            <div class="alert alert-warning m-3">
+                <i class="fas fa-exclamation-triangle me-2"></i>
+                Google Maps n'est pas disponible. Veuillez vérifier votre connexion internet.
+            </div>
+        `;
+        return;
+    }
+    
+    const mapElement = document.getElementById('map-circuit');
+    if (!mapElement) return;
+    
+    // Calculer le centre de la carte
+    let centerLat = 0, centerLng = 0, validPoints = 0;
+    
+    prospects.forEach(prospect => {
+        if (prospect.latitude && prospect.longitude) {
+            centerLat += parseFloat(prospect.latitude);
+            centerLng += parseFloat(prospect.longitude);
+            validPoints++;
+        }
+    });
+    
+    if (validPoints === 0) {
+        mapElement.innerHTML = `
+            <div class="alert alert-warning m-3">
+                <i class="fas fa-map-marked-alt me-2"></i>
+                Aucune coordonnée géographique disponible pour afficher la carte.
+            </div>
+        `;
+        return;
+    }
+    
+    centerLat /= validPoints;
+    centerLng /= validPoints;
+    
+    // Créer la carte
+    const map = new google.maps.Map(mapElement, {
+        center: { lat: centerLat, lng: centerLng },
+        zoom: 12,
+        mapTypeId: google.maps.MapTypeId.ROADMAP
+    });
+    
+    // Ajouter les marqueurs et le chemin
+    const path = [];
+    const bounds = new google.maps.LatLngBounds();
+    
+    prospects.forEach((prospect, index) => {
+        if (prospect.latitude && prospect.longitude) {
+            const position = { 
+                lat: parseFloat(prospect.latitude), 
+                lng: parseFloat(prospect.longitude) 
+            };
+            
+            const marker = new google.maps.Marker({
+                position: position,
+                map: map,
+                title: prospect.nom_complet,
+                label: {
+                    text: (prospect.ordre_circuit || (index + 1)).toString(),
+                    color: 'white',
+                    fontWeight: 'bold'
+                },
+                icon: {
+                    path: google.maps.SymbolPath.CIRCLE,
+                    fillColor: index === 0 ? '#28a745' : '#007bff',
+                    fillOpacity: 1,
+                    strokeColor: 'white',
+                    strokeWeight: 2,
+                    scale: 15
+                }
+            });
+            
+            // InfoWindow pour chaque marqueur
+            const infoWindow = new google.maps.InfoWindow({
+                content: `
+                    <div style="padding: 10px;">
+                        <h6 class="mb-2">${prospect.nom_complet}</h6>
+                        <p class="mb-1"><strong>Contact:</strong> ${prospect.contact_nom}</p>
+                        <p class="mb-1"><strong>Adresse:</strong> ${prospect.adresse_complete}</p>
+                        ${prospect.telephone ? `<p class="mb-1"><strong>Tél:</strong> <a href="tel:${prospect.telephone}">${prospect.telephone}</a></p>` : ''}
+                        <div class="mt-2">
+                            <button class="btn btn-sm btn-primary" onclick="voirFicheClient(${prospect.id})">
+                                <i class="fas fa-eye me-1"></i>Voir fiche
+                            </button>
+                        </div>
+                    </div>
+                `
+            });
+            
+            marker.addListener('click', () => {
+                infoWindow.open(map, marker);
+            });
+            
+            path.push(position);
+            bounds.extend(position);
+        }
+    });
+    
+    // Tracer le chemin optimisé
+    if (path.length > 1) {
+        const polyline = new google.maps.Polyline({
+            path: path,
+            geodesic: true,
+            strokeColor: '#FF6B35',
+            strokeOpacity: 1.0,
+            strokeWeight: 3
+        });
+        
+        polyline.setMap(map);
+    }
+    
+    // Ajuster la vue pour inclure tous les points
+    if (validPoints > 1) {
+        map.fitBounds(bounds);
+    }
+    
+    // Stocker la carte pour utilisation ultérieure
+    window.mapCircuit = map;
+}
+
+function centrerCarteProspect(latitude, longitude) {
+    if (window.mapCircuit && latitude && longitude) {
+        const position = { lat: parseFloat(latitude), lng: parseFloat(longitude) };
+        window.mapCircuit.setCenter(position);
+        window.mapCircuit.setZoom(15);
+    }
+}
+
+function exporterCircuit() {
+    const data = window.circuitProspectionData;
+    if (!data || !data.prospects) return;
+    
+    // Créer un CSV simple
+    let csv = 'Ordre;Entreprise;Contact;Téléphone;Email;Adresse\n';
+    
+    data.prospects.forEach((prospect, index) => {
+        const ordre = prospect.ordre_circuit || (index + 1);
+        csv += `${ordre};"${prospect.nom_complet}";"${prospect.contact_nom}";"${prospect.telephone || ''}";"${prospect.email || ''}";"${prospect.adresse_complete}"\n`;
+    });
+    
+    // Télécharger le fichier
+    const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
+    const link = document.createElement('a');
+    link.href = URL.createObjectURL(blob);
+    link.download = `circuit_prospection_${data.zone.replace(/\s+/g, '_')}_${new Date().toISOString().split('T')[0]}.csv`;
+    link.click();
+}
+
+function ouvrirGoogleMaps() {
+    const data = window.circuitProspectionData;
+    if (!data || !data.prospects || data.prospects.length === 0) return;
+    
+    // Créer une URL Google Maps avec waypoints
+    let url = 'https://www.google.com/maps/dir/';
+    
+    data.prospects.forEach((prospect, index) => {
+        if (prospect.latitude && prospect.longitude) {
+            url += `${prospect.latitude},${prospect.longitude}`;
+            if (index < data.prospects.length - 1) {
+                url += '/';
+            }
+        }
+    });
+    
+    window.open(url, '_blank');
+}
+
+// Échéances contrat
+function afficherEcheancesContrat() {
+    const button = document.querySelector('.btn-echeances-contrat');
+    const originalText = button.innerHTML;
+    button.innerHTML = '<i class="fas fa-spinner fa-spin me-2"></i>Chargement...';
+    button.disabled = true;
+    
+    fetch('{{ path('workflow_echeances_contrat') }}', {
+        method: 'GET',
+        headers: {
+            'X-Requested-With': 'XMLHttpRequest'
+        }
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.success) {
+            afficherModalEcheances(data.echeances);
+        } else {
+            alert('Erreur lors du chargement des échéances');
+        }
+    })
+    .catch(error => {
+        console.error('Erreur échéances:', error);
+        alert('Erreur lors du chargement des échéances de contrat');
+    })
+    .finally(() => {
+        button.innerHTML = originalText;
+        button.disabled = false;
+    });
+}
+
+function afficherModalEcheances(echeances) {
+    const modalHtml = `
+        <div class="modal fade" id="echeancesContratModal" tabindex="-1">
+            <div class="modal-dialog modal-xl">
+                <div class="modal-content">
+                    <div class="modal-header bg-warning text-dark">
+                        <h5 class="modal-title">
+                            <i class="fas fa-calendar-times me-2"></i>Échéances de Contrat (${echeances.length})
+                        </h5>
+                        <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                    </div>
+                    <div class="modal-body">
+                        ${echeances.length === 0 ? 
+                            '<div class="alert alert-info"><i class="fas fa-info-circle me-2"></i>Aucune échéance de contrat dans les 3 prochains mois</div>' :
+                            '<div id="liste-echeances"></div>'
+                        }
+                    </div>
+                    <div class="modal-footer">
+                        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Fermer</button>
+                        ${echeances.length > 0 ? '<button type="button" class="btn btn-primary" onclick="exporterEcheances()"><i class="fas fa-download me-2"></i>Exporter</button>' : ''}
+                    </div>
+                </div>
+            </div>
+        </div>
+    `;
+    
+    // Nettoyer les modals existantes
+    const existingModal = document.getElementById('echeancesContratModal');
+    if (existingModal) {
+        existingModal.remove();
+    }
+    
+    // Ajouter la modal
+    document.body.insertAdjacentHTML('beforeend', modalHtml);
+    
+    // Stocker les données
+    window.echeancesData = echeances;
+    
+    // Afficher la liste si on a des échéances
+    if (echeances.length > 0) {
+        afficherListeEcheances(echeances);
+    }
+    
+    // Afficher la modal
+    const modal = new bootstrap.Modal(document.getElementById('echeancesContratModal'));
+    modal.show();
+}
+
+function afficherListeEcheances(echeances) {
+    const listeContainer = document.getElementById('liste-echeances');
+    let listeHtml = '';
+    
+    echeances.forEach(echeance => {
+        const badgeClass = echeance.priorite === 'urgent' ? 'bg-danger' : 
+                          (echeance.priorite === 'important' ? 'bg-warning' : 'bg-success');
+        
+        const prioriteText = echeance.priorite === 'urgent' ? 'Urgent' :
+                            (echeance.priorite === 'important' ? 'Important' : 'Normal');
+        
+        listeHtml += `
+            <div class="echeance-item border rounded p-3 mb-3">
+                <div class="row align-items-center">
+                    <div class="col-md-2">
+                        <span class="badge ${badgeClass} w-100 p-2">
+                            ${prioriteText}<br>
+                            <small>${echeance.jours_restants} jours</small>
+                        </span>
+                    </div>
+                    <div class="col-md-3">
+                        <h6 class="mb-1">${echeance.client_nom}</h6>
+                        <small class="text-muted">${echeance.contact_nom}</small>
+                        ${echeance.telephone ? `<br><a href="tel:${echeance.telephone}" class="btn btn-sm btn-outline-success mt-1"><i class="fas fa-phone me-1"></i>${echeance.telephone}</a>` : ''}
+                    </div>
+                    <div class="col-md-2">
+                        <strong>Commande:</strong><br>
+                        <a href="{{ path('app_commande_show', {'id': 'PLACEHOLDER'}) }}".replace('PLACEHOLDER', ${echeance.id}) class="text-decoration-none">
+                            ${echeance.numero_commande}
+                        </a>
+                    </div>
+                    <div class="col-md-2">
+                        <strong>Livré le:</strong><br>
+                        ${echeance.date_livraison}
+                    </div>
+                    <div class="col-md-2">
+                        <strong>Échéance:</strong><br>
+                        <span class="text-${echeance.priorite === 'urgent' ? 'danger' : 'dark'} fw-bold">
+                            ${echeance.date_echeance}
+                        </span>
+                    </div>
+                    <div class="col-md-1">
+                        <button class="btn btn-sm btn-primary" onclick="planifierRenouvellecontrat(${echeance.id})" title="Planifier renouvellement">
+                            <i class="fas fa-calendar-plus"></i>
+                        </button>
+                    </div>
+                </div>
+                <div class="row mt-2">
+                    <div class="col-12">
+                        <small class="text-muted">
+                            <strong>Services:</strong> ${echeance.services.join(', ')}
+                        </small>
+                    </div>
+                </div>
+            </div>
+        `;
+    });
+    
+    listeContainer.innerHTML = listeHtml;
+}
+
+function planifierRenouvellecontrat(commandeId) {
+    // Pour l'instant, rediriger vers la création d'un nouveau devis basé sur cette commande
+    alert('Fonctionnalité en développement - Création automatique devis de renouvellement');
+}
+
+function exporterEcheances() {
+    const echeances = window.echeancesData;
+    if (!echeances || echeances.length === 0) return;
+    
+    // Créer un CSV
+    let csv = 'Priorité;Client;Contact;Téléphone;Commande;Date Livraison;Date Échéance;Jours Restants;Services\n';
+    
+    echeances.forEach(echeance => {
+        csv += `"${echeance.priorite}";"${echeance.client_nom}";"${echeance.contact_nom}";"${echeance.telephone || ''}";"${echeance.numero_commande}";"${echeance.date_livraison}";"${echeance.date_echeance}";${echeance.jours_restants};"${echeance.services.join(', ')}"\n`;
+    });
+    
+    // Télécharger le fichier
+    const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
+    const link = document.createElement('a');
+    link.href = URL.createObjectURL(blob);
+    link.download = `echeances_contrat_${new Date().toISOString().split('T')[0]}.csv`;
+    link.click();
+}
+
+// Visites à venir
+function planifierVisites() {
+    const button = document.querySelector('.btn-planifier-visites');
+    const originalText = button.innerHTML;
+    button.innerHTML = '<i class="fas fa-spinner fa-spin me-2"></i>Chargement...';
+    button.disabled = true;
+    
+    fetch('{{ path('workflow_visites_clients') }}', {
+        method: 'GET',
+        headers: {
+            'X-Requested-With': 'XMLHttpRequest'
+        }
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.success) {
+            afficherModalVisites(data.visites, data.frequence_visite);
+        } else {
+            alert('Erreur lors du chargement des visites');
+        }
+    })
+    .catch(error => {
+        console.error('Erreur visites:', error);
+        alert('Erreur lors du chargement des visites clients');
+    })
+    .finally(() => {
+        button.innerHTML = originalText;
+        button.disabled = false;
+    });
+}
+
+function afficherModalVisites(visites, frequenceVisite) {
+    const modalHtml = `
+        <div class="modal fade" id="visitesClientsModal" tabindex="-1">
+            <div class="modal-dialog modal-xl">
+                <div class="modal-content">
+                    <div class="modal-header bg-info text-white">
+                        <h5 class="modal-title">
+                            <i class="fas fa-calendar-check me-2"></i>Visites Clients à Programmer (${visites.length})
+                        </h5>
+                        <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+                    </div>
+                    <div class="modal-body">
+                        <div class="alert alert-info mb-3">
+                            <i class="fas fa-info-circle me-2"></i>
+                            Fréquence de visite configurée: <strong>${Math.round(frequenceVisite / 365 * 10) / 10} an(s)</strong> 
+                            (${frequenceVisite} jours)
+                        </div>
+                        ${visites.length === 0 ? 
+                            '<div class="alert alert-success"><i class="fas fa-check-circle me-2"></i>Tous vos clients ont été visités récemment !</div>' :
+                            '<div id="liste-visites"></div>'
+                        }
+                    </div>
+                    <div class="modal-footer">
+                        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Fermer</button>
+                        ${visites.length > 0 ? '<button type="button" class="btn btn-success" onclick="optimiserTourneeVisites()"><i class="fas fa-route me-2"></i>Optimiser tournée</button>' : ''}
+                        ${visites.length > 0 ? '<button type="button" class="btn btn-primary" onclick="exporterVisites()"><i class="fas fa-download me-2"></i>Exporter</button>' : ''}
+                    </div>
+                </div>
+            </div>
+        </div>
+    `;
+    
+    // Nettoyer les modals existantes
+    const existingModal = document.getElementById('visitesClientsModal');
+    if (existingModal) {
+        existingModal.remove();
+    }
+    
+    // Ajouter la modal
+    document.body.insertAdjacentHTML('beforeend', modalHtml);
+    
+    // Stocker les données
+    window.visitesData = {
+        visites: visites,
+        frequenceVisite: frequenceVisite
+    };
+    
+    // Afficher la liste si on a des visites
+    if (visites.length > 0) {
+        afficherListeVisites(visites);
+    }
+    
+    // Afficher la modal
+    const modal = new bootstrap.Modal(document.getElementById('visitesClientsModal'));
+    modal.show();
+}
+
+function afficherListeVisites(visites) {
+    const listeContainer = document.getElementById('liste-visites');
+    let listeHtml = '';
+    
+    // Grouper par priorité
+    const visitesUrgentes = visites.filter(v => v.priorite === 'urgent');
+    const visitesImportantes = visites.filter(v => v.priorite === 'important');
+    const visitesNormales = visites.filter(v => v.priorite === 'normal');
+    
+    // Afficher les visites urgentes en premier
+    if (visitesUrgentes.length > 0) {
+        listeHtml += `
+            <div class="mb-4">
+                <h6 class="text-danger mb-3"><i class="fas fa-exclamation-triangle me-2"></i>Visites Urgentes (${visitesUrgentes.length})</h6>
+                ${genererHtmlVisites(visitesUrgentes, 'danger')}
+            </div>
+        `;
+    }
+    
+    if (visitesImportantes.length > 0) {
+        listeHtml += `
+            <div class="mb-4">
+                <h6 class="text-warning mb-3"><i class="fas fa-clock me-2"></i>Visites Importantes (${visitesImportantes.length})</h6>
+                ${genererHtmlVisites(visitesImportantes, 'warning')}
+            </div>
+        `;
+    }
+    
+    if (visitesNormales.length > 0) {
+        listeHtml += `
+            <div class="mb-4">
+                <h6 class="text-success mb-3"><i class="fas fa-check me-2"></i>Visites Normales (${visitesNormales.length})</h6>
+                ${genererHtmlVisites(visitesNormales, 'success')}
+            </div>
+        `;
+    }
+    
+    listeContainer.innerHTML = listeHtml;
+}
+
+function genererHtmlVisites(visites, couleur) {
+    let html = '';
+    
+    visites.forEach(visite => {
+        html += `
+            <div class="visite-item border-start border-${couleur} border-3 bg-light p-3 mb-2">
+                <div class="row align-items-center">
+                    <div class="col-md-3">
+                        <h6 class="mb-1">${visite.nom_complet}</h6>
+                        <small class="text-muted">${visite.contact_nom}</small>
+                        ${visite.telephone ? `<br><a href="tel:${visite.telephone}" class="btn btn-sm btn-outline-success mt-1"><i class="fas fa-phone me-1"></i>${visite.telephone}</a>` : ''}
+                    </div>
+                    <div class="col-md-3">
+                        <small class="text-muted">Adresse:</small><br>
+                        <small>${visite.adresse_courte}</small>
+                    </div>
+                    <div class="col-md-2">
+                        <small class="text-muted">Dernière visite:</small><br>
+                        <strong>${visite.derniere_visite}</strong><br>
+                        <small class="text-${couleur}">${visite.jours_depuis_visite}</small>
+                    </div>
+                    <div class="col-md-2">
+                        <small class="text-muted">CA annuel:</small><br>
+                        <strong>${visite.chiffre_affaire > 0 ? visite.chiffre_affaire + '€' : 'Non renseigné'}</strong>
+                    </div>
+                    <div class="col-md-2">
+                        <button class="btn btn-sm btn-primary w-100 mb-1" onclick="planifierVisite(${visite.id})" title="Planifier visite">
+                            <i class="fas fa-calendar-plus me-1"></i>Planifier
+                        </button>
+                        <button class="btn btn-sm btn-outline-info w-100" onclick="voirFicheClient(${visite.id})" title="Voir fiche">
+                            <i class="fas fa-eye me-1"></i>Voir fiche
+                        </button>
+                    </div>
+                </div>
+            </div>
+        `;
+    });
+    
+    return html;
+}
+
+function planifierVisite(clientId) {
+    // Créer un événement Google Calendar pour la visite
+    const client = window.visitesData.visites.find(v => v.id === clientId);
+    if (!client) return;
+    
+    const modalHtml = `
+        <div class="modal fade" id="planifierVisiteModal" tabindex="-1">
+            <div class="modal-dialog">
+                <div class="modal-content">
+                    <div class="modal-header bg-primary text-white">
+                        <h5 class="modal-title">
+                            <i class="fas fa-calendar-plus me-2"></i>Planifier Visite
+                        </h5>
+                        <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+                    </div>
+                    <div class="modal-body">
+                        <h6>${client.nom_complet}</h6>
+                        <p class="text-muted mb-3">${client.adresse_complete}</p>
+                        
+                        <div class="mb-3">
+                            <label class="form-label">Date de la visite:</label>
+                            <input type="date" id="date-visite" class="form-control" min="${new Date().toISOString().split('T')[0]}">
+                        </div>
+                        
+                        <div class="mb-3">
+                            <label class="form-label">Heure:</label>
+                            <input type="time" id="heure-visite" class="form-control" value="14:00">
+                        </div>
+                        
+                        <div class="mb-3">
+                            <label class="form-label">Durée (minutes):</label>
+                            <select id="duree-visite" class="form-control">
+                                <option value="30">30 minutes</option>
+                                <option value="60" selected>1 heure</option>
+                                <option value="90">1h30</option>
+                                <option value="120">2 heures</option>
+                            </select>
+                        </div>
+                        
+                        <div class="mb-3">
+                            <label class="form-label">Notes (optionnel):</label>
+                            <textarea id="notes-visite" class="form-control" rows="3" placeholder="Objectif de la visite, points à aborder..."></textarea>
+                        </div>
+                    </div>
+                    <div class="modal-footer">
+                        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Annuler</button>
+                        <button type="button" class="btn btn-primary" onclick="confirmerPlanificationVisite(${clientId})">
+                            <i class="fas fa-save me-2"></i>Planifier
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    `;
+    
+    // Ajouter la modal
+    document.body.insertAdjacentHTML('beforeend', modalHtml);
+    
+    // Afficher la modal
+    const modal = new bootstrap.Modal(document.getElementById('planifierVisiteModal'));
+    modal.show();
+    
+    // Nettoyer au fermer
+    document.getElementById('planifierVisiteModal').addEventListener('hidden.bs.modal', () => {
+        document.getElementById('planifierVisiteModal').remove();
+    });
+}
+
+function confirmerPlanificationVisite(clientId) {
+    const dateVisite = document.getElementById('date-visite').value;
+    const heureVisite = document.getElementById('heure-visite').value;
+    const dureeVisite = document.getElementById('duree-visite').value;
+    const notesVisite = document.getElementById('notes-visite').value;
+    
+    if (!dateVisite) {
+        alert('Veuillez sélectionner une date de visite');
+        return;
+    }
+    
+    // Pour l'instant, créer un lien Google Calendar
+    const client = window.visitesData.visites.find(v => v.id === clientId);
+    const startDateTime = new Date(`${dateVisite}T${heureVisite}`);
+    const endDateTime = new Date(startDateTime.getTime() + parseInt(dureeVisite) * 60000);
+    
+    const googleCalendarUrl = `https://calendar.google.com/calendar/render?action=TEMPLATE&text=Visite client - ${encodeURIComponent(client.nom_complet)}&dates=${startDateTime.toISOString().replace(/[-:]/g, '').split('.')[0]}Z/${endDateTime.toISOString().replace(/[-:]/g, '').split('.')[0]}Z&location=${encodeURIComponent(client.adresse_complete)}&details=${encodeURIComponent(notesVisite || 'Visite client programmée via TechnoProd')}`;
+    
+    window.open(googleCalendarUrl, '_blank');
+    
+    // Fermer la modal
+    bootstrap.Modal.getInstance(document.getElementById('planifierVisiteModal')).hide();
+    
+    // Marquer la visite comme planifiée (mise à jour visuelle)
+    alert('Visite planifiée dans Google Calendar');
+}
+
+function optimiserTourneeVisites() {
+    const visites = window.visitesData.visites;
+    if (!visites || visites.length === 0) return;
+    
+    // Filtrer les visites avec coordonnées
+    const visitesAvecCoords = visites.filter(v => v.latitude && v.longitude);
+    
+    if (visitesAvecCoords.length < 2) {
+        alert('Il faut au moins 2 clients avec des adresses géolocalisées pour optimiser une tournée');
+        return;
+    }
+    
+    // Créer une URL Google Maps avec tous les points
+    let url = 'https://www.google.com/maps/dir/';
+    
+    visitesAvecCoords.slice(0, 10).forEach((visite, index) => { // Limiter à 10 pour Google Maps
+        url += `${visite.latitude},${visite.longitude}`;
+        if (index < Math.min(visitesAvecCoords.length, 10) - 1) {
+            url += '/';
+        }
+    });
+    
+    window.open(url, '_blank');
+    
+    if (visitesAvecCoords.length > 10) {
+        alert(`Tournée optimisée pour les 10 premiers clients. ${visitesAvecCoords.length - 10} clients supplémentaires avec adresses disponibles.`);
+    }
+}
+
+function exporterVisites() {
+    const visites = window.visitesData.visites;
+    if (!visites || visites.length === 0) return;
+    
+    // Créer un CSV
+    let csv = 'Priorité;Client;Contact;Téléphone;Email;Adresse;Dernière Visite;Jours Depuis Visite;CA Annuel\n';
+    
+    visites.forEach(visite => {
+        csv += `"${visite.priorite}";"${visite.nom_complet}";"${visite.contact_nom}";"${visite.telephone || ''}";"${visite.email || ''}";"${visite.adresse_complete}";"${visite.derniere_visite}";"${visite.jours_depuis_visite}";${visite.chiffre_affaire}\n`;
+    });
+    
+    // Télécharger le fichier
+    const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
+    const link = document.createElement('a');
+    link.href = URL.createObjectURL(blob);
+    link.download = `visites_clients_${new Date().toISOString().split('T')[0]}.csv`;
+    link.click();
+}
+
+// === FONCTIONS ONGLET MON SECTEUR ===
+
+// Initialiser l'onglet Mon Secteur
+function initialiserMonSecteur() {
+    console.log('🔍 DEBUG: Début initialiserMonSecteur');
+    console.log('🔍 DEBUG: URL à appeler:', '{{ path('workflow_mon_secteur') }}');
+    
+    // Charger les données du secteur commercial
+    fetch('{{ path('workflow_mon_secteur') }}', {
+        method: 'GET',
+        headers: {
+            'X-Requested-With': 'XMLHttpRequest'
+        }
+    })
+    .then(response => {
+        console.log('🔍 DEBUG: Réponse reçue, status:', response.status);
+        console.log('🔍 DEBUG: Response OK:', response.ok);
+        if (!response.ok) {
+            throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+        }
+        return response.json();
+    })
+    .then(data => {
+        console.log('🔍 DEBUG: Données JSON reçues:', data);
+        if (data.success) {
+            console.log('✅ DEBUG: Succès - secteurs:', data.secteurs?.length, 'contrats:', data.contrats_actifs?.length);
+            initialiserCarteSecteur(data.secteurs, data.contrats_actifs);
+            afficherContratsActifs(data.contrats_actifs);
+        } else {
+            console.error('❌ Erreur chargement secteur:', data.message);
+            afficherErreurSecteur(data.message || 'Erreur lors du chargement du secteur');
+        }
+    })
+    .catch(error => {
+        console.error('❌ Erreur AJAX secteur:', error);
+        afficherErreurSecteur('Erreur de communication avec le serveur: ' + error.message);
+    });
+}
+
+// Initialiser la carte Google Maps du secteur
+function initialiserCarteSecteur(secteurs, contratsActifs) {
+    const mapElement = document.getElementById('map-secteur-commercial');
+    if (!mapElement) return;
+
+    // Fonction d'attente pour Google Maps
+    function waitForGoogleMaps() {
+        if (typeof google !== 'undefined' && google.maps) {
+            console.log('✅ Google Maps disponible, initialisation carte secteur');
+            initCarteAvecDonnees();
+        } else {
+            console.log('⏳ Attente du chargement de Google Maps...');
+            setTimeout(waitForGoogleMaps, 100);
+        }
+    }
+
+    function initCarteAvecDonnees() {
+
+    if (secteurs.length === 0) {
+        mapElement.innerHTML = `
+            <div class="alert alert-info m-3">
+                <i class="fas fa-info-circle me-2"></i>
+                Aucun secteur assigné. Contactez votre administrateur pour vous assigner un secteur commercial.
+            </div>
+        `;
+        return;
+    }
+
+    // Centre de la carte par défaut sur la France
+    const franceCenter = { lat: 46.603354, lng: 1.888334 };
+    
+    // Créer la carte
+    const map = new google.maps.Map(mapElement, {
+        center: franceCenter,
+        zoom: 6,
+        mapTypeId: google.maps.MapTypeId.ROADMAP,
+        styles: [
+            {
+                featureType: 'administrative',
+                elementType: 'geometry',
+                stylers: [{ visibility: 'on' }, { lightness: 50 }]
+            }
+        ]
+    });
+
+    const bounds = new google.maps.LatLngBounds();
+    let hasValidBounds = false;
+
+    // Ajouter les marqueurs des contrats actifs
+    contratsActifs.forEach(contrat => {
+        const position = { 
+            lat: parseFloat(contrat.latitude), 
+            lng: parseFloat(contrat.longitude) 
+        };
+
+        // Icône différente selon le type de contrat
+        const iconConfig = contrat.type === 'devis' ? {
+            path: google.maps.SymbolPath.CIRCLE,
+            fillColor: '#ffc107',
+            fillOpacity: 1,
+            strokeColor: '#ff8f00',
+            strokeWeight: 2,
+            scale: 8
+        } : {
+            path: google.maps.SymbolPath.CIRCLE,
+            fillColor: '#28a745',
+            fillOpacity: 1,
+            strokeColor: '#155724',
+            strokeWeight: 2,
+            scale: 8
+        };
+
+        const marker = new google.maps.Marker({
+            position: position,
+            map: map,
+            title: contrat.client_nom,
+            icon: iconConfig
+        });
+
+        // InfoWindow avec détails du contrat
+        const infoWindow = new google.maps.InfoWindow({
+            content: `
+                <div style="padding: 10px; min-width: 250px;">
+                    <h6 class="mb-2 text-primary">${contrat.client_nom}</h6>
+                    <div class="mb-2">
+                        <span class="badge bg-${contrat.type === 'devis' ? 'warning' : 'success'} me-2">
+                            ${contrat.type === 'devis' ? 'Devis' : 'Commande'}
+                        </span>
+                        <strong>${contrat.numero}</strong>
+                    </div>
+                    <p class="mb-1"><strong>Montant:</strong> ${parseFloat(contrat.montant).toLocaleString('fr-FR', {style: 'currency', currency: 'EUR'})}</p>
+                    <p class="mb-1"><strong>Statut:</strong> <span class="text-capitalize">${contrat.statut.replace('_', ' ')}</span></p>
+                    ${contrat.date_signature ? `<p class="mb-1"><strong>Signé le:</strong> ${contrat.date_signature}</p>` : ''}
+                    ${contrat.date_livraison_prevue ? `<p class="mb-1"><strong>Livraison prévue:</strong> ${contrat.date_livraison_prevue}</p>` : ''}
+                    <p class="mb-2"><small class="text-muted">${contrat.adresse}</small></p>
+                    <div class="text-center mt-2">
+                        <a href="/devis/${contrat.id}" class="btn btn-sm btn-primary" target="_blank">
+                            <i class="fas fa-eye me-1"></i>Voir détails
+                        </a>
+                    </div>
+                </div>
+            `
+        });
+
+        marker.addListener('click', () => {
+            infoWindow.open(map, marker);
+        });
+
+        bounds.extend(position);
+        hasValidBounds = true;
+    });
+
+    // Ajuster la vue si on a des contrats géolocalisés
+    if (hasValidBounds) {
+        map.fitBounds(bounds);
+        
+        // Éviter un zoom trop important si un seul point
+        google.maps.event.addListenerOnce(map, 'bounds_changed', function() {
+            if (map.getZoom() > 12) {
+                map.setZoom(12);
+            }
+        });
+    }
+
+    // Stocker la carte pour usage ultérieur
+    window.mapSecteurCommercial = map;
+    }
+
+    // Démarrer l'attente de Google Maps
+    waitForGoogleMaps();
+}
+
+// Afficher la liste des contrats actifs
+function afficherContratsActifs(contratsActifs) {
+    const loadingElement = document.getElementById('contrats-actifs-loading');
+    const listeElement = document.getElementById('contrats-actifs-liste');
+    
+    if (!loadingElement || !listeElement) return;
+
+    loadingElement.style.display = 'none';
+    listeElement.style.display = 'block';
+
+    if (contratsActifs.length === 0) {
+        listeElement.innerHTML = `
+            <div class="alert alert-info">
+                <i class="fas fa-info-circle me-2"></i>
+                Aucun contrat actif dans vos secteurs.
+            </div>
+        `;
+        return;
+    }
+
+    let listeHtml = '';
+    
+    // Grouper par type
+    const devis = contratsActifs.filter(c => c.type === 'devis');
+    const commandes = contratsActifs.filter(c => c.type === 'commande');
+
+    if (devis.length > 0) {
+        listeHtml += `
+            <div class="mb-3">
+                <h6 class="text-warning mb-2"><i class="fas fa-file-invoice me-2"></i>Devis signés (${devis.length})</h6>
+                ${genererHtmlContrats(devis, 'warning')}
+            </div>
+        `;
+    }
+
+    if (commandes.length > 0) {
+        listeHtml += `
+            <div class="mb-3">
+                <h6 class="text-success mb-2"><i class="fas fa-shopping-cart me-2"></i>Commandes en cours (${commandes.length})</h6>
+                ${genererHtmlContrats(commandes, 'success')}
+            </div>
+        `;
+    }
+
+    listeElement.innerHTML = listeHtml;
+}
+
+// Générer le HTML pour une liste de contrats
+function genererHtmlContrats(contrats, couleur) {
+    let html = '';
+    
+    contrats.forEach(contrat => {
+        html += `
+            <div class="contrat-item border-start border-${couleur} border-3 bg-light p-2 mb-2 cursor-pointer" 
+                 onclick="centrerCarteContrat(${contrat.latitude}, ${contrat.longitude})">
+                <div class="d-flex justify-content-between align-items-start">
+                    <div class="flex-grow-1">
+                        <h6 class="mb-1">${contrat.client_nom}</h6>
+                        <small class="text-muted d-block">${contrat.numero}</small>
+                        <small class="text-${couleur} fw-bold">${parseFloat(contrat.montant).toLocaleString('fr-FR', {style: 'currency', currency: 'EUR'})}</small>
+                    </div>
+                    <div class="text-end">
+                        <span class="badge bg-${couleur}">${contrat.statut.replace('_', ' ')}</span>
+                        ${contrat.date_signature ? `<br><small class="text-muted">Signé ${contrat.date_signature}</small>` : ''}
+                        ${contrat.date_livraison_prevue ? `<br><small class="text-muted">Livraison ${contrat.date_livraison_prevue}</small>` : ''}
+                    </div>
+                </div>
+            </div>
+        `;
+    });
+    
+    return html;
+}
+
+// Centrer la carte sur un contrat spécifique
+function centrerCarteContrat(latitude, longitude) {
+    if (window.mapSecteurCommercial && latitude && longitude) {
+        const position = { lat: parseFloat(latitude), lng: parseFloat(longitude) };
+        window.mapSecteurCommercial.setCenter(position);
+        window.mapSecteurCommercial.setZoom(14);
+    }
+}
+
+// Afficher une erreur dans l'onglet secteur
+function afficherErreurSecteur(message) {
+    const mapElement = document.getElementById('map-secteur-commercial');
+    const listeElement = document.getElementById('contrats-actifs-liste');
+    const loadingElement = document.getElementById('contrats-actifs-loading');
+    
+    if (mapElement) {
+        mapElement.innerHTML = `
+            <div class="alert alert-danger m-3">
+                <i class="fas fa-exclamation-triangle me-2"></i>
+                ${message}
+            </div>
+        `;
+    }
+    
+    if (loadingElement) loadingElement.style.display = 'none';
+    if (listeElement) {
+        listeElement.style.display = 'block';
+        listeElement.innerHTML = `
+            <div class="alert alert-danger">
+                <i class="fas fa-exclamation-triangle me-2"></i>
+                Impossible de charger les contrats actifs.
+            </div>
+        `;
+    }
+}
+
+// === FONCTIONS ONGLET MES PERFORMANCES ===
+
+// Variables globales pour les graphiques
+window.chartVentesMois = window.chartVentesMois || null;
+window.chartObjectifs = window.chartObjectifs || null;
+
+// Initialiser l'onglet Mes Performances
+function initialiserMesPerformances() {
+    // Charger les données de performance
+    fetch('{{ path('workflow_mes_performances') }}', {
+        method: 'GET',
+        headers: {
+            'X-Requested-With': 'XMLHttpRequest'
+        }
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.success) {
+            initialiserChartsPerformances(data);
+            afficherTableauSemestriel(data.semestre_1, data.semestre_2, data.objectifs);
+        } else {
+            console.error('Erreur chargement performances:', data.message);
+            afficherErreurPerformances(data.message || 'Erreur lors du chargement des performances');
+        }
+    })
+    .catch(error => {
+        console.error('Erreur AJAX performances:', error);
+        afficherErreurPerformances('Erreur de communication avec le serveur');
+    });
+}
+
+// Initialiser les graphiques de performance
+function initialiserChartsPerformances(data) {
+    // Détruire les graphiques existants
+    if (window.chartVentesMois) {
+        window.chartVentesMois.destroy();
+    }
+    if (window.chartObjectifs) {
+        window.chartObjectifs.destroy();
+    }
+    
+    // Graphique des ventes par mois
+    const ctxVentes = document.getElementById('chart-ventes-mois');
+    if (ctxVentes) {
+        window.chartVentesMois = new Chart(ctxVentes, {
+            type: 'bar',
+            data: {
+                labels: data.performances_mensuelles.map(p => p.mois_nom),
+                datasets: [
+                    {
+                        label: 'CA Réalisé (€)',
+                        data: data.performances_mensuelles.map(p => p.ca_realise),
+                        backgroundColor: 'rgba(40, 167, 69, 0.8)',
+                        borderColor: 'rgba(40, 167, 69, 1)',
+                        borderWidth: 1
+                    },
+                    {
+                        label: 'Objectif Mensuel (€)',
+                        data: Array(12).fill(data.objectifs.ca_mensuel),
+                        type: 'line',
+                        borderColor: 'rgba(255, 193, 7, 1)',
+                        backgroundColor: 'rgba(255, 193, 7, 0.1)',
+                        borderWidth: 2,
+                        fill: false
+                    }
+                ]
+            },
+            options: {
+                responsive: true,
+                scales: {
+                    y: {
+                        beginAtZero: true,
+                        ticks: {
+                            callback: function(value) {
+                                return value.toLocaleString('fr-FR') + '€';
+                            }
+                        }
+                    }
+                },
+                plugins: {
+                    tooltip: {
+                        callbacks: {
+                            label: function(context) {
+                                return context.dataset.label + ': ' + context.parsed.y.toLocaleString('fr-FR') + '€';
+                            }
+                        }
+                    }
+                }
+            }
+        });
+    }
+    
+    // Graphique objectifs vs réalisé (comparaison semestrielle)
+    const ctxObjectifs = document.getElementById('chart-objectifs');
+    if (ctxObjectifs) {
+        const caAnnuelRealise = data.semestre_1.ca_realise + data.semestre_2.ca_realise;
+        const pourcentageObjectif = data.objectifs.ca_annuel > 0 ? 
+            Math.round((caAnnuelRealise / data.objectifs.ca_annuel) * 100) : 0;
+            
+        window.chartObjectifs = new Chart(ctxObjectifs, {
+            type: 'doughnut',
+            data: {
+                labels: ['Réalisé', 'Restant à réaliser'],
+                datasets: [{
+                    data: [caAnnuelRealise, Math.max(0, data.objectifs.ca_annuel - caAnnuelRealise)],
+                    backgroundColor: [
+                        caAnnuelRealise >= data.objectifs.ca_annuel ? '#28a745' : '#17a2b8',
+                        '#dee2e6'
+                    ],
+                    borderColor: [
+                        caAnnuelRealise >= data.objectifs.ca_annuel ? '#28a745' : '#17a2b8',
+                        '#dee2e6'
+                    ],
+                    borderWidth: 2
+                }]
+            },
+            options: {
+                responsive: true,
+                plugins: {
+                    legend: {
+                        position: 'bottom'
+                    },
+                    tooltip: {
+                        callbacks: {
+                            label: function(context) {
+                                const value = context.parsed;
+                                const total = context.dataset.data.reduce((a, b) => a + b, 0);
+                                const percentage = Math.round((value / total) * 100);
+                                return context.label + ': ' + value.toLocaleString('fr-FR') + '€ (' + percentage + '%)';
+                            }
+                        }
+                    }
+                },
+                cutout: '60%',
+                elements: {
+                    center: {
+                        text: pourcentageObjectif + '%\nde l\'objectif',
+                        color: caAnnuelRealise >= data.objectifs.ca_annuel ? '#28a745' : '#6c757d',
+                        fontStyle: 'Arial',
+                        sidePadding: 20,
+                        minFontSize: 12,
+                        lineHeight: 1.4
+                    }
+                }
+            }
+        });
+    }
+}
+
+// Afficher le tableau semestriel
+function afficherTableauSemestriel(semestre1, semestre2, objectifs) {
+    const loadingElement = document.getElementById('performances-loading');
+    const tableauElement = document.getElementById('performances-tableau');
+    
+    if (!loadingElement || !tableauElement) return;
+
+    loadingElement.style.display = 'none';
+    tableauElement.style.display = 'block';
+
+    const tableauHtml = `
+        <div class="row">
+            <div class="col-md-6">
+                <div class="card border-primary">
+                    <div class="card-header bg-primary text-white">
+                        <h6 class="mb-0"><i class="fas fa-calendar me-2"></i>${semestre1.periode}</h6>
+                        <small>${semestre1.mois}</small>
+                    </div>
+                    <div class="card-body">
+                        <div class="row text-center">
+                            <div class="col-6">
+                                <h5 class="text-primary mb-1">${semestre1.ca_realise.toLocaleString('fr-FR')}€</h5>
+                                <small class="text-muted">Chiffre d'affaires</small>
+                            </div>
+                            <div class="col-6">
+                                <h5 class="text-info mb-1">${semestre1.taux_conversion}%</h5>
+                                <small class="text-muted">Taux conversion</small>
+                            </div>
+                        </div>
+                        <hr class="my-2">
+                        <div class="row text-center">
+                            <div class="col-6">
+                                <span class="text-warning fw-bold">${semestre1.nb_devis_envoyes}</span>
+                                <small class="text-muted d-block">Devis envoyés</small>
+                            </div>
+                            <div class="col-6">
+                                <span class="text-success fw-bold">${semestre1.nb_devis_signes}</span>
+                                <small class="text-muted d-block">Devis signés</small>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <div class="col-md-6">
+                <div class="card border-success">
+                    <div class="card-header bg-success text-white">
+                        <h6 class="mb-0"><i class="fas fa-calendar me-2"></i>${semestre2.periode}</h6>
+                        <small>${semestre2.mois}</small>
+                    </div>
+                    <div class="card-body">
+                        <div class="row text-center">
+                            <div class="col-6">
+                                <h5 class="text-primary mb-1">${semestre2.ca_realise.toLocaleString('fr-FR')}€</h5>
+                                <small class="text-muted">Chiffre d'affaires</small>
+                            </div>
+                            <div class="col-6">
+                                <h5 class="text-info mb-1">${semestre2.taux_conversion}%</h5>
+                                <small class="text-muted">Taux conversion</small>
+                            </div>
+                        </div>
+                        <hr class="my-2">
+                        <div class="row text-center">
+                            <div class="col-6">
+                                <span class="text-warning fw-bold">${semestre2.nb_devis_envoyes}</span>
+                                <small class="text-muted d-block">Devis envoyés</small>
+                            </div>
+                            <div class="col-6">
+                                <span class="text-success fw-bold">${semestre2.nb_devis_signes}</span>
+                                <small class="text-muted d-block">Devis signés</small>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        <div class="row mt-3">
+            <div class="col-12">
+                <div class="card border-warning">
+                    <div class="card-header bg-warning text-dark">
+                        <h6 class="mb-0"><i class="fas fa-target me-2"></i>Objectifs annuels</h6>
+                    </div>
+                    <div class="card-body">
+                        <div class="row text-center">
+                            <div class="col-md-3">
+                                <h6 class="text-primary">${objectifs.ca_annuel.toLocaleString('fr-FR')}€</h6>
+                                <small class="text-muted">Objectif CA annuel</small>
+                            </div>
+                            <div class="col-md-3">
+                                <h6 class="text-info">${objectifs.ca_mensuel.toLocaleString('fr-FR')}€</h6>
+                                <small class="text-muted">Objectif CA mensuel</small>
+                            </div>
+                            <div class="col-md-3">
+                                <h6 class="text-warning">${objectifs.nb_devis_mensuel}</h6>
+                                <small class="text-muted">Devis/mois cible</small>
+                            </div>
+                            <div class="col-md-3">
+                                <h6 class="text-success">${objectifs.taux_conversion_cible}%</h6>
+                                <small class="text-muted">Taux conversion cible</small>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    `;
+
+    tableauElement.innerHTML = tableauHtml;
+}
+
+// Afficher une erreur dans l'onglet performances
+function afficherErreurPerformances(message) {
+    const tableauElement = document.getElementById('performances-tableau');
+    const loadingElement = document.getElementById('performances-loading');
+    
+    if (loadingElement) loadingElement.style.display = 'none';
+    if (tableauElement) {
+        tableauElement.style.display = 'block';
+        tableauElement.innerHTML = `
+            <div class="alert alert-danger">
+                <i class="fas fa-exclamation-triangle me-2"></i>
+                ${message}
+            </div>
+        `;
+    }
+}
+
+// Initialiser l'onglet Mon Secteur au chargement de la page
+document.addEventListener('DOMContentLoaded', function() {
+    // Initialiser immédiatement si l'onglet Mon Secteur est actif
+    if (document.getElementById('mon-secteur-tab').classList.contains('active')) {
+        initialiserMonSecteur();
+    }
+    
+    // Initialiser quand on clique sur l'onglet Mon Secteur
+    document.getElementById('mon-secteur-tab').addEventListener('click', function() {
+        setTimeout(() => {
+            initialiserMonSecteur();
+        }, 300); // Délai pour laisser l'onglet s'afficher
+    });
+    
+    // Initialiser quand on clique sur l'onglet Mes Performances
+    document.getElementById('mes-performances-tab').addEventListener('click', function() {
+        setTimeout(() => {
+            initialiserMesPerformances();
+        }, 300); // Délai pour laisser l'onglet s'afficher
+    });
+    
+    // Charger les alertes au chargement de la page
+    chargerMesAlertes();
+});
+
+// === FONCTIONS MES ALERTES ===
+
+// Charger et afficher les alertes de l'utilisateur
+function chargerMesAlertes() {
+    console.log('🔍 DEBUG: Chargement des alertes utilisateur');
+    
+    fetch('{{ path('workflow_mes_alertes') }}', {
+        method: 'GET',
+        headers: {
+            'X-Requested-With': 'XMLHttpRequest'
+        }
+    })
+    .then(response => {
+        if (!response.ok) {
+            throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+        }
+        return response.json();
+    })
+    .then(data => {
+        console.log('🔍 DEBUG: Alertes reçues:', data);
+        if (data.success) {
+            afficherAlertes(data.alertes);
+        } else {
+            console.error('❌ Erreur chargement alertes:', data.message);
+            afficherErreurAlertes(data.message);
+        }
+    })
+    .catch(error => {
+        console.error('❌ Erreur AJAX alertes:', error);
+        afficherErreurAlertes('Erreur de communication avec le serveur');
+    });
+}
+
+// Afficher les alertes dans l'interface
+function afficherAlertes(alertes) {
+    const loadingDiv = document.getElementById('alertes-loading');
+    const containerDiv = document.getElementById('alertes-container');
+    const emptyDiv = document.getElementById('alertes-empty');
+    const badgeCount = document.getElementById('badge-alertes-count');
+    
+    // Masquer le loading
+    loadingDiv.style.display = 'none';
+    
+    if (alertes.length === 0) {
+        // Aucune alerte
+        emptyDiv.style.display = 'block';
+        containerDiv.style.display = 'none';
+        badgeCount.style.display = 'none';
+    } else {
+        // Afficher les alertes
+        emptyDiv.style.display = 'none';
+        containerDiv.style.display = 'block';
+        badgeCount.style.display = 'inline';
+        badgeCount.textContent = alertes.length;
+        
+        let html = '';
+        alertes.forEach(alerte => {
+            const dismissButton = alerte.dismissible ? 
+                `<button type="button" class="btn-close" onclick="fermerAlerte(${alerte.id})" title="Fermer cette alerte"></button>` : 
+                '';
+            
+            html += `
+                <div class="alert alert-${alerte.typeBootstrap} alert-dismissible fade show mb-3" id="alerte-${alerte.id}" role="alert">
+                    <div class="d-flex align-items-start">
+                        <div class="me-3">
+                            <i class="${alerte.typeIcon} fa-lg"></i>
+                        </div>
+                        <div class="flex-grow-1">
+                            <h6 class="alert-heading mb-2">${alerte.titre}</h6>
+                            <div class="mb-2">${alerte.message}</div>
+                            <small class="text-muted">
+                                <i class="fas fa-clock me-1"></i>Créée le ${alerte.createdAt}
+                                ${alerte.dateExpiration ? `<span class="ms-2"><i class="fas fa-calendar-times me-1"></i>Expire le ${alerte.dateExpiration}</span>` : ''}
+                            </small>
+                        </div>
+                        ${dismissButton}
+                    </div>
+                </div>
+            `;
+        });
+        
+        containerDiv.innerHTML = html;
+    }
+}
+
+// Fermer une alerte
+function fermerAlerte(alerteId) {
+    console.log('🔍 DEBUG: Fermeture alerte ID:', alerteId);
+    
+    fetch(`{{ path('workflow_alerte_dismiss', {id: '__ID__'}) }}`.replace('__ID__', alerteId), {
+        method: 'POST',
+        headers: {
+            'X-Requested-With': 'XMLHttpRequest',
+            'Content-Type': 'application/json'
+        }
+    })
+    .then(response => {
+        if (!response.ok) {
+            throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+        }
+        return response.json();
+    })
+    .then(data => {
+        if (data.success) {
+            // Masquer l'alerte avec animation
+            const alerteDiv = document.getElementById(`alerte-${alerteId}`);
+            if (alerteDiv) {
+                alerteDiv.style.opacity = '0';
+                alerteDiv.style.transform = 'translateX(100%)';
+                setTimeout(() => {
+                    alerteDiv.remove();
+                    // Recharger la liste pour mettre à jour le compteur
+                    chargerMesAlertes();
+                }, 300);
+            }
+            
+            console.log('✅ Alerte fermée avec succès');
+        } else {
+            console.error('❌ Erreur fermeture alerte:', data.message);
+            alert('Erreur: ' + data.message);
+        }
+    })
+    .catch(error => {
+        console.error('❌ Erreur AJAX fermeture alerte:', error);
+        alert('Erreur de communication avec le serveur');
+    });
+}
+
+// Afficher une erreur dans le chargement des alertes
+function afficherErreurAlertes(message) {
+    const loadingDiv = document.getElementById('alertes-loading');
+    const containerDiv = document.getElementById('alertes-container');
+    const emptyDiv = document.getElementById('alertes-empty');
+    
+    loadingDiv.style.display = 'none';
+    emptyDiv.style.display = 'none';
+    containerDiv.style.display = 'block';
+    
+    containerDiv.innerHTML = `
+        <div class="alert alert-danger" role="alert">
+            <i class="fas fa-exclamation-triangle me-2"></i>
+            <strong>Erreur de chargement des alertes</strong><br>
+            ${message}
+        </div>
+    `;
+}
+
+// === FONCTIONS ACTIONS COMMERCIALES PRIORITAIRES ===
+
+// Voir devis brouillons à terminer
+function voirDevisBrouillons() {
+    const button = document.querySelector('.btn-voir-brouillons');
+    const originalText = button.innerHTML;
+    button.innerHTML = '<i class="fas fa-spinner fa-spin me-2"></i>Chargement...';
+    button.disabled = true;
+    
+    fetch('{{ path('workflow_devis_brouillons') }}', {
+        method: 'GET',
+        headers: {
+            'X-Requested-With': 'XMLHttpRequest'
+        }
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.success) {
+            afficherModalDevisBrouillons(data.devis);
+        } else {
+            alert('Erreur lors du chargement des devis brouillons');
+        }
+    })
+    .catch(error => {
+        console.error('Erreur devis brouillons:', error);
+        alert('Erreur lors du chargement des devis brouillons');
+    })
+    .finally(() => {
+        button.innerHTML = originalText;
+        button.disabled = false;
+    });
+}
+
+// Voir devis à relancer
+function voirDevisARelancer() {
+    const button = document.querySelector('.btn-voir-relances');
+    const originalText = button.innerHTML;
+    button.innerHTML = '<i class="fas fa-spinner fa-spin me-2"></i>Chargement...';
+    button.disabled = true;
+    
+    fetch('{{ path('workflow_devis_relances') }}', {
+        method: 'GET',
+        headers: {
+            'X-Requested-With': 'XMLHttpRequest'
+        }
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.success) {
+            afficherModalDevisRelances(data.devis);
+        } else {
+            alert('Erreur lors du chargement des devis à relancer');
+        }
+    })
+    .catch(error => {
+        console.error('Erreur devis relances:', error);
+        alert('Erreur lors du chargement des devis à relancer');
+    })
+    .finally(() => {
+        button.innerHTML = originalText;
+        button.disabled = false;
+    });
+}
+
+// Voir commandes sans livraison
+function voirCommandesSansLivraison() {
+    const button = document.querySelector('.btn-voir-livraisons');
+    const originalText = button.innerHTML;
+    button.innerHTML = '<i class="fas fa-spinner fa-spin me-2"></i>Chargement...';
+    button.disabled = true;
+    
+    fetch('{{ path('workflow_commandes_sans_livraison') }}', {
+        method: 'GET',
+        headers: {
+            'X-Requested-With': 'XMLHttpRequest'
+        }
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.success) {
+            afficherModalCommandesSansLivraison(data.commandes);
+        } else {
+            alert('Erreur lors du chargement des commandes');
+        }
+    })
+    .catch(error => {
+        console.error('Erreur commandes sans livraison:', error);
+        alert('Erreur lors du chargement des commandes sans livraison');
+    })
+    .finally(() => {
+        button.innerHTML = originalText;
+        button.disabled = false;
+    });
+}
+
+// Voir livraisons à facturer
+function voirLivraisonsAFacturer() {
+    const button = document.querySelector('.btn-voir-facturer');
+    const originalText = button.innerHTML;
+    button.innerHTML = '<i class="fas fa-spinner fa-spin me-2"></i>Chargement...';
+    button.disabled = true;
+    
+    fetch('{{ path('workflow_livraisons_facturer') }}', {
+        method: 'GET',
+        headers: {
+            'X-Requested-With': 'XMLHttpRequest'
+        }
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.success) {
+            afficherModalLivraisonsFacturer(data.livraisons);
+        } else {
+            alert('Erreur lors du chargement des livraisons');
+        }
+    })
+    .catch(error => {
+        console.error('Erreur livraisons à facturer:', error);
+        alert('Erreur lors du chargement des livraisons à facturer');
+    })
+    .finally(() => {
+        button.innerHTML = originalText;
+        button.disabled = false;
+    });
+}
+
+// Modals pour actions commerciales
+function afficherModalDevisBrouillons(devis) {
+    const modalHtml = `
+        <div class="modal fade" id="devisBrouillonsModal" tabindex="-1">
+            <div class="modal-dialog modal-xl">
+                <div class="modal-content">
+                    <div class="modal-header bg-warning text-dark">
+                        <h5 class="modal-title">
+                            <i class="fas fa-edit me-2"></i>Devis à Terminer (${devis.length})
+                        </h5>
+                        <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                    </div>
+                    <div class="modal-body">
+                        ${devis.length === 0 ? 
+                            '<div class="alert alert-success"><i class="fas fa-check-circle me-2"></i>Aucun devis en brouillon</div>' :
+                            genererTableauDevis(devis, 'warning')}
+                    </div>
+                    <div class="modal-footer">
+                        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Fermer</button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    `;
+    
+    document.body.insertAdjacentHTML('beforeend', modalHtml);
+    const modal = new bootstrap.Modal(document.getElementById('devisBrouillonsModal'));
+    modal.show();
+    
+    // Nettoyer après fermeture
+    document.getElementById('devisBrouillonsModal').addEventListener('hidden.bs.modal', () => {
+        document.getElementById('devisBrouillonsModal').remove();
+    });
+}
+
+function afficherModalDevisRelances(devis) {
+    const modalHtml = `
+        <div class="modal fade" id="devisRelancesModal" tabindex="-1">
+            <div class="modal-dialog modal-xl">
+                <div class="modal-content">
+                    <div class="modal-header bg-danger text-white">
+                        <h5 class="modal-title">
+                            <i class="fas fa-phone me-2"></i>Devis à Relancer (${devis.length})
+                        </h5>
+                        <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+                    </div>
+                    <div class="modal-body">
+                        ${devis.length === 0 ? 
+                            '<div class="alert alert-success"><i class="fas fa-check-circle me-2"></i>Aucun devis à relancer</div>' :
+                            genererTableauDevis(devis, 'danger')}
+                    </div>
+                    <div class="modal-footer">
+                        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Fermer</button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    `;
+    
+    document.body.insertAdjacentHTML('beforeend', modalHtml);
+    const modal = new bootstrap.Modal(document.getElementById('devisRelancesModal'));
+    modal.show();
+    
+    document.getElementById('devisRelancesModal').addEventListener('hidden.bs.modal', () => {
+        document.getElementById('devisRelancesModal').remove();
+    });
+}
+
+function afficherModalCommandesSansLivraison(commandes) {
+    const modalHtml = `
+        <div class="modal fade" id="commandesSansLivraisonModal" tabindex="-1">
+            <div class="modal-dialog modal-xl">
+                <div class="modal-content">
+                    <div class="modal-header bg-info text-white">
+                        <h5 class="modal-title">
+                            <i class="fas fa-truck me-2"></i>Commandes sans Date de Livraison (${commandes.length})
+                        </h5>
+                        <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+                    </div>
+                    <div class="modal-body">
+                        ${commandes.length === 0 ? 
+                            '<div class="alert alert-success"><i class="fas fa-check-circle me-2"></i>Toutes les commandes ont une date de livraison</div>' :
+                            genererTableauCommandes(commandes)}
+                    </div>
+                    <div class="modal-footer">
+                        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Fermer</button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    `;
+    
+    document.body.insertAdjacentHTML('beforeend', modalHtml);
+    const modal = new bootstrap.Modal(document.getElementById('commandesSansLivraisonModal'));
+    modal.show();
+    
+    document.getElementById('commandesSansLivraisonModal').addEventListener('hidden.bs.modal', () => {
+        document.getElementById('commandesSansLivraisonModal').remove();
+    });
+}
+
+function afficherModalLivraisonsFacturer(livraisons) {
+    const modalHtml = `
+        <div class="modal fade" id="livraisonsFacturerModal" tabindex="-1">
+            <div class="modal-dialog modal-xl">
+                <div class="modal-content">
+                    <div class="modal-header bg-success text-white">
+                        <h5 class="modal-title">
+                            <i class="fas fa-file-invoice-dollar me-2"></i>Livraisons à Facturer (${livraisons.length})
+                        </h5>
+                        <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+                    </div>
+                    <div class="modal-body">
+                        ${livraisons.length === 0 ? 
+                            '<div class="alert alert-success"><i class="fas fa-check-circle me-2"></i>Aucune livraison en attente de facturation</div>' :
+                            genererTableauLivraisons(livraisons)}
+                    </div>
+                    <div class="modal-footer">
+                        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Fermer</button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    `;
+    
+    document.body.insertAdjacentHTML('beforeend', modalHtml);
+    const modal = new bootstrap.Modal(document.getElementById('livraisonsFacturerModal'));
+    modal.show();
+    
+    document.getElementById('livraisonsFacturerModal').addEventListener('hidden.bs.modal', () => {
+        document.getElementById('livraisonsFacturerModal').remove();
+    });
+}
+
+// Fonctions utilitaires pour générer les tableaux
+function genererTableauDevis(devis, couleur) {
+    let html = `
+        <div class="table-responsive">
+            <table class="table table-hover">
+                <thead class="table-${couleur}">
+                    <tr>
+                        <th>Numéro</th>
+                        <th>Client</th>
+                        <th>Contact</th>
+                        <th>Montant TTC</th>
+                        <th>Date création</th>
+                        <th>Actions</th>
+                    </tr>
+                </thead>
+                <tbody>
+    `;
+    
+    devis.forEach(d => {
+        html += `
+            <tr>
+                <td><strong>${d.numero}</strong></td>
+                <td>${d.client_nom}</td>
+                <td>${d.contact_nom || 'Non renseigné'}</td>
+                <td><strong>${parseFloat(d.montant_ttc).toLocaleString('fr-FR', {style: 'currency', currency: 'EUR'})}</strong></td>
+                <td>${d.date_creation}</td>
+                <td>
+                    <a href="/devis/${d.id}/edit" class="btn btn-sm btn-primary me-1" target="_blank">
+                        <i class="fas fa-edit me-1"></i>Terminer
+                    </a>
+                    <a href="/devis/${d.id}" class="btn btn-sm btn-outline-info" target="_blank">
+                        <i class="fas fa-eye me-1"></i>Voir
+                    </a>
+                </td>
+            </tr>
+        `;
+    });
+    
+    html += `
+                </tbody>
+            </table>
+        </div>
+    `;
+    
+    return html;
+}
+
+function genererTableauCommandes(commandes) {
+    let html = `
+        <div class="table-responsive">
+            <table class="table table-hover">
+                <thead class="table-info">
+                    <tr>
+                        <th>Numéro</th>
+                        <th>Client</th>
+                        <th>Contact</th>
+                        <th>Montant TTC</th>
+                        <th>Date commande</th>
+                        <th>Actions</th>
+                    </tr>
+                </thead>
+                <tbody>
+    `;
+    
+    commandes.forEach(c => {
+        html += `
+            <tr>
+                <td><strong>${c.numero}</strong></td>
+                <td>${c.client_nom}</td>
+                <td>${c.contact_nom || 'Non renseigné'}</td>
+                <td><strong>${parseFloat(c.montant_ttc).toLocaleString('fr-FR', {style: 'currency', currency: 'EUR'})}</strong></td>
+                <td>${c.date_commande}</td>
+                <td>
+                    <a href="/commande/${c.id}/edit" class="btn btn-sm btn-info me-1" target="_blank">
+                        <i class="fas fa-calendar-plus me-1"></i>Programmer livraison
+                    </a>
+                    <a href="/commande/${c.id}" class="btn btn-sm btn-outline-info" target="_blank">
+                        <i class="fas fa-eye me-1"></i>Voir
+                    </a>
+                </td>
+            </tr>
+        `;
+    });
+    
+    html += `
+                </tbody>
+            </table>
+        </div>
+    `;
+    
+    return html;
+}
+
+function genererTableauLivraisons(livraisons) {
+    let html = `
+        <div class="table-responsive">
+            <table class="table table-hover">
+                <thead class="table-success">
+                    <tr>
+                        <th>Commande</th>
+                        <th>Client</th>
+                        <th>Contact</th>
+                        <th>Montant TTC</th>
+                        <th>Date livraison</th>
+                        <th>Actions</th>
+                    </tr>
+                </thead>
+                <tbody>
+    `;
+    
+    livraisons.forEach(l => {
+        html += `
+            <tr>
+                <td><strong>${l.numero_commande}</strong></td>
+                <td>${l.client_nom}</td>
+                <td>${l.contact_nom || 'Non renseigné'}</td>
+                <td><strong>${parseFloat(l.montant_ttc).toLocaleString('fr-FR', {style: 'currency', currency: 'EUR'})}</strong></td>
+                <td>${l.date_livraison}</td>
+                <td>
+                    <a href="/facture/new?commande=${l.id}" class="btn btn-sm btn-success me-1" target="_blank">
+                        <i class="fas fa-file-invoice me-1"></i>Créer facture
+                    </a>
+                    <a href="/commande/${l.id}" class="btn btn-sm btn-outline-info" target="_blank">
+                        <i class="fas fa-eye me-1"></i>Voir commande
+                    </a>
+                </td>
+            </tr>
+        `;
+    });
+    
+    html += `
+                </tbody>
+            </table>
+        </div>
+    `;
+    
+    return html;
+}
+
 </script>
 {% endblock %}
 {% endblock %}
