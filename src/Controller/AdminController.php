@@ -22,12 +22,15 @@ use App\Entity\DivisionAdministrative;
 use App\Entity\TypeSecteur;
 use App\Entity\AttributionSecteur;
 use App\Entity\GroupeUtilisateur;
+use App\Entity\Alerte;
+use App\Entity\AlerteUtilisateur;
 use App\Service\TenantService;
 use App\Service\CommuneGeometryCacheService;
 use Doctrine\ORM\EntityManagerInterface;
 use Symfony\Bundle\FrameworkBundle\Controller\AbstractController;
 use Symfony\Component\HttpFoundation\Response;
 use Symfony\Component\HttpFoundation\JsonResponse;
+use Symfony\Component\HttpFoundation\Request;
 use Symfony\Component\Routing\Attribute\Route;
 
 #[Route('/admin')]
@@ -79,15 +82,56 @@ final class AdminController extends AbstractController
             'societes_filles' => $entityManager->getRepository(Societe::class)->count(['type' => 'fille']),
             // Statistiques groupes utilisateurs
             'groupes_utilisateurs' => $entityManager->getRepository(GroupeUtilisateur::class)->count([]),
+            // Statistiques alertes
+            'alertes_total' => $entityManager->getRepository(Alerte::class)->count([]),
+            'alertes_actives' => $entityManager->getRepository(Alerte::class)->count(['isActive' => true]),
             'groupes_actifs' => $entityManager->getRepository(GroupeUtilisateur::class)->count(['actif' => true]),
         ];
+
+        // Récupérer les commerciaux (utilisateurs avec rôle COMMERCIAL ou ayant des secteurs)
+        // Approche 1: Récupérer les utilisateurs avec des secteurs
+        $commerciauxAvecSecteurs = $entityManager->getRepository(User::class)->createQueryBuilder('u')
+            ->innerJoin('u.secteurs', 's')
+            ->where('u.isActive = true')
+            ->getQuery()
+            ->getResult();
+            
+        // Approche 2: Récupérer via SQL natif pour les rôles JSON
+        $commerciauxAvecRole = $entityManager->getConnection()->executeQuery(
+            'SELECT u.* FROM "user" u WHERE u.is_active = true AND CAST(u.roles AS TEXT) LIKE ?',
+            ['%ROLE_COMMERCIAL%']
+        )->fetchAllAssociative();
+        
+        // Convertir les résultats SQL en entités User
+        $commerciauxEntites = [];
+        foreach ($commerciauxAvecRole as $userData) {
+            $commerciauxEntites[] = $entityManager->getRepository(User::class)->find($userData['id']);
+        }
+        
+        // Fusionner les deux listes et supprimer les doublons
+        $commerciaux = [];
+        $commerciauxIds = [];
+        
+        foreach (array_merge($commerciauxAvecSecteurs, $commerciauxEntites) as $commercial) {
+            if ($commercial && !in_array($commercial->getId(), $commerciauxIds)) {
+                $commerciaux[] = $commercial;
+                $commerciauxIds[] = $commercial->getId();
+            }
+        }
+        
+        // Trier par nom
+        usort($commerciaux, function($a, $b) {
+            return strcasecmp($a->getNom(), $b->getNom());
+        });
 
         return $this->render('admin/dashboard.html.twig', [
             'stats' => $stats,
             'google_maps_api_key' => $this->getParameter('google.maps.api.key'),
             'secteurs' => $entityManager->getRepository(Secteur::class)->findBy([], ['nomSecteur' => 'ASC']),
+            'commerciaux' => $commerciaux,
             'current_societe' => $currentSociete,
             'is_societe_mere' => $isSocieteMere,
+            'signature_entreprise' => $currentSociete ? "--\n{$currentSociete->getNom()}\n{$currentSociete->getTelephone()}\n{$currentSociete->getEmail()}" : '',
         ]);
     }
 
@@ -891,6 +935,16 @@ final class AdminController extends AbstractController
             }
             
             if (!empty($epcis)) {
+                // Cas spécial Plateau de Lannemezan - utiliser coordonnées de Lannemezan directement
+                if ($secteur->getNomSecteur() === 'Plateau de Lannemezan') {
+                    error_log("🎯 Cas spécial Plateau de Lannemezan - utilisation coordonnées ville Lannemezan");
+                    return [
+                        'center' => ['lat' => 43.1248, 'lng' => 0.3966],
+                        'type' => 'EPCI',
+                        'entite' => 'Lannemezan (ville principale)'
+                    ];
+                }
+                
                 $centre = $this->calculerCentreEntitesPrincipales($epcis, $communesAvecGeometries, 'epci');
                 if ($centre) {
                     error_log("🎯 Position basée sur EPCI principal");
@@ -947,9 +1001,10 @@ final class AdminController extends AbstractController
             return null;
         }
         
-        // Si une seule entité, prendre son centre géographique
+        // Si une seule entité, prendre son centre géographique SPÉCIFIQUE
         if (count($entites) === 1) {
-            return $this->calculerCentreGeographiqueGlobal($communesAvecGeometries);
+            $coordsEntite = $this->getCoordonneesPourEntite($entites[0], $communesAvecGeometries, $type);
+            return $coordsEntite;
         }
         
         // Si plusieurs entités, prendre celle la plus centrale
@@ -1260,5 +1315,424 @@ final class AdminController extends AbstractController
             'success' => true,
             'message' => $groupe->isActif() ? 'Groupe activé' : 'Groupe désactivé'
         ]);
+    }
+
+    #[Route('/parametres', name: 'app_admin_parametres', methods: ['GET'])]
+    public function parametres(): Response
+    {
+        /** @var User $user */
+        $user = $this->getUser();
+        $currentSociete = $user->getSocietePrincipale();
+        $isSocieteMere = $currentSociete && $currentSociete->isMere();
+        
+        return $this->render('admin/parametres.html.twig', [
+            'current_societe' => $currentSociete,
+            'is_societe_mere' => $isSocieteMere,
+            'signature_entreprise' => $currentSociete ? "--\n{$currentSociete->getNom()}\n{$currentSociete->getTelephone()}\n{$currentSociete->getEmail()}" : '',
+        ]);
+    }
+
+    #[Route('/parametres/delais-workflow', name: 'app_admin_delais_workflow', methods: ['POST'])]
+    public function updateDelaisWorkflow(Request $request): JsonResponse
+    {
+        try {
+            /** @var User $user */
+            $user = $this->getUser();
+            $societe = $user->getSocietePrincipale();
+            
+            if (!$societe) {
+                return $this->json(['error' => 'Aucune société associée'], 400);
+            }
+
+            $data = json_decode($request->getContent(), true);
+            
+            // Mettre à jour les délais (null = héritage pour sociétés filles)
+            if (isset($data['delaiRelanceDevis'])) {
+                $societe->setDelaiRelanceDevis($data['delaiRelanceDevis']);
+            }
+            if (isset($data['delaiFacturation'])) {
+                $societe->setDelaiFacturation($data['delaiFacturation']);
+            }
+            if (isset($data['frequenceVisiteClients'])) {
+                $societe->setFrequenceVisiteClients($data['frequenceVisiteClients']);
+            }
+            
+            $this->entityManager->flush();
+
+            return $this->json([
+                'success' => true,
+                'message' => 'Délais workflow mis à jour avec succès'
+            ]);
+            
+        } catch (\Exception $e) {
+            return $this->json(['error' => $e->getMessage()], 500);
+        }
+    }
+
+    // ================================
+    // GESTION ÉQUIPES COMMERCIALES
+    // ================================
+
+    #[Route('/api/commerciaux', name: 'app_admin_api_commerciaux', methods: ['GET'])]
+    public function getCommerciaux(): JsonResponse
+    {
+        try {
+            // Récupérer tous les utilisateurs et filtrer en PHP pour éviter les problèmes avec JSON
+            $allUsers = $this->entityManager->getRepository(User::class)->findAll();
+            $commerciaux = [];
+            
+            foreach ($allUsers as $user) {
+                $roles = $user->getRoles();
+                if (in_array('ROLE_COMMERCIAL', $roles) || in_array('ROLE_ADMIN', $roles)) {
+                    $commerciaux[] = $user;
+                }
+            }
+
+            $data = [];
+            foreach ($commerciaux as $commercial) {
+                $secteurs = [];
+                foreach ($commercial->getSecteursCommercial() as $secteur) {
+                    $secteurs[] = [
+                        'id' => $secteur->getId(),
+                        'nom' => $secteur->getNomSecteur()
+                    ];
+                }
+
+                $data[] = [
+                    'id' => $commercial->getId(),
+                    'nom' => $commercial->getNom(),
+                    'prenom' => $commercial->getPrenom(),
+                    'email' => $commercial->getEmail(),
+                    'secteurs' => $secteurs,
+                    'objectif_mensuel' => $commercial->getObjectifMensuel(),
+                    'objectif_semestriel' => $commercial->getObjectifSemestriel(),
+                    'notes_objectifs' => $commercial->getNotesObjectifs()
+                ];
+            }
+
+            return $this->json([
+                'success' => true,
+                'commerciaux' => $data
+            ]);
+
+        } catch (\Exception $e) {
+            return $this->json([
+                'success' => false,
+                'message' => 'Erreur lors de la récupération des commerciaux: ' . $e->getMessage()
+            ], 500);
+        }
+    }
+
+    #[Route('/api/secteurs-list', name: 'app_admin_api_secteurs_list', methods: ['GET'])]
+    public function getSecteursList(): JsonResponse
+    {
+        try {
+            $secteurs = $this->entityManager->getRepository(Secteur::class)
+                ->createQueryBuilder('s')
+                ->where('s.isActive = :active')
+                ->setParameter('active', true)
+                ->orderBy('s.nomSecteur')
+                ->getQuery()
+                ->getResult();
+
+            $data = [];
+            foreach ($secteurs as $secteur) {
+                $data[] = [
+                    'id' => $secteur->getId(),
+                    'nom' => $secteur->getNomSecteur()
+                ];
+            }
+
+            return $this->json([
+                'success' => true,
+                'secteurs' => $data
+            ]);
+
+        } catch (\Exception $e) {
+            return $this->json([
+                'success' => false,
+                'message' => 'Erreur lors de la récupération des secteurs: ' . $e->getMessage()
+            ], 500);
+        }
+    }
+
+
+    /**
+     * Interface de gestion des secteurs dans l'admin
+     */
+    #[Route('/secteurs-admin', name: 'app_admin_secteurs_moderne', methods: ['GET'])]
+    public function getSecteursAdmin(): Response
+    {
+        try {
+            // Pour l'instant, retourner un contenu simple en attendant de résoudre le template
+            return new Response('
+                <div class="admin-section">
+                    <h3 class="section-title">
+                        <i class="fas fa-map me-2"></i>Gestion des secteurs commerciaux
+                    </h3>
+                    <p class="text-muted">Interface de gestion des secteurs en cours de développement...</p>
+                    <div class="alert alert-info">
+                        <i class="fas fa-info-circle me-2"></i>
+                        Cette interface sera bientôt disponible avec toutes les fonctionnalités de gestion des secteurs.
+                    </div>
+                </div>
+            ');
+        } catch (\Exception $e) {
+            return new Response('
+                <div class="alert alert-danger">
+                    <h4>Erreur lors du chargement des secteurs</h4>
+                    <p>' . htmlspecialchars($e->getMessage()) . '</p>
+                </div>
+            ');
+        }
+    }
+
+    // ============================================
+    // ROUTES GESTION ÉQUIPES COMMERCIALES
+    // ============================================
+
+    #[Route('/admin/commercial/{id}/objectifs', name: 'app_admin_commercial_objectifs', methods: ['PUT'])]
+    public function updateObjectifsCommercial(int $id, Request $request, EntityManagerInterface $entityManager): JsonResponse
+    {
+        try {
+            $user = $entityManager->getRepository(User::class)->find($id);
+            if (!$user) {
+                return new JsonResponse(['success' => false, 'error' => 'Commercial non trouvé']);
+            }
+
+            $data = json_decode($request->getContent(), true);
+            
+            // Mise à jour des objectifs
+            if (isset($data['mensuel'])) {
+                $user->setObjectifMensuel($data['mensuel']);
+            }
+            if (isset($data['semestriel'])) {
+                $user->setObjectifSemestriel($data['semestriel']);
+            }
+            if (isset($data['annuel'])) {
+                $user->setObjectifAnnuel($data['annuel']);
+            }
+
+            $entityManager->flush();
+
+            return new JsonResponse([
+                'success' => true,
+                'message' => 'Objectifs mis à jour avec succès'
+            ]);
+
+        } catch (\Exception $e) {
+            return new JsonResponse(['success' => false, 'error' => $e->getMessage()]);
+        }
+    }
+
+    #[Route('/admin/commercial/performances', name: 'app_admin_commercial_performances', methods: ['GET'])]
+    public function getPerformancesCommerciales(Request $request, EntityManagerInterface $entityManager): JsonResponse
+    {
+        try {
+            $commercial = $request->query->get('commercial');
+            $periode = $request->query->get('periode', 'mois');
+            $annee = $request->query->get('annee', date('Y'));
+
+            // TODO: Implémenter le calcul des performances réelles
+            // Pour l'instant, données simulées
+            $performances = [
+                [
+                    'periode' => 'Janvier 2024',
+                    'commercial' => 'Jean Martin',
+                    'realise' => 15000,
+                    'objectif' => 12000,
+                    'nb_devis' => 25,
+                    'nb_commandes' => 8,
+                    'taux_conversion' => 32.0
+                ],
+                [
+                    'periode' => 'Février 2024',
+                    'commercial' => 'Jean Martin',
+                    'realise' => 18000,
+                    'objectif' => 12000,
+                    'nb_devis' => 30,
+                    'nb_commandes' => 12,
+                    'taux_conversion' => 40.0
+                ]
+            ];
+
+            return new JsonResponse([
+                'success' => true,
+                'performances' => $performances
+            ]);
+
+        } catch (\Exception $e) {
+            return new JsonResponse(['success' => false, 'error' => $e->getMessage()]);
+        }
+    }
+
+    #[Route('/admin/commercial/performances/export', name: 'app_admin_commercial_performances_export', methods: ['GET'])]
+    public function exportPerformancesCommerciales(Request $request): Response
+    {
+        $commercial = $request->query->get('commercial');
+        $periode = $request->query->get('periode', 'mois');
+        $annee = $request->query->get('annee', date('Y'));
+
+        // TODO: Implémenter l'export Excel/PDF
+        // Pour l'instant, retour CSV simple
+        $filename = "performances_commerciales_{$annee}_{$periode}.csv";
+        
+        $response = new Response();
+        $response->headers->set('Content-Type', 'text/csv');
+        $response->headers->set('Content-Disposition', "attachment; filename=\"{$filename}\"");
+        
+        $content = "Période,Commercial,CA Réalisé,Objectif,Écart,Taux Réalisation\n";
+        $content .= "Janvier 2024,Jean Martin,15000,12000,3000,125%\n";
+        $content .= "Février 2024,Jean Martin,18000,12000,6000,150%\n";
+        
+        $response->setContent($content);
+        return $response;
+    }
+
+    // ==========================================
+    // GESTION DES ALERTES SYSTÈME
+    // ==========================================
+
+    /**
+     * Liste toutes les alertes configurées pour l'interface admin
+     */
+    #[Route('/admin/alertes', name: 'app_admin_alertes', methods: ['GET'])]
+    public function alertes(): JsonResponse
+    {
+        $alertes = $this->entityManager->getRepository(Alerte::class)
+            ->createQueryBuilder('a')
+            ->orderBy('a.ordre', 'ASC')
+            ->addOrderBy('a.createdAt', 'DESC')
+            ->getQuery()
+            ->getResult();
+
+        $alertesData = [];
+        foreach ($alertes as $alerte) {
+            $alertesData[] = [
+                'id' => $alerte->getId(),
+                'titre' => $alerte->getTitre(),
+                'message' => $alerte->getMessage(),
+                'type' => $alerte->getType(),
+                'isActive' => $alerte->isActive(),
+                'dismissible' => $alerte->isDismissible(),
+                'ordre' => $alerte->getOrdre(),
+                'cibles' => $alerte->getCibles(),
+                'dateExpiration' => $alerte->getDateExpiration() ? $alerte->getDateExpiration()->format('d/m/Y H:i') : null,
+                'createdAt' => $alerte->getCreatedAt()->format('d/m/Y H:i'),
+                'isExpired' => $alerte->isExpired()
+            ];
+        }
+
+        return $this->json(['alertes' => $alertesData]);
+    }
+
+    /**
+     * Crée une nouvelle alerte système avec réorganisation automatique des ordres
+     */
+    #[Route('/admin/alertes', name: 'app_admin_alertes_create', methods: ['POST'])]
+    public function createAlerte(Request $request): JsonResponse
+    {
+        try {
+            $data = json_decode($request->getContent(), true);
+            
+            $alerte = new Alerte();
+            $alerte->setTitre($data['titre']);
+            $alerte->setMessage($data['message']);
+            $alerte->setType($data['type']);
+            $alerte->setIsActive($data['isActive'] ?? true);
+            $alerte->setDismissible($data['dismissible'] ?? true);
+            $alerte->setOrdre($data['ordre'] ?? 0);
+            $alerte->setCibles($data['cibles'] ?? []);
+            
+            if (!empty($data['dateExpiration'])) {
+                $alerte->setDateExpiration(new \DateTime($data['dateExpiration']));
+            }
+
+            // Réorganiser les ordres
+            if ($alerte->getOrdre() > 0) {
+                $this->entityManager->getRepository(Alerte::class)->reorganizeOrdres($alerte->getOrdre());
+            }
+
+            $this->entityManager->persist($alerte);
+            $this->entityManager->flush();
+
+            return $this->json(['success' => true, 'message' => 'Alerte créée avec succès']);
+        } catch (\Exception $e) {
+            return $this->json(['success' => false, 'message' => 'Erreur: ' . $e->getMessage()]);
+        }
+    }
+
+    /**
+     * Récupère les données d'une alerte pour édition
+     */
+    #[Route('/admin/alertes/{id}', name: 'app_admin_alertes_get', methods: ['GET'])]
+    public function getAlerte(Alerte $alerte): JsonResponse
+    {
+        return $this->json([
+            'id' => $alerte->getId(),
+            'titre' => $alerte->getTitre(),
+            'message' => $alerte->getMessage(),
+            'type' => $alerte->getType(),
+            'isActive' => $alerte->isActive(),
+            'dismissible' => $alerte->isDismissible(),
+            'ordre' => $alerte->getOrdre(),
+            'cibles' => $alerte->getCibles() ?? [],
+            'dateExpiration' => $alerte->getDateExpiration() ? $alerte->getDateExpiration()->format('Y-m-d\TH:i') : null
+        ]);
+    }
+
+    /**
+     * Met à jour une alerte existante avec gestion des ordres
+     */
+    #[Route('/admin/alertes/{id}', name: 'app_admin_alertes_update', methods: ['PUT'])]
+    public function updateAlerte(Alerte $alerte, Request $request): JsonResponse
+    {
+        try {
+            $data = json_decode($request->getContent(), true);
+            
+            $ancienOrdre = $alerte->getOrdre();
+            
+            $alerte->setTitre($data['titre']);
+            $alerte->setMessage($data['message']);
+            $alerte->setType($data['type']);
+            $alerte->setIsActive($data['isActive'] ?? true);
+            $alerte->setDismissible($data['dismissible'] ?? true);
+            $alerte->setOrdre($data['ordre'] ?? 0);
+            $alerte->setCibles($data['cibles'] ?? []);
+            
+            if (!empty($data['dateExpiration'])) {
+                $alerte->setDateExpiration(new \DateTime($data['dateExpiration']));
+            } else {
+                $alerte->setDateExpiration(null);
+            }
+
+            $this->entityManager->flush();
+            
+            // Réorganiser les ordres si nécessaire
+            if ($data['ordre'] && $data['ordre'] != $ancienOrdre) {
+                $this->entityManager->getRepository(Alerte::class)->reorganizeOrdres($data['ordre']);
+                $this->entityManager->flush();
+            }
+
+            return $this->json(['success' => true, 'message' => 'Alerte mise à jour avec succès']);
+        } catch (\Exception $e) {
+            return $this->json(['success' => false, 'message' => 'Erreur: ' . $e->getMessage()]);
+        }
+    }
+
+    /**
+     * Supprime une alerte système (supprime aussi les enregistrements utilisateurs associés)
+     */
+    #[Route('/admin/alertes/{id}', name: 'app_admin_alertes_delete', methods: ['DELETE'])]
+    public function deleteAlerte(Alerte $alerte): JsonResponse
+    {
+        try {
+            $this->entityManager->remove($alerte);
+            $this->entityManager->flush();
+
+            return $this->json(['success' => true, 'message' => 'Alerte supprimée avec succès']);
+        } catch (\Exception $e) {
+            return $this->json(['success' => false, 'message' => 'Erreur: ' . $e->getMessage()]);
+        }
     }
 }

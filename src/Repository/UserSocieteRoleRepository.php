@@ -138,7 +138,7 @@ class UserSocieteRoleRepository extends ServiceEntityRepository
     {
         return $this->createQueryBuilder('usr')
             ->select('s')
-            ->leftJoin('usr.societe', 's')
+            ->join('usr.societe', 's')
             ->andWhere('usr.user = :user')
             ->andWhere('usr.active = true')
             ->andWhere('s.active = true')

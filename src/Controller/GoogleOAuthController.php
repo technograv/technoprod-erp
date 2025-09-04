@@ -28,7 +28,7 @@ class GoogleOAuthController extends AbstractController
         $params = [
             'client_id' => $client_id,
             'redirect_uri' => $redirect_uri,
-            'scope' => 'openid email profile https://www.googleapis.com/auth/gmail.settings.basic https://www.googleapis.com/auth/gmail.send',
+            'scope' => 'openid email profile https://www.googleapis.com/auth/gmail.settings.basic https://www.googleapis.com/auth/gmail.send https://www.googleapis.com/auth/calendar https://www.googleapis.com/auth/calendar.events',
             'response_type' => 'code',
             'state' => $state,
             'access_type' => 'offline'

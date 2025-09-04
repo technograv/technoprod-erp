@@ -66,6 +66,8 @@ final class SocieteController extends AbstractController
             'logo_url' => $societe->getLogoUrl(),
             'couleur_primaire' => $societe->getCouleurPrimaire(),
             'couleur_secondaire' => $societe->getCouleurSecondaire(),
+            'delaiRelanceDevis' => $societe->getDelaiRelanceDevis(),
+            'delaiFacturation' => $societe->getDelaiFacturation(),
             'actif' => $societe->isActif(),
             'ordre' => $societe->getOrdre(),
             'parent_id' => $societe->getParent()?->getId(),
@@ -110,6 +112,8 @@ final class SocieteController extends AbstractController
             $societe->setCouleurPrimaire($data['couleur_primaire'] ?? '#007bff');
             $societe->setCouleurSecondaire($data['couleur_secondaire'] ?? '#6c757d');
             $societe->setActif($data['actif'] ?? true);
+            $societe->setDelaiRelanceDevis($data['delaiRelanceDevis'] ?? 14);
+            $societe->setDelaiFacturation($data['delaiFacturation'] ?? 1);
             
             // Gestion de la société parent
             if (isset($data['parent_id']) && !empty($data['parent_id'])) {
@@ -212,6 +216,12 @@ final class SocieteController extends AbstractController
             }
             if (isset($data['actif'])) {
                 $societe->setActif($data['actif']);
+            }
+            if (isset($data['delaiRelanceDevis'])) {
+                $societe->setDelaiRelanceDevis($data['delaiRelanceDevis']);
+            }
+            if (isset($data['delaiFacturation'])) {
+                $societe->setDelaiFacturation($data['delaiFacturation']);
             }
             
             // Gestion de la société parent
@@ -337,11 +347,11 @@ final class SocieteController extends AbstractController
     public function getSocietesTree(): JsonResponse
     {
         $societes = $this->entityManager->getRepository(Societe::class)
-            ->findBy(['actif' => true], ['ordre' => 'ASC', 'nom' => 'ASC']);
+            ->findBy(['active' => true], ['ordre' => 'ASC', 'nom' => 'ASC']);
         
         $tree = $this->buildSocietesTree($societes);
         
-        return $this->json(['societes' => $tree]);
+        return $this->json($tree);
     }
 
     // ================================
@@ -396,8 +406,9 @@ final class SocieteController extends AbstractController
             $lookup[$societe->getId()] = [
                 'id' => $societe->getId(),
                 'nom' => $societe->getNom(),
-                'code' => $societe->getCode(),
-                'parent_id' => $societe->getParent()?->getId(),
+                'display_name' => $societe->getNom(),
+                'type' => $societe->getType(),
+                'parent_id' => $societe->getSocieteParent()?->getId(),
                 'enfants' => []
             ];
         }

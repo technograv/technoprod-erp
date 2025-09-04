@@ -4,6 +4,7 @@ namespace App\Controller;
 
 use App\Entity\UserPreferences;
 use App\Repository\UserPreferencesRepository;
+use App\Service\GoogleCalendarService;
 use Doctrine\ORM\EntityManagerInterface;
 use Symfony\Bundle\FrameworkBundle\Controller\AbstractController;
 use Symfony\Component\HttpFoundation\Request;
@@ -20,7 +21,8 @@ class UserPreferencesController extends AbstractController
 
     public function __construct(
         EntityManagerInterface $entityManager,
-        UserPreferencesRepository $preferencesRepository
+        UserPreferencesRepository $preferencesRepository,
+        private GoogleCalendarService $calendarService
     ) {
         $this->entityManager = $entityManager;
         $this->preferencesRepository = $preferencesRepository;
@@ -114,6 +116,96 @@ class UserPreferencesController extends AbstractController
         return $this->render('user_preferences/notes.html.twig', [
             'preferences' => $preferences,
             'user' => $user,
+        ]);
+    }
+
+    #[Route('/calendar', name: 'app_user_preferences_calendar')]
+    public function calendar(Request $request): Response
+    {
+        $user = $this->getUser();
+        $preferences = $this->getUserPreferences($user);
+
+        // Vérifier si l'utilisateur a un compte Google
+        if (!$user->isGoogleAccount() || !$user->getGoogleAccessToken()) {
+            $this->addFlash('warning', 'Vous devez vous connecter avec un compte Google pour gérer vos calendriers.');
+            return $this->redirectToRoute('app_user_preferences_index');
+        }
+
+        $availableCalendars = [];
+        $calendarError = null;
+
+        try {
+            $availableCalendars = $this->calendarService->getUserCalendars($user);
+        } catch (\Exception $e) {
+            $calendarError = 'Erreur lors de la récupération des calendriers : ' . $e->getMessage();
+        }
+
+        // Récupérer les calendriers avec droits d'écriture
+        $writableCalendars = [];
+        try {
+            $writableCalendars = $this->calendarService->getWritableCalendars($user);
+        } catch (\Exception $e) {
+            // Déjà géré dans l'erreur générale des calendriers
+        }
+
+        if ($request->isMethod('POST')) {
+            $selectedCalendars = $request->request->all('selected_calendars') ?: [];
+            
+            // Valider que les calendriers sélectionnés existent dans la liste disponible
+            $validCalendars = [];
+            foreach ($selectedCalendars as $calendarId) {
+                foreach ($availableCalendars as $availableCalendar) {
+                    if ($availableCalendar['id'] === $calendarId) {
+                        $validCalendars[] = $calendarId;
+                        break;
+                    }
+                }
+            }
+
+            $preferences->setSelectedCalendarIds($validCalendars);
+
+            // Gérer les calendriers d'écriture
+            $writeCalendars = [
+                'rdv_commerciaux' => $request->request->get('write_calendar_rdv_commerciaux', 'primary'),
+                'reunions' => $request->request->get('write_calendar_reunions', 'primary'),
+                'livraisons' => $request->request->get('write_calendar_livraisons', 'primary'),
+                'facturations' => $request->request->get('write_calendar_facturations', 'primary')
+            ];
+
+            // Valider que les calendriers d'écriture sélectionnés existent et sont modifiables
+            $validWriteCalendars = [];
+            foreach ($writeCalendars as $eventType => $calendarId) {
+                $isValid = false;
+                foreach ($writableCalendars as $writableCalendar) {
+                    if ($writableCalendar['id'] === $calendarId) {
+                        $isValid = true;
+                        break;
+                    }
+                }
+                $validWriteCalendars[$eventType] = $isValid ? $calendarId : 'primary';
+            }
+
+            $preferences->setWriteCalendarIds($validWriteCalendars);
+            $this->entityManager->flush();
+
+            $this->addFlash('success', 'Vos préférences de calendrier ont été mises à jour.');
+            return $this->redirectToRoute('app_user_preferences_calendar');
+        }
+
+        // Récupérer les calendriers actuellement sélectionnés
+        $selectedCalendarIds = $preferences->getSelectedCalendarIds();
+
+        // Récupérer les calendriers d'écriture actuels
+        $writeCalendarIds = $preferences->getWriteCalendarIds();
+
+        return $this->render('user_preferences/calendar.html.twig', [
+            'preferences' => $preferences,
+            'user' => $user,
+            'available_calendars' => $availableCalendars,
+            'writable_calendars' => $writableCalendars,
+            'selected_calendar_ids' => $selectedCalendarIds,
+            'write_calendar_ids' => $writeCalendarIds,
+            'calendar_error' => $calendarError,
         ]);
     }
 

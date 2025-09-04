@@ -397,6 +397,9 @@ function chargerSocietes() {
     fetch('/admin/api/societes-tree')
         .then(response => response.json())
         .then(societes => {
+            console.log('=== API SOCIETES-TREE RESPONSE ===');
+            console.log('Nombre de sociétés:', societes.length);
+            
             if (societes.length === 0) {
                 societesList.innerHTML = `
                     <div class="text-center py-3">
@@ -408,29 +411,76 @@ function chargerSocietes() {
             }
             
             // Construire l'arbre généalogique
-            let html = '<div class="societes-tree">';
-            
-            // Ajouter une option pour sélectionner toutes les sociétés
-            html += `
-                <div class="mb-3 p-2 bg-light rounded">
-                    <div class="form-check">
-                        <input class="form-check-input" type="checkbox" id="societe_all" onchange="toggleAllSocietes(this.checked)">
-                        <label class="form-check-label fw-bold text-primary" for="societe_all">
-                            <i class="fas fa-globe me-1"></i>Toutes les sociétés (accès global)
-                        </label>
+            let html = `
+                <div class="societes-tree">
+                    <div class="mb-3 p-3 bg-light rounded border">
+                        <div class="form-check">
+                            <input class="form-check-input" type="checkbox" id="societe_all" onchange="toggleAllSocietes(this.checked)">
+                            <label class="form-check-label fw-bold text-primary d-flex align-items-center" for="societe_all">
+                                <i class="fas fa-globe me-2"></i>
+                                <span>Toutes les sociétés (accès global)</span>
+                            </label>
+                            <small class="text-muted d-block mt-1">Cocher cette option donne accès à toutes les sociétés</small>
+                        </div>
                     </div>
-                </div>
+                    
+                    <div class="societes-list border rounded" style="background-color: #fafafa;">
+                        <div class="p-2 bg-white border-bottom">
+                            <small class="text-muted fw-medium">
+                                <i class="fas fa-sitemap me-1"></i>Sélection par société
+                            </small>
+                        </div>
+                        <div class="p-2">
             `;
-            
-            html += '<div class="societes-list">';
             
             societes.forEach(societe => {
                 html += renderSocieteNode(societe, 0);
             });
             
-            html += '</div></div>';
+            html += `
+                        </div>
+                    </div>
+                </div>
+            `;
             
             societesList.innerHTML = html;
+            
+            // Debug: Vérifier les data attributes
+            setTimeout(() => {
+                console.log('=== DEBUG SOCIÉTÉ TREE ===');
+                document.querySelectorAll('.societe-checkbox').forEach(checkbox => {
+                    console.log('Checkbox:', checkbox.id, {
+                        children: checkbox.dataset.children,
+                        parent: checkbox.dataset.parent,
+                        hasChildren: !!checkbox.dataset.children,
+                        hasParent: !!checkbox.dataset.parent,
+                        element: checkbox
+                    });
+                });
+                
+                // Test manuel de la cascade
+                console.log('=== TEST MANUEL CASCADE ===');
+                const parentCheckboxes = document.querySelectorAll('.societe-checkbox[data-children]');
+                console.log('Société(s) mère(s) trouvée(s):', parentCheckboxes.length);
+                parentCheckboxes.forEach((checkbox, index) => {
+                    console.log(`Société mère ${index + 1}:`, checkbox.id, 'enfants:', checkbox.dataset.children);
+                });
+                
+                // Créer une fonction de test globale
+                window.testCascade = function() {
+                    console.log('=== TEST FORCE CASCADE ===');
+                    const parentCheckbox = document.querySelector('.societe-checkbox[data-children]');
+                    if (parentCheckbox) {
+                        console.log('Test avec société mère:', parentCheckbox.id);
+                        parentCheckbox.checked = true;
+                        onSocieteToggle(parentCheckbox);
+                    } else {
+                        console.log('Aucune société mère trouvée avec data-children');
+                    }
+                };
+                
+                console.log('Fonction testCascade() créée. Utilisez testCascade() dans la console.');
+            }, 100);
         })
         .catch(error => {
             console.error('Erreur lors du chargement des sociétés:', error);
@@ -450,19 +500,28 @@ function renderSocieteNode(societe, level) {
         '<span class="badge bg-primary ms-1">Mère</span>' : 
         '<span class="badge bg-secondary ms-1">Fille</span>';
     
+    // Construire les data attributes pour la cascade
+    const isParent = societe.enfants && societe.enfants.length > 0;
+    const childrenIds = isParent ? societe.enfants.map(e => e.id).join(',') : '';
+    
+    console.log('Rendu société:', societe.nom, 'isParent:', isParent, 'childrenIds:', childrenIds, 'parent_id:', societe.parent_id);
+    
     let html = `
-        <div class="societe-item mb-2" style="margin-left: ${indent}px;">
-            <div class="form-check">
-                <input class="form-check-input societe-checkbox" 
+        <div class="societe-item mb-1">
+            <div class="form-check d-flex align-items-center p-2 rounded" 
+                 style="margin-left: ${indent}px; background-color: ${level > 0 ? '#f8f9fa' : 'white'}; border-left: ${level > 0 ? '3px solid #dee2e6' : 'none'}; border: 1px solid #dee2e6;">
+                <input class="form-check-input societe-checkbox me-2" 
                        type="checkbox" 
                        id="societe_${societe.id}" 
                        value="${societe.id}"
-                       onchange="updateSocieteSelection()">
-                <label class="form-check-label d-flex align-items-center" for="societe_${societe.id}">
-                    <i class="${typeIcon} me-2"></i>
-                    <span>${societe.display_name}</span>
+                       ${isParent ? `data-children="${childrenIds}"` : ''}
+                       ${societe.parent_id ? `data-parent="${societe.parent_id}"` : ''}
+                       onchange="onSocieteToggle(this)">
+                <label class="form-check-label d-flex align-items-center flex-grow-1 mb-0" for="societe_${societe.id}">
+                    <i class="${typeIcon} me-2 text-${societe.type === 'mere' ? 'primary' : 'secondary'}"></i>
+                    <span class="fw-medium">${societe.display_name || societe.nom}</span>
                     ${typeBadge}
-                    ${societe.enfants.length > 0 ? `<small class="text-muted ms-2">(${societe.enfants.length} fille${societe.enfants.length > 1 ? 's' : ''})</small>` : ''}
+                    ${isParent ? `<small class="text-muted ms-2">(${societe.enfants.length} filiale${societe.enfants.length > 1 ? 's' : ''})</small>` : ''}
                 </label>
             </div>
         </div>
@@ -476,6 +535,68 @@ function renderSocieteNode(societe, level) {
     }
     
     return html;
+}
+
+function onSocieteToggle(checkbox, preventRecursion = false) {
+    const isChecked = checkbox.checked;
+    const childrenIds = checkbox.dataset.children;
+    const parentId = checkbox.dataset.parent;
+    
+    console.log('Toggle société:', checkbox.id, 'checked:', isChecked, 'children:', childrenIds, 'parent:', parentId, 'preventRecursion:', preventRecursion);
+    
+    // Si c'est une société mère, cocher/décocher automatiquement les filiales
+    if (childrenIds && childrenIds.trim() !== '' && !preventRecursion) {
+        const children = childrenIds.split(',');
+        console.log('Enfants à traiter:', children);
+        children.forEach(childId => {
+            if (childId.trim() !== '') {
+                const childCheckbox = document.getElementById(`societe_${childId.trim()}`);
+                console.log('Recherche enfant:', `societe_${childId.trim()}`, 'trouvé:', !!childCheckbox);
+                if (childCheckbox) {
+                    const oldChecked = childCheckbox.checked;
+                    childCheckbox.checked = isChecked;
+                    console.log('Enfant', childId, 'mis à jour de', oldChecked, 'vers', isChecked);
+                    
+                    // Propager aux petits-enfants s'il y en a (avec protection récursion)
+                    if (childCheckbox.dataset.children && childCheckbox.dataset.children.trim() !== '') {
+                        console.log('Propagation récursive pour:', childId);
+                        onSocieteToggle(childCheckbox, true);
+                    }
+                }
+            }
+        });
+    }
+    
+    // Si c'est une filiale décochée, décocher la société mère
+    if (parentId && !isChecked && !preventRecursion) {
+        const parentCheckbox = document.getElementById(`societe_${parentId}`);
+        if (parentCheckbox && parentCheckbox.checked) {
+            parentCheckbox.checked = false;
+            console.log('Parent décoché:', parentId);
+        }
+    }
+    
+    // Si c'est une filiale cochée, vérifier si toutes les filiales sont cochées pour cocher la mère
+    if (parentId && isChecked && !preventRecursion) {
+        const parentCheckbox = document.getElementById(`societe_${parentId}`);
+        if (parentCheckbox && !parentCheckbox.checked && parentCheckbox.dataset.children) {
+            const siblingIds = parentCheckbox.dataset.children.split(',');
+            const allSiblingsChecked = siblingIds.every(siblingId => {
+                const siblingCheckbox = document.getElementById(`societe_${siblingId.trim()}`);
+                return siblingCheckbox && siblingCheckbox.checked;
+            });
+            
+            if (allSiblingsChecked) {
+                parentCheckbox.checked = true;
+                console.log('Parent auto-coché:', parentId);
+            }
+        }
+    }
+    
+    // Mettre à jour la sélection globale
+    if (!preventRecursion) {
+        updateSocieteSelection();
+    }
 }
 
 function toggleAllSocietes(checked) {
@@ -787,69 +908,100 @@ function showNotification(message, type = 'info') {
 <style>
 /* Styles pour l'arbre généalogique des sociétés */
 .societes-tree {
-    max-height: 300px;
+    max-height: 400px;
     overflow-y: auto;
-    border: 1px solid #dee2e6;
-    border-radius: 0.375rem;
-    padding: 0.5rem;
+}
+
+.societes-list {
+    max-height: 280px;
+    overflow-y: auto;
 }
 
 .societe-item {
     position: relative;
-}
-
-.societe-item:before {
-    content: '';
-    position: absolute;
-    left: -10px;
-    top: 15px;
-    width: 8px;
-    height: 1px;
-    background-color: #dee2e6;
-}
-
-.societe-item[style*="margin-left: 20px"]:before {
-    left: 10px;
-}
-
-.societe-item[style*="margin-left: 40px"]:before {
-    left: 30px;
-}
-
-.societe-item .form-check {
-    background-color: #f8f9fa;
-    border-radius: 0.25rem;
-    padding: 0.5rem;
-    margin-bottom: 0.25rem;
-    border-left: 3px solid transparent;
     transition: all 0.2s ease;
 }
 
+.societe-item .form-check {
+    transition: all 0.2s ease;
+    border: 1px solid transparent;
+}
+
 .societe-item .form-check:hover {
-    background-color: #e9ecef;
-    border-left-color: #6c757d;
+    background-color: #fff !important;
+    border-color: #dee2e6 !important;
+    box-shadow: 0 2px 4px rgba(0,0,0,0.1);
 }
 
-.societe-item .form-check-input:checked ~ .form-check-label {
-    font-weight: 500;
+.societe-item .form-check-input:checked + .form-check-label {
+    color: #0d6efd;
 }
 
-.societe-item .form-check-input:checked ~ .form-check-label .badge {
+.societe-item .form-check-input:checked + .form-check-label .badge {
     opacity: 1;
+    transform: scale(1.05);
 }
 
 .societe-item .form-check-label .badge {
-    opacity: 0.7;
-    transition: opacity 0.2s ease;
+    opacity: 0.8;
+    transition: all 0.2s ease;
+    font-size: 0.7rem;
+}
+
+.societe-item .form-check-label:hover .badge {
+    opacity: 1;
+}
+
+/* Lignes de connexion hiérarchique */
+.societe-item .form-check {
+    position: relative;
+    width: 100%;
+    box-sizing: border-box;
+}
+
+/* Indicateurs de société mère */
+.societe-item input[data-children] + .form-check-label {
+    font-weight: 600;
+    color: #0d6efd;
+}
+
+.societe-item input[data-children] + .form-check-label::after {
+    content: '👥';
+    margin-left: 8px;
+    font-size: 0.8rem;
+}
+
+/* S'assurer que les éléments restent dans le conteneur */
+.societes-list .p-2 {
+    overflow-x: hidden;
+}
+
+.societe-item .form-check {
+    max-width: 100%;
+    box-sizing: border-box;
+}
+
+/* Animation pour les sociétés sélectionnées */
+.societe-item .form-check-input:checked + .form-check-label {
+    animation: pulse 0.3s ease;
+}
+
+@keyframes pulse {
+    0% { transform: scale(1); }
+    50% { transform: scale(1.02); }
+    100% { transform: scale(1); }
 }
 
 /* Style spécial pour l'option "Toutes les sociétés" */
-.societes-tree > div:first-child .form-check {
+.societes-tree .mb-3 .form-check {
     background: linear-gradient(135deg, #e3f2fd 0%, #bbdefb 100%);
-    border: 1px solid #90caf9;
+    border: 1px solid #90caf9 !important;
+    transition: all 0.2s ease;
 }
 
-.societes-tree > div:first-child .form-check:hover {
+.societes-tree .mb-3 .form-check:hover {
     background: linear-gradient(135deg, #bbdefb 0%, #90caf9 100%);
+    transform: translateY(-1px);
+    box-shadow: 0 4px 8px rgba(0,0,0,0.15);
 }
 </style>

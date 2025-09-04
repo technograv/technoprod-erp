@@ -90,6 +90,15 @@ class Societe
     #[ORM\Column(type: 'datetime_immutable')]
     private \DateTimeImmutable $updatedAt;
 
+    #[ORM\Column(type: 'integer', options: ['default' => 14])]
+    private int $delaiRelanceDevis = 14; // Délai en jours pour relancer un devis
+
+    #[ORM\Column(type: 'integer', options: ['default' => 1])]
+    private int $delaiFacturation = 1; // Délai en jours après livraison pour facturer
+
+    #[ORM\Column(type: 'integer', options: ['default' => 365])]
+    private int $frequenceVisiteClients = 365; // Fréquence en jours pour visiter chaque client
+
     #[ORM\OneToMany(mappedBy: 'societe', targetEntity: UserSocieteRole::class, orphanRemoval: true)]
     private Collection $userRoles;
 
@@ -486,6 +495,66 @@ class Societe
         $this->parametresCustom[$key] = $value;
         $this->updateTimestamp();
         return $this;
+    }
+
+    public function getDelaiRelanceDevis(): int
+    {
+        return $this->delaiRelanceDevis;
+    }
+
+    public function setDelaiRelanceDevis(int $delaiRelanceDevis): self
+    {
+        $this->delaiRelanceDevis = $delaiRelanceDevis;
+        $this->updateTimestamp();
+        return $this;
+    }
+
+    public function getDelaiFacturation(): int
+    {
+        return $this->delaiFacturation;
+    }
+
+    public function setDelaiFacturation(int $delaiFacturation): self
+    {
+        $this->delaiFacturation = $delaiFacturation;
+        $this->updateTimestamp();
+        return $this;
+    }
+
+    public function getFrequenceVisiteClients(): int
+    {
+        return $this->frequenceVisiteClients;
+    }
+
+    public function setFrequenceVisiteClients(int $frequenceVisiteClients): self
+    {
+        $this->frequenceVisiteClients = $frequenceVisiteClients;
+        $this->updateTimestamp();
+        return $this;
+    }
+
+    /**
+     * Récupère un délai avec héritage de la société parent
+     */
+    public function getDelaiAvecHeritage(string $type): int
+    {
+        $delai = match($type) {
+            'relance_devis' => $this->delaiRelanceDevis,
+            'facturation' => $this->delaiFacturation,
+            'frequence_visite_clients' => $this->frequenceVisiteClients,
+            default => 0
+        };
+        
+        // Si pas de délai spécifique ET société fille, hériter du parent
+        if ($delai === 0 && $this->societeParent) {
+            return $this->societeParent->getDelaiAvecHeritage($type);
+        }
+        
+        return $delai ?: match($type) {
+            'relance_devis' => 14,
+            'facturation' => 1,
+            default => 0
+        };
     }
 
     public function __toString(): string

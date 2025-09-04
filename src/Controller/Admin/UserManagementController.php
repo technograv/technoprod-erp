@@ -144,10 +144,20 @@ final class UserManagementController extends AbstractController
 
             $this->entityManager->flush();
 
+            // Retourner les données des groupes pour la mise à jour de l'interface
+            $groupesData = [];
+            foreach ($user->getGroupes() as $groupe) {
+                $groupesData[] = [
+                    'id' => $groupe->getId(),
+                    'nom' => $groupe->getNom(),
+                    'couleur' => $groupe->getCouleur()
+                ];
+            }
+
             return $this->json([
                 'success' => true,
                 'message' => 'Groupes mis à jour avec succès',
-                'groupes_count' => $user->getGroupes()->count()
+                'groupes' => $groupesData
             ]);
         } catch (\Exception $e) {
             return $this->json(['error' => 'Erreur lors de la mise à jour: ' . $e->getMessage()], 500);
@@ -157,21 +167,24 @@ final class UserManagementController extends AbstractController
     #[Route('/users/{id}/permissions', name: 'app_admin_users_get_permissions', methods: ['GET'])]
     public function getUserPermissions(User $user): JsonResponse
     {
-        $permissions = [];
-        $societes = $this->entityManager->getRepository(Societe::class)->findAll();
+        $userPermissions = $this->entityManager->getRepository(UserPermission::class)
+            ->findBy(['user' => $user]);
         
-        foreach ($societes as $societe) {
-            $userPermission = $this->entityManager->getRepository(UserPermission::class)
-                ->findOneBy(['user' => $user, 'societe' => $societe]);
-            
-            $permissions[$societe->getId()] = [
-                'societe_nom' => $societe->getNom(),
-                'permissions' => $userPermission?->getPermissions() ?? [],
-                'niveau' => $userPermission?->getNiveau() ?? 1
-            ];
+        $permissions = [];
+        
+        foreach ($userPermissions as $userPermission) {
+            if ($userPermission->isActif()) {
+                $permissions[] = [
+                    'societe_id' => $userPermission->getSociete()->getId(),
+                    'societe_nom' => $userPermission->getSociete()->getNom(),
+                    'permissions' => $userPermission->getPermissions(),
+                    'niveau' => $userPermission->getNiveau(),
+                    'actif' => $userPermission->isActif()
+                ];
+            }
         }
 
-        return $this->json(['permissions' => $permissions]);
+        return $this->json($permissions);
     }
 
     #[Route('/users/{id}/permissions', name: 'app_admin_users_update_permissions', methods: ['PUT'])]
@@ -180,34 +193,61 @@ final class UserManagementController extends AbstractController
         try {
             $data = json_decode($request->getContent(), true);
             
-            if (!isset($data['societe_id']) || !isset($data['permissions'])) {
-                return $this->json(['error' => 'Données manquantes'], 400);
+            if (!isset($data['permissions']) || !is_array($data['permissions'])) {
+                return $this->json(['error' => 'Format de données incorrect'], 400);
             }
 
-            $societe = $this->entityManager->find(Societe::class, $data['societe_id']);
-            if (!$societe) {
-                return $this->json(['error' => 'Société non trouvée'], 404);
-            }
-
-            // Trouver ou créer la permission utilisateur
-            $userPermission = $this->entityManager->getRepository(UserPermission::class)
-                ->findOneBy(['user' => $user, 'societe' => $societe]);
+            // Supprimer toutes les permissions existantes de cet utilisateur
+            $existingPermissions = $this->entityManager->getRepository(UserPermission::class)
+                ->findBy(['user' => $user]);
             
-            if (!$userPermission) {
+            foreach ($existingPermissions as $permission) {
+                $this->entityManager->remove($permission);
+            }
+
+            // Ajouter les nouvelles permissions
+            foreach ($data['permissions'] as $permissionData) {
+                if (!isset($permissionData['societe_id']) || !isset($permissionData['permissions'])) {
+                    continue;
+                }
+
+                $societe = $this->entityManager->find(Societe::class, $permissionData['societe_id']);
+                if (!$societe) {
+                    continue;
+                }
+
                 $userPermission = new UserPermission();
                 $userPermission->setUser($user);
                 $userPermission->setSociete($societe);
+                $userPermission->setPermissions($permissionData['permissions']);
+                $userPermission->setNiveau($permissionData['niveau'] ?? 5);
+                $userPermission->setActif($permissionData['actif'] ?? true);
+                
                 $this->entityManager->persist($userPermission);
             }
-
-            $userPermission->setPermissions($data['permissions']);
-            $userPermission->setNiveau($data['niveau'] ?? 1);
             
             $this->entityManager->flush();
 
+            // Récupérer les nouvelles permissions pour l'affichage
+            $newPermissions = $this->entityManager->getRepository(UserPermission::class)
+                ->findBy(['user' => $user]);
+            
+            $permissionsData = [];
+            foreach ($newPermissions as $permission) {
+                $permissionsData[] = [
+                    'societe' => [
+                        'id' => $permission->getSociete()->getId(),
+                        'nom' => $permission->getSociete()->getNom()
+                    ],
+                    'niveau' => $permission->getNiveau(),
+                    'permissions' => $permission->getPermissions()
+                ];
+            }
+
             return $this->json([
                 'success' => true,
-                'message' => 'Permissions mises à jour avec succès'
+                'message' => 'Permissions mises à jour avec succès',
+                'permissions' => $permissionsData
             ]);
         } catch (\Exception $e) {
             return $this->json(['error' => 'Erreur lors de la mise à jour: ' . $e->getMessage()], 500);
@@ -235,7 +275,10 @@ final class UserManagementController extends AbstractController
             return $this->json([
                 'success' => true,
                 'message' => 'Société principale mise à jour avec succès',
-                'societe' => $societe->getNom()
+                'societe' => $societe ? [
+                    'id' => $societe->getId(),
+                    'nom' => $societe->getNom()
+                ] : null
             ]);
         } catch (\Exception $e) {
             return $this->json(['error' => 'Erreur lors de la mise à jour: ' . $e->getMessage()], 500);
@@ -359,6 +402,71 @@ final class UserManagementController extends AbstractController
             'stats' => $stats,
             'available_permissions' => $availablePermissions
         ]);
+    }
+
+    // ================================
+    // API ROUTES
+    // ================================
+
+    #[Route('/api/societes-tree', name: 'app_admin_api_societes_tree', methods: ['GET'])]
+    public function getSocietesTree(): JsonResponse
+    {
+        $societes = $this->entityManager
+            ->getRepository(Societe::class)
+            ->findBy(['societeParent' => null, 'active' => true], ['nom' => 'ASC']);
+        
+        $result = [];
+        
+        foreach ($societes as $societe) {
+            $societeData = [
+                'id' => $societe->getId(),
+                'nom' => $societe->getNom(),
+                'display_name' => $societe->getDisplayName(),
+                'type' => $societe->getType(),
+                'enfants' => []
+            ];
+            
+            // Ajouter les sociétés filles
+            $enfants = $this->entityManager
+                ->getRepository(Societe::class)
+                ->findBy(['societeParent' => $societe, 'active' => true], ['nom' => 'ASC']);
+            
+            foreach ($enfants as $enfant) {
+                $societeData['enfants'][] = [
+                    'id' => $enfant->getId(),
+                    'nom' => $enfant->getNom(),
+                    'display_name' => $enfant->getDisplayName(),
+                    'type' => $enfant->getType(),
+                    'parent_id' => $societe->getId()
+                ];
+            }
+            
+            $result[] = $societeData;
+        }
+        
+        return $this->json($result);
+    }
+
+    #[Route('/api/groupes-disponibles', name: 'app_admin_api_groupes_disponibles', methods: ['GET'])]
+    public function getGroupesDisponibles(): JsonResponse
+    {
+        $groupes = $this->entityManager
+            ->getRepository(GroupeUtilisateur::class)
+            ->findBy(['actif' => true], ['nom' => 'ASC']);
+        
+        $result = [];
+        
+        foreach ($groupes as $groupe) {
+            $result[] = [
+                'id' => $groupe->getId(),
+                'nom' => $groupe->getNom(),
+                'description' => $groupe->getDescription(),
+                'niveau' => $groupe->getNiveau(),
+                'couleur' => $groupe->getCouleur()
+            ];
+        }
+        
+        return $this->json($result);
     }
 
     // ================================

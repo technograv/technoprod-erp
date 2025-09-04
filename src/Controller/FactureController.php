@@ -7,6 +7,7 @@ use App\Form\FactureType;
 use App\Repository\FactureRepository;
 use App\Service\WorkflowService;
 use App\Service\FacturXService;
+use App\Service\AutoEventService;
 use Doctrine\ORM\EntityManagerInterface;
 use Symfony\Bundle\FrameworkBundle\Controller\AbstractController;
 use Symfony\Component\HttpFoundation\Request;
@@ -18,6 +19,7 @@ class FactureController extends AbstractController
 {
     public function __construct(
         private WorkflowService $workflowService,
+        private AutoEventService $autoEventService,
         private EntityManagerInterface $entityManager
     ) {}
 
@@ -39,6 +41,11 @@ class FactureController extends AbstractController
         if ($form->isSubmitted() && $form->isValid()) {
             $entityManager->persist($facture);
             $entityManager->flush();
+
+            // Créer automatiquement un événement de facturation si une date d'échéance est définie
+            if ($facture->getDateEcheance()) {
+                $this->autoEventService->createFacturationEvent($facture);
+            }
 
             $this->addFlash('success', 'Facture créée avec succès !');
 
@@ -65,11 +72,21 @@ class FactureController extends AbstractController
     #[Route('/{id}/edit', name: 'app_facture_edit', methods: ['GET', 'POST'])]
     public function edit(Request $request, Facture $facture, EntityManagerInterface $entityManager): Response
     {
+        // Sauvegarder l'ancienne date d'échéance pour détecter les changements
+        $oldDateEcheance = $facture->getDateEcheance();
+        
         $form = $this->createForm(FactureType::class, $facture);
         $form->handleRequest($request);
 
         if ($form->isSubmitted() && $form->isValid()) {
             $facture->setUpdatedAt(new \DateTimeImmutable());
+            
+            // Créer automatiquement un événement de facturation si une nouvelle date d'échéance est définie
+            $newDateEcheance = $facture->getDateEcheance();
+            if ($newDateEcheance && (!$oldDateEcheance || $oldDateEcheance->format('Y-m-d') !== $newDateEcheance->format('Y-m-d'))) {
+                $this->autoEventService->createFacturationEvent($facture);
+            }
+            
             $entityManager->flush();
 
             $this->addFlash('success', 'Facture modifiée avec succès !');

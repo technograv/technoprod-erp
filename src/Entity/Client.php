@@ -103,6 +103,12 @@ class Client
     #[ORM\Column(nullable: true)]
     private ?\DateTimeImmutable $dateConversionClient = null;
 
+    #[ORM\Column(type: Types::DATE_MUTABLE, nullable: true)]
+    private ?\DateTimeInterface $derniereVisite = null;
+
+    #[ORM\Column(type: Types::DECIMAL, precision: 10, scale: 2, nullable: true)]
+    private ?string $chiffreAffaireAnnuel = null;
+
     // Collections
     #[ORM\OneToMany(mappedBy: 'client', targetEntity: Devis::class)]
     private Collection $devis;
@@ -450,6 +456,28 @@ class Client
     public function setDateConversionClient(?\DateTimeImmutable $dateConversionClient): static
     {
         $this->dateConversionClient = $dateConversionClient;
+        return $this;
+    }
+
+    public function getDerniereVisite(): ?\DateTimeInterface
+    {
+        return $this->derniereVisite;
+    }
+
+    public function setDerniereVisite(?\DateTimeInterface $derniereVisite): static
+    {
+        $this->derniereVisite = $derniereVisite;
+        return $this;
+    }
+
+    public function getChiffreAffaireAnnuel(): ?string
+    {
+        return $this->chiffreAffaireAnnuel;
+    }
+
+    public function setChiffreAffaireAnnuel(?string $chiffreAffaireAnnuel): static
+    {
+        $this->chiffreAffaireAnnuel = $chiffreAffaireAnnuel;
         return $this;
     }
 

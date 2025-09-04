@@ -249,6 +249,7 @@
                         </div>
                     </div>
                     
+                    
                 </form>
             </div>
             <div class="modal-footer">
@@ -488,13 +489,11 @@ function voirSocieteModal(societeId) {
     fetch(`/admin/societes/${societeId}`)
         .then(response => response.json())
         .then(data => {
-            if (data.success) {
-                remplirFormulaireSociete(data.societe, true); // readonly
-                document.getElementById('modal-title-text').textContent = 'Détails de la société';
-                
-                const modal = new bootstrap.Modal(document.getElementById('societeModal'));
-                modal.show();
-            }
+            remplirFormulaireSociete(data, true); // readonly - data contient directement les propriétés
+            document.getElementById('modal-title-text').textContent = 'Détails de la société';
+            
+            const modal = new bootstrap.Modal(document.getElementById('societeModal'));
+            modal.show();
         })
         .catch(error => {
             console.error('Erreur:', error);
@@ -506,12 +505,11 @@ function modifierSocieteModal(societeId) {
     fetch(`/admin/societes/${societeId}`)
         .then(response => response.json())
         .then(data => {
-            if (data.success) {
-                remplirFormulaireSociete(data.societe, false); // editable
-                document.getElementById('modal-title-text').textContent = 'Modifier la société';
-                
-                const modal = new bootstrap.Modal(document.getElementById('societeModal'));
-                modal.show();
+            remplirFormulaireSociete(data, false); // editable - data contient directement les propriétés
+            document.getElementById('modal-title-text').textContent = 'Modifier la société';
+            
+            const modal = new bootstrap.Modal(document.getElementById('societeModal'));
+            modal.show();
                 
                 // Initialiser après ouverture du modal
                 setTimeout(() => {

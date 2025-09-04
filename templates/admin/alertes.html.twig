@@ -1,0 +1,400 @@
+<h3 class="section-title">
+    <i class="fas fa-bell me-2 text-warning"></i>Gestion des Alertes
+</h3>
+
+<div class="row">
+    <div class="col-lg-12">
+        <div class="card">
+            <div class="card-header d-flex justify-content-between align-items-center">
+                <h6 class="mb-0">
+                    <i class="fas fa-list me-2"></i>Alertes configurées
+                </h6>
+                <button type="button" class="btn btn-primary btn-sm" onclick="ajouterAlerte()">
+                    <i class="fas fa-plus me-1"></i>Nouvelle alerte
+                </button>
+            </div>
+            <div class="card-body">
+                <div id="alertes-admin-loading" class="text-center py-4">
+                    <div class="spinner-border text-primary" role="status"></div>
+                    <div class="mt-2 text-muted">Chargement des alertes...</div>
+                </div>
+                <div id="alertes-admin-container" style="display: none;">
+                    <div class="table-responsive">
+                        <table class="table table-hover">
+                            <thead>
+                                <tr>
+                                    <th width="50">Ordre</th>
+                                    <th>Titre</th>
+                                    <th>Type</th>
+                                    <th width="80">Statut</th>
+                                    <th width="100">Dismissible</th>
+                                    <th width="150">Expiration</th>
+                                    <th width="120">Actions</th>
+                                </tr>
+                            </thead>
+                            <tbody id="alertes-admin-tbody">
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+                <div id="alertes-admin-empty" style="display: none;" class="text-center py-4 text-muted">
+                    <i class="fas fa-bell-slash fa-3x mb-3"></i>
+                    <h6>Aucune alerte configurée</h6>
+                    <p class="mb-0">Commencez par créer votre première alerte système.</p>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Modal Création/Édition Alerte -->
+<div class="modal fade" id="alerteModal" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-lg">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title" id="alerteModalTitle">
+                    <i class="fas fa-bell me-2"></i>Nouvelle alerte
+                </h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body">
+                <form id="alerteForm">
+                    <input type="hidden" id="alerteId" name="id">
+                    
+                    <div class="row">
+                        <div class="col-md-8">
+                            <div class="mb-3">
+                                <label for="alerteTitre" class="form-label">Titre de l'alerte *</label>
+                                <input type="text" class="form-control" id="alerteTitre" name="titre" required maxlength="255">
+                            </div>
+                        </div>
+                        <div class="col-md-4">
+                            <div class="mb-3">
+                                <label for="alerteOrdre" class="form-label">Ordre d'affichage</label>
+                                <input type="number" class="form-control" id="alerteOrdre" name="ordre" min="0" value="0">
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div class="row">
+                        <div class="col-md-6">
+                            <div class="mb-3">
+                                <label for="alerteType" class="form-label">Type d'alerte *</label>
+                                <select class="form-select" id="alerteType" name="type" required>
+                                    <option value="info">Information (bleu)</option>
+                                    <option value="success">Succès (vert)</option>
+                                    <option value="warning">Attention (orange)</option>
+                                    <option value="danger">Danger (rouge)</option>
+                                </select>
+                            </div>
+                        </div>
+                        <div class="col-md-6">
+                            <div class="mb-3">
+                                <label for="alerteExpiration" class="form-label">Date d'expiration</label>
+                                <input type="datetime-local" class="form-control" id="alerteExpiration" name="dateExpiration">
+                                <small class="form-text text-muted">Laissez vide pour une alerte permanente</small>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div class="mb-3">
+                        <label for="alerteMessage" class="form-label">Message de l'alerte *</label>
+                        <textarea class="form-control" id="alerteMessage" name="message" rows="4" required></textarea>
+                    </div>
+                    
+                    <div class="row">
+                        <div class="col-md-6">
+                            <div class="mb-3">
+                                <label class="form-label">Cibles (rôles)</label>
+                                <div class="form-check">
+                                    <input class="form-check-input" type="checkbox" id="cibleAdmin" name="cibles" value="ROLE_ADMIN">
+                                    <label class="form-check-label" for="cibleAdmin">Administrateurs</label>
+                                </div>
+                                <div class="form-check">
+                                    <input class="form-check-input" type="checkbox" id="cibleManager" name="cibles" value="ROLE_MANAGER">
+                                    <label class="form-check-label" for="cibleManager">Managers</label>
+                                </div>
+                                <div class="form-check">
+                                    <input class="form-check-input" type="checkbox" id="cibleCommercial" name="cibles" value="ROLE_COMMERCIAL">
+                                    <label class="form-check-label" for="cibleCommercial">Commerciaux</label>
+                </div>
+                                <div class="form-check">
+                                    <input class="form-check-input" type="checkbox" id="cibleUser" name="cibles" value="ROLE_USER">
+                                    <label class="form-check-label" for="cibleUser">Utilisateurs</label>
+                                </div>
+                                <small class="form-text text-muted">Laissez vide pour afficher à tous les utilisateurs</small>
+                            </div>
+                        </div>
+                        <div class="col-md-6">
+                            <div class="mb-3">
+                                <div class="form-check">
+                                    <input class="form-check-input" type="checkbox" id="alerteActive" name="isActive" checked>
+                                    <label class="form-check-label" for="alerteActive">
+                                        Alerte active
+                                    </label>
+                                </div>
+                            </div>
+                            
+                            <div class="mb-3">
+                                <div class="form-check">
+                                    <input class="form-check-input" type="checkbox" id="alerteDismissible" name="dismissible" checked>
+                                    <label class="form-check-label" for="alerteDismissible">
+                                        Peut être fermée par l'utilisateur
+                                    </label>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </form>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Annuler</button>
+                <button type="button" class="btn btn-primary" onclick="sauvegarderAlerte()">
+                    <i class="fas fa-save me-1"></i>Enregistrer
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<style>
+.alert-dismissible {
+    transition: all 0.3s ease;
+}
+.table-responsive {
+    border-radius: 0.5rem;
+    overflow: hidden;
+}
+.badge-type {
+    font-size: 0.75rem;
+    padding: 0.4rem 0.6rem;
+}
+</style>
+
+<script>
+function initAlertes() {
+    console.log('🔍 DEBUG: Initialisation des alertes admin');
+    chargerAlertesAdmin();
+}
+
+// Charger les alertes pour l'admin
+function chargerAlertesAdmin() {
+    const loading = document.getElementById('alertes-admin-loading');
+    const container = document.getElementById('alertes-admin-container');
+    const empty = document.getElementById('alertes-admin-empty');
+    
+    loading.style.display = 'block';
+    container.style.display = 'none';
+    empty.style.display = 'none';
+    
+    fetch('{{ path('app_admin_alertes') }}', {
+        method: 'GET',
+        headers: { 'X-Requested-With': 'XMLHttpRequest' }
+    })
+    .then(response => response.json())
+    .then(data => {
+        loading.style.display = 'none';
+        
+        if (data.alertes.length === 0) {
+            empty.style.display = 'block';
+        } else {
+            container.style.display = 'block';
+            afficherTableauAlertes(data.alertes);
+        }
+    })
+    .catch(error => {
+        console.error('Erreur chargement alertes:', error);
+        loading.style.display = 'none';
+        container.style.display = 'block';
+        document.getElementById('alertes-admin-tbody').innerHTML = 
+            '<tr><td colspan="7" class="text-center text-danger">Erreur de chargement</td></tr>';
+    });
+}
+
+// Afficher le tableau des alertes
+function afficherTableauAlertes(alertes) {
+    const tbody = document.getElementById('alertes-admin-tbody');
+    let html = '';
+    
+    alertes.forEach(alerte => {
+        const statusBadge = alerte.isActive ? 
+            '<span class="badge bg-success">Active</span>' : 
+            '<span class="badge bg-secondary">Inactive</span>';
+            
+        const dismissibleBadge = alerte.dismissible ? 
+            '<span class="badge bg-info">Oui</span>' : 
+            '<span class="badge bg-secondary">Non</span>';
+            
+        const typeBadge = `<span class="badge badge-type bg-${alerte.type === 'info' ? 'primary' : alerte.type}">${alerte.type.toUpperCase()}</span>`;
+        
+        const expiration = alerte.dateExpiration || '<span class="text-muted">Permanente</span>';
+        const isExpired = alerte.isExpired ? ' <span class="badge bg-danger">Expirée</span>' : '';
+        
+        html += `
+            <tr class="${alerte.isExpired ? 'text-muted' : ''}">
+                <td class="text-center"><strong>${alerte.ordre}</strong></td>
+                <td>
+                    <div class="fw-bold">${alerte.titre}</div>
+                    <small class="text-muted">${alerte.message.substring(0, 80)}${alerte.message.length > 80 ? '...' : ''}</small>
+                </td>
+                <td>${typeBadge}</td>
+                <td>${statusBadge}</td>
+                <td>${dismissibleBadge}</td>
+                <td>${expiration}${isExpired}</td>
+                <td>
+                    <button class="btn btn-outline-primary btn-sm me-1" onclick="modifierAlerte(${alerte.id})" title="Modifier">
+                        <i class="fas fa-edit"></i>
+                    </button>
+                    <button class="btn btn-outline-danger btn-sm" onclick="supprimerAlerte(${alerte.id})" title="Supprimer">
+                        <i class="fas fa-trash"></i>
+                    </button>
+                </td>
+            </tr>
+        `;
+    });
+    
+    tbody.innerHTML = html;
+}
+
+// Nouvelle alerte
+function ajouterAlerte() {
+    resetAlerteForm();
+    document.getElementById('alerteModalTitle').innerHTML = '<i class="fas fa-bell me-2"></i>Nouvelle alerte';
+    const modal = new bootstrap.Modal(document.getElementById('alerteModal'));
+    modal.show();
+}
+
+// Modifier alerte
+function modifierAlerte(alerteId) {
+    fetch(`{{ path('app_admin_alertes_get', {id: '__ID__'}) }}`.replace('__ID__', alerteId))
+        .then(response => response.json())
+        .then(alerte => {
+            // Remplir le formulaire
+            document.getElementById('alerteId').value = alerte.id;
+            document.getElementById('alerteTitre').value = alerte.titre;
+            document.getElementById('alerteMessage').value = alerte.message;
+            document.getElementById('alerteType').value = alerte.type;
+            document.getElementById('alerteOrdre').value = alerte.ordre;
+            document.getElementById('alerteActive').checked = alerte.isActive;
+            document.getElementById('alerteDismissible').checked = alerte.dismissible;
+            
+            if (alerte.dateExpiration) {
+                document.getElementById('alerteExpiration').value = alerte.dateExpiration;
+            }
+            
+            // Cocher les cibles
+            document.querySelectorAll('input[name="cibles"]').forEach(input => {
+                input.checked = alerte.cibles.includes(input.value);
+            });
+            
+            document.getElementById('alerteModalTitle').innerHTML = '<i class="fas fa-edit me-2"></i>Modifier l\'alerte';
+            const modal = new bootstrap.Modal(document.getElementById('alerteModal'));
+            modal.show();
+        })
+        .catch(error => {
+            console.error('Erreur chargement alerte:', error);
+            alert('Erreur lors du chargement de l\'alerte');
+        });
+}
+
+// Sauvegarder alerte
+function sauvegarderAlerte() {
+    const form = document.getElementById('alerteForm');
+    const formData = new FormData(form);
+    const alerteId = document.getElementById('alerteId').value;
+    
+    // Récupérer les cibles cochées
+    const cibles = [];
+    document.querySelectorAll('input[name="cibles"]:checked').forEach(input => {
+        cibles.push(input.value);
+    });
+    
+    const data = {
+        titre: formData.get('titre'),
+        message: formData.get('message'),
+        type: formData.get('type'),
+        ordre: parseInt(formData.get('ordre')) || 0,
+        isActive: document.getElementById('alerteActive').checked,
+        dismissible: document.getElementById('alerteDismissible').checked,
+        dateExpiration: formData.get('dateExpiration') || null,
+        cibles: cibles
+    };
+    
+    const url = alerteId ? 
+        `{{ path('app_admin_alertes_update', {id: '__ID__'}) }}`.replace('__ID__', alerteId) :
+        '{{ path('app_admin_alertes_create') }}';
+    const method = alerteId ? 'PUT' : 'POST';
+    
+    fetch(url, {
+        method: method,
+        headers: {
+            'Content-Type': 'application/json',
+            'X-Requested-With': 'XMLHttpRequest'
+        },
+        body: JSON.stringify(data)
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.success) {
+            bootstrap.Modal.getInstance(document.getElementById('alerteModal')).hide();
+            chargerAlertesAdmin();
+            
+            // Notification succès
+            const toast = document.createElement('div');
+            toast.className = 'toast align-items-center text-bg-success border-0 position-fixed';
+            toast.style.cssText = 'top: 20px; right: 20px; z-index: 9999;';
+            toast.innerHTML = `
+                <div class="d-flex">
+                    <div class="toast-body">
+                        <i class="fas fa-check me-2"></i>${data.message}
+                    </div>
+                    <button type="button" class="btn-close btn-close-white me-2 m-auto" data-bs-dismiss="toast"></button>
+                </div>
+            `;
+            document.body.appendChild(toast);
+            const bsToast = new bootstrap.Toast(toast);
+            bsToast.show();
+            setTimeout(() => toast.remove(), 5000);
+        } else {
+            alert('Erreur: ' + data.message);
+        }
+    })
+    .catch(error => {
+        console.error('Erreur sauvegarde alerte:', error);
+        alert('Erreur lors de la sauvegarde');
+    });
+}
+
+// Supprimer alerte
+function supprimerAlerte(alerteId) {
+    if (!confirm('Êtes-vous sûr de vouloir supprimer cette alerte ?')) {
+        return;
+    }
+    
+    fetch(`{{ path('app_admin_alertes_delete', {id: '__ID__'}) }}`.replace('__ID__', alerteId), {
+        method: 'DELETE',
+        headers: { 'X-Requested-With': 'XMLHttpRequest' }
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.success) {
+            chargerAlertesAdmin();
+        } else {
+            alert('Erreur: ' + data.message);
+        }
+    })
+    .catch(error => {
+        console.error('Erreur suppression alerte:', error);
+        alert('Erreur lors de la suppression');
+    });
+}
+
+// Reset formulaire
+function resetAlerteForm() {
+    document.getElementById('alerteForm').reset();
+    document.getElementById('alerteId').value = '';
+    document.querySelectorAll('input[name="cibles"]').forEach(input => {
+        input.checked = false;
+    });
+}
+</script>

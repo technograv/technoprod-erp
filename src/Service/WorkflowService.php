@@ -18,8 +18,8 @@ class WorkflowService
      */
     public function convertDevisToCommande(Devis $devis): Commande
     {
-        if ($devis->getStatut() !== 'accepte') {
-            throw new \InvalidArgumentException('Le devis doit être accepté pour être converti en commande');
+        if (!in_array($devis->getStatut(), ['accepte', 'signe', 'acompte_regle'])) {
+            throw new \InvalidArgumentException('Le devis doit être accepté, signé ou avoir un acompte réglé pour être converti en commande');
         }
 
         // Vérifier qu'il n'y a pas déjà une commande pour ce devis
@@ -216,7 +216,7 @@ class WorkflowService
         }
         
         // Action spéciale pour convertir en commande
-        if ($devis->getStatut() === 'accepte') {
+        if (in_array($devis->getStatut(), ['accepte', 'signe', 'acompte_regle'])) {
             $actions[] = [
                 'action' => 'convert_to_commande',
                 'label' => 'Convertir en commande',

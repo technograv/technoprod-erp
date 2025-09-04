@@ -2892,4 +2892,161 @@
 })();
 </script>
 
+<!-- Section Gestion des Équipes Commerciales -->
+<div class="card mt-4">
+    <div class="card-header">
+        <h4 class="card-title mb-0">
+            <i class="fas fa-users-cog me-2"></i>Gestion des Équipes Commerciales
+        </h4>
+    </div>
+    <div class="card-body">
+        <!-- Navigation simple -->
+        <div class="text-center mb-3">
+            <div class="btn-group" role="group">
+                <button type="button" class="btn btn-outline-primary active" onclick="showObjectifs()">
+                    <i class="fas fa-target me-2"></i>Objectifs Commerciaux
+                </button>
+                <button type="button" class="btn btn-outline-primary" onclick="showPerformances()">
+                    <i class="fas fa-chart-line me-2"></i>Performances & Historique
+                </button>
+            </div>
+        </div>
+
+        <!-- Panel Objectifs -->
+        <div id="objectifs-panel">
+            <div class="row">
+                <div class="col-md-12">
+                    <h5><i class="fas fa-target text-primary me-2"></i>Définir les Objectifs Commerciaux</h5>
+                    <div class="table-responsive">
+                        <table class="table table-striped">
+                            <thead>
+                                <tr>
+                                    <th>Commercial</th>
+                                    <th>Objectif Mensuel (€)</th>
+                                    <th>Objectif Semestriel (€)</th>
+                                    <th>Date de début</th>
+                                    <th>Actions</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% if commerciaux is defined and commerciaux|length > 0 %}
+                                    {% for commercial in commerciaux %}
+                                    <tr>
+                                        <td>
+                                            <span class="badge bg-secondary me-2" style="background-color: {{ commercial.secteurs|length > 0 ? commercial.secteurs[0].couleurHex : '#6c757d' }};">●</span>
+                                            {{ commercial.nom }}
+                                        </td>
+                                        <td>
+                                            <input type="number" class="form-control form-control-sm" 
+                                                   value="0" 
+                                                   placeholder="0" data-commercial-id="{{ commercial.id }}" data-field="objectif-mensuel">
+                                        </td>
+                                        <td>
+                                            <input type="number" class="form-control form-control-sm" 
+                                                   value="0" 
+                                                   placeholder="0" data-commercial-id="{{ commercial.id }}" data-field="objectif-semestriel">
+                                        </td>
+                                        <td>
+                                            <input type="date" class="form-control form-control-sm" 
+                                                   value="{{ 'now'|date('Y-m-d') }}" data-commercial-id="{{ commercial.id }}" data-field="date-debut">
+                                        </td>
+                                        <td>
+                                            <button class="btn btn-sm btn-success" onclick="sauvegarderObjectif({{ commercial.id }})">
+                                                <i class="fas fa-save"></i>
+                                            </button>
+                                        </td>
+                                    </tr>
+                                    {% endfor %}
+                                {% else %}
+                                    <tr>
+                                        <td colspan="5" class="text-center text-muted">
+                                            <i class="fas fa-users-slash me-2"></i>Aucun commercial trouvé
+                                        </td>
+                                    </tr>
+                                {% endif %}
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Panel Performances -->
+        <div id="performances-panel" style="display: none;">
+            <div class="row">
+                <div class="col-md-12">
+                    <h5><i class="fas fa-chart-line text-success me-2"></i>Performances & Historique</h5>
+                    
+                    {% if commerciaux is defined and commerciaux|length > 0 %}
+                        <div class="row">
+                            {% for commercial in commerciaux %}
+                            <div class="col-lg-6 col-md-12 mb-4">
+                                <div class="card">
+                                    <div class="card-header">
+                                        <h6 class="card-title mb-0">{{ commercial.nom }}</h6>
+                                        <small class="text-muted">Secteur: {{ commercial.secteurs|length > 0 ? commercial.secteurs[0].nomSecteur : 'Non assigné' }}</small>
+                                    </div>
+                                    <div class="card-body">
+                                        <!-- Graphique placeholder -->
+                                        <canvas id="chart-{{ commercial.id }}" width="400" height="200"></canvas>
+                                        
+                                        <!-- Stats résumé -->
+                                        <div class="row text-center mt-3">
+                                            <div class="col-4">
+                                                <small class="text-muted">Ce mois</small>
+                                                <br><strong class="text-primary">0€</strong>
+                                            </div>
+                                            <div class="col-4">
+                                                <small class="text-muted">Semestre</small>
+                                                <br><strong class="text-success">0€</strong>
+                                            </div>
+                                            <div class="col-4">
+                                                <small class="text-muted">Objectif atteint</small>
+                                                <br><strong class="text-warning">0%</strong>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                            {% endfor %}
+                        </div>
+                    {% else %}
+                        <div class="text-center py-4">
+                            <i class="fas fa-chart-line fa-3x text-muted mb-3"></i>
+                            <p class="text-muted">Aucun commercial trouvé pour afficher les performances</p>
+                        </div>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+function showObjectifs() {
+    document.getElementById('objectifs-panel').style.display = 'block';
+    document.getElementById('performances-panel').style.display = 'none';
+    
+    // Update buttons
+    const buttons = document.querySelectorAll('.btn-group .btn');
+    buttons.forEach(btn => btn.classList.remove('active'));
+    event.target.classList.add('active');
+}
+
+function showPerformances() {
+    document.getElementById('objectifs-panel').style.display = 'none';
+    document.getElementById('performances-panel').style.display = 'block';
+    
+    // Update buttons
+    const buttons = document.querySelectorAll('.btn-group .btn');
+    buttons.forEach(btn => btn.classList.remove('active'));
+    event.target.classList.add('active');
+}
+
+function sauvegarderObjectif(commercialId) {
+    // Cette fonction sera implémentée côté serveur si nécessaire
+    alert('Fonctionnalité de sauvegarde des objectifs à implémenter');
+}
+</script>
+
 {# Fin du template AJAX #}

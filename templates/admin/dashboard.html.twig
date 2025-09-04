@@ -178,7 +178,7 @@
             </li>
             <li class="nav-item">
                 <a class="nav-link" data-bs-toggle="tab" href="#secteurs" role="tab">
-                    <i class="fas fa-map me-2"></i>Secteurs
+                    <i class="fas fa-map me-2"></i>Secteurs et commerciaux
                 </a>
             </li>
             {% else %}
@@ -767,10 +767,6 @@
         {% if is_societe_mere %}
         <div class="tab-pane fade" id="parametres" role="tabpanel">
             <div class="admin-section">
-                <h3 class="section-title">
-                    <i class="fas fa-server me-2"></i>Configuration Système
-                </h3>
-                <p class="text-muted mb-4">Configuration technique et paramètres généraux de l'application</p>
                 <div class="text-center">
                     <div class="spinner-border text-primary" role="status">
                         <span class="visually-hidden">Chargement...</span>
@@ -795,7 +791,7 @@
         </div>
 
         <div class="tab-pane fade" id="secteurs" role="tabpanel">
-            {% include 'admin/secteurs.html.twig' with {'google_maps_api_key': google_maps_api_key, 'secteurs': secteurs} %}
+            {% include 'admin/secteurs.html.twig' with {'google_maps_api_key': google_maps_api_key, 'secteurs': secteurs, 'commerciaux': commerciaux} %}
             <script>
             // Forcer l'initialisation des secteurs après chargement du contenu
             document.addEventListener('DOMContentLoaded', function() {
@@ -1041,7 +1037,8 @@
             unites: '{{ path("app_admin_unites") }}',
             tags: '{{ path("app_admin_tags") }}',
             transporteurs: '{{ path("app_admin_transporteurs") }}',
-            frais_port: '{{ path("app_admin_frais_port") }}'
+            frais_port: '{{ path("app_admin_frais_port") }}',
+            parametres: '{{ path("app_admin_parametres") }}'
         };
     </script>
     <script src="{{ asset('js/admin/ajax-loader.js') }}"></script>

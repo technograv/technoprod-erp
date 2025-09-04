@@ -6,6 +6,7 @@ use App\Entity\Commande;
 use App\Form\CommandeType;
 use App\Repository\CommandeRepository;
 use App\Service\WorkflowService;
+use App\Service\AutoEventService;
 use Doctrine\ORM\EntityManagerInterface;
 use Symfony\Bundle\FrameworkBundle\Controller\AbstractController;
 use Symfony\Component\HttpFoundation\Request;
@@ -17,6 +18,7 @@ class CommandeController extends AbstractController
 {
     public function __construct(
         private WorkflowService $workflowService,
+        private AutoEventService $autoEventService,
         private EntityManagerInterface $entityManager
     ) {}
 
@@ -64,11 +66,28 @@ class CommandeController extends AbstractController
     #[Route('/{id}/edit', name: 'app_commande_edit', methods: ['GET', 'POST'])]
     public function edit(Request $request, Commande $commande, EntityManagerInterface $entityManager): Response
     {
+        // Sauvegarder l'ancienne date de livraison pour détecter les changements
+        $oldDateLivraison = $commande->getDateLivraisonPrevue();
+        
         $form = $this->createForm(CommandeType::class, $commande);
         $form->handleRequest($request);
 
         if ($form->isSubmitted() && $form->isValid()) {
             $commande->setUpdatedAt(new \DateTimeImmutable());
+            
+            // Créer automatiquement un événement de livraison si une nouvelle date est définie
+            $newDateLivraison = $commande->getDateLivraisonPrevue();
+            if ($newDateLivraison && (!$oldDateLivraison || $oldDateLivraison->format('Y-m-d') !== $newDateLivraison->format('Y-m-d'))) {
+                $this->autoEventService->createLivraisonEvent($commande);
+            }
+            
+            // Créer également un événement si la date de livraison réelle est définie/modifiée
+            $newDateLivraisonReelle = $commande->getDateLivraisonReelle();
+            $oldDateLivraisonReelle = $entityManager->getUnitOfWork()->getOriginalEntityData($commande)['dateLivraisonReelle'] ?? null;
+            if ($newDateLivraisonReelle && (!$oldDateLivraisonReelle || $oldDateLivraisonReelle->format('Y-m-d') !== $newDateLivraisonReelle->format('Y-m-d'))) {
+                $this->autoEventService->createLivraisonEvent($commande);
+            }
+            
             $entityManager->flush();
 
             $this->addFlash('success', 'Commande modifiée avec succès !');

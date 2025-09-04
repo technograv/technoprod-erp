@@ -83,7 +83,9 @@ class ComptabilisationService
             $ecriture->setDocumentType('facture');
             $ecriture->setDocumentId($facture->getId());
             $ecriture->setExerciceComptable($exercice);
-            $ecriture->setCreatedBy($this->security->getUser());
+            if ($user = $this->security->getUser()) {
+                $ecriture->setCreatedBy($user);
+            }
 
             $lignes = [];
 
@@ -145,25 +147,33 @@ class ComptabilisationService
                 throw new \Exception("Écriture comptable déséquilibrée pour la facture {$facture->getNumeroFacture()}");
             }
 
-            // 5. Sécurisation selon NF203
-            $this->integrityService->secureDocument(
-                $ecriture,
-                $this->security->getUser(),
-                $this->requestStack->getCurrentRequest()?->getClientIp() ?? '127.0.0.1'
-            );
+            // Flush pour obtenir l'ID avant sécurisation
+            $this->em->flush();
 
-            // 6. Audit trail
-            $this->auditService->logEntityChange(
-                $ecriture,
-                'CREATE',
-                [],
-                [
-                    'numeroEcriture' => $ecriture->getNumeroEcriture(),
-                    'montantTtc' => $facture->getTotalTtc(),
-                    'nombreLignes' => count($lignes)
-                ],
-                "Comptabilisation automatique de la facture {$facture->getNumeroFacture()}"
-            );
+            // 5. Sécurisation selon NF203 (si utilisateur connecté)
+            $user = $this->security->getUser();
+            if ($user) {
+                $this->integrityService->secureDocument(
+                    $ecriture,
+                    $user,
+                    $this->requestStack->getCurrentRequest()?->getClientIp() ?? '127.0.0.1'
+                );
+            }
+
+            // 6. Audit trail (si utilisateur connecté)
+            if ($user) {
+                $this->auditService->logEntityChange(
+                    $ecriture,
+                    'CREATE',
+                    [],
+                    [
+                        'numeroEcriture' => $ecriture->getNumeroEcriture(),
+                        'montantTtc' => $facture->getTotalTtc(),
+                        'nombreLignes' => count($lignes)
+                    ],
+                    "Comptabilisation automatique de la facture {$facture->getNumeroFacture()}"
+                );
+            }
 
             $this->em->flush();
             $this->em->commit();
@@ -293,7 +303,7 @@ class ComptabilisationService
         $ventilation = [];
 
         foreach ($facture->getFactureItems() as $item) {
-            $tauxTva = $item->getTauxTva() ?? 20.0; // TVA par défaut 20%
+            $tauxTva = floatval($item->getTvaPercent() ?? '20.00'); // TVA par défaut 20%
             
             if (!isset($ventilation[$tauxTva])) {
                 $ventilation[$tauxTva] = [
@@ -302,7 +312,7 @@ class ComptabilisationService
                 ];
             }
 
-            $montantHt = bcmul($item->getQuantite(), $item->getPrixUnitaireHt(), 2);
+            $montantHt = $item->getTotalLigneHt();
             $montantTva = bcmul($montantHt, bcdiv($tauxTva, '100', 4), 2);
 
             $ventilation[$tauxTva]['ht'] = bcadd($ventilation[$tauxTva]['ht'], $montantHt, 2);

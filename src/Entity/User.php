@@ -46,10 +46,10 @@ class User implements UserInterface, PasswordAuthenticatedUserInterface
     #[ORM\Column(length: 255, nullable: true)]
     private ?string $googleId = null;
 
-    #[ORM\Column(length: 255, nullable: true)]
+    #[ORM\Column(type: 'text', nullable: true)]
     private ?string $googleAccessToken = null;
 
-    #[ORM\Column(length: 255, nullable: true)]
+    #[ORM\Column(type: 'text', nullable: true)]
     private ?string $googleRefreshToken = null;
 
     #[ORM\Column(length: 255, nullable: true)]
@@ -83,6 +83,15 @@ class User implements UserInterface, PasswordAuthenticatedUserInterface
 
     #[ORM\OneToMany(mappedBy: 'user', targetEntity: UserPermission::class)]
     private Collection $permissions;
+
+    #[ORM\Column(type: Types::DECIMAL, precision: 10, scale: 2, nullable: true)]
+    private ?string $objectifMensuel = null;
+
+    #[ORM\Column(type: Types::DECIMAL, precision: 10, scale: 2, nullable: true)]
+    private ?string $objectifSemestriel = null;
+
+    #[ORM\Column(type: Types::TEXT, nullable: true)]
+    private ?string $notesObjectifs = null;
 
     public function __construct()
     {
@@ -408,11 +417,33 @@ class User implements UserInterface, PasswordAuthenticatedUserInterface
             return true;
         }
 
+        // Vérifier les anciennes societeRoles (compatibilité)
         foreach ($this->societeRoles as $role) {
             if ($role->getSociete() === $societe && $role->isActive()) {
                 return true;
             }
         }
+        
+        // Vérifier les nouvelles UserPermission
+        foreach ($this->permissions as $permission) {
+            if ($permission->getSociete() === $societe && $permission->isActif()) {
+                return true;
+            }
+            
+            // Si l'utilisateur a accès à la société mère, il a automatiquement accès aux filles
+            if ($permission->isActif() && $permission->getSociete()->isMere() && 
+                $societe->getSocieteParent() === $permission->getSociete()) {
+                return true;
+            }
+        }
+        
+        // Vérifier accès via les groupes
+        foreach ($this->groupes as $groupe) {
+            if ($groupe->isActif() && $groupe->hasAccessToSociete($societe)) {
+                return true;
+            }
+        }
+        
         return false;
     }
 
@@ -470,12 +501,30 @@ class User implements UserInterface, PasswordAuthenticatedUserInterface
         }
 
         $societes = [];
+        
+        // 1. Sociétés via les anciens rôles (compatibilité)
         foreach ($this->societeRoles as $role) {
             if ($role->isActive()) {
-                $societes[] = $role->getSociete();
+                $societes[$role->getSociete()->getId()] = $role->getSociete();
             }
         }
-        return $societes;
+        
+        // 2. Sociétés via les groupes
+        $societesViaGroupes = $this->getAccessibleSocietesFromGroupes();
+        foreach ($societesViaGroupes as $societe) {
+            if ($societe->isActive()) {
+                $societes[$societe->getId()] = $societe;
+            }
+        }
+        
+        // 3. Sociétés via les permissions individuelles (nouveau système)
+        foreach ($this->permissions as $permission) {
+            if ($permission->isActif() && $permission->getSociete()->isActive()) {
+                $societes[$permission->getSociete()->getId()] = $permission->getSociete();
+            }
+        }
+        
+        return array_values($societes);
     }
 
     /**
@@ -743,5 +792,70 @@ class User implements UserInterface, PasswordAuthenticatedUserInterface
     public function hasMinimumLevelInSociete(int $requiredLevel, Societe $societe): bool
     {
         return $this->getMaxLevelInSociete($societe) >= $requiredLevel;
+    }
+
+    // ===== GESTION DES OBJECTIFS COMMERCIAUX =====
+
+    public function getObjectifMensuel(): ?float
+    {
+        return $this->objectifMensuel ? (float)$this->objectifMensuel : null;
+    }
+
+    public function setObjectifMensuel(?float $objectifMensuel): static
+    {
+        $this->objectifMensuel = $objectifMensuel ? (string)$objectifMensuel : null;
+        $this->updatedAt = new \DateTimeImmutable();
+        return $this;
+    }
+
+    public function getObjectifSemestriel(): ?float
+    {
+        return $this->objectifSemestriel ? (float)$this->objectifSemestriel : null;
+    }
+
+    public function setObjectifSemestriel(?float $objectifSemestriel): static
+    {
+        $this->objectifSemestriel = $objectifSemestriel ? (string)$objectifSemestriel : null;
+        $this->updatedAt = new \DateTimeImmutable();
+        return $this;
+    }
+
+    public function getNotesObjectifs(): ?string
+    {
+        return $this->notesObjectifs;
+    }
+
+    public function setNotesObjectifs(?string $notesObjectifs): static
+    {
+        $this->notesObjectifs = $notesObjectifs;
+        $this->updatedAt = new \DateTimeImmutable();
+        return $this;
+    }
+
+    /**
+     * @return Collection<int, Secteur>
+     */
+    public function getSecteursCommercial(): Collection
+    {
+        return $this->secteurs;
+    }
+
+    public function addSecteurCommercial(Secteur $secteur): static
+    {
+        if (!$this->secteurs->contains($secteur)) {
+            $this->secteurs->add($secteur);
+            $secteur->setCommercial($this);
+        }
+        return $this;
+    }
+
+    public function removeSecteurCommercial(Secteur $secteur): static
+    {
+        if ($this->secteurs->removeElement($secteur)) {
+            if ($secteur->getCommercial() === $this) {
+                $secteur->setCommercial(null);
+            }
+        }
+        return $this;
     }
 }
