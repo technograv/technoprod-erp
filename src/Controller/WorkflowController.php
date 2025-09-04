@@ -34,7 +34,8 @@ class WorkflowController extends AbstractController
         private ValidatorInterface $validator,
         private DashboardService $dashboardService,
         private AlerteService $alerteService,
-        private SecteurService $secteurService
+        private SecteurService $secteurService,
+        private \App\Service\CommuneGeometryCacheService $cacheService
     ) {}
 
     #[Route('/devis/{id}/action/{action}', name: 'workflow_devis_action', methods: ['POST'])]
@@ -214,23 +215,57 @@ class WorkflowController extends AbstractController
         ]);
     }
 
-    #[Route('/dashboard/mon-secteur', name: 'workflow_mon_secteur', methods: ['GET'])]
-    public function getMonSecteur(): JsonResponse
+    #[Route('/dashboard/mon-secteur-test', name: 'workflow_mon_secteur_test', methods: ['GET'])]
+    public function getMonSecteurTest(): JsonResponse
     {
         try {
-            /** @var User $user */
             $user = $this->getUser();
             
             if (!$user) {
                 return $this->json([
                     'success' => false,
                     'message' => 'Utilisateur non authentifié'
-                ]);
+                ], 401);
             }
             
-            // Test simplifié pour debug
+            return $this->json([
+                'success' => true,
+                'message' => 'Test endpoint OK',
+                'user' => $user->getNom() . ' ' . $user->getPrenom(),
+                'user_id' => $user->getId()
+            ]);
+            
+        } catch (\Exception $e) {
+            return $this->json([
+                'success' => false,
+                'message' => 'Erreur: ' . $e->getMessage()
+            ], 500);
+        }
+    }
+
+    #[Route('/dashboard/mon-secteur', name: 'workflow_mon_secteur', methods: ['GET'])]
+    public function getMonSecteur(): JsonResponse
+    {
+        error_log("🔍 DEBUG: getMonSecteur - Version simplifiée pour dashboard commercial");
+        try {
+            /** @var User $user */
+            $user = $this->getUser();
+            
+            if (!$user) {
+                error_log("❌ DEBUG: Utilisateur non authentifié");
+                return $this->json([
+                    'success' => false,
+                    'message' => 'Utilisateur non authentifié'
+                ], 401);
+            }
+            
+            error_log("👤 DEBUG: Utilisateur connecté: " . $user->getNom() . " " . $user->getPrenom() . " (ID: " . $user->getId() . ")");
+            
+            // Récupérer SEULEMENT les secteurs de l'utilisateur connecté
             $secteurs = $this->entityManager->getRepository(Secteur::class)
                 ->findBy(['commercial' => $user, 'isActive' => true]);
+            
+            error_log("🎯 DEBUG: Secteurs trouvés: " . count($secteurs));
             
             if (empty($secteurs)) {
                 return $this->json([
@@ -243,63 +278,66 @@ class WorkflowController extends AbstractController
                 ]);
             }
             
-            // Utiliser une structure de données simplifiée
-            $data = [
-                'secteurs' => [],
-                'contrats_actifs' => [],
+            // Construire les données secteurs simples pour le JavaScript commercial
+            $secteursData = [];
+            
+            foreach ($secteurs as $secteur) {
+                error_log("📍 DEBUG: Traitement secteur: " . $secteur->getNomSecteur());
+                
+                // Calculer le centre basé sur les attributions
+                $centreCoords = $this->calculateSecteurCenterFromAttributions($secteur);
+                
+                $secteurData = [
+                    'id' => $secteur->getId(),
+                    'nom' => $secteur->getNomSecteur(),
+                    'couleur' => $secteur->getCouleurHex() ?: '#3498db',
+                    'commercial' => $secteur->getCommercial() ? 
+                        trim(($secteur->getCommercial()->getPrenom() ?: '') . ' ' . ($secteur->getCommercial()->getNom() ?: '')) : 
+                        null,
+                    'description' => $secteur->getDescription(),
+                    'isActive' => $secteur->getIsActive(),
+                    // Champs attendus par le JavaScript commercial
+                    'nombre_divisions' => count($secteur->getAttributions()),
+                    'nombre_clients' => count($secteur->getClients()),
+                    'resume_territoire' => $secteur->getNomSecteur(),
+                    'latitude' => $centreCoords['lat'],
+                    'longitude' => $centreCoords['lng'],
+                    // Ajouter les attributions pour compatibilité avec l'affichage polygones si nécessaire
+                    'attributions' => []
+                ];
+                
+                error_log("📍 DEBUG: Secteur {$secteur->getNomSecteur()} - Centre: ({$centreCoords['lat']}, {$centreCoords['lng']})");
+                
+                $secteursData[] = $secteurData;
+            }
+            
+            $response = [
+                'success' => true,
+                'secteurs' => $secteursData,
+                'contrats_actifs' => [], // Vide pour l'instant
+                'total_contrats' => 0,
                 'statistics' => [
-                    'total_secteurs' => count($secteurs),
-                    'total_clients' => 0,
-                    'total_zones' => 0
+                    'total_secteurs' => count($secteursData),
+                    'total_clients' => array_sum(array_column($secteursData, 'nombre_clients')),
+                    'total_zones' => array_sum(array_column($secteursData, 'nombre_divisions'))
+                ],
+                'debug' => [
+                    'user_id' => $user->getId(),
+                    'user_nom' => $user->getNom() . ' ' . $user->getPrenom(),
+                    'methode' => 'simple_commercial_dashboard'
                 ]
             ];
             
-            foreach ($secteurs as $secteur) {
-                $data['secteurs'][] = [
-                    'id' => $secteur->getId(),
-                    'nom' => $secteur->getNomSecteur(),
-                    'couleur' => $secteur->getCouleurHex() ?: '#007bff',
-                    'nombre_zones' => 0, // Simplifié pour debug
-                    'nombre_clients' => 0 // Simplifié pour debug
-                ];
-            }
-            
-            if (empty($data['secteurs'])) {
-                return $this->json([
-                    'success' => true,
-                    'secteurs' => [],
-                    'contrats_actifs' => [],
-                    'message' => 'Aucun secteur assigné'
-                ]);
-            }
-            
-            // Enrichir avec coordonnées pour Google Maps (version simplifiée)
-            $secteursData = [];
-            foreach ($data['secteurs'] as $secteurInfo) {
-                // Coordonnées par défaut (Toulouse) pour debug
-                $secteursData[] = [
-                    'id' => $secteurInfo['id'],
-                    'nom' => $secteurInfo['nom'],
-                    'couleur' => $secteurInfo['couleur'],
-                    'nombre_divisions' => $secteurInfo['nombre_zones'],
-                    'resume_territoire' => $secteurInfo['nom'],
-                    'latitude' => 43.6,  // Toulouse par défaut
-                    'longitude' => 1.4   // Toulouse par défaut
-                ];
-            }
-            
-            return $this->json([
-                'success' => true,
-                'secteurs' => $secteursData,
-                'contrats_actifs' => $data['contrats_actifs'],
-                'total_contrats' => count($data['contrats_actifs']),
-                'statistics' => $data['statistics']
-            ]);
+            error_log("✅ DEBUG: Réponse construite avec " . count($secteursData) . " secteurs");
+            return $this->json($response);
             
         } catch (\Exception $e) {
+            error_log("❌ ERREUR getMonSecteur WorkflowController: " . $e->getMessage());
+            error_log("❌ ERREUR Stack trace: " . $e->getTraceAsString());
             return $this->json([
                 'success' => false,
-                'message' => 'Erreur serveur: ' . $e->getMessage()
+                'message' => 'Erreur serveur: ' . $e->getMessage(),
+                'debug_error' => $e->getMessage()
             ], 500);
         }
     }
@@ -710,12 +748,145 @@ class WorkflowController extends AbstractController
         }
     }
 
-    private function calculateSecteurCenter(Secteur $secteur): array
+    /**
+     * Récupérer toutes les communes d'un type géographique donné
+     */
+    private function getCommunesPourType(string $type, $division, EntityManagerInterface $entityManager): array
     {
-        $zones = $secteur->getAttributions();
+        switch ($type) {
+            case 'commune':
+                // Une seule commune
+                return [[
+                    'codeInseeCommune' => $division->getCodeInseeCommune(),
+                    'nomCommune' => $division->getNomCommune()
+                ]];
+                
+            case 'code_postal':
+                // Toutes les communes de ce code postal
+                $communes = $entityManager->createQuery('
+                    SELECT d.codeInseeCommune, d.nomCommune 
+                    FROM App\Entity\DivisionAdministrative d 
+                    WHERE d.codePostal = :codePostal 
+                    AND d.codeInseeCommune IS NOT NULL
+                    ORDER BY d.nomCommune
+                ')
+                ->setParameter('codePostal', $division->getCodePostal())
+                ->getResult();
+                return $communes;
+                
+            case 'epci':
+                // Toutes les communes de cet EPCI
+                $communes = $entityManager->createQuery('
+                    SELECT d.codeInseeCommune, d.nomCommune 
+                    FROM App\Entity\DivisionAdministrative d 
+                    WHERE d.codeEpci = :codeEpci 
+                    AND d.codeInseeCommune IS NOT NULL
+                    ORDER BY d.nomCommune
+                ')
+                ->setParameter('codeEpci', $division->getCodeEpci())
+                ->getResult();
+                return $communes;
+                
+            case 'departement':
+                // Toutes les communes de ce département
+                $communes = $entityManager->createQuery('
+                    SELECT d.codeInseeCommune, d.nomCommune 
+                    FROM App\Entity\DivisionAdministrative d 
+                    WHERE d.codeDepartement = :codeDepartement 
+                    AND d.codeInseeCommune IS NOT NULL
+                    ORDER BY d.nomCommune
+                ')
+                ->setParameter('codeDepartement', $division->getCodeDepartement())
+                ->getResult();
+                return $communes;
+                
+            case 'region':
+                // Toutes les communes de cette région
+                $communes = $entityManager->createQuery('
+                    SELECT d.codeInseeCommune, d.nomCommune 
+                    FROM App\Entity\DivisionAdministrative d 
+                    WHERE d.codeRegion = :codeRegion 
+                    AND d.codeInseeCommune IS NOT NULL
+                    ORDER BY d.nomCommune
+                ')
+                ->setParameter('codeRegion', $division->getCodeRegion())
+                ->getResult();
+                return $communes;
+                
+            default:
+                return [];
+        }
+    }
+
+    /**
+     * Calcule les bounds d'un secteur avec positionnement des coordonnées
+     */
+    private function calculerBoundsSecteurHierarchique(array &$secteurData, Secteur $secteur, array $communesAvecGeometries): void
+    {
+        $minLat = $minLng = PHP_FLOAT_MAX;
+        $maxLat = $maxLng = PHP_FLOAT_MIN;
+        $hasCoordinates = false;
+        $totalLat = $totalLng = 0;
+        $countCoords = 0;
         
-        if ($zones->isEmpty()) {
-            // Centre Toulouse par défaut
+        foreach ($communesAvecGeometries as $commune) {
+            if (isset($commune['coordinates']) && is_array($commune['coordinates'])) {
+                foreach ($commune['coordinates'] as $coord) {
+                    if (isset($coord['lat']) && isset($coord['lng'])) {
+                        $lat = (float) $coord['lat'];
+                        $lng = (float) $coord['lng'];
+                        $minLat = min($minLat, $lat);
+                        $maxLat = max($maxLat, $lat);
+                        $minLng = min($minLng, $lng);
+                        $maxLng = max($maxLng, $lng);
+                        $totalLat += $lat;
+                        $totalLng += $lng;
+                        $countCoords++;
+                        $hasCoordinates = true;
+                    }
+                }
+            }
+        }
+        
+        if ($hasCoordinates && $countCoords > 0) {
+            // Calculer le centre géométrique
+            $centerLat = $totalLat / $countCoords;
+            $centerLng = $totalLng / $countCoords;
+            
+            // Mise à jour des coordonnées du secteur pour le JavaScript
+            $secteurData['latitude'] = round($centerLat, 6);
+            $secteurData['longitude'] = round($centerLng, 6);
+            $secteurData['hasCoordinates'] = true;
+            
+            // Optionnel: ajouter les bounds pour usage futur
+            $latMargin = ($maxLat - $minLat) * 0.1;
+            $lngMargin = ($maxLng - $minLng) * 0.1;
+            
+            $secteurData['bounds'] = [
+                'southwest' => [
+                    'lat' => $minLat - $latMargin,
+                    'lng' => $minLng - $lngMargin
+                ],
+                'northeast' => [
+                    'lat' => $maxLat + $latMargin,
+                    'lng' => $maxLng + $lngMargin
+                ]
+            ];
+            
+            error_log("📍 Secteur {$secteurData['nom']}: Centre calculé ({$centerLat}, {$centerLng}) à partir de {$countCoords} coordonnées");
+        }
+    }
+
+    /**
+     * Calcule le centre géographique d'un secteur basé sur ses attributions
+     * Utilise les coordonnées des divisions administratives pour un calcul précis
+     */
+    private function calculateSecteurCenterFromAttributions(Secteur $secteur): array
+    {
+        $attributions = $secteur->getAttributions();
+        
+        if ($attributions->isEmpty()) {
+            // Centre Toulouse par défaut si aucune attribution
             return ['lat' => 43.6, 'lng' => 1.4];
         }
         
@@ -723,15 +894,17 @@ class WorkflowController extends AbstractController
         $totalLng = 0;
         $count = 0;
         
-        foreach ($zones as $attribution) {
-            $zone = $attribution->getZone();
+        foreach ($attributions as $attribution) {
+            $division = $attribution->getDivisionAdministrative();
             
-            // Si la zone a des communes liées, utiliser leur centre
-            if ($zone->getCommuneFrancaise()) {
-                $commune = $zone->getCommuneFrancaise();
-                if ($commune->getLatitude() && $commune->getLongitude()) {
-                    $totalLat += (float) $commune->getLatitude();
-                    $totalLng += (float) $commune->getLongitude();
+            if ($division && $division->getLatitude() && $division->getLongitude()) {
+                $lat = (float) $division->getLatitude();
+                $lng = (float) $division->getLongitude();
+                
+                // Éviter les coordonnées par défaut ou invalides
+                if ($lat !== 0.0 && $lng !== 0.0 && $lat !== 43.6 && $lng !== 1.4) {
+                    $totalLat += $lat;
+                    $totalLng += $lng;
                     $count++;
                 }
             }
@@ -744,7 +917,13 @@ class WorkflowController extends AbstractController
             ];
         }
         
-        // Fallback Toulouse
+        // Si aucune coordonnée valide trouvée, utiliser le centre France/Toulouse
         return ['lat' => 43.6, 'lng' => 1.4];
+    }
+
+    private function calculateSecteurCenter(Secteur $secteur): array
+    {
+        // Utiliser la nouvelle méthode basée sur les attributions
+        return $this->calculateSecteurCenterFromAttributions($secteur);
     }
 }
