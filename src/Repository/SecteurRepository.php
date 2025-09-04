@@ -20,11 +20,15 @@ class SecteurRepository extends ServiceEntityRepository
     }
 
     /**
-     * Trouve les secteurs d'un commercial donné
+     * Trouve les secteurs d'un commercial donné avec relations preloadées
      */
     public function findByCommercial(int $commercialId): array
     {
         return $this->createQueryBuilder('s')
+            ->leftJoin('s.attributions', 'a')
+            ->leftJoin('a.zone', 'z')
+            ->leftJoin('z.communeFrancaise', 'cf')
+            ->addSelect('a', 'z', 'cf')
             ->andWhere('s.commercial = :commercial')
             ->setParameter('commercial', $commercialId)
             ->andWhere('s.isActive = true')
