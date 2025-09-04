@@ -13,8 +13,10 @@ use Symfony\Component\HttpFoundation\JsonResponse;
 use Symfony\Component\HttpFoundation\Request;
 use Symfony\Component\HttpFoundation\Response;
 use Symfony\Component\Routing\Attribute\Route;
+use Symfony\Component\Security\Http\Attribute\IsGranted;
 
 #[Route('/client')]
+#[IsGranted('ROLE_USER')]
 final class ClientController extends AbstractController
 {
     #[Route('/', name: 'app_client_index', methods: ['GET'])]
