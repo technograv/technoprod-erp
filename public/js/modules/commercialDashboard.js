@@ -225,14 +225,61 @@ class CommercialDashboard {
             return;
         }
 
-        const map = new google.maps.Map(document.getElementById('map-secteur-commercial'), {
-            zoom: 8,
-            center: { lat: 43.6, lng: 1.4 }, // Centre Toulouse par défaut
-            mapTypeId: google.maps.MapTypeId.ROADMAP
-        });
-
+        // Calcul automatique du centre et bounds basés sur les secteurs
         const bounds = new google.maps.LatLngBounds();
         let hasValidCoords = false;
+        let totalLat = 0, totalLng = 0, validSecteurs = 0;
+        
+        // Première passe : calculer les bounds et le centre
+        secteurs.forEach(secteur => {
+            const lat = parseFloat(secteur.latitude);
+            const lng = parseFloat(secteur.longitude);
+            
+            if (!isNaN(lat) && !isNaN(lng) && lat !== 43.6 && lng !== 1.4) { // Éviter les coordonnées par défaut
+                bounds.extend({ lat, lng });
+                totalLat += lat;
+                totalLng += lng;
+                validSecteurs++;
+                hasValidCoords = true;
+            }
+        });
+        
+        // Calculer le centre optimal
+        let center = { lat: 43.6, lng: 1.4 }; // Toulouse par défaut
+        let zoom = 8; // Zoom par défaut
+        
+        if (hasValidCoords && validSecteurs > 0) {
+            center = {
+                lat: totalLat / validSecteurs,
+                lng: totalLng / validSecteurs
+            };
+            
+            // Calculer un zoom approprié selon la dispersion des secteurs
+            if (validSecteurs === 1) {
+                zoom = 11; // Zoom rapproché pour un seul secteur
+            } else {
+                // Zoom basé sur la distance entre les points les plus éloignés
+                const ne = bounds.getNorthEast();
+                const sw = bounds.getSouthWest();
+                const distance = Math.sqrt(
+                    Math.pow(ne.lat() - sw.lat(), 2) + 
+                    Math.pow(ne.lng() - sw.lng(), 2)
+                );
+                
+                if (distance < 0.1) zoom = 12;      // Très proche
+                else if (distance < 0.3) zoom = 10; // Proche  
+                else if (distance < 0.8) zoom = 9;  // Moyen
+                else zoom = 8;                      // Éloigné
+            }
+        }
+        
+        console.log('📍 [DEBUG] Centre calculé:', center, 'Zoom:', zoom, 'Secteurs valides:', validSecteurs);
+
+        const map = new google.maps.Map(document.getElementById('map-secteur-commercial'), {
+            zoom: zoom,
+            center: center,
+            mapTypeId: google.maps.MapTypeId.ROADMAP
+        });
         
         console.log('📍 [DEBUG] Création des marqueurs pour', secteurs.length, 'secteurs...');
         
