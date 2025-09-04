@@ -228,16 +228,10 @@ class WorkflowController extends AbstractController
                 ]);
             }
             
-            // Récupérer les secteurs assignés au commercial
-            $secteurs = $this->entityManager->getRepository(Secteur::class)
-                ->createQueryBuilder('s')
-                ->where('s.commercial = :user')
-                ->andWhere('s.isActive = true')
-                ->setParameter('user', $user)
-                ->getQuery()
-                ->getResult();
+            // Utiliser le service optimisé
+            $data = $this->secteurService->getSecteurDataForCommercial($user);
             
-            if (empty($secteurs)) {
+            if (empty($data['secteurs'])) {
                 return $this->json([
                     'success' => true,
                     'secteurs' => [],
@@ -246,31 +240,30 @@ class WorkflowController extends AbstractController
                 ]);
             }
             
-            // Formater les données des secteurs pour Google Maps
+            // Enrichir avec coordonnées pour Google Maps
             $secteursData = [];
-            foreach ($secteurs as $secteur) {
-                // Calculer le centre du secteur basé sur ses zones
+            foreach ($data['secteurs'] as $secteurInfo) {
+                // Récupérer l'entité pour calculer le centre
+                $secteur = $this->entityManager->getRepository(Secteur::class)->find($secteurInfo['id']);
                 $centreCoords = $this->calculateSecteurCenter($secteur);
                 
                 $secteursData[] = [
-                    'id' => $secteur->getId(),
-                    'nom' => $secteur->getNomSecteur(),
-                    'couleur' => $secteur->getCouleurHex() ?: '#007bff',
-                    'nombre_divisions' => count($secteur->getAttributions()),
-                    'resume_territoire' => $secteur->getNomSecteur(),
+                    'id' => $secteurInfo['id'],
+                    'nom' => $secteurInfo['nom'],
+                    'couleur' => $secteurInfo['couleur'] ?: '#007bff',
+                    'nombre_divisions' => $secteurInfo['nombre_zones'],
+                    'resume_territoire' => $secteurInfo['nom'],
                     'latitude' => $centreCoords['lat'],
                     'longitude' => $centreCoords['lng']
                 ];
             }
             
-            // Pour l'instant, pas de contrats actifs complexes
-            $contratsActifs = [];
-            
             return $this->json([
                 'success' => true,
                 'secteurs' => $secteursData,
-                'contrats_actifs' => $contratsActifs,
-                'total_contrats' => count($contratsActifs)
+                'contrats_actifs' => $data['contrats_actifs'],
+                'total_contrats' => count($data['contrats_actifs']),
+                'statistics' => $data['statistics']
             ]);
             
         } catch (\Exception $e) {
@@ -399,7 +392,7 @@ class WorkflowController extends AbstractController
                 ]);
             }
 
-            // Utiliser le service pour obtenir les alertes visibles
+            // Utiliser le service optimisé pour obtenir les alertes visibles
             $alertes = $this->alerteService->getVisibleAlertsForUser($user);
 
             // Formater les alertes

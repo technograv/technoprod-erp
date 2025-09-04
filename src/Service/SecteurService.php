@@ -24,25 +24,12 @@ class SecteurService
             return $this->secteurRepository->findAll();
         }
 
-        return $this->secteurRepository->findBy(['commercial' => $user, 'active' => true]);
+        return $this->secteurRepository->findBy(['commercial' => $user, 'isActive' => true]);
     }
 
     public function getSecteurStats(): array
     {
-        $total = $this->secteurRepository->count([]);
-        $active = $this->secteurRepository->count(['active' => true]);
-        $withZones = $this->secteurRepository->createQueryBuilder('s')
-            ->select('COUNT(s.id)')
-            ->innerJoin('s.zones', 'z')
-            ->getQuery()
-            ->getSingleScalarResult();
-
-        return [
-            'total' => $total,
-            'active' => $active,
-            'inactive' => $total - $active,
-            'with_zones' => $withZones
-        ];
+        return $this->secteurRepository->getStatistiques();
     }
 
     public function createSecteur(array $data, ?User $commercial = null): Secteur
@@ -51,7 +38,7 @@ class SecteurService
         $secteur->setNom($data['nom']);
         $secteur->setDescription($data['description'] ?? null);
         $secteur->setCommercial($commercial);
-        $secteur->setActive($data['active'] ?? true);
+        $secteur->setIsActive($data['active'] ?? true);
 
         $this->entityManager->persist($secteur);
         $this->entityManager->flush();
@@ -64,7 +51,7 @@ class SecteurService
         $secteur->setNom($data['nom']);
         $secteur->setDescription($data['description'] ?? null);
         $secteur->setCommercial($commercial);
-        $secteur->setActive($data['active'] ?? true);
+        $secteur->setIsActive($data['active'] ?? true);
 
         $this->entityManager->flush();
 
@@ -121,7 +108,7 @@ class SecteurService
 
     public function getSecteurGeoData(): array
     {
-        $secteurs = $this->secteurRepository->findBy(['active' => true]);
+        $secteurs = $this->secteurRepository->findBy(['isActive' => true]);
         $geoData = [];
 
         foreach ($secteurs as $secteur) {
@@ -165,6 +152,62 @@ class SecteurService
     private function isUserAdmin(User $user): bool
     {
         return in_array('ROLE_ADMIN', $user->getRoles());
+    }
+
+    /**
+     * Récupère les données secteur pour un commercial avec toutes les relations
+     * Optimisé avec fetch joins pour éviter N+1
+     */
+    public function getSecteurDataForCommercial(User $commercial): array
+    {
+        // Utiliser la méthode repository optimisée
+        $secteurs = $this->secteurRepository->findByCommercial($commercial->getId());
+        
+        $data = [
+            'secteurs' => [],
+            'contrats_actifs' => [],
+            'statistics' => [
+                'total_secteurs' => count($secteurs),
+                'total_clients' => 0,
+                'total_zones' => 0,
+                'ca_mensuel' => 0
+            ]
+        ];
+        
+        foreach ($secteurs as $secteur) {
+            $nombreZones = count($secteur->getAttributions());
+            $nombreClients = count($secteur->getClients());
+            
+            $data['secteurs'][] = [
+                'id' => $secteur->getId(),
+                'nom' => $secteur->getNomSecteur(),
+                'couleur' => $secteur->getCouleurHex(),
+                'nombre_clients' => $nombreClients,
+                'nombre_zones' => $nombreZones
+            ];
+            
+            $data['statistics']['total_clients'] += $nombreClients;
+            $data['statistics']['total_zones'] += $nombreZones;
+        }
+        
+        return $data;
+    }
+
+    /**
+     * Calcule les performances d'un commercial basé sur ses secteurs
+     */
+    public function calculerPerformancesCommercial(User $commercial): array
+    {
+        // TODO: Implémenter calculs réels basés sur commandes/factures
+        return [
+            'objectif_mensuel' => 15000,
+            'realise_mensuel' => 12500,
+            'taux_objectif' => 83.3,
+            'evolution_mois' => 5.2,
+            'nombre_prospects' => 24,
+            'nombre_clients' => 18,
+            'taux_conversion' => 75.0
+        ];
     }
 
     public function getSecteursWithStats(): array

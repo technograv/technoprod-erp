@@ -41,39 +41,21 @@ class AlerteRepository extends ServiceEntityRepository
 
     /**
      * Récupère les alertes actives pour un utilisateur donné
-     * Exclut les alertes fermées par l'utilisateur
+     * Exclut les alertes fermées par l'utilisateur - requête optimisée avec LEFT JOIN
      */
     public function findActiveAlertsForUser(User $user): array
     {
-        // Première requête simple - récupérer toutes les alertes actives
-        $alertesActives = $this->createQueryBuilder('a')
+        return $this->createQueryBuilder('a')
+            ->leftJoin(AlerteUtilisateur::class, 'au', 'WITH', 'au.alerte = a.id AND au.user = :user')
             ->where('a.isActive = true')
             ->andWhere('a.dateExpiration IS NULL OR a.dateExpiration > :now')
+            ->andWhere('au.id IS NULL') // Exclure les alertes déjà fermées
+            ->setParameter('user', $user)
             ->setParameter('now', new \DateTime())
             ->orderBy('a.ordre', 'ASC')
             ->addOrderBy('a.createdAt', 'DESC')
             ->getQuery()
             ->getResult();
-
-        // Deuxième requête - récupérer les alertes fermées par cet utilisateur
-        $alertesFermees = $this->getEntityManager()
-            ->getRepository(AlerteUtilisateur::class)
-            ->createQueryBuilder('au')
-            ->select('IDENTITY(au.alerte)')
-            ->where('au.user = :user')
-            ->setParameter('user', $user)
-            ->getQuery()
-            ->getSingleColumnResult();
-
-        // Filtrer côté PHP pour éviter les problèmes DQL
-        $alertesFiltered = [];
-        foreach ($alertesActives as $alerte) {
-            if (!in_array($alerte->getId(), $alertesFermees)) {
-                $alertesFiltered[] = $alerte;
-            }
-        }
-
-        return $alertesFiltered;
     }
 
     /**
@@ -112,5 +94,43 @@ class AlerteRepository extends ServiceEntityRepository
             ->getSingleScalarResult();
 
         return $result !== null ? (int)$result : null;
+    }
+
+    /**
+     * Récupère toutes les alertes avec leurs statistiques d'utilisation
+     * Optimisé avec fetch joins pour éviter N+1
+     */
+    public function findAllWithStats(): array
+    {
+        return $this->createQueryBuilder('a')
+            ->leftJoin('a.alerteUtilisateurs', 'au')
+            ->addSelect('au')
+            ->orderBy('a.ordre', 'ASC')
+            ->addOrderBy('a.createdAt', 'DESC')
+            ->getQuery()
+            ->getResult();
+    }
+
+    /**
+     * Statistiques globales des alertes
+     */
+    public function getGlobalStats(): array
+    {
+        $result = $this->createQueryBuilder('a')
+            ->select([
+                'COUNT(a.id) as total',
+                'SUM(CASE WHEN a.isActive = true THEN 1 ELSE 0 END) as active',
+                'SUM(CASE WHEN a.dateExpiration IS NOT NULL AND a.dateExpiration < :now THEN 1 ELSE 0 END) as expired'
+            ])
+            ->setParameter('now', new \DateTime())
+            ->getQuery()
+            ->getSingleResult();
+
+        return [
+            'total' => (int)$result['total'],
+            'active' => (int)$result['active'],
+            'inactive' => (int)$result['total'] - (int)$result['active'],
+            'expired' => (int)$result['expired']
+        ];
     }
 }
