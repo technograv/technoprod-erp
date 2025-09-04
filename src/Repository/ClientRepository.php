@@ -165,4 +165,36 @@ class ClientRepository extends ServiceEntityRepository
         
         return $nextCode;
     }
+
+    public function findAllWithOptimizedJoins(): array
+    {
+        return $this->createQueryBuilder('c')
+            ->select('c, fj, s, cf, cl, af, al')
+            ->leftJoin('c.formeJuridique', 'fj')
+            ->leftJoin('c.secteur', 's')
+            ->leftJoin('c.contactFacturation', 'cf')
+            ->leftJoin('c.contactLivraison', 'cl')
+            ->leftJoin('c.adresseFacturation', 'af')
+            ->leftJoin('c.adresseLivraison', 'al')
+            ->orderBy('c.nomEntreprise', 'ASC')
+            ->getQuery()
+            ->getResult();
+    }
+
+    public function findClientStatsByUser(int $userId): array
+    {
+        return $this->createQueryBuilder('c')
+            ->select('
+                COUNT(CASE WHEN c.statut = :client THEN 1 END) as total_clients,
+                COUNT(CASE WHEN c.statut = :prospect THEN 1 END) as total_prospects,
+                COUNT(CASE WHEN c.statut = :prospect AND c.dateConversion IS NULL THEN 1 END) as prospects_actifs
+            ')
+            ->leftJoin('c.secteur', 's')
+            ->where('s.commercial = :userId')
+            ->setParameter('client', 'CLIENT')
+            ->setParameter('prospect', 'PROSPECT')
+            ->setParameter('userId', $userId)
+            ->getQuery()
+            ->getSingleResult();
+    }
 }

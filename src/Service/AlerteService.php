@@ -135,14 +135,7 @@ class AlerteService
 
     public function getAlerteStats(): array
     {
-        $total = $this->alerteRepository->count([]);
-        $active = $this->alerteRepository->count(['isActive' => true]);
-        
-        return [
-            'total' => $total,
-            'active' => $active,
-            'inactive' => $total - $active
-        ];
+        return $this->alerteRepository->getGlobalStats();
     }
 
     public function getVisibleAlertsForUser(User $user): array

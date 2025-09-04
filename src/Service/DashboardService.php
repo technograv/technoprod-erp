@@ -2,305 +2,178 @@
 
 namespace App\Service;
 
-use App\Entity\User;
-use App\Repository\DevisRepository;
-use App\Repository\CommandeRepository;
-use App\Repository\FactureRepository;
+use App\Repository\UserRepository;
+use App\Repository\SecteurRepository;
+use App\Repository\ProduitRepository;
+use App\Repository\FormeJuridiqueRepository;
 use App\Repository\ClientRepository;
+use App\Repository\DevisRepository;
 use Doctrine\ORM\EntityManagerInterface;
+use Symfony\Contracts\Cache\CacheInterface;
+use Symfony\Contracts\Cache\ItemInterface;
 
 class DashboardService
 {
     public function __construct(
         private EntityManagerInterface $entityManager,
+        private UserRepository $userRepository,
+        private SecteurRepository $secteurRepository,
+        private ProduitRepository $produitRepository,
+        private FormeJuridiqueRepository $formeJuridiqueRepository,
+        private ClientRepository $clientRepository,
         private DevisRepository $devisRepository,
-        private CommandeRepository $commandeRepository,
-        private FactureRepository $factureRepository,
-        private ClientRepository $clientRepository
-    ) {}
-
-    public function getDashboardStats(?User $user = null): array
-    {
-        $stats = [
-            'devis_brouillons' => $this->countDevisBrouillons($user),
-            'devis_a_relancer' => $this->countDevisARelancer($user),
-            'commandes_sans_livraison' => $this->countCommandesSansLivraison($user),
-            'livraisons_non_facturees' => $this->countLivraisonsNonFacturees($user),
-            'contract_deadlines' => $this->countContractDeadlines($user),
-            'visits_due' => $this->countVisitsDue($user)
-        ];
-
-        return $stats;
+        private CacheInterface $dashboardCache
+    ) {
     }
 
-    public function getDevisBrouillons(?User $user = null, int $limit = null): array
+    public function getAdminDashboardStats(): array
     {
-        $queryBuilder = $this->devisRepository->createQueryBuilder('d')
-            ->where('d.statut = :statut')
-            ->setParameter('statut', 'brouillon')
-            ->orderBy('d.updatedAt', 'DESC');
+        return $this->dashboardCache->get('admin_dashboard_stats', function (ItemInterface $item) {
+            $item->expiresAfter(300); // 5 minutes
 
-        if ($user && !$this->isUserAdmin($user)) {
-            $queryBuilder->andWhere('d.commercial = :user')
-                        ->setParameter('user', $user);
-        }
+            // Requête unique consolidée pour toutes les statistiques admin
+            $sql = '
+                SELECT 
+                    (SELECT COUNT(*) FROM "user") as total_users,
+                    (SELECT COUNT(*) FROM "user" WHERE is_active = true) as active_users,
+                    (SELECT COUNT(*) FROM "user" WHERE CAST(roles AS TEXT) LIKE \'%ROLE_ADMIN%\') as admin_users,
+                    (SELECT COUNT(*) FROM secteur) as total_secteurs,
+                    (SELECT COUNT(*) FROM secteur) as total_zones,
+                    (SELECT COUNT(*) FROM produit) as total_produits,
+                    (SELECT COUNT(*) FROM forme_juridique) as total_formes_juridiques,
+                    (SELECT COUNT(*) FROM forme_juridique) as active_formes_juridiques,
+                    (SELECT COUNT(*) FROM client WHERE statut = \'CLIENT\') as total_clients,
+                    (SELECT COUNT(*) FROM client WHERE statut = \'PROSPECT\') as total_prospects,
+                    (SELECT COUNT(*) FROM devis WHERE statut = \'SIGNE\') as devis_signes,
+                    (SELECT COUNT(*) FROM devis WHERE statut = \'ENVOYE\') as devis_en_cours
+            ';
 
-        if ($limit) {
-            $queryBuilder->setMaxResults($limit);
-        }
-
-        return $queryBuilder->getQuery()->getResult();
+            $result = $this->entityManager->getConnection()->fetchAssociative($sql);
+            
+            return [
+                // Format compatible avec le template existant
+                'users' => (int)$result['total_users'],
+                'users_actifs' => (int)$result['active_users'],
+                'admins' => (int)$result['admin_users'],
+                'secteurs' => (int)$result['total_secteurs'],
+                'zones' => (int)$result['total_zones'],
+                'produits' => (int)$result['total_produits'],
+                'formes_juridiques' => (int)$result['total_formes_juridiques'],
+                // Données commerciales
+                'clients' => (int)$result['total_clients'],
+                'prospects' => (int)$result['total_prospects'],
+                'devis_signes' => (int)$result['devis_signes'],
+                'devis_en_cours' => (int)$result['devis_en_cours'],
+                // Conserve aussi le nouveau format pour compatibilité future
+                'utilisateurs' => [
+                    'total' => (int)$result['total_users'],
+                    'actifs' => (int)$result['active_users'],
+                    'administrateurs' => (int)$result['admin_users']
+                ],
+                'commercial' => [
+                    'clients' => (int)$result['total_clients'],
+                    'prospects' => (int)$result['total_prospects'],
+                    'devis_signes' => (int)$result['devis_signes'],
+                    'devis_en_cours' => (int)$result['devis_en_cours']
+                ]
+            ];
+        });
     }
 
-    public function getDevisARelancer(?User $user = null, int $limit = null): array
+    public function getWorkflowDashboardStats(int $userId): array
     {
-        $dateLimite = new \DateTime('-2 weeks');
+        $cacheKey = "workflow_dashboard_stats_user_{$userId}";
         
-        $queryBuilder = $this->devisRepository->createQueryBuilder('d')
-            ->where('d.statut = :statut')
-            ->andWhere('d.dateEnvoi <= :date_limite')
-            ->setParameter('statut', 'envoye')
-            ->setParameter('date_limite', $dateLimite)
-            ->orderBy('d.dateEnvoi', 'ASC');
+        return $this->dashboardCache->get($cacheKey, function (ItemInterface $item) use ($userId) {
+            $item->expiresAfter(300); // 5 minutes
 
-        if ($user && !$this->isUserAdmin($user)) {
-            $queryBuilder->andWhere('d.commercial = :user')
-                        ->setParameter('user', $user);
-        }
+            // Requête consolidée pour les stats du workflow utilisateur
+            $sql = '
+                SELECT 
+                    (SELECT COUNT(*) FROM devis d 
+                     JOIN client c ON d.client_id = c.id 
+                     JOIN secteur s ON c.secteur_id = s.id 
+                     WHERE s.commercial_id = :userId 
+                     AND d.statut = \'BROUILLON\') as devis_brouillons,
+                    
+                    (SELECT COUNT(*) FROM devis d 
+                     JOIN client c ON d.client_id = c.id 
+                     JOIN secteur s ON c.secteur_id = s.id 
+                     WHERE s.commercial_id = :userId 
+                     AND d.statut = \'ENVOYE\' 
+                     AND d.date_envoi < NOW() - INTERVAL \'7 days\') as devis_relances,
+                     
+                    (SELECT COUNT(*) FROM client c 
+                     JOIN secteur s ON c.secteur_id = s.id 
+                     WHERE s.commercial_id = :userId 
+                     AND c.statut = \'PROSPECT\' 
+                     AND c.date_conversion_client IS NULL) as prospects_actifs,
+                     
+                    (SELECT COUNT(*) FROM client c 
+                     JOIN secteur s ON c.secteur_id = s.id 
+                     WHERE s.commercial_id = :userId 
+                     AND c.statut = \'CLIENT\') as clients_total
+            ';
 
-        if ($limit) {
-            $queryBuilder->setMaxResults($limit);
-        }
-
-        return $queryBuilder->getQuery()->getResult();
+            $result = $this->entityManager->getConnection()->fetchAssociative($sql, ['userId' => $userId]);
+            
+            return [
+                'devis_brouillons' => (int)$result['devis_brouillons'],
+                'devis_relances' => (int)$result['devis_relances'],
+                'prospects_actifs' => (int)$result['prospects_actifs'],
+                'clients_total' => (int)$result['clients_total']
+            ];
+        });
     }
 
-    public function getCommandesSansLivraison(?User $user = null, int $limit = null): array
+    public function getSecteurPerformanceData(int $userId): array
     {
-        $queryBuilder = $this->commandeRepository->createQueryBuilder('c')
-            ->where('c.dateLivraisonPrevue IS NULL')
-            ->andWhere('c.statut != :statut_livre')
-            ->setParameter('statut_livre', 'livree')
-            ->orderBy('c.createdAt', 'ASC');
-
-        if ($user && !$this->isUserAdmin($user)) {
-            $queryBuilder->andWhere('c.commercial = :user')
-                        ->setParameter('user', $user);
-        }
-
-        if ($limit) {
-            $queryBuilder->setMaxResults($limit);
-        }
-
-        return $queryBuilder->getQuery()->getResult();
-    }
-
-    public function getLivraisonsNonFacturees(?User $user = null, int $limit = null): array
-    {
-        $queryBuilder = $this->commandeRepository->createQueryBuilder('c')
-            ->leftJoin('App\Entity\Facture', 'f', 'WITH', 'f.commande = c.id')
-            ->where('c.statut = :statut_livre')
-            ->andWhere('f.id IS NULL')
-            ->setParameter('statut_livre', 'livree')
-            ->orderBy('c.dateLivraisonReelle', 'ASC');
-
-        if ($user && !$this->isUserAdmin($user)) {
-            $queryBuilder->andWhere('c.commercial = :user')
-                        ->setParameter('user', $user);
-        }
-
-        if ($limit) {
-            $queryBuilder->setMaxResults($limit);
-        }
-
-        return $queryBuilder->getQuery()->getResult();
-    }
-
-    public function getPerformanceData(User $user, ?\DateTime $dateDebut = null, ?\DateTime $dateFin = null): array
-    {
-        $dateDebut = $dateDebut ?? new \DateTime('-1 year');
-        $dateFin = $dateFin ?? new \DateTime();
-
-        $ventesMensuelle = $this->getVentesMensuelle($user, $dateDebut, $dateFin);
-        $objectifsData = $this->getObjectifsData($user, $dateDebut, $dateFin);
-        $performanceSemestrielle = $this->getPerformanceSemestrielle($user);
-
-        return [
-            'ventes_mensuelle' => $ventesMensuelle,
-            'objectifs' => $objectifsData,
-            'performance_semestrielle' => $performanceSemestrielle
-        ];
-    }
-
-    private function getVentesMensuelle(User $user, \DateTime $dateDebut, \DateTime $dateFin): array
-    {
-        $qb = $this->factureRepository->createQueryBuilder('f')
-            ->select('EXTRACT(MONTH FROM f.createdAt) as mois, SUM(f.montantTotal) as total')
-            ->where('f.createdAt BETWEEN :debut AND :fin')
-            ->setParameter('debut', $dateDebut)
-            ->setParameter('fin', $dateFin)
-            ->groupBy('mois')
-            ->orderBy('mois', 'ASC');
-
-        if (!$this->isUserAdmin($user)) {
-            $qb->andWhere('f.commercial = :user')
-               ->setParameter('user', $user);
-        }
-
-        return $qb->getQuery()->getResult();
-    }
-
-    private function getObjectifsData(User $user, \DateTime $dateDebut, \DateTime $dateFin): array
-    {
-        return [
-            'objectif_mensuel' => 50000,
-            'realise_mois_courant' => $this->getVentesMoisCourant($user),
-            'progression' => $this->getProgressionObjectif($user)
-        ];
-    }
-
-    private function getVentesMoisCourant(User $user): float
-    {
-        $debutMois = new \DateTime('first day of this month');
-        $finMois = new \DateTime('last day of this month');
-
-        $qb = $this->factureRepository->createQueryBuilder('f')
-            ->select('SUM(f.montantTotal)')
-            ->where('f.createdAt BETWEEN :debut AND :fin')
-            ->setParameter('debut', $debutMois)
-            ->setParameter('fin', $finMois);
-
-        if (!$this->isUserAdmin($user)) {
-            $qb->andWhere('f.commercial = :user')
-               ->setParameter('user', $user);
-        }
-
-        return (float)$qb->getQuery()->getSingleScalarResult() ?? 0.0;
-    }
-
-    private function getProgressionObjectif(User $user): float
-    {
-        $ventesCourantes = $this->getVentesMoisCourant($user);
-        $objectif = 50000;
+        $cacheKey = "secteur_performance_user_{$userId}";
         
-        return $objectif > 0 ? round(($ventesCourantes / $objectif) * 100, 2) : 0;
+        return $this->dashboardCache->get($cacheKey, function (ItemInterface $item) use ($userId) {
+            $item->expiresAfter(600); // 10 minutes
+            
+            // Requête optimisée pour les données de performance secteur
+            $sql = '
+                SELECT 
+                    s.id,
+                    s.nom_secteur as secteur_nom,
+                    s.couleur_hex as couleur,
+                    COUNT(DISTINCT c.id) as nombre_clients,
+                    COUNT(DISTINCT CASE WHEN c.statut = \'PROSPECT\' THEN c.id END) as nombre_prospects,
+                    COUNT(DISTINCT d.id) as nombre_devis,
+                    COALESCE(SUM(CASE WHEN d.statut = \'SIGNE\' THEN d.total_ttc END), 0) as ca_signe,
+                    1 as nombre_zones,
+                    s.nom_secteur as zones_noms
+                FROM secteur s
+                LEFT JOIN client c ON s.id = c.secteur_id
+                LEFT JOIN devis d ON c.id = d.client_id
+                WHERE s.commercial_id = :userId
+                GROUP BY s.id, s.nom_secteur, s.couleur_hex
+                ORDER BY ca_signe DESC
+            ';
+
+            $results = $this->entityManager->getConnection()->fetchAllAssociative($sql, ['userId' => $userId]);
+            
+            return [
+                'secteurs' => $results,
+                'resume' => [
+                    'total_ca' => array_sum(array_column($results, 'ca_signe')),
+                    'total_devis' => array_sum(array_column($results, 'nombre_devis')),
+                    'total_clients' => array_sum(array_column($results, 'nombre_clients'))
+                ]
+            ];
+        });
     }
 
-    private function getPerformanceSemestrielle(User $user): array
+    public function invalidateUserCache(int $userId): void
     {
-        $anneeActuelle = (int)date('Y');
-        $semestre1 = $this->getVentesSemestre($user, $anneeActuelle, 1);
-        $semestre2 = $this->getVentesSemestre($user, $anneeActuelle, 2);
-
-        return [
-            'semestre_1' => $semestre1,
-            'semestre_2' => $semestre2
-        ];
+        $this->dashboardCache->delete("workflow_dashboard_stats_user_{$userId}");
+        $this->dashboardCache->delete("secteur_performance_user_{$userId}");
     }
 
-    private function getVentesSemestre(User $user, int $annee, int $semestre): float
+    public function invalidateAdminCache(): void
     {
-        if ($semestre === 1) {
-            $debut = new \DateTime("$annee-01-01");
-            $fin = new \DateTime("$annee-06-30");
-        } else {
-            $debut = new \DateTime("$annee-07-01");
-            $fin = new \DateTime("$annee-12-31");
-        }
-
-        $qb = $this->factureRepository->createQueryBuilder('f')
-            ->select('SUM(f.montantTotal)')
-            ->where('f.createdAt BETWEEN :debut AND :fin')
-            ->setParameter('debut', $debut)
-            ->setParameter('fin', $fin);
-
-        if (!$this->isUserAdmin($user)) {
-            $qb->andWhere('f.commercial = :user')
-               ->setParameter('user', $user);
-        }
-
-        return (float)$qb->getQuery()->getSingleScalarResult() ?? 0.0;
-    }
-
-    private function countDevisBrouillons(?User $user = null): int
-    {
-        $qb = $this->devisRepository->createQueryBuilder('d')
-            ->select('COUNT(d.id)')
-            ->where('d.statut = :statut')
-            ->setParameter('statut', 'brouillon');
-
-        if ($user && !$this->isUserAdmin($user)) {
-            $qb->andWhere('d.commercial = :user')
-               ->setParameter('user', $user);
-        }
-
-        return (int)$qb->getQuery()->getSingleScalarResult();
-    }
-
-    private function countDevisARelancer(?User $user = null): int
-    {
-        $dateLimite = new \DateTime('-2 weeks');
-        
-        $qb = $this->devisRepository->createQueryBuilder('d')
-            ->select('COUNT(d.id)')
-            ->where('d.statut = :statut')
-            ->andWhere('d.dateEnvoi <= :date_limite')
-            ->setParameter('statut', 'envoye')
-            ->setParameter('date_limite', $dateLimite);
-
-        if ($user && !$this->isUserAdmin($user)) {
-            $qb->andWhere('d.commercial = :user')
-               ->setParameter('user', $user);
-        }
-
-        return (int)$qb->getQuery()->getSingleScalarResult();
-    }
-
-    private function countCommandesSansLivraison(?User $user = null): int
-    {
-        $qb = $this->commandeRepository->createQueryBuilder('c')
-            ->select('COUNT(c.id)')
-            ->where('c.dateLivraisonPrevue IS NULL')
-            ->andWhere('c.statut != :statut_livre')
-            ->setParameter('statut_livre', 'livree');
-
-        if ($user && !$this->isUserAdmin($user)) {
-            $qb->andWhere('c.commercial = :user')
-               ->setParameter('user', $user);
-        }
-
-        return (int)$qb->getQuery()->getSingleScalarResult();
-    }
-
-    private function countLivraisonsNonFacturees(?User $user = null): int
-    {
-        $qb = $this->commandeRepository->createQueryBuilder('c')
-            ->select('COUNT(c.id)')
-            ->leftJoin('App\Entity\Facture', 'f', 'WITH', 'f.commande = c.id')
-            ->where('c.statut = :statut_livre')
-            ->andWhere('f.id IS NULL')
-            ->setParameter('statut_livre', 'livree');
-
-        if ($user && !$this->isUserAdmin($user)) {
-            $qb->andWhere('c.commercial = :user')
-               ->setParameter('user', $user);
-        }
-
-        return (int)$qb->getQuery()->getSingleScalarResult();
-    }
-
-    private function countContractDeadlines(?User $user = null): int
-    {
-        return 0;
-    }
-
-    private function countVisitsDue(?User $user = null): int
-    {
-        return 0;
-    }
-
-    private function isUserAdmin(User $user): bool
-    {
-        return in_array('ROLE_ADMIN', $user->getRoles());
+        $this->dashboardCache->delete('admin_dashboard_stats');
     }
 }

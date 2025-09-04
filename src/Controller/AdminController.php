@@ -54,7 +54,7 @@ final class AdminController extends AbstractController
         private DashboardService $dashboardService
     ) {}
     #[Route('/', name: 'app_admin_dashboard', methods: ['GET'])]
-    public function dashboard(EntityManagerInterface $entityManager, TenantService $tenantService): Response
+    public function dashboard(DashboardService $dashboardService, TenantService $tenantService): Response
     {
         // Vérifier les permissions d'administration
         $this->denyAccessUnlessGranted('ADMIN_ACCESS');
@@ -63,54 +63,45 @@ final class AdminController extends AbstractController
         $currentSociete = $tenantService->getCurrentSociete();
         $isSocieteMere = $currentSociete ? $currentSociete->isMere() : true;
         
-        // Statistiques générales pour le dashboard admin
-        $stats = [
-            'users' => $entityManager->getRepository(User::class)->count([]),
-            'formes_juridiques' => $entityManager->getRepository(FormeJuridique::class)->count([]),
-            'users_actifs' => $entityManager->getRepository(User::class)->count(['isActive' => true]),
-            'admins' => $entityManager->getConnection()->fetchOne(
-                'SELECT COUNT(id) FROM "user" WHERE CAST(roles AS TEXT) LIKE ?',
-                ['%ROLE_ADMIN%']
-            ),
-            'secteurs' => $entityManager->getRepository(Secteur::class)->count([]),
-            'zones' => 0, // Zones obsolètes supprimées
-            'produits' => $entityManager->getRepository(Produit::class)->count([]),
-            'modes_reglement' => $entityManager->getRepository(ModeReglement::class)->count([]),
-            'modes_paiement' => $entityManager->getRepository(ModePaiement::class)->count([]),
-            'banques' => $entityManager->getRepository(Banque::class)->count([]),
-            'tags' => $entityManager->getRepository(Tag::class)->count([]),
-            'taux_tva' => $entityManager->getRepository(TauxTVA::class)->count([]),
-            'unites' => $entityManager->getRepository(Unite::class)->count([]),
-            'civilites' => $entityManager->getRepository(Civilite::class)->count([]),
-            'frais_port' => $entityManager->getRepository(FraisPort::class)->count([]),
-            'transporteurs' => $entityManager->getRepository(Transporteur::class)->count([]),
-            'methodes_expedition' => $entityManager->getRepository(MethodeExpedition::class)->count([]),
-            'modeles_document' => $entityManager->getRepository(ModeleDocument::class)->count([]),
-            // Nouvelles entités système secteurs
-            'divisions_administratives' => $entityManager->getRepository(DivisionAdministrative::class)->count(['actif' => true]),
-            'types_secteur' => $entityManager->getRepository(TypeSecteur::class)->count(['actif' => true]),
-            'attributions_secteur' => $entityManager->getRepository(AttributionSecteur::class)->count([]),
-            // Statistiques sociétés
-            'societes_meres' => $entityManager->getRepository(Societe::class)->count(['type' => 'mere']),
-            'societes_filles' => $entityManager->getRepository(Societe::class)->count(['type' => 'fille']),
-            // Statistiques groupes utilisateurs
-            'groupes_utilisateurs' => $entityManager->getRepository(GroupeUtilisateur::class)->count([]),
-            // Statistiques alertes
-            'alertes_total' => $entityManager->getRepository(Alerte::class)->count([]),
-            'alertes_actives' => $entityManager->getRepository(Alerte::class)->count(['isActive' => true]),
-            'groupes_actifs' => $entityManager->getRepository(GroupeUtilisateur::class)->count(['actif' => true]),
+        // Statistiques optimisées via service avec cache Redis
+        $coreStats = $dashboardService->getAdminDashboardStats();
+        
+        // Statistiques supplémentaires (moins fréquentes, peuvent être optimisées plus tard)
+        $additionalStats = [
+            'modes_reglement' => $this->entityManager->getRepository(ModeReglement::class)->count([]),
+            'modes_paiement' => $this->entityManager->getRepository(ModePaiement::class)->count([]),
+            'banques' => $this->entityManager->getRepository(Banque::class)->count([]),
+            'tags' => $this->entityManager->getRepository(Tag::class)->count([]),
+            'taux_tva' => $this->entityManager->getRepository(TauxTVA::class)->count([]),
+            'unites' => $this->entityManager->getRepository(Unite::class)->count([]),
+            'civilites' => $this->entityManager->getRepository(Civilite::class)->count([]),
+            'frais_port' => $this->entityManager->getRepository(FraisPort::class)->count([]),
+            'transporteurs' => $this->entityManager->getRepository(Transporteur::class)->count([]),
+            'methodes_expedition' => $this->entityManager->getRepository(MethodeExpedition::class)->count([]),
+            'modeles_document' => $this->entityManager->getRepository(ModeleDocument::class)->count([]),
+            'divisions_administratives' => $this->entityManager->getRepository(DivisionAdministrative::class)->count(['actif' => true]),
+            'types_secteur' => $this->entityManager->getRepository(TypeSecteur::class)->count(['actif' => true]),
+            'attributions_secteur' => $this->entityManager->getRepository(AttributionSecteur::class)->count([]),
+            'societes_meres' => $this->entityManager->getRepository(Societe::class)->count(['type' => 'mere']),
+            'societes_filles' => $this->entityManager->getRepository(Societe::class)->count(['type' => 'fille']),
+            'groupes_utilisateurs' => $this->entityManager->getRepository(GroupeUtilisateur::class)->count([]),
+            'alertes_total' => $this->entityManager->getRepository(Alerte::class)->count([]),
+            'alertes_actives' => $this->entityManager->getRepository(Alerte::class)->count(['isActive' => true]),
+            'groupes_actifs' => $this->entityManager->getRepository(GroupeUtilisateur::class)->count(['actif' => true]),
         ];
+        
+        $stats = array_merge($coreStats, $additionalStats);
 
         // Récupérer les commerciaux (utilisateurs avec rôle COMMERCIAL ou ayant des secteurs)
         // Approche 1: Récupérer les utilisateurs avec des secteurs
-        $commerciauxAvecSecteurs = $entityManager->getRepository(User::class)->createQueryBuilder('u')
+        $commerciauxAvecSecteurs = $this->entityManager->getRepository(User::class)->createQueryBuilder('u')
             ->innerJoin('u.secteurs', 's')
             ->where('u.isActive = true')
             ->getQuery()
             ->getResult();
             
         // Approche 2: Récupérer via SQL natif pour les rôles JSON
-        $commerciauxAvecRole = $entityManager->getConnection()->executeQuery(
+        $commerciauxAvecRole = $this->entityManager->getConnection()->executeQuery(
             'SELECT u.* FROM "user" u WHERE u.is_active = true AND CAST(u.roles AS TEXT) LIKE ?',
             ['%ROLE_COMMERCIAL%']
         )->fetchAllAssociative();
@@ -118,7 +109,7 @@ final class AdminController extends AbstractController
         // Convertir les résultats SQL en entités User
         $commerciauxEntites = [];
         foreach ($commerciauxAvecRole as $userData) {
-            $commerciauxEntites[] = $entityManager->getRepository(User::class)->find($userData['id']);
+            $commerciauxEntites[] = $this->entityManager->getRepository(User::class)->find($userData['id']);
         }
         
         // Fusionner les deux listes et supprimer les doublons
@@ -140,7 +131,7 @@ final class AdminController extends AbstractController
         return $this->render('admin/dashboard.html.twig', [
             'stats' => $stats,
             'google_maps_api_key' => $this->getParameter('google.maps.api.key'),
-            'secteurs' => $entityManager->getRepository(Secteur::class)->findBy([], ['nomSecteur' => 'ASC']),
+            'secteurs' => $this->entityManager->getRepository(Secteur::class)->findBy([], ['nomSecteur' => 'ASC']),
             'commerciaux' => $commerciaux,
             'current_societe' => $currentSociete,
             'is_societe_mere' => $isSocieteMere,
