@@ -74,3 +74,8 @@ ngrok*
 /node_modules/
 package-lock.json
 yarn.lock
+
+###> phpunit/phpunit ###
+/phpunit.xml
+/.phpunit.cache/
+###< phpunit/phpunit ###

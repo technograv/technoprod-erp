@@ -58,7 +58,7 @@ class CacheService
         return $this->cache->get($key, function (ItemInterface $item) use ($user) {
             $item->expiresAfter(600); // 10 minutes
             
-            return $this->dashboardService->getDashboardStats($user);
+            return $this->dashboardService->getWorkflowDashboardStats($user->getId());
         });
     }
 

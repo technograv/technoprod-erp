@@ -191,7 +191,7 @@ class WorkflowController extends AbstractController
         $user = $this->getUser();
         
         // Utiliser le service pour obtenir les statistiques
-        $stats = $this->dashboardService->getDashboardStats($user);
+        $stats = $this->dashboardService->getWorkflowDashboardStats($user->getId());
 
         // Dernières activités
         $recentDevis = $this->entityManager->getRepository(Devis::class)
