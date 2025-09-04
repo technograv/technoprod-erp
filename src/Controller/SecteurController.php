@@ -19,6 +19,7 @@ use Symfony\Component\Routing\Attribute\Route;
 use Symfony\Component\Security\Http\Attribute\IsGranted;
 
 #[Route('/secteur')]
+#[IsGranted('ROLE_ADMIN')]
 final class SecteurController extends AbstractController
 {
     #[Route(name: 'app_secteur_index', methods: ['GET'])]

@@ -3,6 +3,8 @@
 namespace App\Repository;
 
 use App\Entity\Alerte;
+use App\Entity\AlerteUtilisateur;
+use App\Entity\User;
 use Doctrine\Bundle\DoctrineBundle\Repository\ServiceEntityRepository;
 use Doctrine\Persistence\ManagerRegistry;
 
@@ -97,5 +99,18 @@ class AlerteRepository extends ServiceEntityRepository
         // TODO: Ajouter vérification des groupes si nécessaire
         
         return false;
+    }
+
+    /**
+     * Trouve l'ordre maximum des alertes
+     */
+    public function findMaxOrdre(): ?int
+    {
+        $result = $this->createQueryBuilder('a')
+            ->select('MAX(a.ordre)')
+            ->getQuery()
+            ->getSingleScalarResult();
+
+        return $result !== null ? (int)$result : null;
     }
 }

@@ -10,19 +10,31 @@ use App\Entity\Secteur;
 use App\Entity\Alerte;
 use App\Entity\AlerteUtilisateur;
 use App\Service\WorkflowService;
+use App\Service\DashboardService;
+use App\Service\AlerteService;
+use App\Service\SecteurService;
+use App\DTO\Dashboard\ProductionStatusUpdateDto;
+use Symfony\Component\HttpKernel\Attribute\MapRequestPayload;
+use Symfony\Component\Validator\Validator\ValidatorInterface;
 use Doctrine\ORM\EntityManagerInterface;
 use Symfony\Bundle\FrameworkBundle\Controller\AbstractController;
 use Symfony\Component\HttpFoundation\JsonResponse;
 use Symfony\Component\HttpFoundation\Request;
 use Symfony\Component\HttpFoundation\Response;
 use Symfony\Component\Routing\Attribute\Route;
+use Symfony\Component\Security\Http\Attribute\IsGranted;
 
 #[Route('/workflow')]
+#[IsGranted('ROLE_USER')]
 class WorkflowController extends AbstractController
 {
     public function __construct(
         private WorkflowService $workflowService,
-        private EntityManagerInterface $entityManager
+        private EntityManagerInterface $entityManager,
+        private ValidatorInterface $validator,
+        private DashboardService $dashboardService,
+        private AlerteService $alerteService,
+        private SecteurService $secteurService
     ) {}
 
     #[Route('/devis/{id}/action/{action}', name: 'workflow_devis_action', methods: ['POST'])]
@@ -116,14 +128,17 @@ class WorkflowController extends AbstractController
     }
 
     #[Route('/commande/{id}/production/{itemId}', name: 'workflow_commande_item_production', methods: ['POST'])]
-    public function updateProductionStatus(Commande $commande, int $itemId, Request $request): JsonResponse
+    public function updateProductionStatus(Commande $commande, int $itemId, #[MapRequestPayload] ProductionStatusUpdateDto $dto): JsonResponse
     {
         try {
-            $data = json_decode($request->getContent(), true);
-            $newStatut = $data['statut'] ?? null;
+            $errors = $this->validator->validate($dto);
             
-            if (!$newStatut) {
-                return $this->json(['success' => false, 'message' => 'Statut requis'], 400);
+            if (count($errors) > 0) {
+                $errorMessages = [];
+                foreach ($errors as $error) {
+                    $errorMessages[$error->getPropertyPath()] = $error->getMessage();
+                }
+                return $this->json(['success' => false, 'errors' => $errorMessages], 400);
             }
             
             $item = null;
@@ -138,11 +153,11 @@ class WorkflowController extends AbstractController
                 return $this->json(['success' => false, 'message' => 'Ligne non trouvée'], 404);
             }
             
-            $item->setStatutProduction($newStatut);
+            $item->setStatutProduction($dto->statut);
             $item->setUpdatedAt(new \DateTimeImmutable());
             
             // Mettre à jour les dates selon le statut
-            switch ($newStatut) {
+            switch ($dto->statut) {
                 case 'en_cours':
                     if (!$item->getDateProductionPrevue()) {
                         $item->setDateProductionPrevue(new \DateTime('+2 days'));
@@ -172,15 +187,11 @@ class WorkflowController extends AbstractController
     #[Route('/dashboard', name: 'workflow_dashboard')]
     public function dashboard(): Response
     {
-        // Statistiques du workflow
-        $stats = [
-            'devis_en_attente' => $this->entityManager->getRepository(Devis::class)
-                ->count(['statut' => 'envoye']),
-            'commandes_en_cours' => $this->entityManager->getRepository(Commande::class)
-                ->count(['statut' => 'en_production']),
-            'factures_impayees' => $this->entityManager->getRepository(Facture::class)
-                ->count(['statut' => 'envoyee']),
-        ];
+        /** @var User $user */
+        $user = $this->getUser();
+        
+        // Utiliser le service pour obtenir les statistiques
+        $stats = $this->dashboardService->getDashboardStats($user);
 
         // Dernières activités
         $recentDevis = $this->entityManager->getRepository(Devis::class)
@@ -238,12 +249,17 @@ class WorkflowController extends AbstractController
             // Formater les données des secteurs pour Google Maps
             $secteursData = [];
             foreach ($secteurs as $secteur) {
+                // Calculer le centre du secteur basé sur ses zones
+                $centreCoords = $this->calculateSecteurCenter($secteur);
+                
                 $secteursData[] = [
                     'id' => $secteur->getId(),
                     'nom' => $secteur->getNomSecteur(),
                     'couleur' => $secteur->getCouleurHex() ?: '#007bff',
                     'nombre_divisions' => count($secteur->getAttributions()),
-                    'resume_territoire' => $secteur->getNomSecteur() // Utilisation simple du nom
+                    'resume_territoire' => $secteur->getNomSecteur(),
+                    'latitude' => $centreCoords['lat'],
+                    'longitude' => $centreCoords['lng']
                 ];
             }
             
@@ -383,13 +399,8 @@ class WorkflowController extends AbstractController
                 ]);
             }
 
-            // Pour le moment, récupérer simplement toutes les alertes actives
-            $alertes = $this->entityManager->getRepository(Alerte::class)
-                ->createQueryBuilder('a')
-                ->where('a.isActive = true')
-                ->orderBy('a.ordre', 'ASC')
-                ->getQuery()
-                ->getResult();
+            // Utiliser le service pour obtenir les alertes visibles
+            $alertes = $this->alerteService->getVisibleAlertsForUser($user);
 
             // Formater les alertes
             $alertesData = [];
@@ -441,32 +452,15 @@ class WorkflowController extends AbstractController
                 ]);
             }
 
-            // Vérifier si l'alerte est dismissible
-            if (!$alerte->isDismissible()) {
+            // Utiliser le service pour fermer l'alerte
+            $success = $this->alerteService->dismissAlertForUser($alerte, $user);
+            
+            if (!$success) {
                 return $this->json([
                     'success' => false,
                     'message' => 'Cette alerte ne peut pas être fermée'
                 ]);
             }
-
-            // Vérifier si l'utilisateur n'a pas déjà fermé cette alerte
-            $existingDismissal = $this->entityManager->getRepository(AlerteUtilisateur::class)
-                ->findOneBy(['user' => $user, 'alerte' => $alerte]);
-
-            if ($existingDismissal) {
-                return $this->json([
-                    'success' => false,
-                    'message' => 'Alerte déjà fermée'
-                ]);
-            }
-
-            // Créer l'enregistrement de fermeture
-            $alerteUtilisateur = new AlerteUtilisateur();
-            $alerteUtilisateur->setUser($user);
-            $alerteUtilisateur->setAlerte($alerte);
-
-            $this->entityManager->persist($alerteUtilisateur);
-            $this->entityManager->flush();
 
             return $this->json([
                 'success' => true,
@@ -479,5 +473,43 @@ class WorkflowController extends AbstractController
                 'message' => 'Erreur serveur: ' . $e->getMessage()
             ], 500);
         }
+    }
+
+    private function calculateSecteurCenter(Secteur $secteur): array
+    {
+        $zones = $secteur->getAttributions();
+        
+        if ($zones->isEmpty()) {
+            // Centre Toulouse par défaut
+            return ['lat' => 43.6, 'lng' => 1.4];
+        }
+        
+        $totalLat = 0;
+        $totalLng = 0;
+        $count = 0;
+        
+        foreach ($zones as $attribution) {
+            $zone = $attribution->getZone();
+            
+            // Si la zone a des communes liées, utiliser leur centre
+            if ($zone->getCommuneFrancaise()) {
+                $commune = $zone->getCommuneFrancaise();
+                if ($commune->getLatitude() && $commune->getLongitude()) {
+                    $totalLat += (float) $commune->getLatitude();
+                    $totalLng += (float) $commune->getLongitude();
+                    $count++;
+                }
+            }
+        }
+        
+        if ($count > 0) {
+            return [
+                'lat' => round($totalLat / $count, 6),
+                'lng' => round($totalLng / $count, 6)
+            ];
+        }
+        
+        // Fallback Toulouse
+        return ['lat' => 43.6, 'lng' => 1.4];
     }
 }

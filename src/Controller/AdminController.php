@@ -24,8 +24,16 @@ use App\Entity\AttributionSecteur;
 use App\Entity\GroupeUtilisateur;
 use App\Entity\Alerte;
 use App\Entity\AlerteUtilisateur;
+use App\DTO\Alerte\AlerteCreateDto;
+use App\DTO\Alerte\AlerteUpdateDto;
+use Symfony\Component\HttpKernel\Attribute\MapRequestPayload;
+use Symfony\Component\Validator\Validator\ValidatorInterface;
+use Symfony\Component\Security\Csrf\CsrfTokenManagerInterface;
 use App\Service\TenantService;
 use App\Service\CommuneGeometryCacheService;
+use App\Service\AlerteService;
+use App\Service\SecteurService;
+use App\Service\DashboardService;
 use Doctrine\ORM\EntityManagerInterface;
 use Symfony\Bundle\FrameworkBundle\Controller\AbstractController;
 use Symfony\Component\HttpFoundation\Response;
@@ -38,7 +46,12 @@ final class AdminController extends AbstractController
 {
     public function __construct(
         private EntityManagerInterface $entityManager,
-        private CommuneGeometryCacheService $cacheService
+        private CommuneGeometryCacheService $cacheService,
+        private ValidatorInterface $validator,
+        private CsrfTokenManagerInterface $csrfTokenManager,
+        private AlerteService $alerteService,
+        private SecteurService $secteurService,
+        private DashboardService $dashboardService
     ) {}
     #[Route('/', name: 'app_admin_dashboard', methods: ['GET'])]
     public function dashboard(EntityManagerInterface $entityManager, TenantService $tenantService): Response
@@ -1596,7 +1609,7 @@ final class AdminController extends AbstractController
     /**
      * Liste toutes les alertes configurées pour l'interface admin
      */
-    #[Route('/admin/alertes', name: 'app_admin_alertes', methods: ['GET'])]
+    #[Route('/alertes', name: 'app_admin_alertes', methods: ['GET'])]
     public function alertes(): JsonResponse
     {
         $alertes = $this->entityManager->getRepository(Alerte::class)
@@ -1629,32 +1642,39 @@ final class AdminController extends AbstractController
     /**
      * Crée une nouvelle alerte système avec réorganisation automatique des ordres
      */
-    #[Route('/admin/alertes', name: 'app_admin_alertes_create', methods: ['POST'])]
-    public function createAlerte(Request $request): JsonResponse
+    #[Route('/alertes', name: 'app_admin_alertes_create', methods: ['POST'])]
+    public function createAlerte(#[MapRequestPayload] AlerteCreateDto $dto, Request $request): JsonResponse
     {
         try {
-            $data = json_decode($request->getContent(), true);
-            
-            $alerte = new Alerte();
-            $alerte->setTitre($data['titre']);
-            $alerte->setMessage($data['message']);
-            $alerte->setType($data['type']);
-            $alerte->setIsActive($data['isActive'] ?? true);
-            $alerte->setDismissible($data['dismissible'] ?? true);
-            $alerte->setOrdre($data['ordre'] ?? 0);
-            $alerte->setCibles($data['cibles'] ?? []);
-            
-            if (!empty($data['dateExpiration'])) {
-                $alerte->setDateExpiration(new \DateTime($data['dateExpiration']));
+            // Validation CSRF
+            $csrfToken = $request->headers->get('X-CSRF-Token');
+            if (!$this->csrfTokenManager->isTokenValid(new \Symfony\Component\Security\Csrf\CsrfToken('ajax', $csrfToken))) {
+                return $this->json(['success' => false, 'message' => 'Token CSRF invalide'], 403);
             }
-
-            // Réorganiser les ordres
-            if ($alerte->getOrdre() > 0) {
-                $this->entityManager->getRepository(Alerte::class)->reorganizeOrdres($alerte->getOrdre());
+            
+            $errors = $this->validator->validate($dto);
+            
+            if (count($errors) > 0) {
+                $errorMessages = [];
+                foreach ($errors as $error) {
+                    $errorMessages[$error->getPropertyPath()] = $error->getMessage();
+                }
+                return $this->json(['success' => false, 'errors' => $errorMessages], 400);
             }
-
-            $this->entityManager->persist($alerte);
-            $this->entityManager->flush();
+            
+            // Utiliser le service pour créer l'alerte
+            $data = [
+                'titre' => $dto->titre,
+                'message' => $dto->message,
+                'type_alerte' => $dto->type,
+                'active' => $dto->isActive,
+                'dismissible' => $dto->dismissible,
+                'ordre' => $dto->ordre,
+                'cibles_roles' => $dto->cibles,
+                'date_expiration' => $dto->dateExpiration
+            ];
+            
+            $alerte = $this->alerteService->createAlerte($data);
 
             return $this->json(['success' => true, 'message' => 'Alerte créée avec succès']);
         } catch (\Exception $e) {
@@ -1665,7 +1685,7 @@ final class AdminController extends AbstractController
     /**
      * Récupère les données d'une alerte pour édition
      */
-    #[Route('/admin/alertes/{id}', name: 'app_admin_alertes_get', methods: ['GET'])]
+    #[Route('/alertes/{id}', name: 'app_admin_alertes_get', methods: ['GET'])]
     public function getAlerte(Alerte $alerte): JsonResponse
     {
         return $this->json([
@@ -1684,35 +1704,39 @@ final class AdminController extends AbstractController
     /**
      * Met à jour une alerte existante avec gestion des ordres
      */
-    #[Route('/admin/alertes/{id}', name: 'app_admin_alertes_update', methods: ['PUT'])]
-    public function updateAlerte(Alerte $alerte, Request $request): JsonResponse
+    #[Route('/alertes/{id}', name: 'app_admin_alertes_update', methods: ['PUT'])]
+    public function updateAlerte(Alerte $alerte, #[MapRequestPayload] AlerteUpdateDto $dto, Request $request): JsonResponse
     {
         try {
-            $data = json_decode($request->getContent(), true);
-            
-            $ancienOrdre = $alerte->getOrdre();
-            
-            $alerte->setTitre($data['titre']);
-            $alerte->setMessage($data['message']);
-            $alerte->setType($data['type']);
-            $alerte->setIsActive($data['isActive'] ?? true);
-            $alerte->setDismissible($data['dismissible'] ?? true);
-            $alerte->setOrdre($data['ordre'] ?? 0);
-            $alerte->setCibles($data['cibles'] ?? []);
-            
-            if (!empty($data['dateExpiration'])) {
-                $alerte->setDateExpiration(new \DateTime($data['dateExpiration']));
-            } else {
-                $alerte->setDateExpiration(null);
+            // Validation CSRF
+            $csrfToken = $request->headers->get('X-CSRF-Token');
+            if (!$this->csrfTokenManager->isTokenValid(new \Symfony\Component\Security\Csrf\CsrfToken('ajax', $csrfToken))) {
+                return $this->json(['success' => false, 'message' => 'Token CSRF invalide'], 403);
             }
-
-            $this->entityManager->flush();
             
-            // Réorganiser les ordres si nécessaire
-            if ($data['ordre'] && $data['ordre'] != $ancienOrdre) {
-                $this->entityManager->getRepository(Alerte::class)->reorganizeOrdres($data['ordre']);
-                $this->entityManager->flush();
+            $errors = $this->validator->validate($dto);
+            
+            if (count($errors) > 0) {
+                $errorMessages = [];
+                foreach ($errors as $error) {
+                    $errorMessages[$error->getPropertyPath()] = $error->getMessage();
+                }
+                return $this->json(['success' => false, 'errors' => $errorMessages], 400);
             }
+            
+            // Utiliser le service pour mettre à jour l'alerte
+            $data = [
+                'titre' => $dto->titre,
+                'message' => $dto->message,
+                'type_alerte' => $dto->type,
+                'active' => $dto->isActive,
+                'dismissible' => $dto->dismissible,
+                'ordre' => $dto->ordre,
+                'cibles_roles' => $dto->cibles,
+                'date_expiration' => $dto->dateExpiration
+            ];
+            
+            $this->alerteService->updateAlerte($alerte, $data);
 
             return $this->json(['success' => true, 'message' => 'Alerte mise à jour avec succès']);
         } catch (\Exception $e) {
@@ -1723,12 +1747,21 @@ final class AdminController extends AbstractController
     /**
      * Supprime une alerte système (supprime aussi les enregistrements utilisateurs associés)
      */
-    #[Route('/admin/alertes/{id}', name: 'app_admin_alertes_delete', methods: ['DELETE'])]
-    public function deleteAlerte(Alerte $alerte): JsonResponse
+    #[Route('/alertes/{id}', name: 'app_admin_alertes_delete', methods: ['DELETE'])]
+    public function deleteAlerte(Alerte $alerte, Request $request): JsonResponse
     {
         try {
-            $this->entityManager->remove($alerte);
-            $this->entityManager->flush();
+            // Validation CSRF
+            $csrfToken = $request->headers->get('X-CSRF-Token');
+            if (!$this->csrfTokenManager->isTokenValid(new \Symfony\Component\Security\Csrf\CsrfToken('ajax', $csrfToken))) {
+                return $this->json(['success' => false, 'message' => 'Token CSRF invalide'], 403);
+            }
+            
+            $success = $this->alerteService->deleteAlerte($alerte);
+            
+            if (!$success) {
+                return $this->json(['success' => false, 'message' => 'Impossible de supprimer l\'alerte']);
+            }
 
             return $this->json(['success' => true, 'message' => 'Alerte supprimée avec succès']);
         } catch (\Exception $e) {
