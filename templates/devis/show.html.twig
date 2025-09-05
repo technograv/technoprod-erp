@@ -98,6 +98,30 @@
             background: #28a745;
             border-color: #28a745;
         }
+        
+        /* Styles pour l'historique des versions */
+        .timeline-marker {
+            position: absolute;
+            left: -8px;
+            top: 8px;
+            width: 32px;
+            height: 32px;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            border: 3px solid white;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        }
+        
+        .timeline-content {
+            position: relative;
+            margin-left: 20px;
+        }
+        
+        .timeline-item.latest .card {
+            box-shadow: 0 4px 8px rgba(0,0,0,0.1);
+        }
     </style>
 {% endblock %}
 
@@ -172,6 +196,13 @@
                     <i class="fas fa-tasks me-2"></i>Suivi
                 </button>
             </li>
+            {% if devis.hasVersions %}
+            <li class="nav-item" role="presentation">
+                <button class="nav-link" id="versions-tab" data-bs-toggle="tab" data-bs-target="#versions" type="button" role="tab">
+                    <i class="fas fa-history me-2"></i>Historique <span class="badge bg-secondary ms-1">{{ devis.versionCount }}</span>
+                </button>
+            </li>
+            {% endif %}
             {% if devis.dateSignature %}
             <li class="nav-item" role="presentation">
                 <button class="nav-link" id="signature-tab" data-bs-toggle="tab" data-bs-target="#signature" type="button" role="tab">
@@ -373,6 +404,32 @@
             </div>
         </div>
 
+        <!-- Onglet Historique des versions -->
+        {% if devis.hasVersions %}
+        <div class="tab-pane fade" id="versions" role="tabpanel">
+            <div class="p-4">
+                <div class="d-flex justify-content-between align-items-center mb-4">
+                    <h6><i class="fas fa-history me-2"></i>Historique des versions</h6>
+                    {% if devis.canCreateVersion %}
+                        <button class="btn btn-outline-primary btn-sm" data-bs-toggle="modal" data-bs-target="#createVersionModal">
+                            <i class="fas fa-plus me-2"></i>Créer une version
+                        </button>
+                    {% endif %}
+                </div>
+
+                <!-- Liste des versions -->
+                <div id="versions-list">
+                    <div class="text-center">
+                        <div class="spinner-border" role="status">
+                            <span class="visually-hidden">Chargement...</span>
+                        </div>
+                        <p class="mt-2">Chargement des versions...</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+        {% endif %}
+
         <!-- Onglet Signature -->
         {% if devis.dateSignature %}
         <div class="tab-pane fade" id="signature" role="tabpanel">
@@ -454,6 +511,45 @@
     </div>
 </div>
 
+<!-- Modal pour créer une version -->
+{% if devis.canCreateVersion %}
+<div class="modal fade" id="createVersionModal" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <form method="POST" action="{{ path('app_devis_create_version', {'id': devis.id}) }}">
+                <div class="modal-header">
+                    <h5 class="modal-title">Créer une version</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body">
+                    <div class="mb-3">
+                        <label for="versionLabel" class="form-label">Label de la version (optionnel)</label>
+                        <input type="text" class="form-control" id="versionLabel" name="label" 
+                               placeholder="Ex: Corrections après relecture client">
+                        <div class="form-text">Si vide, un label automatique sera généré</div>
+                    </div>
+                    <div class="mb-3">
+                        <label for="versionReason" class="form-label">Motif de création *</label>
+                        <textarea class="form-control" id="versionReason" name="reason" rows="3" required
+                                  placeholder="Expliquez pourquoi vous créez cette version...">Version créée manuellement</textarea>
+                    </div>
+                    <div class="alert alert-info">
+                        <i class="fas fa-info-circle me-2"></i>
+                        Cette version conservera l'état actuel du devis avant toute modification future.
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Annuler</button>
+                    <button type="submit" class="btn btn-primary">
+                        <i class="fas fa-save me-2"></i>Créer la version
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+{% endif %}
+
 {% block javascripts %}
 <script>
 // Activer les tooltips Bootstrap
@@ -461,6 +557,132 @@ var tooltipTriggerList = [].slice.call(document.querySelectorAll('[data-bs-toggl
 var tooltipList = tooltipTriggerList.map(function (tooltipTriggerEl) {
     return new bootstrap.Tooltip(tooltipTriggerEl)
 });
+
+// Charger les versions quand l'onglet est activé
+document.addEventListener('DOMContentLoaded', function() {
+    {% if devis.hasVersions %}
+    const versionsTab = document.getElementById('versions-tab');
+    if (versionsTab) {
+        versionsTab.addEventListener('shown.bs.tab', function() {
+            loadVersions();
+        });
+    }
+    {% endif %}
+});
+
+{% if devis.hasVersions %}
+function loadVersions() {
+    const versionsList = document.getElementById('versions-list');
+    
+    fetch('{{ path("app_devis_api_versions", {"id": devis.id}) }}')
+        .then(response => response.json())
+        .then(versions => {
+            if (versions.length === 0) {
+                versionsList.innerHTML = `
+                    <div class="text-center text-muted">
+                        <i class="fas fa-history fa-3x mb-3"></i>
+                        <p>Aucune version disponible</p>
+                    </div>
+                `;
+                return;
+            }
+
+            let html = '<div class="timeline position-relative">';
+            
+            versions.forEach((version, index) => {
+                const isFirst = index === 0;
+                const badgeClass = getStatusBadgeClass(version.statutAtTime);
+                
+                html += `
+                    <div class="timeline-item ${isFirst ? 'latest' : ''} mb-4">
+                        <div class="timeline-marker ${isFirst ? 'bg-primary' : 'bg-secondary'}">
+                            <i class="fas fa-${isFirst ? 'clock' : 'history'} text-white"></i>
+                        </div>
+                        <div class="timeline-content ms-4">
+                            <div class="card ${isFirst ? 'border-primary' : ''}">
+                                <div class="card-header d-flex justify-content-between align-items-center">
+                                    <div>
+                                        <h6 class="mb-1">
+                                            ${version.versionLabel}
+                                            ${isFirst ? '<span class="badge bg-primary ms-2">Actuelle</span>' : ''}
+                                        </h6>
+                                        <small class="text-muted">
+                                            <i class="fas fa-calendar me-1"></i>${version.createdAt}
+                                            <i class="fas fa-user ms-3 me-1"></i>${version.modifiedBy}
+                                        </small>
+                                    </div>
+                                    <div>
+                                        <span class="badge ${badgeClass}">${getStatusLabel(version.statutAtTime)}</span>
+                                        <span class="badge bg-light text-dark ms-2">${version.totalTtcAtTime}€ TTC</span>
+                                    </div>
+                                </div>
+                                <div class="card-body">
+                                    <p class="mb-2"><strong>Motif :</strong> ${version.modificationReason || 'Non spécifié'}</p>
+                                    <div class="d-flex gap-2">
+                                        <a href="/devis/{{ devis.id }}/versions/${version.versionNumber}" 
+                                           class="btn btn-outline-primary btn-sm">
+                                            <i class="fas fa-eye me-1"></i>Voir
+                                        </a>
+                                        ${!isFirst ? `
+                                            <button class="btn btn-outline-secondary btn-sm" onclick="compareVersions(${version.versionNumber})">
+                                                <i class="fas fa-exchange-alt me-1"></i>Comparer
+                                            </button>
+                                        ` : ''}
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                `;
+            });
+            
+            html += '</div>';
+            versionsList.innerHTML = html;
+        })
+        .catch(error => {
+            console.error('Erreur lors du chargement des versions:', error);
+            versionsList.innerHTML = `
+                <div class="alert alert-danger">
+                    <i class="fas fa-exclamation-triangle me-2"></i>
+                    Erreur lors du chargement des versions
+                </div>
+            `;
+        });
+}
+
+function getStatusBadgeClass(status) {
+    const classes = {
+        'brouillon': 'bg-secondary',
+        'envoye': 'bg-info',
+        'relance': 'bg-warning',
+        'signe': 'bg-primary',
+        'acompte_regle': 'bg-success',
+        'accepte': 'bg-success',
+        'refuse': 'bg-danger',
+        'expire': 'bg-dark'
+    };
+    return classes[status] || 'bg-secondary';
+}
+
+function getStatusLabel(status) {
+    const labels = {
+        'brouillon': 'Brouillon',
+        'envoye': 'Envoyé',
+        'relance': 'Relancé',
+        'signe': 'Signé',
+        'acompte_regle': 'Acompte réglé',
+        'accepte': 'Accepté',
+        'refuse': 'Refusé',
+        'expire': 'Expiré'
+    };
+    return labels[status] || 'Inconnu';
+}
+
+function compareVersions(versionNumber) {
+    // TODO: Implémenter la comparaison de versions
+    alert('Fonctionnalité de comparaison à venir - Version ' + versionNumber);
+}
+{% endif %}
 </script>
 {% endblock %}
 {% endblock %}

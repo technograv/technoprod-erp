@@ -711,4 +711,88 @@ class Devis
         return $this;
     }
 
+    #[ORM\OneToMany(mappedBy: 'devis', targetEntity: DevisVersion::class, cascade: ['persist', 'remove'], orphanRemoval: true)]
+    #[ORM\OrderBy(['versionNumber' => 'DESC'])]
+    private Collection $versions;
+
+    /**
+     * @return Collection<int, DevisVersion>
+     */
+    public function getVersions(): Collection
+    {
+        if (!isset($this->versions)) {
+            $this->versions = new ArrayCollection();
+        }
+        return $this->versions;
+    }
+
+    public function addVersion(DevisVersion $version): static
+    {
+        if (!$this->getVersions()->contains($version)) {
+            $this->versions->add($version);
+            $version->setDevis($this);
+        }
+
+        return $this;
+    }
+
+    public function removeVersion(DevisVersion $version): static
+    {
+        if ($this->getVersions()->removeElement($version)) {
+            // set the owning side to null (unless already changed)
+            if ($version->getDevis() === $this) {
+                $version->setDevis(null);
+            }
+        }
+
+        return $this;
+    }
+
+    /**
+     * Récupère le nombre de versions de ce devis
+     */
+    public function getVersionCount(): int
+    {
+        return $this->getVersions()->count();
+    }
+
+    /**
+     * Récupère la dernière version du devis
+     */
+    public function getLatestVersion(): ?DevisVersion
+    {
+        $versions = $this->getVersions()->toArray();
+        if (empty($versions)) {
+            return null;
+        }
+        
+        // Trier par numéro de version décroissant
+        usort($versions, fn($a, $b) => $b->getVersionNumber() <=> $a->getVersionNumber());
+        return $versions[0];
+    }
+
+    /**
+     * Vérifie si ce devis a des versions (historique)
+     */
+    public function hasVersions(): bool
+    {
+        return $this->getVersionCount() > 0;
+    }
+
+    /**
+     * Vérifie si le devis peut être modifié (avec création de version)
+     */
+    public function canCreateVersion(): bool
+    {
+        return in_array($this->statut, ['envoye', 'signe']);
+    }
+
+    /**
+     * Récupère le prochain numéro de version
+     */
+    public function getNextVersionNumber(): int
+    {
+        $latestVersion = $this->getLatestVersion();
+        return $latestVersion ? $latestVersion->getVersionNumber() + 1 : 1;
+    }
 }
