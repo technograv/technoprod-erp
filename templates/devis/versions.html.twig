@@ -1,0 +1,342 @@
+{% extends 'base.html.twig' %}
+
+{% block title %}Historique - Devis {{ devis.numeroDevis }}{% endblock %}
+
+{% block stylesheets %}
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
+    <style>
+        .versions-header {
+            background: linear-gradient(135deg, #6c757d 0%, #495057 100%);
+            color: white;
+            padding: 1.5rem 0;
+            margin-bottom: 2rem;
+        }
+        .version-card {
+            transition: transform 0.2s;
+            margin-bottom: 1rem;
+        }
+        .version-card:hover {
+            transform: translateY(-2px);
+        }
+        .version-current {
+            border-left: 4px solid #0d6efd;
+            background-color: #f8f9ff;
+        }
+        .version-old {
+            border-left: 4px solid #6c757d;
+        }
+        .version-timeline {
+            position: relative;
+            padding-left: 30px;
+        }
+        .version-timeline::before {
+            content: '';
+            position: absolute;
+            left: 15px;
+            top: 0;
+            bottom: 0;
+            width: 2px;
+            background: #dee2e6;
+        }
+        .version-timeline-item {
+            position: relative;
+            margin-bottom: 20px;
+        }
+        .version-timeline-item::before {
+            content: '';
+            position: absolute;
+            left: -8px;
+            top: 20px;
+            width: 16px;
+            height: 16px;
+            border-radius: 50%;
+            background: white;
+            border: 3px solid #6c757d;
+        }
+        .version-timeline-item.current::before {
+            border-color: #0d6efd;
+            background: #0d6efd;
+        }
+        .stats-card {
+            background: linear-gradient(135deg, #f8f9fa 0%, #e9ecef 100%);
+        }
+    </style>
+{% endblock %}
+
+{% block body %}
+<!-- Messages Flash -->
+{% for type, messages in app.flashes %}
+    {% for message in messages %}
+        <div class="alert alert-{{ type == 'error' ? 'danger' : (type == 'warning' ? 'warning' : (type == 'info' ? 'info' : 'success')) }} alert-dismissible fade show" role="alert">
+            {{ message }}
+            <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+        </div>
+    {% endfor %}
+{% endfor %}
+
+<!-- En-tête -->
+<div class="versions-header">
+    <div class="container-fluid">
+        <div class="row align-items-center">
+            <div class="col-md-8">
+                <div class="d-flex align-items-center">
+                    <div class="me-3">
+                        <i class="fas fa-history fa-2x"></i>
+                    </div>
+                    <div>
+                        <h1 class="mb-1">Historique des versions</h1>
+                        <p class="mb-0">Devis {{ devis.numeroDevis }} - {{ versions|length }} version(s)</p>
+                    </div>
+                </div>
+            </div>
+            <div class="col-md-4 text-end">
+                <div class="btn-group">
+                    <a href="{{ path('app_devis_show', {'id': devis.id}) }}" class="btn btn-light">
+                        <i class="fas fa-arrow-left"></i> Retour au devis
+                    </a>
+                    {% if devis.canCreateVersion %}
+                        <button class="btn btn-outline-light" data-bs-toggle="modal" data-bs-target="#createVersionModal">
+                            <i class="fas fa-plus"></i> Créer une version
+                        </button>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="container-fluid">
+    <div class="row">
+        <div class="col-md-8">
+            <!-- Timeline des versions -->
+            <div class="version-timeline">
+                {% for version in versions %}
+                    {% set isFirst = loop.first %}
+                    <div class="version-timeline-item {{ isFirst ? 'current' : '' }}">
+                        <div class="card version-card {{ isFirst ? 'version-current' : 'version-old' }}">
+                            <div class="card-header d-flex justify-content-between align-items-center">
+                                <div>
+                                    <h5 class="mb-1">
+                                        {{ version.generateAutoLabel }}
+                                        {% if isFirst %}
+                                            <span class="badge bg-primary ms-2">Version actuelle</span>
+                                        {% endif %}
+                                    </h5>
+                                    <small class="text-muted">
+                                        <i class="fas fa-calendar me-1"></i>{{ version.createdAt|date('d/m/Y à H:i') }}
+                                        <i class="fas fa-user ms-3 me-1"></i>{{ version.modifiedBy ? version.modifiedBy.nom ~ ' ' ~ version.modifiedBy.prenom : 'Inconnu' }}
+                                    </small>
+                                </div>
+                                <div class="text-end">
+                                    <span class="badge bg-{{ version.statutAtTime == 'brouillon' ? 'secondary' : (version.statutAtTime == 'envoye' ? 'info' : (version.statutAtTime == 'signe' ? 'primary' : 'success')) }}">
+                                        {{ version.statutAtTime|title }}
+                                    </span>
+                                    <br>
+                                    <small class="text-muted">{{ version.totalTtcAtTime }}€ TTC</small>
+                                </div>
+                            </div>
+                            <div class="card-body">
+                                <p class="mb-3">
+                                    <strong>Motif :</strong> {{ version.modificationReason ?: 'Non spécifié' }}
+                                </p>
+                                
+                                <!-- Résumé des changements -->
+                                {% if not isFirst %}
+                                    {% set previousVersion = versions[loop.index0 - 1] %}
+                                    {% if previousVersion %}
+                                        <div class="mb-3">
+                                            <strong>Changements par rapport à la version précédente :</strong>
+                                            <ul class="mb-0 mt-1">
+                                                {% if version.totalTtcAtTime != previousVersion.totalTtcAtTime %}
+                                                    <li>Total TTC : {{ previousVersion.totalTtcAtTime }}€ → {{ version.totalTtcAtTime }}€
+                                                        {% set diff = version.totalTtcAtTime - previousVersion.totalTtcAtTime %}
+                                                        <span class="badge bg-{{ diff > 0 ? 'success' : 'danger' }} ms-1">
+                                                            {{ diff > 0 ? '+' : '' }}{{ diff }}€
+                                                        </span>
+                                                    </li>
+                                                {% endif %}
+                                                {% if version.statutAtTime != previousVersion.statutAtTime %}
+                                                    <li>Statut : {{ previousVersion.statutAtTime|title }} → {{ version.statutAtTime|title }}</li>
+                                                {% endif %}
+                                                {% set itemsCount = version.devisItems|length %}
+                                                {% set previousItemsCount = previousVersion.devisItems|length %}
+                                                {% if itemsCount != previousItemsCount %}
+                                                    <li>Nombre de lignes : {{ previousItemsCount }} → {{ itemsCount }}</li>
+                                                {% endif %}
+                                            </ul>
+                                        </div>
+                                    {% endif %}
+                                {% endif %}
+                                
+                                <div class="d-flex gap-2">
+                                    {% if isFirst %}
+                                        <a href="{{ path('app_devis_show', {'id': devis.id}) }}" class="btn btn-primary btn-sm">
+                                            <i class="fas fa-eye me-1"></i>Voir (actuelle)
+                                        </a>
+                                    {% else %}
+                                        <a href="{{ path('app_devis_version_show', {'id': devis.id, 'versionNumber': version.versionNumber}) }}" 
+                                           class="btn btn-outline-primary btn-sm">
+                                            <i class="fas fa-eye me-1"></i>Voir
+                                        </a>
+                                    {% endif %}
+                                    
+                                    {% if not isFirst %}
+                                        <button class="btn btn-outline-secondary btn-sm" onclick="compareVersions({{ version.versionNumber }})">
+                                            <i class="fas fa-exchange-alt me-1"></i>Comparer
+                                        </button>
+                                    {% endif %}
+                                    
+                                    <button class="btn btn-outline-info btn-sm" onclick="showVersionDetails({{ version.id }})">
+                                        <i class="fas fa-info me-1"></i>Détails
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                {% else %}
+                    <div class="text-center py-5">
+                        <i class="fas fa-history fa-3x text-muted mb-3"></i>
+                        <h4 class="text-muted">Aucune version disponible</h4>
+                        <p class="text-muted mb-4">Les versions sont créées automatiquement lors des modifications d'un devis envoyé.</p>
+                        {% if devis.canCreateVersion %}
+                            <button class="btn btn-outline-primary" data-bs-toggle="modal" data-bs-target="#createVersionModal">
+                                <i class="fas fa-plus me-2"></i>Créer la première version
+                            </button>
+                        {% endif %}
+                    </div>
+                {% endfor %}
+            </div>
+        </div>
+
+        <div class="col-md-4">
+            <!-- Statistiques -->
+            <div class="card stats-card mb-4">
+                <div class="card-header">
+                    <h6 class="mb-0"><i class="fas fa-chart-bar me-2"></i>Statistiques</h6>
+                </div>
+                <div class="card-body">
+                    <div class="row text-center">
+                        <div class="col-6">
+                            <div class="h3 text-primary mb-1">{{ versions|length }}</div>
+                            <small class="text-muted">Version(s) total</small>
+                        </div>
+                        <div class="col-6">
+                            <div class="h3 text-info mb-1">
+                                {% if versions|length > 0 %}
+                                    {{ ((versions|last).createdAt.diff((versions|first).createdAt).days) }}
+                                {% else %}
+                                    0
+                                {% endif %}
+                            </div>
+                            <small class="text-muted">Jours de suivi</small>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Actions rapides -->
+            <div class="card mb-4">
+                <div class="card-header">
+                    <h6 class="mb-0"><i class="fas fa-bolt me-2"></i>Actions rapides</h6>
+                </div>
+                <div class="card-body">
+                    <div class="d-grid gap-2">
+                        <a href="{{ path('app_devis_show', {'id': devis.id}) }}" class="btn btn-primary">
+                            <i class="fas fa-file-invoice me-2"></i>Voir le devis actuel
+                        </a>
+                        <a href="{{ path('app_devis_edit', {'id': devis.id}) }}" class="btn btn-outline-primary">
+                            <i class="fas fa-edit me-2"></i>Modifier le devis
+                        </a>
+                        {% if devis.canCreateVersion %}
+                            <button class="btn btn-outline-secondary" data-bs-toggle="modal" data-bs-target="#createVersionModal">
+                                <i class="fas fa-save me-2"></i>Créer une version manuelle
+                            </button>
+                        {% endif %}
+                        <a href="{{ path('app_devis_pdf', {'id': devis.id}) }}" target="_blank" class="btn btn-outline-info">
+                            <i class="fas fa-file-pdf me-2"></i>Télécharger PDF
+                        </a>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Informations devis -->
+            <div class="card">
+                <div class="card-header">
+                    <h6 class="mb-0"><i class="fas fa-info-circle me-2"></i>Informations devis</h6>
+                </div>
+                <div class="card-body">
+                    <p class="mb-2"><strong>Numéro :</strong> {{ devis.numeroDevis }}</p>
+                    <p class="mb-2"><strong>Client :</strong> {{ devis.client ? devis.client.nomComplet : 'Non défini' }}</p>
+                    <p class="mb-2"><strong>Statut actuel :</strong> 
+                        <span class="badge bg-{{ devis.statutCouleur }}">{{ devis.statutLibelle }}</span>
+                    </p>
+                    <p class="mb-2"><strong>Total actuel :</strong> <strong>{{ devis.totalTtc }}€ TTC</strong></p>
+                    <p class="mb-0"><strong>Date création :</strong> {{ devis.dateCreation|date('d/m/Y') }}</p>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Modal pour créer une version -->
+{% if devis.canCreateVersion %}
+<div class="modal fade" id="createVersionModal" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <form method="POST" action="{{ path('app_devis_create_version', {'id': devis.id}) }}">
+                <div class="modal-header">
+                    <h5 class="modal-title">Créer une version</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body">
+                    <div class="mb-3">
+                        <label for="versionLabel" class="form-label">Label de la version (optionnel)</label>
+                        <input type="text" class="form-control" id="versionLabel" name="label" 
+                               placeholder="Ex: Corrections après relecture client">
+                        <div class="form-text">Si vide, un label automatique sera généré</div>
+                    </div>
+                    <div class="mb-3">
+                        <label for="versionReason" class="form-label">Motif de création *</label>
+                        <textarea class="form-control" id="versionReason" name="reason" rows="3" required
+                                  placeholder="Expliquez pourquoi vous créez cette version...">Version créée manuellement</textarea>
+                    </div>
+                    <div class="alert alert-info">
+                        <i class="fas fa-info-circle me-2"></i>
+                        Cette version conservera l'état actuel du devis avant toute modification future.
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Annuler</button>
+                    <button type="submit" class="btn btn-primary">
+                        <i class="fas fa-save me-2"></i>Créer la version
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+{% endif %}
+
+{% block javascripts %}
+<script>
+function compareVersions(versionNumber) {
+    // TODO: Implémenter la comparaison de versions
+    alert('Fonctionnalité de comparaison à venir - Version ' + versionNumber);
+}
+
+function showVersionDetails(versionId) {
+    // TODO: Afficher les détails d'une version dans une modal
+    alert('Détails de la version ' + versionId + ' - Fonctionnalité à venir');
+}
+
+// Activer les tooltips Bootstrap
+document.addEventListener('DOMContentLoaded', function() {
+    var tooltipTriggerList = [].slice.call(document.querySelectorAll('[data-bs-toggle="tooltip"]'));
+    var tooltipList = tooltipTriggerList.map(function (tooltipTriggerEl) {
+        return new bootstrap.Tooltip(tooltipTriggerEl);
+    });
+});
+</script>
+{% endblock %}
+{% endblock %}

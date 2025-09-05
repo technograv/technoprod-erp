@@ -1,0 +1,302 @@
+{% extends 'base.html.twig' %}
+
+{% block title %}{{ version.generateAutoLabel }} - Devis {{ devis.numeroDevis }}{% endblock %}
+
+{% block stylesheets %}
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
+    <style>
+        .version-header {
+            background: linear-gradient(135deg, #6c757d 0%, #495057 100%);
+            color: white;
+            padding: 1.5rem 0;
+            margin-bottom: 0;
+        }
+        .version-badge {
+            font-size: 1rem;
+            padding: 0.5rem 1rem;
+        }
+        .info-group {
+            background: #f8f9fa;
+            border-radius: 8px;
+            padding: 1rem;
+            margin-bottom: 1rem;
+        }
+        .info-group h6 {
+            color: #495057;
+            font-weight: 600;
+            margin-bottom: 0.75rem;
+            border-bottom: 2px solid #dee2e6;
+            padding-bottom: 0.5rem;
+        }
+        .version-items-table th {
+            background-color: #f8f9fa;
+            border-top: none;
+            font-weight: 600;
+            color: #495057;
+        }
+        .comparison-badge {
+            position: absolute;
+            top: 15px;
+            right: 15px;
+        }
+    </style>
+{% endblock %}
+
+{% block body %}
+<!-- Messages Flash -->
+{% for type, messages in app.flashes %}
+    {% for message in messages %}
+        <div class="alert alert-{{ type == 'error' ? 'danger' : (type == 'warning' ? 'warning' : (type == 'info' ? 'info' : 'success')) }} alert-dismissible fade show" role="alert">
+            {{ message }}
+            <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+        </div>
+    {% endfor %}
+{% endfor %}
+
+<!-- En-tête version -->
+<div class="version-header position-relative">
+    <div class="comparison-badge">
+        <span class="badge bg-warning version-badge">
+            <i class="fas fa-history me-2"></i>Version archivée
+        </span>
+    </div>
+    <div class="container-fluid">
+        <div class="row align-items-center">
+            <div class="col-md-8">
+                <div class="d-flex align-items-center">
+                    <div class="me-3">
+                        <i class="fas fa-file-invoice fa-2x"></i>
+                    </div>
+                    <div>
+                        <h1 class="mb-1">{{ version.generateAutoLabel }}</h1>
+                        <p class="mb-0">
+                            <span class="me-3">Devis {{ devis.numeroDevis }}</span>
+                            <span class="badge bg-{{ version.statutAtTime == 'brouillon' ? 'secondary' : (version.statutAtTime == 'envoye' ? 'info' : (version.statutAtTime == 'signe' ? 'primary' : 'success')) }}">
+                                {{ version.statutAtTime|title }}
+                            </span>
+                        </p>
+                    </div>
+                </div>
+            </div>
+            <div class="col-md-4 text-end">
+                <div class="btn-group">
+                    <a href="{{ path('app_devis_show', {'id': devis.id}) }}" class="btn btn-light">
+                        <i class="fas fa-arrow-left"></i> Retour au devis
+                    </a>
+                    <a href="{{ path('app_devis_versions', {'id': devis.id}) }}" class="btn btn-outline-light">
+                        <i class="fas fa-history"></i> Historique
+                    </a>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="container-fluid">
+    <div class="row p-4">
+        <div class="col-md-8">
+            <!-- Informations de la version -->
+            <div class="info-group">
+                <h6><i class="fas fa-info-circle me-2"></i>Informations de la version</h6>
+                <div class="row">
+                    <div class="col-md-6">
+                        <p class="mb-1"><strong>Créée le :</strong> {{ version.createdAt|date('d/m/Y à H:i') }}</p>
+                        <p class="mb-1"><strong>Par :</strong> {{ version.modifiedBy ? version.modifiedBy.nom ~ ' ' ~ version.modifiedBy.prenom : 'Inconnu' }}</p>
+                        <p class="mb-0"><strong>Motif :</strong> {{ version.modificationReason ?: 'Non spécifié' }}</p>
+                    </div>
+                    <div class="col-md-6">
+                        {% set devisData = version.devisData %}
+                        <p class="mb-1"><strong>Statut à l'époque :</strong> 
+                            <span class="badge bg-{{ version.statutAtTime == 'brouillon' ? 'secondary' : (version.statutAtTime == 'envoye' ? 'info' : (version.statutAtTime == 'signe' ? 'primary' : 'success')) }}">
+                                {{ version.statutAtTime|title }}
+                            </span>
+                        </p>
+                        <p class="mb-1"><strong>Total à l'époque :</strong> {{ version.totalTtcAtTime }}€ TTC</p>
+                        <p class="mb-0"><strong>Date de validité :</strong> 
+                            {% if devisData.dateValidite %}
+                                {{ devisData.dateValidite|date('d/m/Y') }}
+                            {% else %}
+                                Non définie
+                            {% endif %}
+                        </p>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Informations client (version archivée) -->
+            <div class="info-group">
+                <h6><i class="fas fa-building me-2"></i>Informations client (version archivée)</h6>
+                {% if devisData.client %}
+                    <div class="row">
+                        <div class="col-md-6">
+                            <p class="mb-1"><strong>Client :</strong> 
+                                {% if devisData.client.nomEntreprise %}
+                                    {{ devisData.client.nomEntreprise }}
+                                {% else %}
+                                    {{ devisData.client.prenom }} {{ devisData.client.nom }}
+                                {% endif %}
+                            </p>
+                            {% if devisData.contactFacturation %}
+                                <p class="mb-1"><strong>Contact facturation :</strong> 
+                                    {{ devisData.contactFacturation.prenom }} {{ devisData.contactFacturation.nom }}
+                                    {% if devisData.contactFacturation.email %}
+                                        ({{ devisData.contactFacturation.email }})
+                                    {% endif %}
+                                </p>
+                            {% endif %}
+                        </div>
+                        <div class="col-md-6">
+                            {% if devisData.contactLivraison %}
+                                <p class="mb-1"><strong>Contact livraison :</strong> 
+                                    {{ devisData.contactLivraison.prenom }} {{ devisData.contactLivraison.nom }}
+                                    {% if devisData.contactLivraison.email %}
+                                        ({{ devisData.contactLivraison.email }})
+                                    {% endif %}
+                                </p>
+                            {% endif %}
+                            {% if devisData.delaiLivraison %}
+                                <p class="mb-0"><strong>Délai de livraison :</strong> {{ devisData.delaiLivraison }}</p>
+                            {% endif %}
+                        </div>
+                    </div>
+                {% endif %}
+            </div>
+
+            <!-- Lignes de devis (version archivée) -->
+            <div class="info-group">
+                <h6><i class="fas fa-list me-2"></i>Lignes de devis (version archivée)</h6>
+                {% set items = version.devisItems %}
+                {% if items %}
+                    <div class="table-responsive">
+                        <table class="table table-hover version-items-table">
+                            <thead>
+                                <tr>
+                                    <th>Désignation</th>
+                                    <th>Description</th>
+                                    <th class="text-center">Qté</th>
+                                    <th class="text-end">Prix unit. HT</th>
+                                    <th class="text-center">TVA</th>
+                                    <th class="text-end">Total HT</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% for item in items %}
+                                    <tr>
+                                        <td>
+                                            <strong>{{ item.designation }}</strong>
+                                            {% if item.produit %}
+                                                <br><small class="text-muted">Réf: {{ item.produit.reference }}</small>
+                                            {% endif %}
+                                        </td>
+                                        <td>{{ item.description ?: '-' }}</td>
+                                        <td class="text-center">{{ item.quantite }}</td>
+                                        <td class="text-end">{{ item.prixUnitaireHt }}€</td>
+                                        <td class="text-center">{{ item.tvaPercent }}%</td>
+                                        <td class="text-end"><strong>{{ item.totalLigneHt }}€</strong></td>
+                                    </tr>
+                                {% endfor %}
+                            </tbody>
+                            <tfoot>
+                                <tr>
+                                    <th colspan="5" class="text-end">Total HT :</th>
+                                    <th class="text-end">{{ devisData.totalHt }}€</th>
+                                </tr>
+                                <tr>
+                                    <th colspan="5" class="text-end">TVA :</th>
+                                    <th class="text-end">{{ devisData.totalTva }}€</th>
+                                </tr>
+                                <tr class="table-success">
+                                    <th colspan="5" class="text-end">Total TTC :</th>
+                                    <th class="text-end">{{ devisData.totalTtc }}€</th>
+                                </tr>
+                            </tfoot>
+                        </table>
+                    </div>
+                {% else %}
+                    <p class="text-muted mb-0">Aucune ligne de devis dans cette version</p>
+                {% endif %}
+            </div>
+
+            <!-- Notes (version archivée) -->
+            {% if devisData.notesClient or devisData.notesInternes %}
+            <div class="info-group">
+                <h6><i class="fas fa-sticky-note me-2"></i>Notes (version archivée)</h6>
+                <div class="row">
+                    {% if devisData.notesClient %}
+                    <div class="col-md-6">
+                        <h6 class="h6">Notes client :</h6>
+                        <p class="mb-0">{{ devisData.notesClient|nl2br }}</p>
+                    </div>
+                    {% endif %}
+                    {% if devisData.notesInternes %}
+                    <div class="col-md-6">
+                        <h6 class="h6">Notes internes :</h6>
+                        <p class="mb-0">{{ devisData.notesInternes|nl2br }}</p>
+                    </div>
+                    {% endif %}
+                </div>
+            </div>
+            {% endif %}
+        </div>
+
+        <div class="col-md-4">
+            <!-- Récapitulatif version -->
+            <div class="info-group">
+                <h6><i class="fas fa-calculator me-2"></i>Récapitulatif (version archivée)</h6>
+                
+                <div class="d-flex justify-content-between mb-2">
+                    <span>Total HT :</span>
+                    <span><strong>{{ devisData.totalHt }}€</strong></span>
+                </div>
+                
+                <div class="d-flex justify-content-between mb-2">
+                    <span>TVA :</span>
+                    <span><strong>{{ devisData.totalTva }}€</strong></span>
+                </div>
+                
+                <div class="d-flex justify-content-between mb-3 border-top pt-2">
+                    <span class="fw-bold">Total TTC :</span>
+                    <span class="fw-bold text-success">{{ devisData.totalTtc }}€</span>
+                </div>
+                
+                {% if devisData.acomptePercent or devisData.acompteMontant %}
+                <div class="d-flex justify-content-between mb-2">
+                    <span>Acompte :</span>
+                    <span>
+                        {% if devisData.acomptePercent %}{{ devisData.acomptePercent }}%{% endif %}
+                        {% if devisData.acompteMontant %}{{ devisData.acompteMontant }}€{% endif %}
+                    </span>
+                </div>
+                {% endif %}
+                
+                {% if devisData.remiseGlobalePercent or devisData.remiseGlobaleMontant %}
+                <div class="d-flex justify-content-between mb-2">
+                    <span>Remise globale :</span>
+                    <span>
+                        {% if devisData.remiseGlobalePercent %}{{ devisData.remiseGlobalePercent }}%{% endif %}
+                        {% if devisData.remiseGlobaleMontant %}{{ devisData.remiseGlobaleMontant }}€{% endif %}
+                    </span>
+                </div>
+                {% endif %}
+            </div>
+
+            <!-- Comparaison -->
+            <div class="info-group">
+                <h6><i class="fas fa-exchange-alt me-2"></i>Comparaison</h6>
+                <div class="d-grid gap-2">
+                    <a href="{{ path('app_devis_show', {'id': devis.id}) }}" class="btn btn-primary">
+                        <i class="fas fa-eye me-2"></i>Voir la version actuelle
+                    </a>
+                    <button class="btn btn-outline-secondary" onclick="window.print()">
+                        <i class="fas fa-print me-2"></i>Imprimer cette version
+                    </button>
+                    <a href="{{ path('app_devis_versions', {'id': devis.id}) }}" class="btn btn-outline-info">
+                        <i class="fas fa-list me-2"></i>Toutes les versions
+                    </a>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

@@ -324,8 +324,21 @@
 
             <!-- Actions -->
             <div class="d-grid gap-2 mt-3">
+                {% if devis.statut in ['envoye', 'signe'] %}
+                    <div class="alert alert-warning mb-3">
+                        <i class="fas fa-exclamation-triangle me-2"></i>
+                        <strong>Attention :</strong> Ce devis a déjà été envoyé. 
+                        Toute modification créera automatiquement une version pour conserver l'historique.
+                    </div>
+                {% endif %}
+                
                 <button type="submit" name="action" value="save" class="btn btn-primary btn-lg">
-                    <i class="fas fa-save"></i> Enregistrer les modifications
+                    <i class="fas fa-save"></i> 
+                    {% if devis.statut in ['envoye', 'signe'] %}
+                        Modifier et créer une version
+                    {% else %}
+                        Enregistrer les modifications
+                    {% endif %}
                 </button>
                 
                 {% if devis.statut == 'brouillon' %}
@@ -363,7 +376,7 @@ $(document).ready(function() {
         $('.add-item-btn, .remove-item-btn').hide();
         
         // Message d'information
-        const info = $('<div class="alert alert-info"><i class="fas fa-info-circle me-2"></i>Ce devis ne peut plus être modifié car il a été envoyé.</div>');
+        const info = $('<div class="alert alert-info"><i class="fas fa-info-circle me-2"></i>Ce devis a été envoyé. Les modifications créeront une version pour conserver l\'historique.</div>');
         $('.devis-items-collection').before(info);
     {% else %}
     
@@ -391,10 +404,8 @@ $(document).ready(function() {
         calculateTotals();
     }
 
-    // Créer et ajouter le bouton d'ajout
-    $('<button type="button" class="btn btn-add-item w-100 mt-3"><i class="fas fa-plus me-2"></i>Ajouter une ligne</button>')
-        .appendTo($collectionHolder.parent())
-        .on('click', addNewDevisItem);
+    // Attacher l'événement au bouton existant dans le template
+    $('.add-item-btn').on('click', addNewDevisItem);
 
     // Fonction pour calculer les totaux
     function calculateTotals() {
