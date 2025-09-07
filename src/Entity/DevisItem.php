@@ -34,7 +34,7 @@ class DevisItem
     #[ORM\Column(type: Types::DECIMAL, precision: 10, scale: 2)]
     private ?string $prixUnitaireHt = '0.00';
 
-    #[ORM\Column(type: Types::DECIMAL, precision: 5, scale: 2, nullable: true)]
+    #[ORM\Column(type: Types::DECIMAL, precision: 6, scale: 3, nullable: true)]
     private ?string $remisePercent = null;
 
     #[ORM\Column(type: Types::DECIMAL, precision: 10, scale: 2, nullable: true)]
@@ -43,8 +43,8 @@ class DevisItem
     #[ORM\Column(type: Types::DECIMAL, precision: 10, scale: 2, nullable: false)]
     private string $totalLigneHt = '0.00';
 
-    #[ORM\Column(type: Types::DECIMAL, precision: 5, scale: 2)]
-    private ?string $tvaPercent = '20.00';
+    #[ORM\Column(type: Types::DECIMAL, precision: 6, scale: 3)]
+    private ?string $tvaPercent = '20.000';
 
     #[ORM\Column]
     private ?int $ordreAffichage = 1;

@@ -44,7 +44,7 @@
     {{ form_start(form, {'attr': {'id': 'devis-form', 'class': 'devis-form'}}) }}
     
     <div class="row">
-        <div class="col-lg-8">
+        <div class="col-12">
             <!-- Informations générales -->
             <div class="form-section">
                 <div class="form-section-header">
@@ -134,68 +134,82 @@
                     <div class="d-flex justify-content-between align-items-center">
                         <h5 class="mb-0"><i class="fas fa-list me-2"></i>Lignes de devis</h5>
                         {% if devis.statut == 'brouillon' %}
-                            <button type="button" class="btn btn-sm btn-outline-primary add-item-btn">
-                                <i class="fas fa-plus"></i> Ajouter une ligne
+                            <button type="button" class="btn btn-sm btn-success add-item-btn">
+                                <i class="fas fa-plus me-1"></i>Nouvelle ligne
                             </button>
                         {% endif %}
                     </div>
                 </div>
                 <div class="form-section-body">
+                    <!-- En-têtes colonnes -->
+                    <div class="row devis-headers mb-2 py-2 bg-light border rounded align-items-center">
+                        <div class="col-1"><small class="fw-bold">Code</small></div>
+                        <div class="col-2"><small class="fw-bold">Désignation</small></div>
+                        <div class="col-4"><small class="fw-bold">Description détaillée</small></div>
+                        <div class="col-1 text-center"><small class="fw-bold">Qté</small></div>
+                        <div class="col-1 text-center"><small class="fw-bold">PU HT</small></div>
+                        <div class="col-1 text-center"><small class="fw-bold">% Rem.</small></div>
+                        <div class="col-1 text-center"><small class="fw-bold">TVA</small></div>
+                        <div class="col-1 text-center"><small class="fw-bold">Total HT</small></div>
+                        {% if devis.statut == 'brouillon' %}
+                        <div style="width: 40px;"><small class="fw-bold"></small></div>
+                        {% endif %}
+                    </div>
+
                     <div class="devis-items-collection" id="devis_devisItems" data-prototype="{{ form_row(form.devisItems.vars.prototype)|e('html_attr') }}" data-index="{{ form.devisItems|length }}">
                         {% for item in form.devisItems %}
-                            <div class="devis-item">
-                                <div class="row">
-                                    <div class="col-md-6">
-                                        {{ form_row(item.produit, {
-                                            'label': 'Produit/Service',
-                                            'attr': {'class': 'form-select produit-select'}
-                                        }) }}
+                            <div class="devis-item mb-1 py-2 border-bottom">
+                                <div class="row align-items-center g-1">
+                                    <!-- Code article -->
+                                    <div class="col-1">
+                                        <input type="text" class="form-control form-control-sm code-article-input" 
+                                               placeholder="Code..." readonly value="{{ item.vars.data.produit ? item.vars.data.produit.reference : '' }}" />
                                     </div>
-                                    <div class="col-md-6">
-                                        {{ form_row(item.designation, {
-                                            'label': 'Désignation',
-                                            'attr': {'class': 'form-control'}
-                                        }) }}
+                                    
+                                    <!-- Désignation -->
+                                    <div class="col-2">
+                                        {{ form_widget(item.designation, {'attr': {'class': 'form-control form-control-sm designation-input'}}) }}
                                     </div>
-                                </div>
-                                <div class="row">
-                                    <div class="col-md-12">
-                                        {{ form_row(item.description, {
-                                            'label': 'Description',
-                                            'attr': {'class': 'form-control', 'rows': 2}
-                                        }) }}
+                                    
+                                    <!-- Description détaillée -->
+                                    <div class="col-4">
+                                        {{ form_widget(item.description, {'attr': {'class': 'form-control form-control-sm description-input', 'placeholder': 'Description détaillée...'}}) }}
                                     </div>
-                                </div>
-                                <div class="row">
-                                    <div class="col-md-2">
-                                        {{ form_row(item.quantite, {
-                                            'label': 'Qté',
-                                            'attr': {'class': 'form-control quantity-input', 'min': 0, 'step': 0.01}
-                                        }) }}
+                                    
+                                    <!-- Quantité -->
+                                    <div class="col-1">
+                                        {{ form_widget(item.quantite, {'attr': {'class': 'form-control form-control-sm text-center quantity-input'}}) }}
                                     </div>
-                                    <div class="col-md-3">
-                                        {{ form_row(item.prixUnitaireHt, {
-                                            'label': 'Prix unit. HT',
-                                            'attr': {'class': 'form-control price-input', 'min': 0, 'step': 0.01}
-                                        }) }}
+                                    
+                                    <!-- Prix unitaire HT -->
+                                    <div class="col-1">
+                                        {{ form_widget(item.prixUnitaireHt, {'attr': {'class': 'form-control form-control-sm text-end price-input'}}) }}
                                     </div>
-                                    <div class="col-md-2">
-                                        {{ form_row(item.tvaPercent, {
-                                            'label': 'TVA %',
-                                            'attr': {'class': 'form-control tva-input', 'min': 0, 'max': 100, 'step': 0.01}
-                                        }) }}
+                                    
+                                    <!-- % Remise -->
+                                    <div class="col-1">
+                                        {{ form_widget(item.remisePercent, {'attr': {'class': 'form-control form-control-sm text-center remise-input', 'placeholder': '0'}}) }}
                                     </div>
-                                    <div class="col-md-3">
-                                        <label class="form-label">Total HT</label>
-                                        <div class="form-control-plaintext fw-bold total-line-display">{{ item.vars.data.totalLigneHt ?? '0.00' }}€</div>
+                                    
+                                    <!-- TVA (menu déroulant) -->
+                                    <div class="col-1">
+                                        <select class="form-select form-select-sm tva-select" name="{{ item.tvaPercent.vars.full_name }}">
+                                            <option value="">TVA</option>
+                                        </select>
                                     </div>
+                                    
+                                    <!-- Total HT ligne -->
+                                    <div class="col-1 text-center">
+                                        <small class="total-ligne-display fw-bold text-success">{{ item.vars.data.totalLigneHt ?? '0.00' }}€</small>
+                                    </div>
+                                    
+                                    <!-- Action -->
                                     {% if devis.statut == 'brouillon' %}
-                                        <div class="col-md-2">
-                                            <label class="form-label">&nbsp;</label>
-                                            <button type="button" class="btn btn-outline-danger w-100 remove-item-btn">
-                                                <i class="fas fa-trash"></i>
-                                            </button>
-                                        </div>
+                                    <div class="text-center" style="width: 40px;">
+                                        <button type="button" class="btn btn-outline-danger btn-sm remove-item-btn p-1" title="Supprimer">
+                                            <i class="fas fa-trash fa-xs"></i>
+                                        </button>
+                                    </div>
                                     {% endif %}
                                 </div>
                                 {{ form_rest(item) }}
@@ -275,65 +289,74 @@
                     </div>
                 </div>
             </div>
+            <!-- Message d'alerte pour devis envoyé -->
+            {% if devis.statut in ['envoye', 'signe'] %}
+                <div class="alert alert-warning mt-3">
+                    <i class="fas fa-exclamation-triangle me-2"></i>
+                    <strong>Attention :</strong> Ce devis a déjà été envoyé. 
+                    Toute modification créera automatiquement une version pour conserver l'historique.
+                </div>
+            {% endif %}
         </div>
+    </div>
 
-        <div class="col-lg-4">
-            <!-- Récapitulatif -->
-            <div class="totals-section">
-                <h5 class="mb-3"><i class="fas fa-calculator me-2"></i>Récapitulatif</h5>
-                
-                <div class="total-line">
-                    <span>Sous-total HT :</span>
-                    <span class="subtotal-ht">{{ devis.totalHt }}€</span>
+    {{ form_rest(form) }}
+    {{ form_end(form) }}
+</div>
+
+<!-- Panneau récapitulatif flottant -->
+<div class="floating-summary" id="floating-summary">
+    <div class="floating-summary-toggle" id="summary-toggle">
+        <i class="fas fa-calculator me-2"></i>
+        <span class="summary-total-display">{{ devis.totalTtc }}€ TTC</span>
+        <i class="fas fa-chevron-up toggle-icon"></i>
+    </div>
+    <div class="floating-summary-content" id="summary-content">
+        <div class="row">
+            <div class="col-md-3">
+                <div class="summary-item">
+                    <span class="summary-label">Total HT :</span>
+                    <span class="summary-value total-ht">{{ devis.totalHt }}€</span>
                 </div>
-                
-                {% if devis.remiseGlobalePercent %}
-                <div class="total-line">
-                    <span>Remise globale :</span>
-                    <span class="remise-globale">{{ devis.remiseGlobaleMontant }}€</span>
-                </div>
-                {% endif %}
-                
-                <div class="total-line">
-                    <span>Total HT :</span>
-                    <span class="total-ht">{{ devis.totalHt }}€</span>
-                </div>
-                
-                <div class="total-line">
-                    <span>TVA :</span>
-                    <span class="total-tva">{{ devis.totalTva }}€</span>
-                </div>
-                
-                <div class="total-line">
-                    <span>Total TTC :</span>
-                    <span class="total-ttc">{{ devis.totalTtc }}€</span>
-                </div>
-                
-                {% if devis.acomptePercent or devis.acompteMontant %}
-                <div class="total-line">
-                    <span>Acompte :</span>
-                    <span class="acompte-montant">{{ devis.calculateAcompte }}€</span>
-                </div>
-                
-                <div class="total-line">
-                    <span>Solde :</span>
-                    <span class="solde-montant">{{ (devis.totalTtc - devis.calculateAcompte) }}€</span>
-                </div>
-                {% endif %}
             </div>
+            <div class="col-md-3">
+                <div class="summary-item">
+                    <span class="summary-label">TVA :</span>
+                    <span class="summary-value total-tva">{{ devis.totalTva }}€</span>
+                </div>
+            </div>
+            <div class="col-md-3">
+                <div class="summary-item">
+                    <span class="summary-label">Total TTC :</span>
+                    <span class="summary-value total-ttc fw-bold text-success">{{ devis.totalTtc }}€</span>
+                </div>
+            </div>
+            {% if devis.acomptePercent or devis.acompteMontant %}
+            <div class="col-md-3">
+                <div class="summary-item">
+                    <span class="summary-label">Acompte :</span>
+                    <span class="summary-value acompte-montant">{{ devis.calculateAcompte }}€</span>
+                </div>
+            </div>
+            {% endif %}
+        </div>
+    </div>
+</div>
 
-            <!-- Actions -->
-            <div class="d-grid gap-2 mt-3">
-                {% if devis.statut in ['envoye', 'signe'] %}
-                    <div class="alert alert-warning mb-3">
-                        <i class="fas fa-exclamation-triangle me-2"></i>
-                        <strong>Attention :</strong> Ce devis a déjà été envoyé. 
-                        Toute modification créera automatiquement une version pour conserver l'historique.
-                    </div>
-                {% endif %}
-                
-                <button type="submit" name="action" value="save" class="btn btn-primary btn-lg">
-                    <i class="fas fa-save"></i> 
+<!-- Barre flottante d'actions -->
+<div class="floating-action-bar" id="floating-actions">
+    <div class="container-fluid">
+        <div class="d-flex justify-content-between align-items-center">
+            <div>
+                <span class="text-white me-3">
+                    <i class="fas fa-file-invoice me-2"></i>
+                    <strong>{{ devis.numeroDevis }}</strong>
+                    <span class="badge bg-{{ devis.statutCouleur }} ms-2">{{ devis.statutLibelle }}</span>
+                </span>
+            </div>
+            <div class="d-flex gap-2">
+                <button type="submit" name="action" value="save" class="btn btn-light" form="devis-form">
+                    <i class="fas fa-save me-1"></i>
                     {% if devis.statut in ['envoye', 'signe'] %}
                         Modifier et créer une version
                     {% else %}
@@ -342,28 +365,166 @@
                 </button>
                 
                 {% if devis.statut == 'brouillon' %}
-                    <button type="submit" name="action" value="save_and_send" class="btn btn-success">
-                        <i class="fas fa-paper-plane"></i> Enregistrer et envoyer
+                    <button type="submit" name="action" value="save_and_send" class="btn btn-success" form="devis-form">
+                        <i class="fas fa-paper-plane me-1"></i>Enregistrer et envoyer
                     </button>
                 {% endif %}
                 
-                <a href="{{ path('app_devis_pdf', {'id': devis.id}) }}" target="_blank" class="btn btn-outline-primary">
-                    <i class="fas fa-file-pdf"></i> Aperçu PDF
+                <a href="{{ path('app_devis_pdf', {'id': devis.id}) }}" target="_blank" class="btn btn-info">
+                    <i class="fas fa-file-pdf me-1"></i>PDF
                 </a>
                 
-                <a href="{{ path('app_devis_show', {'id': devis.id}) }}" class="btn btn-outline-secondary">
-                    <i class="fas fa-times"></i> Annuler
+                <a href="{{ path('app_devis_show', {'id': devis.id}) }}" class="btn btn-secondary">
+                    <i class="fas fa-eye me-1"></i>Voir
+                </a>
+                
+                <a href="{{ path('app_devis_index') }}" class="btn btn-outline-light">
+                    <i class="fas fa-times me-1"></i>Annuler
                 </a>
             </div>
         </div>
     </div>
-
-    {{ form_rest(form) }}
-    {{ form_end(form) }}
 </div>
 
+{% block stylesheets %}
+    {{ parent() }}
+    <style>
+        /* Barre flottante d'actions */
+        .floating-action-bar {
+            position: fixed;
+            bottom: 0;
+            left: 0;
+            right: 0;
+            background: linear-gradient(135deg, #6f42c1 0%, #e83e8c 100%);
+            box-shadow: 0 -2px 10px rgba(0,0,0,0.1);
+            z-index: 1050;
+            padding: 12px 0;
+        }
+        
+        /* Lignes de devis compactes */
+        .devis-item {
+            transition: background-color 0.2s;
+        }
+        
+        .devis-item:hover {
+            background-color: #f8f9fa;
+        }
+        
+        .devis-headers {
+            position: sticky;
+            top: 0;
+            z-index: 10;
+        }
+        
+        /* Ajustement pour éviter que le contenu passe sous les barres flottantes */
+        body {
+            padding-bottom: 140px; /* Augmenté pour la double barre */
+        }
+        
+        /* Panneau récapitulatif flottant */
+        .floating-summary {
+            position: fixed;
+            bottom: 70px; /* Au-dessus de la barre d'actions */
+            right: 20px;
+            background: white;
+            border: 1px solid #dee2e6;
+            border-radius: 8px;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+            z-index: 1040;
+            min-width: 320px;
+            max-width: 600px;
+        }
+        
+        .floating-summary-toggle {
+            background: linear-gradient(135deg, #28a745 0%, #20c997 100%);
+            color: white;
+            padding: 12px 16px;
+            border-radius: 8px 8px 0 0;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            font-weight: 600;
+            transition: background 0.2s;
+        }
+        
+        .floating-summary-toggle:hover {
+            background: linear-gradient(135deg, #218838 0%, #1fa085 100%);
+        }
+        
+        .floating-summary-content {
+            padding: 16px;
+            border-radius: 0 0 8px 8px;
+            display: none; /* Caché par défaut */
+        }
+        
+        .floating-summary.expanded .floating-summary-content {
+            display: block;
+        }
+        
+        .floating-summary.expanded .toggle-icon {
+            transform: rotate(180deg);
+        }
+        
+        .toggle-icon {
+            transition: transform 0.2s;
+        }
+        
+        .summary-item {
+            display: flex;
+            justify-content: space-between;
+            padding: 4px 0;
+            border-bottom: 1px solid #f8f9fa;
+        }
+        
+        .summary-item:last-child {
+            border-bottom: none;
+        }
+        
+        .summary-label {
+            color: #6c757d;
+            font-size: 0.875rem;
+        }
+        
+        .summary-value {
+            font-weight: 600;
+            color: #495057;
+        }
+        
+        .summary-total-display {
+            font-size: 1.1rem;
+            font-weight: 700;
+        }
+        
+        /* Champs compacts */
+        .form-control-sm {
+            font-size: 0.875rem;
+        }
+        
+        /* Totaux mis en évidence */
+        .total-display, .total-ligne-display {
+            font-weight: 600;
+            color: #198754;
+        }
+        
+        /* Responsive pour écrans plus petits */
+        @media (max-width: 768px) {
+            .floating-action-bar .d-flex {
+                flex-direction: column;
+                gap: 8px;
+            }
+            .floating-action-bar {
+                padding: 8px 0;
+            }
+        }
+    </style>
+{% endblock %}
+
 {% block javascripts %}
-{{ parent() }}
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/js/bootstrap.bundle.min.js"></script>
+<script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/js/select2.min.js"></script>
+
 <script>
 $(document).ready(function() {
     // Désactiver la modification des lignes si le devis n'est pas en brouillon
@@ -385,27 +546,234 @@ $(document).ready(function() {
     let index = $collectionHolder.find('.devis-item').length;
 
     function addNewDevisItem() {
+        // Protection contre les doubles appels
+        if (window.addingInProgress) {
+            return;
+        }
+        window.addingInProgress = true;
+        
+        // Utiliser le prototype du formulaire Symfony
         const prototype = $collectionHolder.data('prototype');
         const newForm = prototype.replace(/__name__/g, index);
         index++;
 
         const $newItem = $('<div class="devis-item"></div>').html(newForm);
-        $collectionHolder.append($newItem);
-
-        // Initialiser les valeurs par défaut pour éviter les erreurs null
-        $newItem.find('[id$="_totalLigneHt"]').val('0.00');
-        $newItem.find('[id$="_tvaPercent"]').val('20.00');
-        $newItem.find('[id$="_quantite"]').val('1');
-        $newItem.find('[id$="_prixUnitaireHt"]').val('0.00');
-        $newItem.find('[id$="_ordreAffichage"]').val(index);
-
-        // Réinitialiser les événements pour le calcul
-        bindCalculationEvents($newItem);
+        
+        // Créer une nouvelle ligne compacte
+        const $newItemCompact = $(`
+        <div class="devis-item mb-2 py-2 border-bottom" data-index="${index}">
+            <div class="row align-items-center">
+                <!-- Catalogue -->
+                <div class="col-md-1 text-center">
+                    <button type="button" class="btn btn-outline-info btn-sm catalogue-btn" title="Catalogue">
+                        <i class="fas fa-book"></i>
+                    </button>
+                </div>
+                
+                <!-- Code article -->
+                <div class="col-md-2">
+                    <input type="text" class="form-control form-control-sm code-article-input" placeholder="Code..." />
+                </div>
+                
+                <!-- Désignation -->
+                <div class="col-md-2">
+                </div>
+                
+                <!-- Quantité -->
+                <div class="col-md-1">
+                </div>
+                
+                <!-- Prix unitaire HT -->
+                <div class="col-md-1">
+                </div>
+                
+                <!-- % Remise -->
+                <div class="col-md-1">
+                </div>
+                
+                <!-- Net HT (calculé) -->
+                <div class="col-md-1 text-center">
+                    <small class="total-display fw-bold">0.00€</small>
+                </div>
+                
+                <!-- TVA -->
+                <div class="col-md-1">
+                </div>
+                
+                <!-- Total HT ligne -->
+                <div class="col-md-1 text-center">
+                    <small class="total-ligne-display fw-bold text-success">0.00€</small>
+                </div>
+                
+                <!-- Actions (affiché seulement si brouillon) -->
+                <div class="col-md-1 text-center action-column">
+                    <button type="button" class="btn btn-outline-danger btn-sm remove-item-btn" title="Supprimer">
+                        <i class="fas fa-trash"></i>
+                    </button>
+                </div>
+            </div>
+            <!-- Champs Symfony cachés -->
+            <div style="display: none;" class="symfony-fields"></div>
+        </div>
+        `);
+        
+        // Déplacer les champs Symfony dans la partie cachée et les adapter
+        const $symFields = $newItem.find('input, select, textarea').clone();
+        $newItemCompact.find('.symfony-fields').append($symFields);
+        
+        // Remplacer les champs visibles par les bons
+        const designationField = $newItemCompact.find('.symfony-fields').find('[id$="_designation"]');
+        const quantiteField = $newItemCompact.find('.symfony-fields').find('[id$="_quantite"]');
+        const prixField = $newItemCompact.find('.symfony-fields').find('[id$="_prixUnitaireHt"]');
+        const remiseField = $newItemCompact.find('.symfony-fields').find('[id$="_remisePercent"]');
+        const tvaField = $newItemCompact.find('.symfony-fields').find('[id$="_tvaPercent"]');
+        const produitField = $newItemCompact.find('.symfony-fields').find('[id$="_produit"]');
+        
+        // Intégrer les champs dans l'interface compacte avec contraintes
+        $newItemCompact.find('.col-md-2').eq(1).append(designationField.addClass('form-control form-control-sm designation-input'));
+        $newItemCompact.find('.col-md-1').eq(0).append(quantiteField.addClass('form-control form-control-sm quantity-input').val('1'));
+        $newItemCompact.find('.col-md-1').eq(1).append(prixField.addClass('form-control form-control-sm price-input').val('0.00'));
+        $newItemCompact.find('.col-md-1').eq(2).append(remiseField.addClass('form-control form-control-sm remise-input').val('0').attr('max', '100').attr('min', '0'));
+        $newItemCompact.find('.col-md-1').eq(4).append(tvaField.addClass('form-select form-select-sm tva-select'));
+        
+        // Ajouter champ produit caché pour l'autocomplétion
+        $newItemCompact.find('.symfony-fields').append(produitField.addClass('produit-id-input'));
+        
+        $collectionHolder.append($newItemCompact);
+        
+        // Masquer la colonne d'action si le devis n'est pas en brouillon
+        {% if devis.statut != 'brouillon' %}
+        $newItemCompact.find('.action-column').hide();
+        {% endif %}
+        
+        // Initialiser l'autocomplétion pour cette ligne
+        initAutocompleteForItem($newItemCompact);
+        
+        // Charger les taux de TVA
+        loadTauxTva($newItemCompact);
+        
+        // Lier les événements de calcul
+        bindCalculationEvents($newItemCompact);
+        
+        // Calculer les totaux
         calculateTotals();
+        
+        // Libérer le verrou
+        setTimeout(function() {
+            window.addingInProgress = false;
+        }, 100);
     }
 
     // Attacher l'événement au bouton existant dans le template
-    $('.add-item-btn').on('click', addNewDevisItem);
+    $('.add-item-btn').off('click').on('click', function(e) {
+        e.preventDefault();
+        e.stopPropagation();
+        addNewDevisItem();
+    });
+    
+    // Empêcher la création de boutons supplémentaires du template parent
+    // Supprimer tout bouton "btn-add-item" qui pourrait être créé par le JavaScript parent
+    setTimeout(function() {
+        $('.btn-add-item').not('.add-item-btn').remove();
+    }, 100);
+
+    // Fonction d'initialisation de l'autocomplétion pour une ligne
+    function initAutocompleteForItem($item) {
+        const $input = $item.find('.code-article-input');
+        const $produitIdInput = $item.find('[id$="_produit"], .produit-id-input');
+        const $designationInput = $item.find('[id$="_designation"], .designation-input');
+        const $priceInput = $item.find('[id$="_prixUnitaireHt"], .price-input');
+        const $tvaSelect = $item.find('[id$="_tvaPercent"], .tva-select');
+        
+        $input.on('input', function() {
+            const term = $(this).val();
+            if (term.length < 2) {
+                return;
+            }
+            
+            // Appel API pour recherche produits
+            $.ajax({
+                url: '/devis/api/produits',
+                method: 'GET',
+                data: { q: term },
+                success: function(products) {
+                    // Créer une liste déroulante des suggestions
+                    const $existing = $item.find('.autocomplete-dropdown');
+                    $existing.remove();
+                    
+                    if (products.length > 0) {
+                        const $dropdown = $('<div class="autocomplete-dropdown list-group position-absolute" style="z-index: 1000; max-height: 200px; overflow-y: auto; width: 100%;"></div>');
+                        
+                        products.forEach(function(product) {
+                            const $option = $('<a href="#" class="list-group-item list-group-item-action small"></a>');
+                            $option.text(product.text);
+                            $option.on('click', function(e) {
+                                e.preventDefault();
+                                
+                                // Remplir les champs avec les données du produit
+                                $input.val(product.reference);
+                                $produitIdInput.val(product.id);
+                                $designationInput.val(product.designation);
+                                $priceInput.val(parseFloat(product.prix_vente_ht));
+                                
+                                // Sélectionner le taux de TVA correspondant
+                                if (product.taux_tva) {
+                                    $tvaSelect.val(product.taux_tva);
+                                }
+                                
+                                $dropdown.remove();
+                                
+                                // Déclencher le calcul
+                                calculateTotals();
+                            });
+                            $dropdown.append($option);
+                        });
+                        
+                        $input.parent().append($dropdown);
+                    }
+                },
+                error: function() {
+                    console.error('Erreur lors de la recherche de produits');
+                }
+            });
+        });
+        
+        // Fermer la dropdown quand on clique ailleurs
+        $(document).on('click', function(e) {
+            if (!$(e.target).closest($item).length) {
+                $item.find('.autocomplete-dropdown').remove();
+            }
+        });
+    }
+
+    // Fonction de chargement des taux de TVA
+    function loadTauxTva($item) {
+        const $select = $item.find('[id$="_tvaPercent"], .tva-select');
+        
+        $.ajax({
+            url: '/devis/api/taux-tva',
+            method: 'GET',
+            success: function(tauxList) {
+                $select.empty();
+                $select.append('<option value="">Sélectionner TVA</option>');
+                
+                tauxList.forEach(function(taux) {
+                    const $option = $('<option></option>');
+                    $option.val(taux.taux);
+                    // Afficher seulement le taux en pourcentage
+                    $option.text(taux.taux + '%');
+                    if (taux.par_defaut) {
+                        $option.prop('selected', true);
+                    }
+                    $select.append($option);
+                });
+            },
+            error: function() {
+                console.error('Erreur lors du chargement des taux de TVA');
+                $select.html('<option value="">Erreur de chargement</option>');
+            }
+        });
+    }
 
     // Fonction pour calculer les totaux
     function calculateTotals() {
@@ -413,18 +781,31 @@ $(document).ready(function() {
         let totalTva = 0;
 
         $('.devis-item').each(function() {
-            const qte = parseFloat($(this).find('[id$="_quantite"]').val()) || 0;
-            const prixUnitaire = parseFloat($(this).find('[id$="_prixUnitaireHt"]').val()) || 0;
-            const tvaPercent = parseFloat($(this).find('[id$="_tvaPercent"]').val()) || 20;
+            // Utiliser les nouvelles classes CSS pour les champs
+            const qte = parseFloat($(this).find('.quantity-input, [id$="_quantite"]').val()) || 0;
+            const prixUnitaire = parseFloat($(this).find('.price-input, [id$="_prixUnitaireHt"]').val()) || 0;
+            let remisePercent = parseFloat($(this).find('.remise-input, [id$="_remisePercent"]').val()) || 0;
+            let tvaPercent = parseFloat($(this).find('.tva-select, [id$="_tvaPercent"]').val()) || 20;
+            
+            // Limiter les valeurs pour éviter l'erreur de dépassement de précision
+            remisePercent = Math.min(Math.max(remisePercent, 0), 100); // Entre 0 et 100
+            tvaPercent = Math.min(Math.max(tvaPercent, 0), 100); // Entre 0 et 100
+            
+            // Mettre à jour les champs avec les valeurs limitées
+            $(this).find('.remise-input, [id$="_remisePercent"]').val(remisePercent.toFixed(3));
+            $(this).find('.tva-select, [id$="_tvaPercent"]').val(tvaPercent.toFixed(3));
 
-            const totalLigneHt = qte * prixUnitaire;
+            // Calcul avec remise
+            const sousTotal = qte * prixUnitaire;
+            const montantRemise = sousTotal * remisePercent / 100;
+            const totalLigneHt = sousTotal - montantRemise;
             const tvaLigne = totalLigneHt * tvaPercent / 100;
 
-            // Mettre à jour le champ caché totalLigneHt pour cette ligne
-            $(this).find('[id$="_totalLigneHt"]').val(totalLigneHt.toFixed(2));
+            // Mettre à jour les champs cachés
+            $(this).find('.total-ligne-ht-input, [id$="_totalLigneHt"]').val(totalLigneHt.toFixed(2));
             
-            // Mettre à jour l'affichage du total de ligne
-            $(this).find('.total-line-display').text(totalLigneHt.toFixed(2) + '€');
+            // Mettre à jour l'affichage du montant net HT
+            $(this).find('.total-display, .total-line-display').text(totalLigneHt.toFixed(2) + '€');
 
             totalHt += totalLigneHt;
             totalTva += tvaLigne;
@@ -446,11 +827,46 @@ $(document).ready(function() {
     // Fonction pour lier les événements de calcul
     function bindCalculationEvents($container) {
         $container = $container || $(document);
-        $container.find('[id$="_quantite"], [id$="_prixUnitaireHt"], [id$="_tvaPercent"]')
+        
+        // Événements pour les anciens champs (lignes existantes)
+        $container.find('[id$="_quantite"], [id$="_prixUnitaireHt"], [id$="_tvaPercent"], [id$="_remisePercent"]')
             .off('input change keyup')
             .on('input change keyup', function() {
                 calculateTotals();
             });
+            
+        // Événements pour les nouveaux champs (nouvelles lignes)
+        $container.find('.quantity-input, .price-input, .remise-input, .tva-select')
+            .off('input change keyup')
+            .on('input change keyup', function() {
+                // Validation des limites pour les champs de pourcentage
+                if ($(this).hasClass('remise-input')) {
+                    let val = parseFloat($(this).val());
+                    if (isNaN(val) || val < 0) $(this).val('0');
+                    else if (val > 100) $(this).val('100');
+                }
+                calculateTotals();
+            });
+            
+        // Gestion des boutons de suppression
+        $container.find('.remove-item-btn').off('click').on('click', function() {
+            const $item = $(this).closest('.devis-item');
+            $item.remove();
+            calculateTotals();
+        });
+        
+        // Gestion des boutons catalogue
+        $container.find('.catalogue-btn').off('click').on('click', function() {
+            const $item = $(this).closest('.devis-item');
+            openCatalogueModal($item);
+        });
+    }
+    
+    // Fonction pour ouvrir la modal du catalogue (à développer)
+    function openCatalogueModal($item) {
+        // Pour l'instant, une alerte simple
+        // TODO: Implémenter la modal du catalogue
+        alert('Catalogue à développer - Fonctionnalité prévue pour sélectionner un produit depuis le catalogue complet');
     }
 
     // Lier les événements pour les lignes existantes
@@ -460,6 +876,37 @@ $(document).ready(function() {
     calculateTotals();
 
     {% endif %}
+    
+    // Gestion du panneau récapitulatif flottant
+    $('#summary-toggle').on('click', function() {
+        const $summary = $('#floating-summary');
+        const $icon = $('.toggle-icon');
+        
+        $summary.toggleClass('expanded');
+        
+        if ($summary.hasClass('expanded')) {
+            $('#summary-content').slideDown(200);
+        } else {
+            $('#summary-content').slideUp(200);
+        }
+    });
+    
+    // Fonction pour mettre à jour le récapitulatif flottant
+    function updateFloatingSummary() {
+        const totalHt = $('.total-ht').first().text();
+        const totalTva = $('.total-tva').first().text();
+        const totalTtc = $('.total-ttc').first().text();
+        
+        // Mettre à jour l'affichage dans le toggle
+        $('.summary-total-display').text(totalTtc + ' TTC');
+    }
+    
+    // Mettre à jour le récapitulatif après chaque calcul
+    const originalCalculateTotals = calculateTotals;
+    calculateTotals = function() {
+        originalCalculateTotals();
+        setTimeout(updateFloatingSummary, 50);
+    };
 });
 </script>
 {% endblock %}
