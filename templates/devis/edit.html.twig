@@ -136,16 +136,16 @@
                     </div>
                 </div>
                 <div class="form-section-body">
-                    <!-- En-têtes colonnes parfaitement alignés -->
+                    <!-- En-têtes colonnes uniformes (90px à droite) -->
                     <div class="d-flex devis-headers mb-2 py-2 bg-light rounded align-items-start" style="gap: 2px; height: 35px;">
                         <div style="width: 120px; padding: 4px;"><small class="fw-bold">Code</small></div>
                         <div style="width: 225px; padding: 4px;"><small class="fw-bold">Désignation</small></div>
                         <div class="flex-fill" style="padding: 4px;"><small class="fw-bold">Description détaillée</small></div>
                         <div style="width: 90px; padding: 4px;" class="text-center"><small class="fw-bold">Qté</small></div>
-                        <div style="width: 120px; padding: 4px;" class="text-center"><small class="fw-bold">PU HT</small></div>
+                        <div style="width: 90px; padding: 4px;" class="text-center"><small class="fw-bold">PU HT</small></div>
                         <div style="width: 90px; padding: 4px;" class="text-center"><small class="fw-bold">% Rem.</small></div>
-                        <div style="width: 105px; padding: 4px;" class="text-center"><small class="fw-bold">TVA</small></div>
-                        <div style="width: 80px; padding: 4px;" class="text-center"><small class="fw-bold">Total HT</small></div>
+                        <div style="width: 90px; padding: 4px;" class="text-center"><small class="fw-bold">TVA</small></div>
+                        <div style="width: 90px; padding: 4px;" class="text-center"><small class="fw-bold">Total HT</small></div>
                         {% if devis.statut == 'brouillon' %}
                         <div style="width: 30px; padding: 4px;"><small class="fw-bold"></small></div>
                         {% endif %}
@@ -176,25 +176,25 @@
                                         {{ form_widget(item.quantite, {'attr': {'class': 'form-control form-control-sm text-center quantity-input'}}) }}
                                     </div>
                                     
-                                    <!-- Prix unitaire HT sans € (1,5x = 120px) -->
-                                    <div style="width: 120px; padding: 4px;">
-                                        {{ form_widget(item.prixUnitaireHt, {'attr': {'class': 'form-control form-control-sm text-end price-input', 'placeholder': '0.00'}}) }}
+                                    <!-- Prix unitaire HT sans € -->
+                                    <div style="width: 90px; padding: 4px;">
+                                        {{ form_widget(item.prixUnitaireHt, {'attr': {'class': 'form-control form-control-sm text-end price-input', 'placeholder': '0.00', 'type': 'number', 'step': '0.01'}}) }}
                                     </div>
                                     
-                                    <!-- % Remise (1,5x = 90px) -->
+                                    <!-- % Remise (uniforme = 90px) -->
                                     <div style="width: 90px; padding: 4px;">
                                         {{ form_widget(item.remisePercent, {'attr': {'class': 'form-control form-control-sm text-center remise-input', 'placeholder': '0.0', 'step': '0.1'}}) }}
                                     </div>
                                     
-                                    <!-- TVA (1,5x = 105px) -->
-                                    <div style="width: 105px; padding: 4px;">
+                                    <!-- TVA (uniforme = 90px) -->
+                                    <div style="width: 90px; padding: 4px;">
                                         <select class="form-select form-select-sm tva-select" name="{{ item.tvaPercent.vars.full_name }}" data-current-value="{{ item.vars.data.tvaPercent ?? '20.00' }}">
                                             <!-- Options seront chargées via JavaScript depuis admin -->
                                         </select>
                                     </div>
                                     
-                                    <!-- Total HT ligne -->
-                                    <div style="width: 80px; padding: 4px;" class="text-center">
+                                    <!-- Total HT ligne (uniforme = 90px) -->
+                                    <div style="width: 90px; padding: 4px;" class="text-center">
                                         <small class="total-ligne-display fw-bold text-success" style="font-size: 0.75rem; line-height: 23px;">{{ item.vars.data.totalLigneHt ?? '0.00' }}€</small>
                                     </div>
                                     
@@ -637,16 +637,16 @@ $(document).ready(function() {
 
         const $newItem = $('<div class="devis-item"></div>').html(newForm);
         
-        // Créer une nouvelle ligne parfaitement alignée avec les en-têtes
+        // Créer une nouvelle ligne avec largeurs uniformes (90px à droite)
         const $newItemCompact = $(`
         <div class="devis-item mb-1 border-bottom" data-index="${index}">
             <div class="d-flex align-items-start" style="gap: 2px; min-height: 35px;">
-                <!-- Code article (1,5x = 120px) -->
+                <!-- Code article (120px) -->
                 <div style="width: 120px; padding: 4px;">
                     <input type="text" class="form-control form-control-sm code-article-input" placeholder="Code..." />
                 </div>
                 
-                <!-- Désignation (1,5x = 225px) -->
+                <!-- Désignation (225px) -->
                 <div style="width: 225px; padding: 4px;">
                 </div>
                 
@@ -654,24 +654,24 @@ $(document).ready(function() {
                 <div class="flex-fill" style="padding: 4px;">
                 </div>
                 
-                <!-- Quantité (1,5x = 90px) -->
+                <!-- Quantité (90px) -->
                 <div style="width: 90px; padding: 4px;">
                 </div>
                 
-                <!-- Prix unitaire HT (1,5x = 120px) -->
-                <div style="width: 120px; padding: 4px;">
-                </div>
-                
-                <!-- % Remise (1,5x = 90px) -->
+                <!-- Prix unitaire HT (90px uniforme) -->
                 <div style="width: 90px; padding: 4px;">
                 </div>
                 
-                <!-- TVA (1,5x = 105px) -->
-                <div style="width: 105px; padding: 4px;">
+                <!-- % Remise (90px uniforme) -->
+                <div style="width: 90px; padding: 4px;">
                 </div>
                 
-                <!-- Total HT ligne -->
-                <div style="width: 80px; padding: 4px;" class="text-center">
+                <!-- TVA (90px uniforme) -->
+                <div style="width: 90px; padding: 4px;">
+                </div>
+                
+                <!-- Total HT ligne (90px uniforme) -->
+                <div style="width: 90px; padding: 4px;" class="text-center">
                     <small class="total-ligne-display fw-bold text-success" style="font-size: 0.75rem; line-height: 23px;">0.00€</small>
                 </div>
                 
@@ -700,13 +700,13 @@ $(document).ready(function() {
         const tvaField = $newItemCompact.find('.symfony-fields').find('[id$="_tvaPercent"]');
         const produitField = $newItemCompact.find('.symfony-fields').find('[id$="_produit"]');
         
-        // Intégrer les champs avec nouvelles largeurs 1,5x
+        // Intégrer les champs avec largeurs uniformes (90px à droite)
         $newItemCompact.find('div[style*="width: 225px"]').append(designationField.addClass('form-control form-control-sm designation-input'));
         $newItemCompact.find('div.flex-fill').append(descriptionField.addClass('form-control form-control-sm description-input').attr('placeholder', 'Description détaillée...'));
-        $newItemCompact.find('div[style*="width: 90px"]').first().append(quantiteField.addClass('form-control form-control-sm text-center quantity-input').val('1'));
-        $newItemCompact.find('div[style*="width: 120px"]').eq(1).append(prixField.addClass('form-control form-control-sm text-end price-input').val('0.00').attr('placeholder', '0.00'));
-        $newItemCompact.find('div[style*="width: 90px"]').eq(1).append(remiseField.addClass('form-control form-control-sm text-center remise-input').val('0.0').attr('max', '100').attr('min', '0').attr('step', '0.1'));
-        $newItemCompact.find('div[style*="width: 105px"]').append(tvaField.addClass('form-select form-select-sm tva-select'));
+        $newItemCompact.find('div[style*="width: 90px"]').eq(0).append(quantiteField.addClass('form-control form-control-sm text-center quantity-input').val('1'));
+        $newItemCompact.find('div[style*="width: 90px"]').eq(1).append(prixField.addClass('form-control form-control-sm text-end price-input').val('0.00').attr('placeholder', '0.00').attr('type', 'number').attr('step', '0.01'));
+        $newItemCompact.find('div[style*="width: 90px"]').eq(2).append(remiseField.addClass('form-control form-control-sm text-center remise-input').val('0.0').attr('max', '100').attr('min', '0').attr('step', '0.1'));
+        $newItemCompact.find('div[style*="width: 90px"]').eq(3).append(tvaField.addClass('form-select form-select-sm tva-select'));
         
         // Ajouter champ produit caché pour l'autocomplétion
         $newItemCompact.find('.symfony-fields').append(produitField.addClass('produit-id-input'));
