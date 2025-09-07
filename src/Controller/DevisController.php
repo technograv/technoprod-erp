@@ -13,6 +13,7 @@ use App\Entity\Client;
 use App\Entity\Contact;
 use App\Entity\Adresse;
 use App\Repository\ProduitRepository;
+use App\Repository\TauxTVARepository;
 use Doctrine\ORM\EntityManagerInterface;
 use Symfony\Bundle\FrameworkBundle\Controller\AbstractController;
 use Symfony\Component\HttpFoundation\JsonResponse;
@@ -495,6 +496,24 @@ final class DevisController extends AbstractController
             ];
         }
 
+        return new JsonResponse($result);
+    }
+
+    #[Route('/api/taux-tva', name: 'app_devis_api_taux_tva', methods: ['GET'])]
+    public function apiTauxTva(TauxTVARepository $tauxTVARepository): JsonResponse
+    {
+        $tauxTva = $tauxTVARepository->findBy(['actif' => true], ['ordre' => 'ASC']);
+        
+        $result = [];
+        foreach ($tauxTva as $taux) {
+            $result[] = [
+                'id' => $taux->getId(),
+                'nom' => $taux->getNom(),
+                'taux' => $taux->getTaux(),
+                'par_defaut' => $taux->isParDefaut()
+            ];
+        }
+        
         return new JsonResponse($result);
     }
 
