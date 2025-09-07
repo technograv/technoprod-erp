@@ -136,71 +136,71 @@
                     </div>
                 </div>
                 <div class="form-section-body">
-                    <!-- En-têtes colonnes optimisées largeurs 1,5x -->
-                    <div class="d-flex devis-headers mb-2 py-2 bg-light border rounded align-items-start" style="gap: 2px;">
-                        <div style="width: 120px;"><small class="fw-bold">Code</small></div>
-                        <div style="width: 225px;"><small class="fw-bold">Désignation</small></div>
-                        <div class="flex-fill"><small class="fw-bold">Description détaillée</small></div>
-                        <div style="width: 90px;" class="text-center"><small class="fw-bold">Qté</small></div>
-                        <div style="width: 120px;" class="text-center"><small class="fw-bold">PU HT</small></div>
-                        <div style="width: 90px;" class="text-center"><small class="fw-bold">% Rem.</small></div>
-                        <div style="width: 105px;" class="text-center"><small class="fw-bold">TVA</small></div>
-                        <div style="width: 80px;" class="text-center"><small class="fw-bold">Total HT</small></div>
+                    <!-- En-têtes colonnes parfaitement alignés -->
+                    <div class="d-flex devis-headers mb-2 py-2 bg-light rounded align-items-start" style="gap: 2px; height: 35px;">
+                        <div style="width: 120px; padding: 4px;"><small class="fw-bold">Code</small></div>
+                        <div style="width: 225px; padding: 4px;"><small class="fw-bold">Désignation</small></div>
+                        <div class="flex-fill" style="padding: 4px;"><small class="fw-bold">Description détaillée</small></div>
+                        <div style="width: 90px; padding: 4px;" class="text-center"><small class="fw-bold">Qté</small></div>
+                        <div style="width: 120px; padding: 4px;" class="text-center"><small class="fw-bold">PU HT</small></div>
+                        <div style="width: 90px; padding: 4px;" class="text-center"><small class="fw-bold">% Rem.</small></div>
+                        <div style="width: 105px; padding: 4px;" class="text-center"><small class="fw-bold">TVA</small></div>
+                        <div style="width: 80px; padding: 4px;" class="text-center"><small class="fw-bold">Total HT</small></div>
                         {% if devis.statut == 'brouillon' %}
-                        <div style="width: 30px;"><small class="fw-bold"></small></div>
+                        <div style="width: 30px; padding: 4px;"><small class="fw-bold"></small></div>
                         {% endif %}
                     </div>
 
                     <div class="devis-items-collection" id="devis_devisItems" data-prototype="{{ form_row(form.devisItems.vars.prototype)|e('html_attr') }}" data-index="{{ form.devisItems|length }}">
                         {% for item in form.devisItems %}
-                            <div class="devis-item mb-1 py-2 border-bottom">
-                                <div class="d-flex align-items-start" style="gap: 2px;">
+                            <div class="devis-item mb-1 border-bottom">
+                                <div class="d-flex align-items-start" style="gap: 2px; min-height: 35px;">
                                     <!-- Code article (1,5x = 120px) -->
-                                    <div style="width: 120px;">
+                                    <div style="width: 120px; padding: 4px;">
                                         <input type="text" class="form-control form-control-sm code-article-input" 
                                                placeholder="Code..." readonly value="{{ item.vars.data.produit ? item.vars.data.produit.reference : '' }}" />
                                     </div>
                                     
                                     <!-- Désignation (1,5x = 225px) -->
-                                    <div style="width: 225px;">
+                                    <div style="width: 225px; padding: 4px;">
                                         {{ form_widget(item.designation, {'attr': {'class': 'form-control form-control-sm designation-input'}}) }}
                                     </div>
                                     
                                     <!-- Description détaillée (espace restant) -->
-                                    <div class="flex-fill">
+                                    <div class="flex-fill" style="padding: 4px;">
                                         {{ form_widget(item.description, {'attr': {'class': 'form-control form-control-sm description-input', 'placeholder': 'Description détaillée...'}}) }}
                                     </div>
                                     
                                     <!-- Quantité (1,5x = 90px) -->
-                                    <div style="width: 90px;">
+                                    <div style="width: 90px; padding: 4px;">
                                         {{ form_widget(item.quantite, {'attr': {'class': 'form-control form-control-sm text-center quantity-input'}}) }}
                                     </div>
                                     
                                     <!-- Prix unitaire HT sans € (1,5x = 120px) -->
-                                    <div style="width: 120px;">
+                                    <div style="width: 120px; padding: 4px;">
                                         {{ form_widget(item.prixUnitaireHt, {'attr': {'class': 'form-control form-control-sm text-end price-input', 'placeholder': '0.00'}}) }}
                                     </div>
                                     
                                     <!-- % Remise (1,5x = 90px) -->
-                                    <div style="width: 90px;">
+                                    <div style="width: 90px; padding: 4px;">
                                         {{ form_widget(item.remisePercent, {'attr': {'class': 'form-control form-control-sm text-center remise-input', 'placeholder': '0.0', 'step': '0.1'}}) }}
                                     </div>
                                     
                                     <!-- TVA (1,5x = 105px) -->
-                                    <div style="width: 105px;">
+                                    <div style="width: 105px; padding: 4px;">
                                         <select class="form-select form-select-sm tva-select" name="{{ item.tvaPercent.vars.full_name }}" data-current-value="{{ item.vars.data.tvaPercent ?? '20.00' }}">
                                             <!-- Options seront chargées via JavaScript depuis admin -->
                                         </select>
                                     </div>
                                     
                                     <!-- Total HT ligne -->
-                                    <div style="width: 80px;" class="text-center">
-                                        <small class="total-ligne-display fw-bold text-success" style="font-size: 0.75rem;">{{ item.vars.data.totalLigneHt ?? '0.00' }}€</small>
+                                    <div style="width: 80px; padding: 4px;" class="text-center">
+                                        <small class="total-ligne-display fw-bold text-success" style="font-size: 0.75rem; line-height: 23px;">{{ item.vars.data.totalLigneHt ?? '0.00' }}€</small>
                                     </div>
                                     
                                     <!-- Action -->
                                     {% if devis.statut == 'brouillon' %}
-                                    <div style="width: 30px;" class="text-center">
+                                    <div style="width: 30px; padding: 4px;" class="text-center">
                                         <button type="button" class="btn btn-outline-danger btn-sm remove-item-btn" title="Supprimer" style="padding: 2px 4px; font-size: 10px;">
                                             <i class="fas fa-trash"></i>
                                         </button>
@@ -427,6 +427,45 @@
         .form-section-body {
             padding: 1.5rem;
         }
+        
+        /* Alignement parfait des lignes de devis */
+        .devis-item .d-flex > div {
+            display: flex;
+            align-items: flex-start !important;
+        }
+        
+        .devis-item .form-control,
+        .devis-item .form-select {
+            margin: 0 !important;
+            padding-top: 0.25rem !important;
+            padding-bottom: 0.25rem !important;
+            height: 31px !important;
+            line-height: 1.2 !important;
+        }
+        
+        .devis-headers > div,
+        .devis-item .d-flex > div {
+            vertical-align: top !important;
+            display: flex !important;
+            align-items: flex-start !important;
+        }
+        
+        /* Forcer l'alignement des en-têtes avec les colonnes */
+        .devis-headers {
+            border: 1px solid #dee2e6;
+        }
+        
+        .devis-headers > div {
+            border-right: 1px solid #e9ecef;
+            padding-left: 4px !important;
+            padding-right: 4px !important;
+        }
+        
+        .devis-item .d-flex > div {
+            border-right: 1px solid rgba(0,0,0,0.05);
+            padding-left: 4px !important;
+            padding-right: 4px !important;
+        }
         /* Barre flottante d'actions */
         .floating-action-bar {
             position: fixed;
@@ -598,46 +637,46 @@ $(document).ready(function() {
 
         const $newItem = $('<div class="devis-item"></div>').html(newForm);
         
-        // Créer une nouvelle ligne avec largeurs 1,5x et alignement vertical
+        // Créer une nouvelle ligne parfaitement alignée avec les en-têtes
         const $newItemCompact = $(`
-        <div class="devis-item mb-1 py-2 border-bottom" data-index="${index}">
-            <div class="d-flex align-items-start" style="gap: 2px;">
+        <div class="devis-item mb-1 border-bottom" data-index="${index}">
+            <div class="d-flex align-items-start" style="gap: 2px; min-height: 35px;">
                 <!-- Code article (1,5x = 120px) -->
-                <div style="width: 120px;">
+                <div style="width: 120px; padding: 4px;">
                     <input type="text" class="form-control form-control-sm code-article-input" placeholder="Code..." />
                 </div>
                 
                 <!-- Désignation (1,5x = 225px) -->
-                <div style="width: 225px;">
+                <div style="width: 225px; padding: 4px;">
                 </div>
                 
                 <!-- Description détaillée (espace restant) -->
-                <div class="flex-fill">
+                <div class="flex-fill" style="padding: 4px;">
                 </div>
                 
                 <!-- Quantité (1,5x = 90px) -->
-                <div style="width: 90px;">
+                <div style="width: 90px; padding: 4px;">
                 </div>
                 
                 <!-- Prix unitaire HT (1,5x = 120px) -->
-                <div style="width: 120px;">
+                <div style="width: 120px; padding: 4px;">
                 </div>
                 
                 <!-- % Remise (1,5x = 90px) -->
-                <div style="width: 90px;">
+                <div style="width: 90px; padding: 4px;">
                 </div>
                 
                 <!-- TVA (1,5x = 105px) -->
-                <div style="width: 105px;">
+                <div style="width: 105px; padding: 4px;">
                 </div>
                 
                 <!-- Total HT ligne -->
-                <div style="width: 80px;" class="text-center">
-                    <small class="total-ligne-display fw-bold text-success" style="font-size: 0.75rem;">0.00€</small>
+                <div style="width: 80px; padding: 4px;" class="text-center">
+                    <small class="total-ligne-display fw-bold text-success" style="font-size: 0.75rem; line-height: 23px;">0.00€</small>
                 </div>
                 
                 <!-- Action -->
-                <div style="width: 30px;" class="text-center action-column">
+                <div style="width: 30px; padding: 4px;" class="text-center action-column">
                     <button type="button" class="btn btn-outline-danger btn-sm remove-item-btn" title="Supprimer" style="padding: 2px 4px; font-size: 10px;">
                         <i class="fas fa-trash"></i>
                     </button>
