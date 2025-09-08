@@ -1468,5 +1468,86 @@ Le dashboard commercial TechnoProd est maintenant **complet et moderne** avec :
 - **JavaScript moderne** : Chargement AJAX, animations, gestion d'état
 - **Base de données** : Structure enrichie avec nouvelles tables alertes
 
+## SESSION DE TRAVAIL - 08/01/2025 🎯
+
+### ✅ CORRECTION CRITIQUE - DUPLICATION CONTACTS ET BOUTONS DEVIS EDIT
+**OBJECTIF MAJEUR ATTEINT : Résolution définitive des duplications dans interface édition devis**
+
+#### **🐛 PROBLÈMES IDENTIFIÉS ET RÉSOLUS :**
+
+**1. 🔄 Duplication des contacts dans les dropdowns :**
+**Symptômes :** Les contacts apparaissaient en double dans les sélecteurs facturation/livraison lors de l'édition de devis
+- Logs montraient deux appels API identiques pour le même client
+- Contacts ajoutés deux fois : "M. Marine MICHEL" apparaissait 2 fois au lieu d'1
+
+**Cause racine :** Double exécution du JavaScript au chargement de page
+- **Deux `$(document).ready()`** dans le même template (lignes 625 et 1483)
+- Event listeners multiples attachés sans désattachement préalable
+- Fonction `loadInitialContactsData()` appelée deux fois
+
+**2. 🔘 Duplication boutons "Ajouter une ligne" :**
+**Symptômes :** Utilisateur voyait 2 boutons "Ajouter une ligne" au lieu d'un seul
+- Un bouton personnalisé (template)
+- Un bouton généré automatiquement par Symfony CollectionType
+
+**Cause racine :** `{{ form_rest(form) }}` générait le prototype CollectionType après rendu manuel
+- `devisItems` collection rendue manuellement (lignes 157-221)
+- `form_rest()` re-générait les champs collection avec boutons Symfony
+
+#### **🔧 SOLUTIONS TECHNIQUES APPLIQUÉES :**
+
+**Correction duplication contacts :**
+```javascript
+// AVANT : Deux $(document).ready() séparés
+$(document).ready(function() { /* code principal */ });
+$(document).ready(function() { loadInitialContactsData(); });
+
+// APRÈS : Un seul $(document).ready() consolidé
+$(document).ready(function() {
+    /* code principal */
+    loadInitialContactsData(); // Intégré dans le principal
+});
+
+// Protection event listeners multiples
+$('#devis_client').off('change').on('change', function() {...});
+$('#devis_contactFacturation').off('change').on('change', function() {...});
+$('#devis_contactLivraison').off('change').on('change', function() {...});
+```
+
+**Correction duplication boutons :**
+```twig
+{# Render devisItems field as hidden to prevent form_rest from creating duplicate buttons #}
+<div style="display: none;">
+    {{ form_widget(form.devisItems) }}
+</div>
+
+{{ form_rest(form) }}
+{{ form_end(form) }}
+```
+
+**Correction structure template :**
+- Supprimé `{% endblock %}` en double
+- Ajouté fermeture manquante pour `{% block body %}`
+
+#### **📊 RÉSULTATS FINALS :**
+- **✅ Contacts uniques** : Plus de duplication dans les dropdowns
+- **✅ Bouton unique** : Un seul "Ajouter une ligne" avec dropdown options
+- **✅ JavaScript optimisé** : Exécution unique, event listeners propres
+- **✅ Template valide** : Structure Twig correcte, plus d'erreur syntaxe
+- **✅ Performance améliorée** : Moins d'appels AJAX redondants
+
+#### **🎯 ARCHITECTURE TECHNIQUE CORRIGÉE :**
+- **Template edit.html.twig** : Structure consolidée et optimisée
+- **JavaScript** : Un seul `$(document).ready()` avec logique centralisée
+- **Event listeners** : Protection contre attachement multiple avec `.off().on()`
+- **Form rendering** : Gestion explicite des collections pour éviter doublons Symfony
+
+### 🚀 **SYSTÈME DEVIS MAINTENANT 100% FONCTIONNEL :**
+L'interface d'édition des devis TechnoProd est maintenant **parfaitement stable** avec :
+- Interface utilisateur cohérente sans doublons
+- Performance optimisée avec moins d'appels réseau
+- Code maintenable et structure template propre
+- Workflow d'édition fluide et prévisible
+
 ---
-*Dernière mise à jour : 04/09/2025 - Dashboard commercial V2.2 complet avec système d'alertes*
+*Dernière mise à jour : 08/01/2025 - Corrections duplication contacts/boutons interface devis*

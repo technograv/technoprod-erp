@@ -24,6 +24,9 @@
                     {% if devis.client %}
                         <span class="ms-2">{{ devis.client.nomComplet }}</span>
                     {% endif %}
+                    <span class="badge bg-info ms-2" title="Sauvegarde automatique activée">
+                        <i class="fas fa-cloud-upload-alt me-1"></i>Auto-sauvegarde
+                    </span>
                 </p>
             </div>
             <div class="col-md-4 text-end">
@@ -195,7 +198,7 @@
                                     
                                     <!-- Total HT ligne (uniforme = 90px) -->
                                     <div style="width: 90px; padding: 4px;" class="text-center">
-                                        <small class="total-ligne-display fw-bold text-success" style="font-size: 0.75rem; line-height: 23px;">{{ item.vars.data.totalLigneHt ?? '0.00' }}€</small>
+                                        <small class="total-ligne-display fw-bold text-success" style="font-size: 0.75rem; line-height: 23px;">{{ item.vars.data.totalLigneHt ?? '0.00' }}</small>
                                     </div>
                                     
                                     <!-- Action -->
@@ -218,15 +221,25 @@
                         {% endfor %}
                     </div>
                     
-                    <!-- Boutons pour ajouter une ligne -->
+                    <!-- Bouton unique pour ajouter une ligne -->
                     {% if devis.statut == 'brouillon' %}
                         <div class="mt-3 text-center">
-                            <button type="button" class="btn btn-success add-item-btn me-2">
-                                <i class="fas fa-plus me-2"></i>Ajouter une ligne libre
-                            </button>
-                            <button type="button" class="btn btn-outline-success catalogue-product-btn">
-                                <i class="fas fa-book me-2"></i>Nouveau produit du catalogue
-                            </button>
+                            <div class="btn-group" role="group">
+                                <button type="button" class="btn btn-success add-item-btn">
+                                    <i class="fas fa-plus me-2"></i>Ajouter une ligne
+                                </button>
+                                <button type="button" class="btn btn-success dropdown-toggle dropdown-toggle-split" data-bs-toggle="dropdown" aria-expanded="false">
+                                    <span class="visually-hidden">Toggle Dropdown</span>
+                                </button>
+                                <ul class="dropdown-menu">
+                                    <li><a class="dropdown-item add-free-line" href="#">
+                                        <i class="fas fa-edit me-2"></i>Ligne libre
+                                    </a></li>
+                                    <li><a class="dropdown-item catalogue-product-btn" href="#">
+                                        <i class="fas fa-book me-2"></i>Produit du catalogue
+                                    </a></li>
+                                </ul>
+                            </div>
                         </div>
                     {% endif %}
                 </div>
@@ -313,6 +326,11 @@
         </div>
     </div>
 
+    {# Render devisItems field as hidden to prevent form_rest from creating duplicate buttons #}
+    <div style="display: none;">
+        {{ form_widget(form.devisItems) }}
+    </div>
+    
     {{ form_rest(form) }}
     {{ form_end(form) }}
 </div>
@@ -672,7 +690,7 @@ $(document).ready(function() {
                 
                 <!-- Total HT ligne (90px uniforme) -->
                 <div style="width: 90px; padding: 4px;" class="text-center">
-                    <small class="total-ligne-display fw-bold text-success" style="font-size: 0.75rem; line-height: 23px;">0.00€</small>
+                    <small class="total-ligne-display fw-bold text-success" style="font-size: 0.75rem; line-height: 23px;">0.00</small>
                 </div>
                 
                 <!-- Action -->
@@ -705,7 +723,7 @@ $(document).ready(function() {
         $newItemCompact.find('div.flex-fill').append(descriptionField.addClass('form-control form-control-sm description-input').attr('placeholder', 'Description détaillée...'));
         $newItemCompact.find('div[style*="width: 90px"]').eq(0).append(quantiteField.addClass('form-control form-control-sm text-center quantity-input').val('1'));
         $newItemCompact.find('div[style*="width: 90px"]').eq(1).append(prixField.addClass('form-control form-control-sm text-end price-input').val('0.00').attr('placeholder', '0.00').attr('type', 'number').attr('step', '0.01'));
-        $newItemCompact.find('div[style*="width: 90px"]').eq(2).append(remiseField.addClass('form-control form-control-sm text-center remise-input').val('0.0').attr('max', '100').attr('min', '0').attr('step', '0.1'));
+        $newItemCompact.find('div[style*="width: 90px"]').eq(2).append(remiseField.addClass('form-control form-control-sm text-center remise-input').attr('max', '100').attr('min', '0').attr('step', '0.1').attr('placeholder', ''));
         $newItemCompact.find('div[style*="width: 90px"]').eq(3).append(tvaField.addClass('form-select form-select-sm tva-select'));
         
         // Ajouter champ produit caché pour l'autocomplétion
@@ -736,57 +754,64 @@ $(document).ready(function() {
         }, 100);
     }
 
-    // Attacher l'événement au bouton ligne libre
+    // Attacher l'événement au bouton principal "Ajouter une ligne" (par défaut: ligne libre)
     $('.add-item-btn').off('click').on('click', function(e) {
         e.preventDefault();
         e.stopPropagation();
         addNewDevisItem();
     });
     
-    // Attacher l'événement au bouton produit du catalogue
+    // Attacher l'événement au lien "Ligne libre" du dropdown
+    $('.add-free-line').off('click').on('click', function(e) {
+        e.preventDefault();
+        e.stopPropagation();
+        addNewDevisItem();
+    });
+    
+    // Attacher l'événement au lien "Produit du catalogue" du dropdown
     $('.catalogue-product-btn').off('click').on('click', function(e) {
         e.preventDefault();
         e.stopPropagation();
         openCatalogueModal();
     });
-    
-    // Plus besoin de supprimer les boutons du parent car on n'hérite plus de new.html.twig
 
     // Fonction d'initialisation de l'autocomplétion pour une ligne
     function initAutocompleteForItem($item) {
-        const $input = $item.find('.code-article-input');
-        const $produitIdInput = $item.find('[id$="_produit"], .produit-id-input');
+        const $codeInput = $item.find('.code-article-input');
         const $designationInput = $item.find('[id$="_designation"], .designation-input');
+        const $produitIdInput = $item.find('[id$="_produit"], .produit-id-input');
         const $priceInput = $item.find('[id$="_prixUnitaireHt"], .price-input');
         const $tvaSelect = $item.find('[id$="_tvaPercent"], .tva-select');
         
-        $input.on('input', function() {
-            const term = $(this).val();
+        // Fonction commune de recherche produit
+        function searchProducts(term, $inputField) {
             if (term.length < 2) {
                 return;
             }
             
-            // Appel API pour recherche produits
             $.ajax({
                 url: '/devis/api/produits',
                 method: 'GET',
                 data: { q: term },
                 success: function(products) {
-                    // Créer une liste déroulante des suggestions
-                    const $existing = $item.find('.autocomplete-dropdown');
-                    $existing.remove();
+                    // Supprimer les dropdowns existantes de cette ligne
+                    $item.find('.autocomplete-dropdown').remove();
                     
                     if (products.length > 0) {
-                        const $dropdown = $('<div class="autocomplete-dropdown list-group position-absolute" style="z-index: 1000; max-height: 200px; overflow-y: auto; width: 100%;"></div>');
+                        const $dropdown = $('<div class="autocomplete-dropdown list-group position-absolute" style="z-index: 1000; max-height: 200px; overflow-y: auto; width: 100%; background: white; border: 1px solid #ddd; border-radius: 4px; box-shadow: 0 4px 6px rgba(0,0,0,0.1);"></div>');
                         
                         products.forEach(function(product) {
-                            const $option = $('<a href="#" class="list-group-item list-group-item-action small"></a>');
-                            $option.text(product.text);
+                            const $option = $('<a href="#" class="list-group-item list-group-item-action small py-2"></a>');
+                            $option.html(`
+                                <div class="fw-bold">${product.designation}</div>
+                                <small class="text-muted">Code: ${product.reference} - Prix: ${product.prix_vente_ht}€ HT</small>
+                            `);
+                            
                             $option.on('click', function(e) {
                                 e.preventDefault();
                                 
-                                // Remplir les champs avec les données du produit
-                                $input.val(product.reference);
+                                // Remplir tous les champs avec les données du produit
+                                $codeInput.val(product.reference);
                                 $produitIdInput.val(product.id);
                                 $designationInput.val(product.designation);
                                 $priceInput.val(parseFloat(product.prix_vente_ht));
@@ -800,20 +825,37 @@ $(document).ready(function() {
                                 
                                 // Déclencher le calcul
                                 calculateTotals();
+                                
+                                // Déclencher auto-sauvegarde
+                                if (hasDataChanged()) {
+                                    scheduleAutoSave();
+                                }
                             });
                             $dropdown.append($option);
                         });
                         
-                        $input.parent().append($dropdown);
+                        $inputField.parent().append($dropdown);
                     }
                 },
                 error: function() {
                     console.error('Erreur lors de la recherche de produits');
                 }
             });
+        }
+        
+        // Autocomplétion sur le champ Code
+        $codeInput.on('input', function() {
+            const term = $(this).val();
+            searchProducts(term, $codeInput);
         });
         
-        // Fermer la dropdown quand on clique ailleurs
+        // Autocomplétion sur le champ Désignation
+        $designationInput.on('input', function() {
+            const term = $(this).val();
+            searchProducts(term, $designationInput);
+        });
+        
+        // Fermer les dropdowns quand on clique ailleurs
         $(document).on('click', function(e) {
             if (!$(e.target).closest($item).length) {
                 $item.find('.autocomplete-dropdown').remove();
@@ -866,16 +908,18 @@ $(document).ready(function() {
             // Utiliser les nouvelles classes CSS pour les champs
             const qte = parseFloat($(this).find('.quantity-input, [id$="_quantite"]').val()) || 0;
             const prixUnitaire = parseFloat($(this).find('.price-input, [id$="_prixUnitaireHt"]').val()) || 0;
-            let remisePercent = parseFloat($(this).find('.remise-input, [id$="_remisePercent"]').val()) || 0;
+            
+            // Gérer la remise - garder vide si pas de valeur
+            const remiseValue = $(this).find('.remise-input, [id$="_remisePercent"]').val();
+            let remisePercent = 0;
+            if (remiseValue && remiseValue !== '') {
+                remisePercent = parseFloat(remiseValue);
+                remisePercent = Math.min(Math.max(remisePercent, 0), 100); // Entre 0 et 100
+                // Ne pas remettre à jour le champ avec toFixed si c'est en cours d'édition
+            }
+            
             let tvaPercent = parseFloat($(this).find('.tva-select, [id$="_tvaPercent"]').val()) || 20;
-            
-            // Limiter les valeurs pour éviter l'erreur de dépassement de précision
-            remisePercent = Math.min(Math.max(remisePercent, 0), 100); // Entre 0 et 100
             tvaPercent = Math.min(Math.max(tvaPercent, 0), 100); // Entre 0 et 100
-            
-            // Mettre à jour les champs avec format 1 décimale pour remise, 2 pour TVA
-            $(this).find('.remise-input, [id$="_remisePercent"]').val(remisePercent.toFixed(1));
-            $(this).find('.tva-select, [id$="_tvaPercent"]').val(tvaPercent.toFixed(2));
 
             // Calcul avec remise
             const sousTotal = qte * prixUnitaire;
@@ -886,8 +930,8 @@ $(document).ready(function() {
             // Mettre à jour les champs cachés
             $(this).find('.total-ligne-ht-input, [id$="_totalLigneHt"]').val(totalLigneHt.toFixed(2));
             
-            // Mettre à jour l'affichage du montant net HT
-            $(this).find('.total-display, .total-line-display').text(totalLigneHt.toFixed(2) + '€');
+            // Mettre à jour l'affichage du montant net HT (sans signe euro)
+            $(this).find('.total-display, .total-line-display, .total-ligne-display').text(totalLigneHt.toFixed(2));
 
             totalHt += totalLigneHt;
             totalTva += tvaLigne;
@@ -924,8 +968,11 @@ $(document).ready(function() {
                 // Validation des limites pour les champs de pourcentage
                 if ($(this).hasClass('remise-input')) {
                     let val = parseFloat($(this).val());
-                    if (isNaN(val) || val < 0) $(this).val('0');
-                    else if (val > 100) $(this).val('100');
+                    // Si la valeur est invalide, on la laisse vide plutôt que de forcer 0
+                    if (!isNaN(val)) {
+                        if (val < 0) $(this).val('0');
+                        else if (val > 100) $(this).val('100');
+                    }
                 }
                 calculateTotals();
             });
@@ -1053,17 +1100,24 @@ $(document).ready(function() {
         }, 100);
     }
 
-    // Charger les taux TVA pour toutes les lignes existantes
+    // Charger les taux TVA et initialiser autocomplétion pour toutes les lignes existantes
     $('.devis-item').each(function() {
-        const $select = $(this).find('.tva-select');
+        const $item = $(this);
+        const $select = $item.find('.tva-select');
         const currentValue = $select.data('current-value');
-        loadTauxTva($(this));
+        
+        // Charger les taux de TVA
+        loadTauxTva($item);
+        
         // Restaurer la valeur après chargement
         if (currentValue) {
             setTimeout(() => {
                 $select.val(parseFloat(currentValue).toFixed(2));
             }, 200);
         }
+        
+        // Initialiser l'autocomplétion pour cette ligne
+        initAutocompleteForItem($item);
     });
     
     // Lier les événements pour les lignes existantes
@@ -1073,6 +1127,374 @@ $(document).ready(function() {
     calculateTotals();
 
     {% endif %}
+    
+    // =============================================
+    // SYSTÈME D'AUTO-SAUVEGARDE INTELLIGENT
+    // =============================================
+    
+    let autoSaveTimer;
+    let isAutoSaving = false;
+    let hasUnsavedChanges = false;
+    let lastSaveData = null;
+
+    // Configuration auto-sauvegarde
+    const AUTOSAVE_DELAY = 3000; // 3 secondes après la dernière modification
+    const AUTOSAVE_URL = '/devis/{{ devis.id }}/auto-save';
+
+    // Indicateur visuel de sauvegarde
+    function showSaveStatus(message, isError = false) {
+        let $indicator = $('#autosave-indicator');
+        if ($indicator.length === 0) {
+            $indicator = $('<div id="autosave-indicator" style="position: fixed; top: 70px; right: 20px; z-index: 1060; padding: 8px 12px; border-radius: 4px; font-size: 0.875rem; font-weight: 500; min-width: 200px; text-align: center;"></div>');
+            $('body').append($indicator);
+        }
+        
+        $indicator
+            .removeClass('bg-success bg-warning bg-danger text-white')
+            .addClass(isError ? 'bg-danger text-white' : 'bg-success text-white')
+            .text(message)
+            .fadeIn(200);
+        
+        setTimeout(() => {
+            $indicator.fadeOut(200);
+        }, 2000);
+    }
+
+    // Collecter les données du formulaire
+    function collectFormData() {
+        // Convertir les IDs en entiers ou null
+        const clientId = $('#devis_client').val();
+        const contactFacturationId = $('#devis_contactFacturation').val();
+        const contactLivraisonId = $('#devis_contactLivraison').val();
+        const adresseFacturationId = $('#devis_adresseFacturation').val();
+        const adresseLivraisonId = $('#devis_adresseLivraison').val();
+
+        const data = {
+            client_id: (clientId && clientId !== '') ? parseInt(clientId) : null,
+            contact_facturation_id: (contactFacturationId && contactFacturationId !== '') ? parseInt(contactFacturationId) : null,
+            contact_livraison_id: (contactLivraisonId && contactLivraisonId !== '') ? parseInt(contactLivraisonId) : null,
+            adresse_facturation_id: (adresseFacturationId && adresseFacturationId !== '') ? parseInt(adresseFacturationId) : null,
+            adresse_livraison_id: (adresseLivraisonId && adresseLivraisonId !== '') ? parseInt(adresseLivraisonId) : null,
+            items: []
+        };
+
+        // Collecter les données des lignes de devis
+        $('.devis-item').each(function(index) {
+            const $item = $(this);
+            let itemId = $item.find('[id$="_id"]').val();
+            // Convertir l'ID en integer si présent, sinon null
+            itemId = (itemId && itemId !== '') ? parseInt(itemId) : null;
+            
+            // Gérer les remises (peuvent être vides)
+            const remisePercentValue = $item.find('.remise-input, [id$="_remisePercent"]').val();
+            const remisePercent = (remisePercentValue && remisePercentValue !== '') ? parseFloat(remisePercentValue) : null;
+            
+            const remiseMontantValue = $item.find('.remise-montant-input, [id$="_remiseMontant"]').val();
+            const remiseMontant = (remiseMontantValue && remiseMontantValue !== '') ? parseFloat(remiseMontantValue) : null;
+            
+            // Validation des valeurs numériques
+            const quantite = parseFloat($item.find('.quantity-input, [id$="_quantite"]').val());
+            const prixUnitaireHt = parseFloat($item.find('.price-input, [id$="_prixUnitaireHt"]').val());
+            const tvaPercent = parseFloat($item.find('.tva-select, [id$="_tvaPercent"]').val());
+            
+            const itemData = {
+                id: itemId,
+                designation: $item.find('.designation-input, [id$="_designation"]').val() || '',
+                description: $item.find('.description-input, [id$="_description"]').val() || '',
+                quantite: isNaN(quantite) ? 1 : quantite,
+                prix_unitaire_ht: isNaN(prixUnitaireHt) ? 0 : prixUnitaireHt,
+                remise_percent: remisePercent,
+                remise_montant: remiseMontant,
+                tva_percent: isNaN(tvaPercent) ? 20 : tvaPercent,
+                ordre_affichage: index + 1
+            };
+            
+            data.items.push(itemData);
+        });
+
+        return data;
+    }
+
+    // Vérifier si les données ont changé
+    function hasDataChanged() {
+        const currentData = JSON.stringify(collectFormData());
+        if (lastSaveData === null) {
+            lastSaveData = currentData;
+            return false;
+        }
+        return currentData !== lastSaveData;
+    }
+
+    // Fonction d'auto-sauvegarde
+    function performAutoSave() {
+        if (isAutoSaving || !hasUnsavedChanges) return;
+        
+        isAutoSaving = true;
+        const formData = collectFormData();
+        
+        // Afficher indicateur de sauvegarde en cours
+        showSaveStatus('💾 Sauvegarde en cours...');
+        
+        $.ajax({
+            url: AUTOSAVE_URL,
+            method: 'POST',
+            contentType: 'application/json',
+            data: JSON.stringify(formData),
+            success: function(response) {
+                if (response.success) {
+                    hasUnsavedChanges = false;
+                    lastSaveData = JSON.stringify(formData);
+                    showSaveStatus('✅ Sauvé à ' + response.saved_at);
+                    
+                    // Mettre à jour les totaux dans l'interface si fournis
+                    if (response.totals) {
+                        $('.total-ht').text(parseFloat(response.totals.total_ht).toFixed(2) + '€');
+                        $('.total-tva').text(parseFloat(response.totals.total_tva).toFixed(2) + '€');
+                        $('.total-ttc').text(parseFloat(response.totals.total_ttc).toFixed(2) + '€');
+                        $('.summary-total-display').text(parseFloat(response.totals.total_ttc).toFixed(2) + '€ TTC');
+                    }
+                } else {
+                    showSaveStatus('❌ ' + response.message, true);
+                }
+            },
+            error: function(xhr) {
+                let message = 'Erreur de sauvegarde';
+                try {
+                    const response = JSON.parse(xhr.responseText);
+                    message = response.message || message;
+                } catch (e) {
+                    // Garder le message par défaut
+                }
+                showSaveStatus('❌ ' + message, true);
+            },
+            complete: function() {
+                isAutoSaving = false;
+            }
+        });
+    }
+
+    // Déclencher l'auto-sauvegarde avec délai
+    function scheduleAutoSave() {
+        hasUnsavedChanges = true;
+        clearTimeout(autoSaveTimer);
+        autoSaveTimer = setTimeout(performAutoSave, AUTOSAVE_DELAY);
+    }
+
+    // Détecter les modifications sur tous les champs pertinents
+    $(document).on('input change keyup', 
+        '#devis_client, #devis_contactFacturation, #devis_contactLivraison, #devis_adresseFacturation, #devis_adresseLivraison, ' +
+        '.designation-input, [id$="_designation"], .description-input, [id$="_description"], ' +
+        '.quantity-input, [id$="_quantite"], .price-input, [id$="_prixUnitaireHt"], ' +
+        '.remise-input, [id$="_remisePercent"], .remise-montant-input, [id$="_remiseMontant"], .tva-select, [id$="_tvaPercent"]', 
+        function() {
+            if (hasDataChanged()) {
+                scheduleAutoSave();
+            }
+        }
+    );
+
+    // Forcer une sauvegarde avant fermeture/navigation
+    window.addEventListener('beforeunload', function(e) {
+        if (hasUnsavedChanges && !isAutoSaving) {
+            e.preventDefault();
+            e.returnValue = 'Vous avez des modifications non sauvegardées. Êtes-vous sûr de vouloir quitter ?';
+        }
+    });
+
+    // =============================================
+    // FILTRAGE CONTACTS ET ADRESSES PAR CLIENT
+    // =============================================
+    
+    // Stocker les données contacts et adresses pour éviter les doublons
+    let currentClientContacts = [];
+    let currentClientAddresses = [];
+    
+    // Fonction pour filtrer les contacts et adresses selon le client sélectionné
+    function filterContactsAndAddresses(clientId) {
+        console.log('🔄 DÉBUT filterContactsAndAddresses pour client:', clientId);
+        
+        // Compter les options AVANT vidage
+        console.log('📊 AVANT vidage:');
+        console.log('  - Contact Facturation:', $('#devis_contactFacturation option').length, 'options');
+        console.log('  - Contact Livraison:', $('#devis_contactLivraison option').length, 'options');
+        console.log('  - Adresse Facturation:', $('#devis_adresseFacturation option').length, 'options');
+        console.log('  - Adresse Livraison:', $('#devis_adresseLivraison option').length, 'options');
+        
+        // Vider complètement les dropdowns (y compris les options Symfony)
+        $('#devis_contactFacturation, #devis_contactLivraison').empty();
+        $('#devis_adresseFacturation, #devis_adresseLivraison').empty();
+        
+        // Vérifier le vidage
+        console.log('🧹 APRÈS vidage:');
+        console.log('  - Contact Facturation:', $('#devis_contactFacturation option').length, 'options');
+        console.log('  - Contact Livraison:', $('#devis_contactLivraison option').length, 'options');
+        
+        if (clientId && clientId !== '') {
+            // Charger les contacts du client sélectionné
+            $.ajax({
+                url: '/client/' + clientId + '/contacts',
+                method: 'GET',
+                success: function(contacts) {
+                    console.log('📞 Contacts reçus de l\'API:', contacts.length, 'contacts');
+                    console.log('📞 Détail des contacts:', contacts);
+                    currentClientContacts = contacts;
+                    
+                    // Ajouter option vide à chaque dropdown séparément
+                    console.log('➕ Ajout options vides...');
+                    $('#devis_contactFacturation').append('<option value="">Sélectionner un contact</option>');
+                    $('#devis_contactLivraison').append('<option value="">Sélectionner un contact</option>');
+                    
+                    // Vérifier après ajout options vides
+                    console.log('📊 Après options vides:');
+                    console.log('  - Contact Facturation:', $('#devis_contactFacturation option').length, 'options');
+                    console.log('  - Contact Livraison:', $('#devis_contactLivraison option').length, 'options');
+                    
+                    // Ajouter chaque contact aux deux dropdowns (options séparées)
+                    console.log('➕ Ajout des', contacts.length, 'contacts...');
+                    contacts.forEach(function(contact, index) {
+                        console.log(`  ➕ Ajout contact ${index + 1}:`, contact.label, 'ID:', contact.id);
+                        const optionFacturation = `<option value="${contact.id}" data-adresse-id="${contact.adresse_id || ''}">${contact.label}</option>`;
+                        const optionLivraison = `<option value="${contact.id}" data-adresse-id="${contact.adresse_id || ''}">${contact.label}</option>`;
+                        
+                        $('#devis_contactFacturation').append(optionFacturation);
+                        console.log('    ✅ Ajouté dans facturation, total maintenant:', $('#devis_contactFacturation option').length);
+                        
+                        $('#devis_contactLivraison').append(optionLivraison);
+                        console.log('    ✅ Ajouté dans livraison, total maintenant:', $('#devis_contactLivraison option').length);
+                    });
+                    
+                    // Compter le total final
+                    console.log('📊 TOTAL FINAL contacts:');
+                    console.log('  - Contact Facturation:', $('#devis_contactFacturation option').length, 'options');
+                    console.log('  - Contact Livraison:', $('#devis_contactLivraison option').length, 'options');
+                    
+                    // Mettre à jour les données pour la sélection automatique
+                    currentClientContacts = contacts;
+                },
+                error: function() {
+                    console.error('Erreur lors du chargement des contacts');
+                    $('#devis_contactFacturation').append('<option value="">Aucun contact trouvé</option>');
+                    $('#devis_contactLivraison').append('<option value="">Aucun contact trouvé</option>');
+                }
+            });
+            
+            // Charger les adresses du client sélectionné
+            $.ajax({
+                url: '/client/' + clientId + '/addresses',
+                method: 'GET',
+                success: function(adresses) {
+                    console.log('Adresses reçues:', adresses);
+                    currentClientAddresses = adresses;
+                    
+                    // Ajouter option vide à chaque dropdown séparément
+                    $('#devis_adresseFacturation').append('<option value="">Sélectionner une adresse</option>');
+                    $('#devis_adresseLivraison').append('<option value="">Sélectionner une adresse</option>');
+                    
+                    // Ajouter chaque adresse aux deux dropdowns (options séparées)
+                    adresses.forEach(function(adresse) {
+                        const optionFacturation = `<option value="${adresse.id}">${adresse.label}</option>`;
+                        const optionLivraison = `<option value="${adresse.id}">${adresse.label}</option>`;
+                        $('#devis_adresseFacturation').append(optionFacturation);
+                        $('#devis_adresseLivraison').append(optionLivraison);
+                    });
+                },
+                error: function() {
+                    console.error('Erreur lors du chargement des adresses');
+                    $('#devis_adresseFacturation').append('<option value="">Aucune adresse trouvée</option>');
+                    $('#devis_adresseLivraison').append('<option value="">Aucune adresse trouvée</option>');
+                }
+            });
+        } else {
+            // Aucun client sélectionné
+            $('#devis_contactFacturation').append('<option value="">Sélectionner d\'abord un client</option>');
+            $('#devis_contactLivraison').append('<option value="">Sélectionner d\'abord un client</option>');
+            $('#devis_adresseFacturation').append('<option value="">Sélectionner d\'abord un client</option>');
+            $('#devis_adresseLivraison').append('<option value="">Sélectionner d\'abord un client</option>');
+        }
+    }
+
+    // Gestion du changement de client - Mise à jour dynamique des contacts/adresses
+    $('#devis_client').off('change').on('change', function() {
+        const clientId = $(this).val();
+        console.log('Client changé:', clientId, '- Mise à jour des contacts/adresses');
+        
+        if (clientId) {
+            // Réactiver le filtrage dynamique car on change de client
+            filterContactsAndAddresses(clientId);
+        } else {
+            // Si aucun client sélectionné, vider les dropdowns
+            $('#devis_contactFacturation').empty().append('<option value="">Sélectionner d\'abord un client</option>');
+            $('#devis_contactLivraison').empty().append('<option value="">Sélectionner d\'abord un client</option>');
+            $('#devis_adresseFacturation').empty().append('<option value="">Sélectionner d\'abord un client</option>');
+            $('#devis_adresseLivraison').empty().append('<option value="">Sélectionner d\'abord un client</option>');
+        }
+    });
+
+    // Charger les données contacts au chargement pour permettre la sélection automatique d'adresses
+    function loadInitialContactsData() {
+        const initialClientId = $('#devis_client').val();
+        if (initialClientId) {
+            // Charger les contacts pour la sélection automatique d'adresses
+            $.ajax({
+                url: '/client/' + initialClientId + '/contacts',
+                method: 'GET',
+                success: function(contacts) {
+                    currentClientContacts = contacts;
+                    console.log('Contacts chargés pour sélection automatique:', contacts);
+                },
+                error: function() {
+                    console.error('Erreur lors du chargement des contacts pour sélection automatique');
+                }
+            });
+        }
+    }
+    
+    // Gestion de la sélection automatique d'adresse quand on choisit un contact
+    $('#devis_contactFacturation').off('change').on('change', function() {
+        const contactId = $(this).val();
+        if (contactId) {
+            // Récupérer l'adresse ID depuis l'attribut data de l'option sélectionnée
+            const selectedOption = $(this).find('option:selected');
+            const adresseId = selectedOption.data('adresse-id');
+            
+            if (adresseId) {
+                $('#devis_adresseFacturation').val(adresseId);
+                console.log('Adresse facturation auto-sélectionnée:', adresseId);
+            }
+        }
+    });
+
+    $('#devis_contactLivraison').off('change').on('change', function() {
+        const contactId = $(this).val();
+        if (contactId) {
+            // Récupérer l'adresse ID depuis l'attribut data de l'option sélectionnée
+            const selectedOption = $(this).find('option:selected');
+            const adresseId = selectedOption.data('adresse-id');
+            
+            if (adresseId) {
+                $('#devis_adresseLivraison').val(adresseId);
+                console.log('Adresse livraison auto-sélectionnée:', adresseId);
+            }
+        }
+    });
+
+    // Filtrage initial au chargement de la page - DÉSACTIVÉ pour éviter les doublons en édition
+    // En mode édition, les contacts et adresses sont déjà chargés via le formulaire Symfony
+    // $(document).ready(function() {
+    //     const initialClientId = $('#devis_client').val();
+    //     if (initialClientId) {
+    //         filterContactsAndAddresses(initialClientId);
+    //     }
+    // });
+
+    // Charger les données contacts au démarrage SEULEMENT pour la sélection automatique
+    // Pas de filtrage pour éviter les doublons au premier chargement
+    loadInitialContactsData();
+    
+    // Sauvegarde initiale après chargement complet
+    setTimeout(function() {
+        lastSaveData = JSON.stringify(collectFormData());
+    }, 1000);
     
     // Gestion du panneau récapitulatif flottant - avec délégation d'événement
     $(document).on('click', '#summary-toggle', function(e) {
@@ -1111,4 +1533,5 @@ $(document).ready(function() {
 });
 </script>
 {% endblock %}
+
 {% endblock %}
