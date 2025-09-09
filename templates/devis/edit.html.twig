@@ -740,35 +740,55 @@
             white-space: nowrap;
         }
         
-        /* Styles spécifiques pour les menus font et size seulement */
+        /* Styles spécifiques pour les menus font et size - approche forcée */
         #description-toolbar .ql-font .ql-picker {
             min-width: 180px !important;
+            width: 180px !important;
+            max-width: 180px !important;
         }
         
         #description-toolbar .ql-size .ql-picker {
             min-width: 140px !important;
+            width: 140px !important;
+            max-width: 140px !important;
         }
         
         #description-toolbar .ql-font .ql-picker-label,
         #description-toolbar .ql-size .ql-picker-label {
             width: 100% !important;
+            min-width: 100% !important;
             padding: 4px 8px !important;
             white-space: nowrap !important;
-            overflow: hidden !important;
-            text-overflow: ellipsis !important;
+            overflow: visible !important;
+            text-overflow: clip !important;
+            display: block !important;
+            box-sizing: border-box !important;
         }
         
         #description-toolbar .ql-font .ql-picker-options,
         #description-toolbar .ql-size .ql-picker-options {
             min-width: 180px !important;
+            width: 180px !important;
         }
         
-        /* Préserver les color pickers et autres éléments */
+        /* Préserver les color pickers - taille normale */
         #description-toolbar .ql-color .ql-picker,
         #description-toolbar .ql-background .ql-picker,
         #description-toolbar .ql-align .ql-picker {
-            min-width: auto !important;
-            width: auto !important;
+            min-width: 28px !important;
+            width: 28px !important;
+            max-width: 28px !important;
+        }
+        
+        /* Forcer la largeur avec une approche CSS plus agressive */
+        #description-toolbar span.ql-picker[class*="ql-font"] {
+            width: 180px !important;
+            min-width: 180px !important;
+        }
+        
+        #description-toolbar span.ql-picker[class*="ql-size"] {
+            width: 140px !important;
+            min-width: 140px !important;
         }
         
         #description-toolbar button {
@@ -2563,6 +2583,26 @@ function initQuillEditor() {
             toolbar: toolbarOptions
         }
     });
+    
+    // Forcer la largeur des menus après initialisation
+    setTimeout(() => {
+        const fontPicker = document.querySelector('#description-toolbar .ql-font .ql-picker');
+        const sizePicker = document.querySelector('#description-toolbar .ql-size .ql-picker');
+        
+        if (fontPicker) {
+            fontPicker.style.width = '180px';
+            fontPicker.style.minWidth = '180px';
+            fontPicker.style.maxWidth = '180px';
+            console.log('Font picker élargi à 180px');
+        }
+        
+        if (sizePicker) {
+            sizePicker.style.width = '140px';
+            sizePicker.style.minWidth = '140px';
+            sizePicker.style.maxWidth = '140px';
+            console.log('Size picker élargi à 140px');
+        }
+    }, 200);
     
     console.log('✅ Quill Editor initialisé');
 }
