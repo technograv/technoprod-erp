@@ -99,6 +99,9 @@ class Societe
     #[ORM\Column(type: 'integer', options: ['default' => 365])]
     private int $frequenceVisiteClients = 365; // Fréquence en jours pour visiter chaque client
 
+    #[ORM\Column(type: 'decimal', precision: 5, scale: 2, options: ['default' => 30.00])]
+    private float $acompteDefautPercent = 30.00; // Pourcentage d'acompte par défaut pour les devis
+
     #[ORM\OneToMany(mappedBy: 'societe', targetEntity: UserSocieteRole::class, orphanRemoval: true)]
     private Collection $userRoles;
 
@@ -533,6 +536,18 @@ class Societe
         return $this;
     }
 
+    public function getAcompteDefautPercent(): float
+    {
+        return $this->acompteDefautPercent;
+    }
+
+    public function setAcompteDefautPercent(float $acompteDefautPercent): self
+    {
+        $this->acompteDefautPercent = $acompteDefautPercent;
+        $this->updateTimestamp();
+        return $this;
+    }
+
     /**
      * Récupère un délai avec héritage de la société parent
      */
@@ -555,6 +570,25 @@ class Societe
             'facturation' => 1,
             default => 0
         };
+    }
+
+    /**
+     * Récupère le pourcentage d'acompte par défaut avec héritage de la société parent
+     */
+    public function getAcompteDefautPercentAvecHeritage(): float
+    {
+        // Si on a une valeur et qu'elle n'est pas 0
+        if ($this->acompteDefautPercent > 0) {
+            return $this->acompteDefautPercent;
+        }
+        
+        // Si société fille et pas de valeur, hériter du parent
+        if ($this->societeParent) {
+            return $this->societeParent->getAcompteDefautPercentAvecHeritage();
+        }
+        
+        // Valeur par défaut si aucune société parent
+        return 30.00;
     }
 
     public function __toString(): string

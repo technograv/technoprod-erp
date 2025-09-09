@@ -279,20 +279,69 @@
             </tr>
         </thead>
         <tbody>
-            {% for item in devis.devisItems %}
-                <tr>
-                    <td>
-                        <strong>{{ item.designation }}</strong>
-                        {% if item.produit %}
-                            <br><small style="color: #666;">Réf: {{ item.produit.reference }}</small>
-                        {% endif %}
-                    </td>
-                    <td>{{ item.description|nl2br }}</td>
-                    <td class="text-center">{{ item.quantite }}</td>
-                    <td class="text-right">{{ item.prixUnitaireHt }}€</td>
-                    <td class="text-center">{{ item.tvaPercent }}%</td>
-                    <td class="text-right"><strong>{{ item.totalLigneHt }}€</strong></td>
-                </tr>
+            {% for element in devis.elementsOrdered %}
+                {% if element.type == 'product' %}
+                    <tr>
+                        <td>
+                            <strong>{{ element.designation }}</strong>
+                            {% if element.produit %}
+                                <br><small style="color: #666;">Réf: {{ element.produit.reference }}</small>
+                            {% endif %}
+                        </td>
+                        <td>{{ element.description|nl2br }}</td>
+                        <td class="text-center">{{ element.quantite }}</td>
+                        <td class="text-right">{{ element.prixUnitaireHt }}€</td>
+                        <td class="text-center">{{ element.tvaPercent }}%</td>
+                        <td class="text-right"><strong>{{ element.totalLigneHt }}€</strong></td>
+                    </tr>
+                {% elseif element.type == 'section_title' %}
+                    <tr>
+                        <td colspan="6" style="background-color: #f8f9fa; padding: 12px; border-top: 2px solid #6f42c1;">
+                            <strong style="color: #6f42c1; font-size: 13px;">{{ element.titre }}</strong>
+                        </td>
+                    </tr>
+                {% elseif element.type == 'line_break' %}
+                    <tr>
+                        <td colspan="6" style="padding: 8px; border: none;">
+                            <hr style="border: none; border-top: 1px solid #dee2e6; margin: 0;">
+                        </td>
+                    </tr>
+                {% elseif element.type == 'page_break' %}
+                    </tbody>
+                </table>
+                
+                <div style="page-break-after: always; text-align: center; color: #666; padding: 20px;">
+                    <hr style="border: none; border-top: 2px solid #6f42c1; margin: 0; width: 100%;">
+                </div>
+                
+                <table class="items-table">
+                    <thead>
+                        <tr>
+                            <th style="width: 35%;">Désignation</th>
+                            <th style="width: 25%;">Description</th>
+                            <th style="width: 8%;" class="text-center">Qté</th>
+                            <th style="width: 12%;" class="text-right">Prix unit. HT</th>
+                            <th style="width: 8%;" class="text-center">TVA</th>
+                            <th style="width: 12%;" class="text-right">Total HT</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                {% elseif element.type == 'separator' %}
+                    <tr>
+                        <td colspan="6" style="padding: 16px; text-align: center; border: none;">
+                            <hr style="border: none; border-top: 3px double #6f42c1; margin: 0;">
+                        </td>
+                    </tr>
+                {% elseif element.type == 'subtotal' %}
+                    <tr>
+                        <td colspan="5" style="background-color: #e9ecef; padding: 10px; text-align: right; border-top: 2px solid #6f42c1;">
+                            <strong>{{ element.titre ?: 'Sous-total' }} :</strong>
+                        </td>
+                        <td style="background-color: #e9ecef; padding: 10px; text-align: right; border-top: 2px solid #6f42c1;">
+                            <strong>{{ devis.calculateSubtotalUpTo(element.position) }}€</strong>
+                        </td>
+                    </tr>
+                {% endif %}
             {% else %}
                 <tr>
                     <td colspan="6" class="text-center" style="color: #666; padding: 20px;">
