@@ -85,10 +85,20 @@ final class DevisController extends AbstractController
         $devis = new Devis();
         
         // Auto-assignment du commercial à l'utilisateur connecté
-        $devis->setCommercial($this->getUser());
+        $user = $this->getUser();
+        $devis->setCommercial($user);
         
         // Définir le statut par défaut comme "brouillon"
         $devis->setStatut('brouillon');
+        
+        // Définir l'acompte par défaut depuis la configuration société
+        if ($user && $user->getSocietePrincipale()) {
+            $societe = $user->getSocietePrincipale();
+            $acompteDefaut = $societe->getAcompteDefautPercentAvecHeritage();
+            if ($acompteDefaut > 0) {
+                $devis->setAcomptePercent((string)$acompteDefaut);
+            }
+        }
         
         // Générer le prochain numéro de devis avec le nouveau système
         $nextDevisNumber = $numerotationService->previewProchainNumero('DE');
