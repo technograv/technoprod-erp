@@ -66,6 +66,39 @@ class ProduitRepository extends ServiceEntityRepository
     }
 
     /**
+     * Recherche de produits par champ spécifique pour autocomplétion
+     */
+    public function searchByField(string $query, string $field = 'designation', int $limit = 10): array
+    {
+        $query = strtolower($query);
+        $qb = $this->createQueryBuilder('p')
+            ->andWhere('p.actif = :actif')
+            ->setParameter('actif', true)
+            ->setMaxResults($limit);
+
+        switch ($field) {
+            case 'reference':
+                $qb->andWhere('LOWER(p.reference) LIKE :query')
+                   ->orderBy('p.reference', 'ASC');
+                break;
+            case 'designation':
+                $qb->andWhere('LOWER(p.designation) LIKE :query')
+                   ->orderBy('p.designation', 'ASC');
+                break;
+            default:
+                $qb->andWhere('
+                    LOWER(p.designation) LIKE :query OR 
+                    LOWER(p.reference) LIKE :query
+                ')
+                   ->orderBy('p.designation', 'ASC');
+        }
+
+        $qb->setParameter('query', '%' . $query . '%');
+
+        return $qb->getQuery()->getResult();
+    }
+
+    /**
      * Statistiques des produits
      */
     public function getStatistiques(): array

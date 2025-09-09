@@ -226,12 +226,25 @@ class DevisElementController extends AbstractController
             $element->setProduit($produit);
         }
 
-        $element->setDesignation($data['designation'] ?? null);
-        $element->setDescription($data['description'] ?? null);
-        $element->setQuantite($data['quantite'] ?? '1');
-        $element->setPrixUnitaireHt($data['prix_unitaire_ht'] ?? '0.00');
-        $element->setRemisePercent($data['remise_percent'] ?? '0.00');
-        $element->setTvaPercent($data['tva_percent'] ?? '20.00');
+        // Ne mettre à jour que les champs fournis dans $data
+        if (array_key_exists('designation', $data)) {
+            $element->setDesignation($data['designation']);
+        }
+        if (array_key_exists('description', $data)) {
+            $element->setDescription($data['description']);
+        }
+        if (array_key_exists('quantite', $data)) {
+            $element->setQuantite($data['quantite'] ?: '1');
+        }
+        if (array_key_exists('prix_unitaire_ht', $data)) {
+            $element->setPrixUnitaireHt($data['prix_unitaire_ht'] ?: '0.00');
+        }
+        if (array_key_exists('remise_percent', $data)) {
+            $element->setRemisePercent($data['remise_percent'] ?: '0.00');
+        }
+        if (array_key_exists('tva_percent', $data)) {
+            $element->setTvaPercent($data['tva_percent'] ?: '20.00');
+        }
 
         $element->calculateTotal();
     }
