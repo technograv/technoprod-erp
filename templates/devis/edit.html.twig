@@ -844,7 +844,8 @@ function renderProductElement(element) {
                         <input type="text" class="form-control form-control-sm code-article-input" 
                                placeholder="Code..." value="${element.produit_reference || ''}"
                                data-element-id="${element.id}"
-                               onchange="updateElement(${element.id}, 'produit_reference', this.value)" />
+                               onchange="updateElement(${element.id}, 'produit_reference', this.value)"
+                               onkeypress="preventEnterSubmit(event)" />
                     </div>
                     
                     <!-- Désignation (225px) -->
@@ -853,7 +854,8 @@ function renderProductElement(element) {
                                placeholder="Désignation..."
                                value="${element.designation || ''}" 
                                data-element-id="${element.id}"
-                               onchange="updateElement(${element.id}, 'designation', this.value)" />
+                               onchange="updateElement(${element.id}, 'designation', this.value)"
+                               onkeypress="preventEnterSubmit(event)" />
                     </div>
                     
                     <!-- Description détaillée (flex-fill) -->
@@ -861,7 +863,8 @@ function renderProductElement(element) {
                         <input type="text" class="form-control form-control-sm description-input" 
                                placeholder="Description détaillée..." 
                                value="${element.description || ''}"
-                               onchange="updateElement(${element.id}, 'description', this.value)" />
+                               onchange="updateElement(${element.id}, 'description', this.value)"
+                               onkeypress="preventEnterSubmit(event)" />
                     </div>
                     
                     <!-- Quantité (90px) -->
@@ -870,7 +873,8 @@ function renderProductElement(element) {
                                value="${element.quantite || 1}" 
                                pattern="[0-9]*[.,]?[0-9]*"
                                onchange="updateElement(${element.id}, 'quantite', this.value)"
-                               oninput="this.value = this.value.replace(/[^0-9.,]/g, '')" />
+                               oninput="this.value = this.value.replace(/[^0-9.,]/g, '')"
+                               onkeypress="preventEnterSubmit(event)" />
                     </div>
                     
                     <!-- Prix unitaire HT (90px) -->
@@ -880,7 +884,8 @@ function renderProductElement(element) {
                                value="${parseFloat(element.prix_unitaire_ht || 0).toFixed(2)}"
                                pattern="[0-9]*[.,]?[0-9]*"
                                onchange="updateElement(${element.id}, 'prix_unitaire_ht', this.value)"
-                               oninput="this.value = this.value.replace(/[^0-9.,]/g, '')" />
+                               oninput="this.value = this.value.replace(/[^0-9.,]/g, '')"
+                               onkeypress="preventEnterSubmit(event)" />
                     </div>
                     
                     <!-- % Remise (90px) -->
@@ -890,7 +895,8 @@ function renderProductElement(element) {
                                value="${parseFloat(element.remise_percent || 0).toFixed(1)}"
                                pattern="[0-9]*[.,]?[0-9]*"
                                onchange="updateElement(${element.id}, 'remise_percent', this.value)"
-                               oninput="this.value = this.value.replace(/[^0-9.,]/g, '')" />
+                               oninput="this.value = this.value.replace(/[^0-9.,]/g, '')"
+                               onkeypress="preventEnterSubmit(event)" />
                     </div>
                     
                     <!-- TVA (90px) -->
@@ -970,7 +976,8 @@ function renderLayoutElement(element) {
                            placeholder="Titre de la section..."
                            style="font-size: 1.25rem; color: inherit;"
                            onchange="updateElement(${element.id}, 'titre', this.value)"
-                           onblur="updateElement(${element.id}, 'titre', this.value)" />
+                           onblur="updateElement(${element.id}, 'titre', this.value)"
+                           onkeypress="preventEnterSubmit(event)" />
                 </div>`;
             } else {
                 content = `<h5 class="mb-0"><i class="${element.icon}"></i> ${element.titre || element.display_label}</h5>`;
@@ -1032,8 +1039,19 @@ function initSortable() {
         ghostClass: 'sortable-ghost',
         chosenClass: 'sortable-chosen',
         dragClass: 'sortable-drag',
-        filter: '.devis-headers, .text-center.text-muted, .btn-group',
+        filter: '.devis-headers, .text-center.text-muted, .btn-group, .mt-3, .add-item-btn',
         preventOnFilter: false,
+        onMove: function(evt, originalEvent) {
+            // Empêcher le déplacement vers les en-têtes ou éléments non-draggables
+            const related = evt.related;
+            if (related && (related.classList.contains('devis-headers') || 
+                          related.classList.contains('text-center') || 
+                          related.classList.contains('btn-group') ||
+                          related.classList.contains('add-item-btn'))) {
+                return false; // Empêcher le déplacement
+            }
+            return true; // Autoriser le déplacement
+        },
         onEnd: function(evt) {
             // Vérifier que c'est bien un déplacement d'élément existant
             if (evt.item && evt.item.dataset.elementId) {
@@ -1245,6 +1263,17 @@ function updateSubtotals() {
             subtotalEl.textContent = subtotal.toFixed(2) + ' €';
         }
     });
+}
+
+// ==========================================
+// GESTION TOUCHES CLAVIER
+// ==========================================
+
+function preventEnterSubmit(event) {
+    if (event.key === 'Enter') {
+        event.preventDefault();
+        event.target.blur(); // Retire le focus du champ pour déclencher onblur/onchange
+    }
 }
 
 // ==========================================
