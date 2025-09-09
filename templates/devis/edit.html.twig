@@ -739,14 +739,29 @@
             white-space: nowrap;
         }
         
-        #description-toolbar select.ql-font {
-            min-width: 180px;
-            width: 180px;
+        /* Styles pour les éléments Quill générés */
+        #description-toolbar .ql-picker {
+            min-width: 140px !important;
         }
         
-        #description-toolbar select.ql-size {
-            min-width: 140px;
-            width: 140px;
+        #description-toolbar .ql-font .ql-picker {
+            min-width: 180px !important;
+        }
+        
+        #description-toolbar .ql-size .ql-picker {
+            min-width: 140px !important;
+        }
+        
+        #description-toolbar .ql-picker-label {
+            width: 100% !important;
+            padding: 4px 8px !important;
+            white-space: nowrap !important;
+            overflow: hidden !important;
+            text-overflow: ellipsis !important;
+        }
+        
+        #description-toolbar .ql-picker-options {
+            min-width: 180px !important;
         }
         
         #description-toolbar button {
