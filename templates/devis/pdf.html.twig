@@ -206,6 +206,16 @@
         .badge-success { background-color: #28a745; }
         .badge-info { background-color: #17a2b8; }
         .badge-warning { background-color: #ffc107; color: #212529; }
+        
+        /* Styles pour le contenu HTML des descriptions WYSIWYG */
+        .items-table td strong { font-weight: bold; }
+        .items-table td em { font-style: italic; }
+        .items-table td u { text-decoration: underline; }
+        .items-table td ul { margin: 3px 0; padding-left: 15px; }
+        .items-table td ol { margin: 3px 0; padding-left: 15px; }
+        .items-table td li { margin: 1px 0; font-size: 10px; }
+        .items-table td p { margin: 3px 0; }
+        .items-table td br { line-height: 1.4; }
     </style>
 </head>
 <body>
@@ -270,11 +280,11 @@
     <table class="items-table">
         <thead>
             <tr>
-                <th style="width: 35%;">Désignation</th>
-                <th style="width: 25%;">Description</th>
-                <th style="width: 8%;" class="text-center">Qté</th>
-                <th style="width: 12%;" class="text-right">Prix unit. HT</th>
-                <th style="width: 8%;" class="text-center">TVA</th>
+                <th style="width: 25%;">Désignation</th>
+                <th style="width: 40%;">Description</th>
+                <th style="width: 7%;" class="text-center">Qté</th>
+                <th style="width: 10%;" class="text-right">Prix unit. HT</th>
+                <th style="width: 6%;" class="text-center">TVA</th>
                 <th style="width: 12%;" class="text-right">Total HT</th>
             </tr>
         </thead>
@@ -288,7 +298,7 @@
                                 <br><small style="color: #666;">Réf: {{ element.produit.reference }}</small>
                             {% endif %}
                         </td>
-                        <td>{{ element.description|nl2br }}</td>
+                        <td>{{ element.description|raw }}</td>
                         <td class="text-center">{{ element.quantite }}</td>
                         <td class="text-right">{{ element.prixUnitaireHt }}€</td>
                         <td class="text-center">{{ element.tvaPercent }}%</td>
@@ -317,11 +327,11 @@
                 <table class="items-table">
                     <thead>
                         <tr>
-                            <th style="width: 35%;">Désignation</th>
-                            <th style="width: 25%;">Description</th>
-                            <th style="width: 8%;" class="text-center">Qté</th>
-                            <th style="width: 12%;" class="text-right">Prix unit. HT</th>
-                            <th style="width: 8%;" class="text-center">TVA</th>
+                            <th style="width: 25%;">Désignation</th>
+                            <th style="width: 40%;">Description</th>
+                            <th style="width: 7%;" class="text-center">Qté</th>
+                            <th style="width: 10%;" class="text-right">Prix unit. HT</th>
+                            <th style="width: 6%;" class="text-center">TVA</th>
                             <th style="width: 12%;" class="text-right">Total HT</th>
                         </tr>
                     </thead>
