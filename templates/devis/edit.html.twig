@@ -717,9 +717,47 @@
         }
 
         /* Quill Editor dans les modales */
-        .ql-toolbar.ql-snow {
+        #description-toolbar {
+            border: 1px solid #ccc;
+            border-bottom: none;
             border-top-left-radius: 0.375rem;
             border-top-right-radius: 0.375rem;
+            background: #f8f9fa;
+            padding: 8px;
+            display: flex;
+            flex-wrap: wrap;
+            gap: 4px;
+            align-items: center;
+        }
+        
+        #description-toolbar select {
+            padding: 4px 8px;
+            border: 1px solid #ccc;
+            border-radius: 3px;
+            background: white;
+            font-size: 13px;
+            min-width: 120px;
+        }
+        
+        #description-toolbar button {
+            background: white;
+            border: 1px solid #ccc;
+            border-radius: 3px;
+            padding: 6px 8px;
+            cursor: pointer;
+            font-size: 13px;
+            min-width: 28px;
+            height: 28px;
+        }
+        
+        #description-toolbar button:hover {
+            background: #e9ecef;
+        }
+        
+        #description-toolbar button.ql-active {
+            background: #007bff;
+            color: white;
+            border-color: #007bff;
         }
         
         .ql-container.ql-snow {
@@ -788,37 +826,28 @@
             overflow-y: auto;
         }
 
-        /* Affichage des labels personnalisés */
-        .ql-picker-label[data-label]:before {
-            content: attr(data-label);
-        }
-        
-        .ql-picker-label[data-label] .ql-picker-label-content {
-            display: none;
-        }
-        
-        /* Styles pour les options de police dans le menu */
-        .ql-font .ql-picker-item[data-value="arial"]:before {
+        /* Prévisualisation des polices dans les selects */
+        #description-toolbar select.ql-font option[value="arial"] {
             font-family: Arial, sans-serif;
         }
         
-        .ql-font .ql-picker-item[data-value="helvetica"]:before {
+        #description-toolbar select.ql-font option[value="helvetica"] {
             font-family: Helvetica, sans-serif;
         }
         
-        .ql-font .ql-picker-item[data-value="times"]:before {
+        #description-toolbar select.ql-font option[value="times"] {
             font-family: 'Times New Roman', serif;
         }
         
-        .ql-font .ql-picker-item[data-value="georgia"]:before {
+        #description-toolbar select.ql-font option[value="georgia"] {
             font-family: Georgia, serif;
         }
         
-        .ql-font .ql-picker-item[data-value="verdana"]:before {
+        #description-toolbar select.ql-font option[value="verdana"] {
             font-family: Verdana, sans-serif;
         }
         
-        .ql-font .ql-picker-item[data-value="courier"]:before {
+        #description-toolbar select.ql-font option[value="courier"] {
             font-family: 'Courier New', monospace;
         }
     </style>
@@ -2439,7 +2468,7 @@ window.openDescriptionEditor = function(elementId, currentDescription) {
 function initQuillEditor() {
     console.log('🔧 Initialisation Quill Editor...');
     
-    // Configuration des polices personnalisées
+    // Configuration des polices personnalisées avec labels
     const Font = Quill.import('formats/font');
     Font.whitelist = ['arial', 'helvetica', 'times', 'georgia', 'verdana', 'courier'];
     Quill.register(Font, true);
@@ -2449,77 +2478,61 @@ function initQuillEditor() {
     Size.whitelist = ['10px', '12px', '14px', '16px', '18px', '20px', '22px', '24px'];
     Quill.register(Size, true);
     
+    // Créer la toolbar personnalisée avec des options nommées
+    const toolbarOptions = {
+        container: '#description-toolbar'
+    };
+    
+    // Créer la toolbar HTML personnalisée
+    document.getElementById('description-editor').insertAdjacentHTML('beforebegin', `
+        <div id="description-toolbar">
+            <select class="ql-font">
+                <option value="">Police par défaut</option>
+                <option value="arial">Arial</option>
+                <option value="helvetica">Helvetica</option>
+                <option value="times">Times New Roman</option>
+                <option value="georgia">Georgia</option>
+                <option value="verdana">Verdana</option>
+                <option value="courier">Courier New</option>
+            </select>
+            <select class="ql-size">
+                <option value="">Taille normale</option>
+                <option value="10px">10px</option>
+                <option value="12px">12px</option>
+                <option value="14px">14px</option>
+                <option value="16px">16px</option>
+                <option value="18px">18px</option>
+                <option value="20px">20px</option>
+                <option value="22px">22px</option>
+                <option value="24px">24px</option>
+            </select>
+            <button class="ql-bold"></button>
+            <button class="ql-italic"></button>
+            <button class="ql-underline"></button>
+            <button class="ql-strike"></button>
+            <button class="ql-header" value="1"></button>
+            <button class="ql-header" value="2"></button>
+            <button class="ql-list" value="ordered"></button>
+            <button class="ql-list" value="bullet"></button>
+            <button class="ql-indent" value="-1"></button>
+            <button class="ql-indent" value="+1"></button>
+            <select class="ql-color"></select>
+            <select class="ql-background"></select>
+            <select class="ql-align"></select>
+            <button class="ql-link"></button>
+            <button class="ql-clean"></button>
+        </div>
+    `);
+    
     quillEditor = new Quill('#description-editor', {
         theme: 'snow',
         placeholder: 'Saisissez ici la description détaillée...',
         modules: {
-            toolbar: {
-                container: [
-                    [{ 'font': ['arial', 'helvetica', 'times', 'georgia', 'verdana', 'courier'] }],
-                    [{ 'size': ['10px', '12px', '14px', '16px', '18px', '20px', '22px', '24px'] }],
-                    ['bold', 'italic', 'underline', 'strike'],
-                    [{ 'header': 1 }, { 'header': 2 }],
-                    [{ 'list': 'ordered'}, { 'list': 'bullet' }],
-                    [{ 'indent': '-1'}, { 'indent': '+1' }],
-                    [{ 'color': [] }, { 'background': [] }],
-                    [{ 'align': [] }],
-                    ['link'],
-                    ['clean']
-                ],
-                handlers: {}
-            }
+            toolbar: toolbarOptions
         }
     });
     
-    // Personnaliser les labels des menus après initialisation
-    setTimeout(() => {
-        customizeQuillLabels();
-    }, 100);
-    
     console.log('✅ Quill Editor initialisé');
-}
-
-// Fonction pour personnaliser les labels des menus Quill
-function customizeQuillLabels() {
-    // Labels pour les polices
-    const fontPicker = document.querySelector('.ql-font .ql-picker');
-    if (fontPicker) {
-        const fontOptions = fontPicker.querySelectorAll('.ql-picker-item');
-        const fontLabels = ['Default', 'Arial', 'Helvetica', 'Times New Roman', 'Georgia', 'Verdana', 'Courier New'];
-        
-        fontOptions.forEach((option, index) => {
-            if (fontLabels[index]) {
-                option.textContent = fontLabels[index];
-                option.setAttribute('data-label', fontLabels[index]);
-            }
-        });
-        
-        // Label par défaut
-        const fontLabel = fontPicker.querySelector('.ql-picker-label');
-        if (fontLabel) {
-            fontLabel.setAttribute('data-label', 'Police');
-        }
-    }
-    
-    // Labels pour les tailles
-    const sizePicker = document.querySelector('.ql-size .ql-picker');
-    if (sizePicker) {
-        const sizeOptions = sizePicker.querySelectorAll('.ql-picker-item');
-        const sizeLabels = ['Default', '10px', '12px', '14px', '16px', '18px', '20px', '22px', '24px'];
-        
-        sizeOptions.forEach((option, index) => {
-            if (sizeLabels[index]) {
-                option.textContent = sizeLabels[index];
-                option.setAttribute('data-label', sizeLabels[index]);
-            }
-        });
-        
-        // Label par défaut
-        const sizeLabel = sizePicker.querySelector('.ql-picker-label');
-        if (sizeLabel) {
-            sizeLabel.setAttribute('data-label', 'Taille');
-        }
-    }
 }
 
 // Gestionnaire de sauvegarde de la description
