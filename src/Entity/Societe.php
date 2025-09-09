@@ -99,8 +99,8 @@ class Societe
     #[ORM\Column(type: 'integer', options: ['default' => 365])]
     private int $frequenceVisiteClients = 365; // Fréquence en jours pour visiter chaque client
 
-    #[ORM\Column(type: 'decimal', precision: 5, scale: 2, options: ['default' => 30.00])]
-    private float $acompteDefautPercent = 30.00; // Pourcentage d'acompte par défaut pour les devis
+    #[ORM\Column(type: 'decimal', precision: 5, scale: 2, options: ['default' => '30.00'])]
+    private ?string $acompteDefautPercent = '30.00'; // Pourcentage d'acompte par défaut pour les devis
 
     #[ORM\OneToMany(mappedBy: 'societe', targetEntity: UserSocieteRole::class, orphanRemoval: true)]
     private Collection $userRoles;
@@ -536,12 +536,12 @@ class Societe
         return $this;
     }
 
-    public function getAcompteDefautPercent(): float
+    public function getAcompteDefautPercent(): ?string
     {
         return $this->acompteDefautPercent;
     }
 
-    public function setAcompteDefautPercent(float $acompteDefautPercent): self
+    public function setAcompteDefautPercent(?string $acompteDefautPercent): self
     {
         $this->acompteDefautPercent = $acompteDefautPercent;
         $this->updateTimestamp();
@@ -578,8 +578,8 @@ class Societe
     public function getAcompteDefautPercentAvecHeritage(): float
     {
         // Si on a une valeur et qu'elle n'est pas 0
-        if ($this->acompteDefautPercent > 0) {
-            return $this->acompteDefautPercent;
+        if ($this->acompteDefautPercent && (float)$this->acompteDefautPercent > 0) {
+            return (float)$this->acompteDefautPercent;
         }
         
         // Si société fille et pas de valeur, hériter du parent
