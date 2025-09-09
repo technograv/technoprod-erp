@@ -1100,7 +1100,7 @@ function renderProductElement(element) {
                         <div class="d-flex align-items-center">
                             <input type="text" class="form-control form-control-sm description-inline-input flex-fill" 
                                    placeholder="Description simple..." 
-                                   value="${element.description ? element.description.replace(/<[^>]*>/g, '') : ''}"
+                                   value="${element.description ? cleanDescriptionForInput(element.description) : ''}"
                                    onchange="updateElement(${element.id}, 'description', this.value)"
                                    onkeypress="preventEnterSubmit(event)"
                                    onfocus="showDescriptionTooltip(this)" 
@@ -1333,7 +1333,7 @@ function initSortable() {
 // ACTIONS SUR LES ÉLÉMENTS
 // ==========================================
 
-async function addElement(type, position = null) {
+window.addElement = async function(type, position = null) {
     try {
         const data = { type };
         if (position !== null) {
@@ -2513,6 +2513,44 @@ window.showDescriptionTooltip = function(input) {
     }
 };
 
+// Fonction pour convertir HTML en texte simple pour l'input inline
+function cleanDescriptionForInput(html) {
+    if (!html) return '';
+    
+    // Créer un élément temporaire pour parser le HTML
+    const tempDiv = document.createElement('div');
+    tempDiv.innerHTML = html;
+    
+    // Convertir en texte simple (supprime tout le HTML)
+    return tempDiv.textContent || tempDiv.innerText || '';
+}
+
+// Fonction pour nettoyer le HTML généré par Quill
+function cleanQuillHTML(html) {
+    if (!html || html.trim() === '') return '';
+    
+    // Approche plus simple : nettoyer les attributs problématiques directement
+    let cleaned = html
+        // Supprimer les styles oklch et autres couleurs complexes
+        .replace(/style="[^"]*oklch[^"]*"/gi, '')
+        .replace(/style="[^"]*rgb\([^)]*\)[^"]*"/gi, '')
+        .replace(/style="[^"]*background-color:[^;"]*oklch[^;"]*[^"]*"/gi, '')
+        // Nettoyer les styles vides
+        .replace(/style="[\s]*"/gi, '')
+        // Normaliser les espaces multiples en un seul espace
+        .replace(/\s+/g, ' ')
+        // Garder les balises HTML de base mais supprimer les attributs complexes
+        .replace(/<span[^>]*>/gi, '<span>')
+        .replace(/<p[^>]*>/gi, '<p>')
+        // Nettoyer les espaces autour des balises MAIS garder les espaces entre les mots
+        .replace(/>\s+</g, '><')  // Supprimer espaces entre balises
+        .replace(/>\s+([^<])/g, '> $1')  // Garder UN espace après balise fermante et contenu
+        .replace(/([^>])\s+</g, '$1 <')  // Garder UN espace avant balise ouvrante et contenu
+        .trim();
+    
+    return cleaned;
+}
+
 // Fonction pour ouvrir l'éditeur de description
 window.openDescriptionEditor = function(elementId, currentDescription) {
     
@@ -2641,17 +2679,9 @@ document.addEventListener('DOMContentLoaded', function() {
             // Nettoyer le contenu vide par défaut
             if (description === '<p><br></p>' || description === '<p>Saisissez votre description ici...</p>') {
                 description = '';
-            }
-            // Si le contenu ne contient que du texte simple sans formatage, 
-            // on garde juste le texte pour compatibilité avec l'édition inline
-            const tempDiv = document.createElement('div');
-            tempDiv.innerHTML = description;
-            const textContent = tempDiv.textContent.trim();
-            const hasFormatting = description.includes('<strong>') || description.includes('<em>') || 
-                                description.includes('<ul>') || description.includes('<ol>') ||
-                                description.includes('color:') || description.includes('font-');
-            if (!hasFormatting && textContent) {
-                description = textContent; // Garde juste le texte simple
+            } else if (description.trim()) {
+                // Nettoyer et simplifier le HTML
+                description = cleanQuillHTML(description);
             }
         }
         
