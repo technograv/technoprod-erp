@@ -161,7 +161,7 @@ class DevisElementRepository extends ServiceEntityRepository
     }
 
     /**
-     * Calcule le sous-total jusqu'à une position donnée
+     * Calcule le sous-total entre deux positions (depuis le dernier sous-total)
      *
      * @param Devis $devis
      * @param int $upToPosition
@@ -169,13 +169,31 @@ class DevisElementRepository extends ServiceEntityRepository
      */
     public function calculateSubtotalUpTo(Devis $devis, int $upToPosition): float
     {
-        $result = $this->createQueryBuilder('de')
-            ->select('SUM(CAST(de.totalLigneHt AS DECIMAL(10,2)))')
+        // Chercher la position du dernier sous-total avant la position courante
+        $lastSubtotalPosition = $this->createQueryBuilder('de')
+            ->select('MAX(de.position)')
             ->andWhere('de.devis = :devis')
             ->andWhere('de.type = :type')
             ->andWhere('de.position < :position')
             ->setParameter('devis', $devis)
+            ->setParameter('type', 'subtotal')
+            ->setParameter('position', $upToPosition)
+            ->getQuery()
+            ->getSingleScalarResult();
+
+        // Si pas de sous-total précédent, partir de 0
+        $fromPosition = $lastSubtotalPosition ? (int)$lastSubtotalPosition + 1 : 0;
+
+        // Calculer la somme des produits entre le dernier sous-total et la position courante
+        $result = $this->createQueryBuilder('de')
+            ->select('SUM(CAST(de.totalLigneHt AS DECIMAL(10,2)))')
+            ->andWhere('de.devis = :devis')
+            ->andWhere('de.type = :type')
+            ->andWhere('de.position > :fromPosition')
+            ->andWhere('de.position < :position')
+            ->setParameter('devis', $devis)
             ->setParameter('type', 'product')
+            ->setParameter('fromPosition', $fromPosition)
             ->setParameter('position', $upToPosition)
             ->getQuery()
             ->getSingleScalarResult();

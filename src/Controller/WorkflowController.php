@@ -23,6 +23,7 @@ use Symfony\Component\HttpFoundation\Request;
 use Symfony\Component\HttpFoundation\Response;
 use Symfony\Component\Routing\Attribute\Route;
 use Symfony\Component\Security\Http\Attribute\IsGranted;
+use Psr\Log\LoggerInterface;
 
 #[Route('/workflow')]
 #[IsGranted('ROLE_USER')]
@@ -35,7 +36,9 @@ class WorkflowController extends AbstractController
         private DashboardService $dashboardService,
         private AlerteService $alerteService,
         private SecteurService $secteurService,
-        private \App\Service\CommuneGeometryCacheService $cacheService
+        private \App\Service\CommuneGeometryCacheService $cacheService,
+        private \App\Service\GoogleCalendarService $googleCalendarService,
+        private LoggerInterface $logger
     ) {}
 
     #[Route('/devis/{id}/action/{action}', name: 'workflow_devis_action', methods: ['POST'])]
@@ -202,16 +205,56 @@ class WorkflowController extends AbstractController
         $recentFactures = $this->entityManager->getRepository(Facture::class)
             ->findBy([], ['updatedAt' => 'DESC'], 5);
 
+        // Générer les jours ouvrés (lundi à vendredi) pour le calendrier
+        $currentWeekOffset = 0;
+        $startOfWeek = new \DateTime('monday this week');
+        $startOfWeek->modify($currentWeekOffset . ' weeks');
+        
+        $weekDays = [];
+        for ($i = 0; $i < 5; $i++) { // Seulement 5 jours : lundi à vendredi
+            $day = clone $startOfWeek;
+            $day->modify('+' . $i . ' days');
+            
+            $weekDays[] = [
+                'date' => $day,
+                'day_number' => $day->format('j'),
+                'day_short_fr' => $this->getDayShortFr($day->format('N')),
+                'is_today' => $day->format('Y-m-d') === (new \DateTime())->format('Y-m-d')
+            ];
+        }
+
+        // Récupérer les préférences utilisateur pour les calendriers
+        $preferences = $this->entityManager->getRepository(\App\Entity\UserPreferences::class)
+            ->findOneBy(['user' => $user]);
+        
+        $selectedCalendarIds = $preferences ? $preferences->getSelectedCalendarIds() : ['primary'];
+        
+        // Récupérer les événements Google Calendar pour la semaine courante
+        $weekEvents = [];
+        try {
+            if ($user->isGoogleAccount()) {
+                $weekEvents = $this->googleCalendarService->getWeekEvents($user, $startOfWeek, $selectedCalendarIds);
+            }
+        } catch (\Exception $e) {
+            // En cas d'erreur, continuer sans les événements calendar
+            $this->logger->warning('Erreur récupération calendrier Google', [
+                'user_id' => $user->getId(),
+                'error' => $e->getMessage()
+            ]);
+        }
+
         return $this->render('workflow/dashboard.html.twig', [
             'stats' => $stats,
             'recent_devis' => $recentDevis,
             'recent_commandes' => $recentCommandes,
             'recent_factures' => $recentFactures,
             'google_maps_api_key' => $this->getParameter('google.maps.api.key'),
-            'calendar_available' => false, // Désactiver temporairement le calendrier
-            'week_events' => [], // Événements vides pour éviter d'autres erreurs
-            'start_of_week' => new \DateTime('monday this week'),
-            'current_week_offset' => 0
+            'calendar_available' => true, // Calendrier réactivé
+            'week_events' => $weekEvents, // Événements récupérés depuis les calendriers sélectionnés
+            'week_days' => $weekDays,
+            'start_of_week' => $startOfWeek,
+            'current_week_offset' => $currentWeekOffset,
+            'selected_calendar_ids' => $selectedCalendarIds
         ]);
     }
 
@@ -925,5 +968,23 @@ class WorkflowController extends AbstractController
     {
         // Utiliser la nouvelle méthode basée sur les attributions
         return $this->calculateSecteurCenterFromAttributions($secteur);
+    }
+
+    /**
+     * Convertit le numéro de jour de semaine en abréviation française
+     */
+    private function getDayShortFr(int $dayNumber): string
+    {
+        $days = [
+            1 => 'Lun',
+            2 => 'Mar',
+            3 => 'Mer',
+            4 => 'Jeu',
+            5 => 'Ven',
+            6 => 'Sam',
+            7 => 'Dim'
+        ];
+        
+        return $days[$dayNumber] ?? 'Lun';
     }
 }

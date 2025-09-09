@@ -394,10 +394,6 @@ document.addEventListener('DOMContentLoaded', function() {
     }
 
     async function deleteElement(elementId) {
-        if (!confirm('Êtes-vous sûr de vouloir supprimer cet élément ?')) {
-            return;
-        }
-
         try {
             const response = await fetch(`/devis/${DEVIS_ID}/element/${elementId}`, {
                 method: 'DELETE'

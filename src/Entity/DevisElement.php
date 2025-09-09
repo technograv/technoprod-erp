@@ -369,7 +369,8 @@ class DevisElement
             'icon' => $this->getIcon(),
             'css_class' => $this->getCssClass(),
             'is_product' => $this->isProductElement(),
-            'is_layout' => $this->isLayoutElement()
+            'is_layout' => $this->isLayoutElement(),
+            'produit_reference' => $this->produit?->getReference()
         ];
     }
 }
