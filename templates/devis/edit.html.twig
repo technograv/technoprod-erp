@@ -1286,8 +1286,8 @@ function initEventListeners() {
         addElement('product');
     });
 
-    // Boutons ajouter éléments de mise en page
-    document.querySelectorAll('[data-element-type]').forEach(btn => {
+    // Boutons ajouter éléments de mise en page (seulement dropdown, pas panneau flottant)
+    document.querySelectorAll('.dropdown-item[data-element-type]').forEach(btn => {
         btn.addEventListener('click', (e) => {
             e.preventDefault();
             const type = btn.dataset.elementType;
