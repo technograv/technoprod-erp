@@ -827,7 +827,7 @@ function renderProductElement(element) {
 
     const deleteButton = IS_EDITABLE ? `
         <div style="width: 30px; padding: 4px;" class="text-center">
-            <button type="button" class="btn btn-outline-danger btn-sm remove-item-btn" title="Supprimer" style="padding: 2px 4px; font-size: 10px;" onclick="deleteElement(${element.id})">
+            <button type="button" class="btn btn-outline-danger btn-sm remove-item-btn" title="Supprimer" style="padding: 2px 4px; font-size: 10px;" onclick="event.preventDefault(); event.stopPropagation(); deleteElement(${element.id}); return false;">
                 <i class="fas fa-trash"></i>
             </button>
         </div>
@@ -960,7 +960,7 @@ function renderLayoutElement(element) {
     ` : '';
 
     const deleteButton = IS_EDITABLE ? `
-        <button class="btn btn-sm btn-outline-danger" onclick="deleteElement(${element.id})">
+        <button type="button" class="btn btn-sm btn-outline-danger" onclick="event.preventDefault(); event.stopPropagation(); deleteElement(${element.id}); return false;">
             <i class="fas fa-trash"></i>
         </button>
     ` : '';
