@@ -139,13 +139,25 @@ class Devis
     #[ORM\Column]
     private ?\DateTimeImmutable $updatedAt = null;
 
+    // LEGACY: Anciennes relations - conservées pour compatibilité temporaire
     #[ORM\OneToMany(mappedBy: 'devis', targetEntity: DevisItem::class, cascade: ['persist', 'remove'], orphanRemoval: true)]
     #[ORM\OrderBy(['ordreAffichage' => 'ASC'])]
     private Collection $devisItems;
 
+    #[ORM\OneToMany(mappedBy: 'devis', targetEntity: LayoutElement::class, cascade: ['persist', 'remove'], orphanRemoval: true)]
+    #[ORM\OrderBy(['ordreAffichage' => 'ASC'])]
+    private Collection $layoutElements;
+
+    // NOUVELLE RELATION UNIFIÉE
+    #[ORM\OneToMany(mappedBy: 'devis', targetEntity: DevisElement::class, cascade: ['persist', 'remove'], orphanRemoval: true)]
+    #[ORM\OrderBy(['position' => 'ASC'])]
+    private Collection $elements;
+
     public function __construct()
     {
         $this->devisItems = new ArrayCollection();
+        $this->layoutElements = new ArrayCollection();
+        $this->elements = new ArrayCollection(); // NOUVELLE COLLECTION
         $this->createdAt = new \DateTimeImmutable();
         $this->updatedAt = new \DateTimeImmutable();
         $this->dateCreation = new \DateTime();
@@ -399,6 +411,57 @@ class Devis
             }
         }
         return $this;
+    }
+
+    // NOUVELLES MÉTHODES POUR DEVIS_ELEMENT
+    public function getElements(): Collection
+    {
+        return $this->elements;
+    }
+
+    public function addElement(DevisElement $element): static
+    {
+        if (!$this->elements->contains($element)) {
+            $this->elements->add($element);
+            $element->setDevis($this);
+        }
+        return $this;
+    }
+
+    public function removeElement(DevisElement $element): static
+    {
+        if ($this->elements->removeElement($element)) {
+            if ($element->getDevis() === $this) {
+                $element->setDevis(null);
+            }
+        }
+        return $this;
+    }
+
+    /**
+     * Récupère tous les éléments triés par position
+     */
+    public function getElementsOrdered(): Collection
+    {
+        $elements = $this->elements->toArray();
+        usort($elements, fn($a, $b) => $a->getPosition() <=> $b->getPosition());
+        return new ArrayCollection($elements);
+    }
+
+    /**
+     * Récupère seulement les éléments produit
+     */
+    public function getProductElements(): Collection
+    {
+        return $this->elements->filter(fn(DevisElement $element) => $element->isProductElement());
+    }
+
+    /**
+     * Récupère seulement les éléments de mise en page (nouvelle API DevisElement)
+     */
+    public function getLayoutElementsV2(): Collection
+    {
+        return $this->elements->filter(fn(DevisElement $element) => $element->isLayoutElement());
     }
 
     public function calculateTotals(): void
@@ -794,5 +857,83 @@ class Devis
     {
         $latestVersion = $this->getLatestVersion();
         return $latestVersion ? $latestVersion->getVersionNumber() + 1 : 1;
+    }
+
+    /**
+     * @return Collection<int, LayoutElement>
+     */
+    public function getLayoutElements(): Collection
+    {
+        return $this->layoutElements;
+    }
+
+    public function addLayoutElement(LayoutElement $layoutElement): static
+    {
+        if (!$this->layoutElements->contains($layoutElement)) {
+            $this->layoutElements->add($layoutElement);
+            $layoutElement->setDevis($this);
+        }
+
+        return $this;
+    }
+
+    public function removeLayoutElement(LayoutElement $layoutElement): static
+    {
+        if ($this->layoutElements->removeElement($layoutElement)) {
+            // set the owning side to null (unless already changed)
+            if ($layoutElement->getDevis() === $this) {
+                $layoutElement->setDevis(null);
+            }
+        }
+
+        return $this;
+    }
+
+    /**
+     * Récupère les éléments de mise en page triés par ordre d'affichage
+     *
+     * @return LayoutElement[]
+     */
+    public function getLayoutElementsOrdered(): array
+    {
+        $elements = $this->layoutElements->toArray();
+        usort($elements, fn(LayoutElement $a, LayoutElement $b) => $a->getOrdreAffichage() <=> $b->getOrdreAffichage());
+        return $elements;
+    }
+
+    /**
+     * Récupère les éléments de mise en page d'un type spécifique
+     *
+     * @param string $type
+     * @return LayoutElement[]
+     */
+    public function getLayoutElementsByType(string $type): array
+    {
+        return $this->layoutElements->filter(
+            fn(LayoutElement $element) => $element->getType() === $type
+        )->toArray();
+    }
+
+    /**
+     * Vérifie si le devis contient des éléments de mise en page
+     */
+    public function hasLayoutElements(): bool
+    {
+        return $this->layoutElements->count() > 0;
+    }
+
+    /**
+     * Compte les éléments de mise en page par type
+     *
+     * @return array Associatif type => count
+     */
+    public function countLayoutElementsByType(): array
+    {
+        $counts = [];
+        foreach ($this->layoutElements as $element) {
+            $type = $element->getType();
+            $counts[$type] = ($counts[$type] ?? 0) + 1;
+        }
+        return $counts;
     }
 }

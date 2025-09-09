@@ -59,13 +59,14 @@ class DevisItemType extends AbstractType
                     'data-calculation' => 'quantite'
                 ]
             ])
-            ->add('prixUnitaireHt', MoneyType::class, [
+            ->add('prixUnitaireHt', NumberType::class, [
                 'label' => 'Prix unitaire HT',
-                'currency' => 'EUR',
+                'scale' => 2,
                 'attr' => [
                     'class' => 'form-control prix-input',
                     'data-calculation' => 'prix',
-                    'step' => '0.01'
+                    'step' => '0.01',
+                    'placeholder' => '0.00'
                 ]
             ])
             ->add('remisePercent', NumberType::class, [
@@ -80,14 +81,15 @@ class DevisItemType extends AbstractType
                     'placeholder' => '0'
                 ]
             ])
-            ->add('remiseMontant', MoneyType::class, [
+            ->add('remiseMontant', NumberType::class, [
                 'label' => 'Remise (€)',
                 'required' => false,
-                'currency' => 'EUR',
+                'scale' => 2,
                 'attr' => [
                     'class' => 'form-control remise-montant-input',
                     'data-calculation' => 'remise-montant',
-                    'placeholder' => '0,00'
+                    'placeholder' => '0.00',
+                    'step' => '0.01'
                 ]
             ])
             ->add('tvaPercent', NumberType::class, [
@@ -101,15 +103,16 @@ class DevisItemType extends AbstractType
                     'data-calculation' => 'tva'
                 ]
             ])
-            ->add('totalLigneHt', MoneyType::class, [
+            ->add('totalLigneHt', NumberType::class, [
                 'label' => 'Total ligne HT',
-                'currency' => 'EUR',
+                'scale' => 2,
                 'data' => '0.00',
                 'empty_data' => '0.00',
                 'attr' => [
                     'class' => 'form-control total-ht-display',
                     'readonly' => true,
-                    'data-calculation' => 'total-ht'
+                    'data-calculation' => 'total-ht',
+                    'step' => '0.01'
                 ]
             ])
             ->add('ordreAffichage', HiddenType::class, [

@@ -131,117 +131,47 @@
                 </div>
             </div>
 
-            <!-- Lignes de devis -->
+            <!-- Éléments du devis -->
             <div class="form-section">
                 <div class="form-section-header">
                     <div class="d-flex justify-content-between align-items-center">
-                        <h5 class="mb-0"><i class="fas fa-list me-2"></i>Lignes de devis</h5>
-                    </div>
-                </div>
-                <div class="form-section-body">
-                    <!-- En-têtes colonnes uniformes (90px à droite) -->
-                    <div class="d-flex devis-headers mb-2 py-2 bg-light rounded align-items-start" style="gap: 2px; height: 35px;">
-                        <div style="width: 120px; padding: 4px;"><small class="fw-bold">Code</small></div>
-                        <div style="width: 225px; padding: 4px;"><small class="fw-bold">Désignation</small></div>
-                        <div class="flex-fill" style="padding: 4px;"><small class="fw-bold">Description détaillée</small></div>
-                        <div style="width: 90px; padding: 4px;" class="text-center"><small class="fw-bold">Qté</small></div>
-                        <div style="width: 90px; padding: 4px;" class="text-center"><small class="fw-bold">PU HT</small></div>
-                        <div style="width: 90px; padding: 4px;" class="text-center"><small class="fw-bold">% Rem.</small></div>
-                        <div style="width: 90px; padding: 4px;" class="text-center"><small class="fw-bold">TVA</small></div>
-                        <div style="width: 90px; padding: 4px;" class="text-center"><small class="fw-bold">Total HT</small></div>
-                        {% if devis.statut == 'brouillon' %}
-                        <div style="width: 30px; padding: 4px;"><small class="fw-bold"></small></div>
-                        {% endif %}
-                    </div>
-
-                    <div class="devis-items-collection" id="devis_devisItems" data-prototype="{{ form_row(form.devisItems.vars.prototype)|e('html_attr') }}" data-index="{{ form.devisItems|length }}">
-                        {% for item in form.devisItems %}
-                            <div class="devis-item mb-1 border-bottom">
-                                <div class="d-flex align-items-start" style="gap: 2px; min-height: 35px;">
-                                    <!-- Code article (1,5x = 120px) -->
-                                    <div style="width: 120px; padding: 4px;">
-                                        <input type="text" class="form-control form-control-sm code-article-input" 
-                                               placeholder="Code..." readonly value="{{ item.vars.data.produit ? item.vars.data.produit.reference : '' }}" />
-                                    </div>
-                                    
-                                    <!-- Désignation (1,5x = 225px) -->
-                                    <div style="width: 225px; padding: 4px;">
-                                        {{ form_widget(item.designation, {'attr': {'class': 'form-control form-control-sm designation-input'}}) }}
-                                    </div>
-                                    
-                                    <!-- Description détaillée (espace restant) -->
-                                    <div class="flex-fill" style="padding: 4px;">
-                                        {{ form_widget(item.description, {'attr': {'class': 'form-control form-control-sm description-input', 'placeholder': 'Description détaillée...'}}) }}
-                                    </div>
-                                    
-                                    <!-- Quantité (1,5x = 90px) -->
-                                    <div style="width: 90px; padding: 4px;">
-                                        {{ form_widget(item.quantite, {'attr': {'class': 'form-control form-control-sm text-center quantity-input'}}) }}
-                                    </div>
-                                    
-                                    <!-- Prix unitaire HT sans € -->
-                                    <div style="width: 90px; padding: 4px;">
-                                        {{ form_widget(item.prixUnitaireHt, {'attr': {'class': 'form-control form-control-sm text-end price-input', 'placeholder': '0.00', 'type': 'number', 'step': '0.01'}}) }}
-                                    </div>
-                                    
-                                    <!-- % Remise (uniforme = 90px) -->
-                                    <div style="width: 90px; padding: 4px;">
-                                        {{ form_widget(item.remisePercent, {'attr': {'class': 'form-control form-control-sm text-center remise-input', 'placeholder': '0.0', 'step': '0.1'}}) }}
-                                    </div>
-                                    
-                                    <!-- TVA (uniforme = 90px) -->
-                                    <div style="width: 90px; padding: 4px;">
-                                        <select class="form-select form-select-sm tva-select" name="{{ item.tvaPercent.vars.full_name }}" data-current-value="{{ item.vars.data.tvaPercent ?? '20.00' }}">
-                                            <!-- Options seront chargées via JavaScript depuis admin -->
-                                        </select>
-                                    </div>
-                                    
-                                    <!-- Total HT ligne (uniforme = 90px) -->
-                                    <div style="width: 90px; padding: 4px;" class="text-center">
-                                        <small class="total-ligne-display fw-bold text-success" style="font-size: 0.75rem; line-height: 23px;">{{ item.vars.data.totalLigneHt ?? '0.00' }}</small>
-                                    </div>
-                                    
-                                    <!-- Action -->
-                                    {% if devis.statut == 'brouillon' %}
-                                    <div style="width: 30px; padding: 4px;" class="text-center">
-                                        <button type="button" class="btn btn-outline-danger btn-sm remove-item-btn" title="Supprimer" style="padding: 2px 4px; font-size: 10px;">
-                                            <i class="fas fa-trash"></i>
-                                        </button>
-                                    </div>
-                                    {% endif %}
-                                </div>
-                                {# Masquer les champs restants pour éviter les doublons #}
-                                <div style="display: none;">
-                                    {{ form_widget(item.produit) }}
-                                    {{ form_widget(item.ordreAffichage) }}
-                                    {{ form_widget(item.totalLigneHt) }}
-                                    {{ form_widget(item.remiseMontant) }}
-                                </div>
-                            </div>
-                        {% endfor %}
-                    </div>
-                    
-                    <!-- Bouton unique pour ajouter une ligne -->
-                    {% if devis.statut == 'brouillon' %}
-                        <div class="mt-3 text-center">
-                            <div class="btn-group" role="group">
-                                <button type="button" class="btn btn-success add-item-btn">
-                                    <i class="fas fa-plus me-2"></i>Ajouter une ligne
+                        <div class="d-flex align-items-center">
+                            <h5 class="mb-0 me-3"><i class="fas fa-list me-2"></i>Éléments du devis</h5>
+                            
+                            {% if devis.statut == 'brouillon' %}
+                            <div class="btn-group">
+                                <button type="button" class="btn btn-primary btn-sm" id="add-product-btn">
+                                    <i class="fas fa-plus"></i> Ajouter produit
                                 </button>
-                                <button type="button" class="btn btn-success dropdown-toggle dropdown-toggle-split" data-bs-toggle="dropdown" aria-expanded="false">
+                                <button type="button" class="btn btn-secondary btn-sm dropdown-toggle dropdown-toggle-split" data-bs-toggle="dropdown">
                                     <span class="visually-hidden">Toggle Dropdown</span>
                                 </button>
                                 <ul class="dropdown-menu">
-                                    <li><a class="dropdown-item add-free-line" href="#">
-                                        <i class="fas fa-edit me-2"></i>Ligne libre
-                                    </a></li>
-                                    <li><a class="dropdown-item catalogue-product-btn" href="#">
-                                        <i class="fas fa-book me-2"></i>Produit du catalogue
-                                    </a></li>
+                                    <li><a class="dropdown-item" href="#" data-element-type="section_title">
+                                        <i class="fas fa-heading"></i> Titre de section</a></li>
+                                    <li><a class="dropdown-item" href="#" data-element-type="subtotal">
+                                        <i class="fas fa-calculator"></i> Sous-total</a></li>
+                                    <li><a class="dropdown-item" href="#" data-element-type="line_break">
+                                        <i class="fas fa-minus"></i> Saut de ligne</a></li>
+                                    <li><a class="dropdown-item" href="#" data-element-type="page_break">
+                                        <i class="fas fa-file-alt"></i> Saut de page</a></li>
+                                    <li><a class="dropdown-item" href="#" data-element-type="separator">
+                                        <i class="fas fa-ellipsis-h"></i> Séparateur</a></li>
                                 </ul>
                             </div>
+                            {% endif %}
                         </div>
-                    {% endif %}
+                    </div>
+                </div>
+                <div class="form-section-body">
+                    <!-- Conteneur des éléments -->
+                    <div id="elements-container" class="border rounded p-3">
+                        <!-- Les éléments seront chargés ici via JavaScript -->
+                        <div class="text-center text-muted p-4">
+                            <i class="fas fa-spinner fa-spin"></i> Chargement des éléments...
+                        </div>
+                    </div>
+
                 </div>
             </div>
 
@@ -416,6 +346,68 @@
         </div>
     </div>
 </div>
+
+<!-- Modal pour éditer un élément -->
+<div class="modal fade" id="element-modal" tabindex="-1">
+    <div class="modal-dialog modal-lg">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title" id="element-modal-title">Modifier l'élément</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <!-- Le contenu sera injecté dynamiquement -->
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Annuler</button>
+                <button type="button" class="btn btn-primary" id="save-element-btn">Enregistrer</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Panneau flottant pour éléments de mise en forme -->
+{% if devis.statut == 'brouillon' %}
+<div id="layout-elements-panel" class="layout-panel">
+    <div class="layout-panel-header">
+        <h6 class="mb-0"><i class="fas fa-magic me-2"></i>Mise en forme</h6>
+        <button type="button" class="btn-close btn-close-white" id="close-layout-panel"></button>
+    </div>
+    <div class="layout-panel-body">
+        <p class="small text-muted mb-3">Glissez les éléments dans le devis</p>
+        
+        <div class="layout-element-item" draggable="true" data-element-type="section_title">
+            <i class="fas fa-heading"></i>
+            <span>Titre de section</span>
+        </div>
+        
+        <div class="layout-element-item" draggable="true" data-element-type="subtotal">
+            <i class="fas fa-calculator"></i>
+            <span>Sous-total</span>
+        </div>
+        
+        <div class="layout-element-item" draggable="true" data-element-type="line_break">
+            <i class="fas fa-minus"></i>
+            <span>Saut de ligne</span>
+        </div>
+        
+        <div class="layout-element-item" draggable="true" data-element-type="page_break">
+            <i class="fas fa-file-alt"></i>
+            <span>Saut de page</span>
+        </div>
+        
+        <div class="layout-element-item" draggable="true" data-element-type="separator">
+            <i class="fas fa-ellipsis-h"></i>
+            <span>Séparateur</span>
+        </div>
+    </div>
+</div>
+
+<!-- Bouton pour ouvrir le panneau -->
+<button type="button" id="open-layout-panel" class="btn btn-secondary layout-panel-toggle">
+    <i class="fas fa-magic"></i>
+</button>
+{% endif %}
 
 {% block stylesheets %}
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/css/bootstrap.min.css" rel="stylesheet">
@@ -619,919 +611,1188 @@
 <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/js/bootstrap.bundle.min.js"></script>
 <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/js/select2.min.js"></script>
-
+<script src="https://cdn.jsdelivr.net/npm/sortablejs@1.15.0/Sortable.min.js"></script>
 
 <script>
-$(document).ready(function() {
-    // Désactiver la modification des lignes si le devis n'est pas en brouillon
-    {% if devis.statut != 'brouillon' %}
-        $('.devis-item input, .devis-item select, .devis-item textarea').each(function() {
-            $(this).attr('readonly', true).attr('disabled', true);
-        });
-        
-        // Masquer les boutons d'ajout/suppression
-        $('.add-item-btn, .remove-item-btn').hide();
-        
-        // Message d'information
-        const info = $('<div class="alert alert-info"><i class="fas fa-info-circle me-2"></i>Ce devis a été envoyé. Les modifications créeront une version pour conserver l\'historique.</div>');
-        $('.devis-items-collection').before(info);
-    {% else %}
-    
-    // Gestion de la collection de lignes de devis (seulement si brouillon)
-    const $collectionHolder = $('#devis_devisItems');
-    let index = $collectionHolder.find('.devis-item').length;
+// Configuration globale
+const DEVIS_ID = {{ devis.id }};
+const IS_EDITABLE = {{ devis.statut == 'brouillon' ? 'true' : 'false' }};
 
-    function addNewDevisItem() {
-        // Protection contre les doubles appels
-        if (window.addingInProgress) {
+let elements = [];
+let sortable = null;
+
+// ==========================================
+// INITIALISATION
+// ==========================================
+
+async function init() {
+    try {
+        await loadElements();
+        if (IS_EDITABLE) {
+            initSortable();
+            initEventListeners();
+            initLayoutPanel();
+        }
+        calculateTotals();
+    } catch (error) {
+        console.error('Erreur d\'initialisation:', error);
+        showError('Erreur lors du chargement des données');
+    }
+}
+
+// ==========================================
+// CHARGEMENT DES ÉLÉMENTS
+// ==========================================
+
+async function loadElements() {
+    try {
+        const response = await fetch(`/devis/${DEVIS_ID}/element`);
+        const data = await response.json();
+        
+        if (!data.success) {
+            throw new Error(data.message);
+        }
+        
+        elements = data.elements;
+        renderElements();
+        
+    } catch (error) {
+        console.error('Erreur chargement éléments:', error);
+        showError('Impossible de charger les éléments du devis');
+    }
+}
+
+// ==========================================
+// RENDU DES ÉLÉMENTS
+// ==========================================
+
+function renderElements() {
+    const container = document.getElementById('elements-container');
+    
+    let html = '';
+    
+    // En-têtes colonnes si on a des éléments ou si éditable
+    if (elements.length > 0 || IS_EDITABLE) {
+        html += `
+            <!-- En-têtes colonnes uniformes (90px à droite) -->
+            <div class="d-flex devis-headers mb-2 py-2 bg-light rounded align-items-start" style="gap: 2px; height: 35px;">
+                ${IS_EDITABLE ? '<div style="width: 25px; padding: 4px;" class="text-center"><small class="fw-bold text-muted"><i class="fas fa-arrows-alt-v" title="Réorganiser"></i></small></div>' : ''}
+                <div style="width: 120px; padding: 4px;"><small class="fw-bold">Code</small></div>
+                <div style="width: 225px; padding: 4px;"><small class="fw-bold">Désignation</small></div>
+                <div class="flex-fill" style="padding: 4px;"><small class="fw-bold">Description détaillée</small></div>
+                <div style="width: 90px; padding: 4px;" class="text-center"><small class="fw-bold">Qté</small></div>
+                <div style="width: 90px; padding: 4px;" class="text-center"><small class="fw-bold">PU HT</small></div>
+                <div style="width: 90px; padding: 4px;" class="text-center"><small class="fw-bold">% Rem.</small></div>
+                <div style="width: 90px; padding: 4px;" class="text-center"><small class="fw-bold">TVA</small></div>
+                <div style="width: 90px; padding: 4px;" class="text-center"><small class="fw-bold">Total HT</small></div>
+                ${IS_EDITABLE ? '<div style="width: 30px; padding: 4px;"><small class="fw-bold"></small></div>' : ''}
+            </div>
+        `;
+    }
+    
+    if (elements.length === 0) {
+        html += `
+            <div class="text-center text-muted p-4">
+                <i class="fas fa-inbox"></i>
+                <p class="mt-2">Aucun élément dans ce devis</p>
+                ${IS_EDITABLE ? '<p class="small">Utilisez le bouton "Ajouter produit" pour commencer</p>' : ''}
+            </div>
+        `;
+    } else {
+        html += elements.map(element => renderElement(element)).join('');
+    }
+    
+    // Bouton d'ajout de produit en bas
+    if (IS_EDITABLE) {
+        html += `
+            <div class="mt-3 text-center">
+                <div class="btn-group" role="group">
+                    <button type="button" class="btn btn-success add-item-btn" onclick="addElement('product')">
+                        <i class="fas fa-plus me-2"></i>Ajouter une ligne
+                    </button>
+                    <button type="button" class="btn btn-success dropdown-toggle dropdown-toggle-split" data-bs-toggle="dropdown" aria-expanded="false">
+                        <span class="visually-hidden">Toggle Dropdown</span>
+                    </button>
+                    <ul class="dropdown-menu">
+                        <li><a class="dropdown-item" href="#" onclick="addElement('product')">
+                            <i class="fas fa-edit me-2"></i>Ligne libre
+                        </a></li>
+                        <li><a class="dropdown-item" href="#" onclick="showProductCatalog()">
+                            <i class="fas fa-book me-2"></i>Produit du catalogue
+                        </a></li>
+                    </ul>
+                </div>
+            </div>
+        `;
+    }
+    
+    container.innerHTML = html;
+    
+    // Initialiser l'autocomplétion après le rendu
+    if (IS_EDITABLE) {
+        setTimeout(() => initProductAutocomplete(), 100);
+    }
+}
+
+function renderElement(element) {
+    if (element.is_product) {
+        return renderProductElement(element);
+    } else {
+        return renderLayoutElement(element);
+    }
+}
+
+function renderProductElement(element) {
+    const dragHandle = IS_EDITABLE ? `
+        <div style="width: 25px; padding: 4px;" class="text-center drag-handle" title="Glisser pour réorganiser">
+            <i class="fas fa-grip-vertical text-muted" style="cursor: grab;"></i>
+        </div>
+    ` : '';
+
+    const deleteButton = IS_EDITABLE ? `
+        <div style="width: 30px; padding: 4px;" class="text-center">
+            <button type="button" class="btn btn-outline-danger btn-sm remove-item-btn" title="Supprimer" style="padding: 2px 4px; font-size: 10px;" onclick="deleteElement(${element.id})">
+                <i class="fas fa-trash"></i>
+            </button>
+        </div>
+    ` : '';
+
+    if (IS_EDITABLE) {
+        return `
+            <div class="element-item mb-1 border-bottom" data-element-id="${element.id}" data-element-type="product">
+                <div class="d-flex align-items-start" style="gap: 2px; min-height: 35px;">
+                    ${dragHandle}
+                    
+                    <!-- Code article (120px) -->
+                    <div style="width: 120px; padding: 4px;">
+                        <input type="text" class="form-control form-control-sm code-article-input" 
+                               placeholder="Code..." value="${element.produit_reference || ''}"
+                               data-element-id="${element.id}"
+                               onchange="updateElement(${element.id}, 'produit_reference', this.value)" />
+                    </div>
+                    
+                    <!-- Désignation (225px) -->
+                    <div style="width: 225px; padding: 4px;">
+                        <input type="text" class="form-control form-control-sm designation-input" 
+                               placeholder="Désignation..."
+                               value="${element.designation || ''}" 
+                               data-element-id="${element.id}"
+                               onchange="updateElement(${element.id}, 'designation', this.value)" />
+                    </div>
+                    
+                    <!-- Description détaillée (flex-fill) -->
+                    <div class="flex-fill" style="padding: 4px;">
+                        <input type="text" class="form-control form-control-sm description-input" 
+                               placeholder="Description détaillée..." 
+                               value="${element.description || ''}"
+                               onchange="updateElement(${element.id}, 'description', this.value)" />
+                    </div>
+                    
+                    <!-- Quantité (90px) -->
+                    <div style="width: 90px; padding: 4px;">
+                        <input type="number" class="form-control form-control-sm text-center quantity-input" 
+                               value="${element.quantite || 1}" step="0.01"
+                               onchange="updateElement(${element.id}, 'quantite', this.value)" />
+                    </div>
+                    
+                    <!-- Prix unitaire HT (90px) -->
+                    <div style="width: 90px; padding: 4px;">
+                        <input type="number" class="form-control form-control-sm text-end price-input" 
+                               placeholder="0.00" step="0.01"
+                               value="${element.prix_unitaire_ht || 0}"
+                               onchange="updateElement(${element.id}, 'prix_unitaire_ht', this.value)" />
+                    </div>
+                    
+                    <!-- % Remise (90px) -->
+                    <div style="width: 90px; padding: 4px;">
+                        <input type="number" class="form-control form-control-sm text-center remise-input" 
+                               placeholder="0.0" step="0.1" min="0" max="100"
+                               value="${element.remise_percent || 0}"
+                               onchange="updateElement(${element.id}, 'remise_percent', this.value)" />
+                    </div>
+                    
+                    <!-- TVA (90px) -->
+                    <div style="width: 90px; padding: 4px;">
+                        <select class="form-select form-select-sm tva-select" 
+                                onchange="updateElement(${element.id}, 'tva_percent', this.value)">
+                            <option value="0" ${element.tva_percent == 0 ? 'selected' : ''}>0%</option>
+                            <option value="5.5" ${element.tva_percent == 5.5 ? 'selected' : ''}>5.5%</option>
+                            <option value="10" ${element.tva_percent == 10 ? 'selected' : ''}>10%</option>
+                            <option value="20" ${element.tva_percent == 20 ? 'selected' : ''}>20%</option>
+                        </select>
+                    </div>
+                    
+                    <!-- Total HT ligne (90px) -->
+                    <div style="width: 90px; padding: 4px;" class="text-center">
+                        <small class="total-ligne-display fw-bold text-success" style="font-size: 0.75rem; line-height: 23px;">
+                            ${parseFloat(element.total_ligne_ht || 0).toFixed(2)} €
+                        </small>
+                    </div>
+                    
+                    ${deleteButton}
+                </div>
+            </div>
+        `;
+    } else {
+        // Mode lecture seule
+        return `
+            <div class="element-item border rounded p-3 mb-2" data-element-id="${element.id}" data-element-type="product">
+                <div class="d-flex align-items-center">
+                    <div class="flex-grow-1">
+                        <div class="row">
+                            <div class="col-md-4">
+                                <strong>${element.designation || 'Produit sans nom'}</strong>
+                                ${element.description ? `<br><small class="text-muted">${element.description}</small>` : ''}
+                            </div>
+                            <div class="col-md-2 text-center">
+                                ${parseFloat(element.quantite || 0)}
+                            </div>
+                            <div class="col-md-2 text-end">
+                                ${parseFloat(element.prix_unitaire_ht || 0).toFixed(2)} €
+                            </div>
+                            <div class="col-md-2 text-center">
+                                ${parseFloat(element.remise_percent || 0)}%
+                            </div>
+                            <div class="col-md-2 text-end">
+                                <strong>${parseFloat(element.total_ligne_ht || 0).toFixed(2)} €</strong>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        `;
+    }
+}
+
+function renderLayoutElement(element) {
+    const dragHandle = IS_EDITABLE ? `
+        <div class="drag-handle me-2" style="cursor: grab;">
+            <i class="fas fa-grip-vertical text-muted"></i>
+        </div>
+    ` : '';
+
+    const editButton = IS_EDITABLE && element.type === 'section_title' ? `
+        <button class="btn btn-sm btn-outline-primary me-1" onclick="editElement(${element.id})">
+            <i class="fas fa-edit"></i>
+        </button>
+    ` : '';
+
+    const deleteButton = IS_EDITABLE ? `
+        <button class="btn btn-sm btn-outline-danger" onclick="deleteElement(${element.id})">
+            <i class="fas fa-trash"></i>
+        </button>
+    ` : '';
+
+    let content = '';
+    switch(element.type) {
+        case 'section_title':
+            content = `<h5 class="mb-0"><i class="${element.icon}"></i> ${element.titre || element.display_label}</h5>`;
+            break;
+        case 'subtotal':
+            content = `<div class="d-flex justify-content-between align-items-center">
+                <span><i class="${element.icon}"></i> ${element.display_label}</span>
+                <strong class="subtotal-amount">${calculateSubtotalUpTo(element.position).toFixed(2)} €</strong>
+            </div>`;
+            break;
+        case 'line_break':
+            content = `<hr class="my-1">`;
+            break;
+        case 'page_break':
+            content = `<div class="text-center text-muted py-2">
+                <i class="${element.icon}"></i> ${element.display_label}
+                <hr class="border-2">
+            </div>`;
+            break;
+        case 'separator':
+            content = `<div class="text-center">
+                <i class="${element.icon}"></i> ${element.display_label}
+            </div>`;
+            break;
+        default:
+            content = `<i class="${element.icon}"></i> ${element.display_label}`;
+    }
+
+    return `
+        <div class="element-item border rounded p-2 mb-2 bg-light" data-element-id="${element.id}" data-element-type="${element.type}">
+            <div class="d-flex align-items-center">
+                ${dragHandle}
+                <div class="flex-grow-1">
+                    ${content}
+                </div>
+                <div class="ms-2">
+                    ${editButton}
+                    ${deleteButton}
+                </div>
+            </div>
+        </div>
+    `;
+}
+
+// ==========================================
+// GESTION DU DRAG & DROP
+// ==========================================
+
+function initSortable() {
+    const container = document.getElementById('elements-container');
+    
+    if (sortable) {
+        sortable.destroy();
+    }
+
+    sortable = new Sortable(container, {
+        handle: '.drag-handle',
+        animation: 150,
+        ghostClass: 'sortable-ghost',
+        chosenClass: 'sortable-chosen',
+        dragClass: 'sortable-drag',
+        filter: '.devis-headers, .text-center.text-muted, .btn-group',
+        preventOnFilter: false,
+        onEnd: function(evt) {
+            // Vérifier que c'est bien un déplacement d'élément existant
+            if (evt.item && evt.item.dataset.elementId) {
+                const elementIds = Array.from(container.children)
+                    .filter(child => child.dataset.elementId && !isNaN(parseInt(child.dataset.elementId)))
+                    .map(child => parseInt(child.dataset.elementId));
+                    
+                if (elementIds.length > 0) {
+                    reorderElements(elementIds);
+                }
+            }
+        }
+    });
+}
+
+// ==========================================
+// ACTIONS SUR LES ÉLÉMENTS
+// ==========================================
+
+async function addElement(type, position = null) {
+    try {
+        const data = { type };
+        if (position !== null) {
+            data.position = position;
+        }
+
+        const response = await fetch(`/devis/${DEVIS_ID}/element`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(data)
+        });
+
+        const result = await response.json();
+        
+        if (!result.success) {
+            throw new Error(result.message);
+        }
+
+        await loadElements();
+        calculateTotals();
+        showSuccess('Élément ajouté avec succès');
+        
+    } catch (error) {
+        console.error('Erreur ajout élément:', error);
+        showError('Impossible d\'ajouter l\'élément');
+    }
+}
+
+async function deleteElement(elementId) {
+    if (!confirm('Êtes-vous sûr de vouloir supprimer cet élément ?')) {
+        return;
+    }
+
+    try {
+        const response = await fetch(`/devis/${DEVIS_ID}/element/${elementId}`, {
+            method: 'DELETE'
+        });
+
+        const result = await response.json();
+        
+        if (!result.success) {
+            throw new Error(result.message);
+        }
+
+        await loadElements();
+        calculateTotals();
+        showSuccess('Élément supprimé avec succès');
+        
+    } catch (error) {
+        console.error('Erreur suppression élément:', error);
+        showError('Impossible de supprimer l\'élément');
+    }
+}
+
+async function reorderElements(elementIds) {
+    try {
+        // Vérifier qu'on a des IDs valides
+        if (!elementIds || elementIds.length === 0) {
             return;
         }
-        window.addingInProgress = true;
-        
-        // Utiliser le prototype du formulaire Symfony
-        const prototype = $collectionHolder.data('prototype');
-        const newForm = prototype.replace(/__name__/g, index);
-        index++;
 
-        const $newItem = $('<div class="devis-item"></div>').html(newForm);
+        const response = await fetch(`/devis/${DEVIS_ID}/element/reorder`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ elementIds })
+        });
+
+        const result = await response.json();
         
-        // Créer une nouvelle ligne avec largeurs uniformes (90px à droite)
-        const $newItemCompact = $(`
-        <div class="devis-item mb-1 border-bottom" data-index="${index}">
-            <div class="d-flex align-items-start" style="gap: 2px; min-height: 35px;">
-                <!-- Code article (120px) -->
-                <div style="width: 120px; padding: 4px;">
-                    <input type="text" class="form-control form-control-sm code-article-input" placeholder="Code..." />
-                </div>
-                
-                <!-- Désignation (225px) -->
-                <div style="width: 225px; padding: 4px;">
-                </div>
-                
-                <!-- Description détaillée (espace restant) -->
-                <div class="flex-fill" style="padding: 4px;">
-                </div>
-                
-                <!-- Quantité (90px) -->
-                <div style="width: 90px; padding: 4px;">
-                </div>
-                
-                <!-- Prix unitaire HT (90px uniforme) -->
-                <div style="width: 90px; padding: 4px;">
-                </div>
-                
-                <!-- % Remise (90px uniforme) -->
-                <div style="width: 90px; padding: 4px;">
-                </div>
-                
-                <!-- TVA (90px uniforme) -->
-                <div style="width: 90px; padding: 4px;">
-                </div>
-                
-                <!-- Total HT ligne (90px uniforme) -->
-                <div style="width: 90px; padding: 4px;" class="text-center">
-                    <small class="total-ligne-display fw-bold text-success" style="font-size: 0.75rem; line-height: 23px;">0.00</small>
-                </div>
-                
-                <!-- Action -->
-                <div style="width: 30px; padding: 4px;" class="text-center action-column">
-                    <button type="button" class="btn btn-outline-danger btn-sm remove-item-btn" title="Supprimer" style="padding: 2px 4px; font-size: 10px;">
-                        <i class="fas fa-trash"></i>
-                    </button>
-                </div>
-            </div>
-            <!-- Champs Symfony cachés -->
-            <div style="display: none;" class="symfony-fields"></div>
-        </div>
-        `);
-        
-        // Déplacer les champs Symfony dans la partie cachée et les adapter
-        const $symFields = $newItem.find('input, select, textarea').clone();
-        $newItemCompact.find('.symfony-fields').append($symFields);
-        
-        // Remplacer les champs visibles par les bons
-        const designationField = $newItemCompact.find('.symfony-fields').find('[id$="_designation"]');
-        const descriptionField = $newItemCompact.find('.symfony-fields').find('[id$="_description"]');
-        const quantiteField = $newItemCompact.find('.symfony-fields').find('[id$="_quantite"]');
-        const prixField = $newItemCompact.find('.symfony-fields').find('[id$="_prixUnitaireHt"]');
-        const remiseField = $newItemCompact.find('.symfony-fields').find('[id$="_remisePercent"]');
-        const tvaField = $newItemCompact.find('.symfony-fields').find('[id$="_tvaPercent"]');
-        const produitField = $newItemCompact.find('.symfony-fields').find('[id$="_produit"]');
-        
-        // Intégrer les champs avec largeurs uniformes (90px à droite)
-        $newItemCompact.find('div[style*="width: 225px"]').append(designationField.addClass('form-control form-control-sm designation-input'));
-        $newItemCompact.find('div.flex-fill').append(descriptionField.addClass('form-control form-control-sm description-input').attr('placeholder', 'Description détaillée...'));
-        $newItemCompact.find('div[style*="width: 90px"]').eq(0).append(quantiteField.addClass('form-control form-control-sm text-center quantity-input').val('1'));
-        $newItemCompact.find('div[style*="width: 90px"]').eq(1).append(prixField.addClass('form-control form-control-sm text-end price-input').val('0.00').attr('placeholder', '0.00').attr('type', 'number').attr('step', '0.01'));
-        $newItemCompact.find('div[style*="width: 90px"]').eq(2).append(remiseField.addClass('form-control form-control-sm text-center remise-input').attr('max', '100').attr('min', '0').attr('step', '0.1').attr('placeholder', ''));
-        $newItemCompact.find('div[style*="width: 90px"]').eq(3).append(tvaField.addClass('form-select form-select-sm tva-select'));
-        
-        // Ajouter champ produit caché pour l'autocomplétion
-        $newItemCompact.find('.symfony-fields').append(produitField.addClass('produit-id-input'));
-        
-        $collectionHolder.append($newItemCompact);
-        
-        // Masquer la colonne d'action si le devis n'est pas en brouillon
-        {% if devis.statut != 'brouillon' %}
-        $newItemCompact.find('.action-column').hide();
-        {% endif %}
-        
-        // Initialiser l'autocomplétion pour cette ligne
-        initAutocompleteForItem($newItemCompact);
-        
-        // Charger les taux de TVA
-        loadTauxTva($newItemCompact);
-        
-        // Lier les événements de calcul
-        bindCalculationEvents($newItemCompact);
-        
-        // Calculer les totaux
+        if (!result.success) {
+            console.warn('Réorganisation non appliquée:', result.message);
+            return;
+        }
+
+        // Mettre à jour l'ordre local
+        elements.sort((a, b) => {
+            const indexA = elementIds.indexOf(a.id);
+            const indexB = elementIds.indexOf(b.id);
+            return indexA - indexB;
+        });
+
         calculateTotals();
         
-        // Libérer le verrou
-        setTimeout(function() {
-            window.addingInProgress = false;
-        }, 100);
+    } catch (error) {
+        console.error('Erreur réorganisation:', error);
+        // Ne pas afficher d'erreur utilisateur pour le drag & drop
+    }
+}
+
+// ==========================================
+// CALCULS
+// ==========================================
+
+function calculateTotals() {
+    const productElements = elements.filter(e => e.is_product);
+    
+    let totalHt = 0;
+    let totalTva = 0;
+    
+    productElements.forEach(element => {
+        const lineHt = parseFloat(element.total_ligne_ht || 0);
+        const tvaPercent = parseFloat(element.tva_percent || 0);
+        
+        totalHt += lineHt;
+        totalTva += lineHt * (tvaPercent / 100);
+    });
+    
+    const totalTtc = totalHt + totalTva;
+    
+    // Mettre à jour les totaux dans l'interface si les éléments existent
+    const totalHtEl = document.getElementById('total-ht');
+    const totalTvaEl = document.getElementById('total-tva');
+    const totalTtcEl = document.getElementById('total-ttc');
+    
+    if (totalHtEl) totalHtEl.textContent = totalHt.toFixed(2) + ' €';
+    if (totalTvaEl) totalTvaEl.textContent = totalTva.toFixed(2) + ' €';
+    if (totalTtcEl) totalTtcEl.textContent = totalTtc.toFixed(2) + ' €';
+    
+    // Mettre à jour les sous-totaux
+    updateSubtotals();
+}
+
+function calculateSubtotalUpTo(position) {
+    let subtotal = 0;
+    
+    elements.forEach(element => {
+        if (element.is_product && element.position < position) {
+            subtotal += parseFloat(element.total_ligne_ht || 0);
+        }
+    });
+    
+    return subtotal;
+}
+
+function updateSubtotals() {
+    document.querySelectorAll('.subtotal-amount').forEach(subtotalEl => {
+        const elementItem = subtotalEl.closest('.element-item');
+        const elementId = parseInt(elementItem.dataset.elementId);
+        const element = elements.find(e => e.id === elementId);
+        
+        if (element) {
+            const subtotal = calculateSubtotalUpTo(element.position);
+            subtotalEl.textContent = subtotal.toFixed(2) + ' €';
+        }
+    });
+}
+
+// ==========================================
+// EVENT LISTENERS
+// ==========================================
+
+function initEventListeners() {
+    // Bouton ajouter produit
+    document.getElementById('add-product-btn').addEventListener('click', () => {
+        addElement('product');
+    });
+
+    // Boutons ajouter éléments de mise en page
+    document.querySelectorAll('[data-element-type]').forEach(btn => {
+        btn.addEventListener('click', (e) => {
+            e.preventDefault();
+            const type = btn.dataset.elementType;
+            addElement(type);
+        });
+    });
+
+    // Synchronisation contact/adresse
+    initContactAddressSynchronization();
+}
+
+// ==========================================
+// SYNCHRONISATION CONTACT/ADRESSE
+// ==========================================
+
+function initContactAddressSynchronization() {
+    const clientSelect = document.getElementById('devis_client');
+    const contactFacturationSelect = document.getElementById('devis_contactFacturation');
+    const contactLivraisonSelect = document.getElementById('devis_contactLivraison');
+    const adresseFacturationSelect = document.getElementById('devis_adresseFacturation');
+    const adresseLivraisonSelect = document.getElementById('devis_adresseLivraison');
+
+    if (!clientSelect) return;
+
+    // Charger contacts et adresses quand client change
+    clientSelect.addEventListener('change', function() {
+        const clientId = this.value;
+        if (clientId) {
+            loadClientContactsAndAddresses(clientId);
+        } else {
+            clearContactsAndAddresses();
+        }
+    });
+
+    // Synchroniser adresse quand contact change
+    if (contactFacturationSelect) {
+        contactFacturationSelect.addEventListener('change', function() {
+            const contactId = this.value;
+            if (contactId && adresseFacturationSelect) {
+                syncContactAddress(contactId, adresseFacturationSelect);
+            }
+        });
     }
 
-    // Attacher l'événement au bouton principal "Ajouter une ligne" (par défaut: ligne libre)
-    $('.add-item-btn').off('click').on('click', function(e) {
-        e.preventDefault();
-        e.stopPropagation();
-        addNewDevisItem();
-    });
-    
-    // Attacher l'événement au lien "Ligne libre" du dropdown
-    $('.add-free-line').off('click').on('click', function(e) {
-        e.preventDefault();
-        e.stopPropagation();
-        addNewDevisItem();
-    });
-    
-    // Attacher l'événement au lien "Produit du catalogue" du dropdown
-    $('.catalogue-product-btn').off('click').on('click', function(e) {
-        e.preventDefault();
-        e.stopPropagation();
-        openCatalogueModal();
-    });
+    if (contactLivraisonSelect) {
+        contactLivraisonSelect.addEventListener('change', function() {
+            const contactId = this.value;
+            if (contactId && adresseLivraisonSelect) {
+                syncContactAddress(contactId, adresseLivraisonSelect);
+            }
+        });
+    }
 
-    // Fonction d'initialisation de l'autocomplétion pour une ligne
-    function initAutocompleteForItem($item) {
-        const $codeInput = $item.find('.code-article-input');
-        const $designationInput = $item.find('[id$="_designation"], .designation-input');
-        const $produitIdInput = $item.find('[id$="_produit"], .produit-id-input');
-        const $priceInput = $item.find('[id$="_prixUnitaireHt"], .price-input');
-        const $tvaSelect = $item.find('[id$="_tvaPercent"], .tva-select');
+    // Charger les données initiales si un client est sélectionné
+    if (clientSelect.value) {
+        loadClientContactsAndAddresses(clientSelect.value);
+    }
+}
+
+async function loadClientContactsAndAddresses(clientId) {
+    try {
+        // Charger les contacts
+        const contactsResponse = await fetch(`/client/${clientId}/contacts`);
+        const contactsData = await contactsResponse.json();
         
-        // Fonction commune de recherche produit
-        function searchProducts(term, $inputField) {
-            if (term.length < 2) {
-                return;
+        // Charger les adresses
+        const addressesResponse = await fetch(`/client/${clientId}/addresses`);  
+        const addressesData = await addressesResponse.json();
+
+        // Stocker les données pour la synchronisation
+        window.clientContacts = contactsData;
+        window.clientAddresses = addressesData;
+
+        // Peupler les dropdowns
+        populateContacts(contactsData);
+        populateAddresses(addressesData);
+
+    } catch (error) {
+        console.error('Erreur chargement contacts/adresses:', error);
+    }
+}
+
+function populateContacts(contacts) {
+    const contactFacturationSelect = document.getElementById('devis_contactFacturation');
+    const contactLivraisonSelect = document.getElementById('devis_contactLivraison');
+
+    [contactFacturationSelect, contactLivraisonSelect].forEach(select => {
+        if (!select) return;
+        
+        const currentValue = select.value;
+        select.innerHTML = '<option value="">Sélectionner un contact...</option>';
+        
+        contacts.forEach(contact => {
+            const option = document.createElement('option');
+            option.value = contact.id;
+            // Utiliser le label fourni par l'API ou construire à partir des données
+            option.textContent = contact.label || `${contact.civilite || ''} ${contact.prenom || ''} ${contact.nom || ''}`.trim();
+            if (contact.id == currentValue) {
+                option.selected = true;
+            }
+            select.appendChild(option);
+        });
+    });
+}
+
+function populateAddresses(addresses) {
+    const adresseFacturationSelect = document.getElementById('devis_adresseFacturation');
+    const adresseLivraisonSelect = document.getElementById('devis_adresseLivraison');
+
+    [adresseFacturationSelect, adresseLivraisonSelect].forEach(select => {
+        if (!select) return;
+        
+        const currentValue = select.value;
+        select.innerHTML = '<option value="">Sélectionner une adresse...</option>';
+        
+        addresses.forEach(address => {
+            const option = document.createElement('option');
+            option.value = address.id;
+            
+            // Utiliser le label de l'API ou construire à partir des données
+            if (address.label) {
+                option.textContent = address.label;
+            } else {
+                // Construire l'affichage avec vérification des champs
+                let displayText = '';
+                if (address.adresse && address.adresse.trim()) {
+                    displayText += address.adresse.trim();
+                }
+                if (address.codePostal && address.codePostal.trim()) {
+                    displayText += (displayText ? ', ' : '') + address.codePostal.trim();
+                }
+                if (address.ville && address.ville.trim()) {
+                    displayText += (displayText && !address.codePostal ? ', ' : ' ') + address.ville.trim();
+                }
+                
+                // Si aucune info, utiliser l'ID
+                if (!displayText) {
+                    displayText = `Adresse #${address.id}`;
+                }
+                
+                option.textContent = displayText;
             }
             
-            $.ajax({
-                url: '/devis/api/produits',
-                method: 'GET',
-                data: { q: term },
-                success: function(products) {
-                    // Supprimer les dropdowns existantes de cette ligne
-                    $item.find('.autocomplete-dropdown').remove();
-                    
-                    if (products.length > 0) {
-                        const $dropdown = $('<div class="autocomplete-dropdown list-group position-absolute" style="z-index: 1000; max-height: 200px; overflow-y: auto; width: 100%; background: white; border: 1px solid #ddd; border-radius: 4px; box-shadow: 0 4px 6px rgba(0,0,0,0.1);"></div>');
-                        
-                        products.forEach(function(product) {
-                            const $option = $('<a href="#" class="list-group-item list-group-item-action small py-2"></a>');
-                            $option.html(`
-                                <div class="fw-bold">${product.designation}</div>
-                                <small class="text-muted">Code: ${product.reference} - Prix: ${product.prix_vente_ht}€ HT</small>
-                            `);
-                            
-                            $option.on('click', function(e) {
-                                e.preventDefault();
-                                
-                                // Remplir tous les champs avec les données du produit
-                                $codeInput.val(product.reference);
-                                $produitIdInput.val(product.id);
-                                $designationInput.val(product.designation);
-                                $priceInput.val(parseFloat(product.prix_vente_ht));
-                                
-                                // Sélectionner le taux de TVA correspondant
-                                if (product.taux_tva) {
-                                    $tvaSelect.val(product.taux_tva);
-                                }
-                                
-                                $dropdown.remove();
-                                
-                                // Déclencher le calcul
-                                calculateTotals();
-                                
-                                // Déclencher auto-sauvegarde
-                                if (hasDataChanged()) {
-                                    scheduleAutoSave();
-                                }
-                            });
-                            $dropdown.append($option);
-                        });
-                        
-                        $inputField.parent().append($dropdown);
-                    }
-                },
-                error: function() {
-                    console.error('Erreur lors de la recherche de produits');
+            if (address.id == currentValue) {
+                option.selected = true;
+            }
+            select.appendChild(option);
+        });
+    });
+}
+
+function syncContactAddress(contactId, adresseSelect) {
+    // Utiliser les données déjà chargées plutôt qu'une nouvelle API
+    if (!window.clientContacts) {
+        console.log('Pas de contacts chargés');
+        return;
+    }
+    
+    // Trouver le contact sélectionné
+    const selectedContact = window.clientContacts.find(contact => contact.id == contactId);
+    if (!selectedContact) {
+        console.log('Contact non trouvé:', contactId);
+        return;
+    }
+    
+    console.log('Contact trouvé:', selectedContact);
+    
+    // Si le contact a une adresse associée, la sélectionner
+    if (selectedContact.adresse_id) {
+        console.log('Sélection de l\'adresse:', selectedContact.adresse_id);
+        adresseSelect.value = selectedContact.adresse_id;
+    } else {
+        console.log('Aucune adresse associée au contact');
+    }
+}
+
+function clearContactsAndAddresses() {
+    const selects = [
+        'devis_contactFacturation',
+        'devis_contactLivraison', 
+        'devis_adresseFacturation',
+        'devis_adresseLivraison'
+    ];
+    
+    selects.forEach(id => {
+        const select = document.getElementById(id);
+        if (select) {
+            select.innerHTML = '<option value="">Sélectionner...</option>';
+        }
+    });
+}
+
+// ==========================================
+// FONCTIONS GLOBALES (appelées depuis le HTML)
+// ==========================================
+
+window.editElement = function(elementId) {
+    console.log('Edit element:', elementId);
+    // TODO: Implémenter l'édition
+};
+
+window.deleteElement = deleteElement;
+
+// ==========================================
+// ÉDITION DES ÉLÉMENTS
+// ==========================================
+
+async function updateElement(elementId, field, value) {
+    try {
+        const data = {};
+        data[field] = value;
+
+        const response = await fetch(`/devis/${DEVIS_ID}/element/${elementId}`, {
+            method: 'PUT',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(data)
+        });
+
+        const result = await response.json();
+        
+        if (!result.success) {
+            throw new Error(result.message);
+        }
+
+        // Mettre à jour l'élément local
+        const elementIndex = elements.findIndex(e => e.id === elementId);
+        if (elementIndex !== -1) {
+            elements[elementIndex] = { ...elements[elementIndex], ...result.element };
+            
+            // Recalculer les totaux si c'est un champ qui affecte le prix
+            if (['quantite', 'prix_unitaire_ht', 'remise_percent', 'tva_percent'].includes(field)) {
+                calculateTotals();
+                
+                // Mettre à jour l'affichage du total de la ligne
+                const totalEl = document.querySelector(`[data-element-id="${elementId}"] .total-ligne-display`);
+                if (totalEl) {
+                    totalEl.textContent = parseFloat(result.element.total_ligne_ht || 0).toFixed(2) + ' €';
                 }
-            });
+            }
         }
         
-        // Autocomplétion sur le champ Code
-        $codeInput.on('input', function() {
-            const term = $(this).val();
-            searchProducts(term, $codeInput);
-        });
-        
-        // Autocomplétion sur le champ Désignation
-        $designationInput.on('input', function() {
-            const term = $(this).val();
-            searchProducts(term, $designationInput);
-        });
-        
-        // Fermer les dropdowns quand on clique ailleurs
-        $(document).on('click', function(e) {
-            if (!$(e.target).closest($item).length) {
-                $item.find('.autocomplete-dropdown').remove();
-            }
-        });
+    } catch (error) {
+        console.error('Erreur mise à jour élément:', error);
+        showError('Impossible de mettre à jour l\'élément');
     }
+}
 
-    // Fonction de chargement des taux de TVA depuis admin
-    function loadTauxTva($item) {
-        const $select = $item.find('[id$="_tvaPercent"], .tva-select');
-        
-        $.ajax({
-            url: '/devis/api/taux-tva',
-            method: 'GET',
-            success: function(tauxList) {
-                $select.empty();
-                $select.append('<option value="">Sélectionner TVA</option>');
-                
-                tauxList.forEach(function(taux) {
-                    const $option = $('<option></option>');
-                    // Format avec 2 décimales pour compatibilité
-                    const tauxValue = parseFloat(taux.taux).toFixed(2);
-                    $option.val(tauxValue);
-                    // Affichage simplifié : juste le pourcentage
-                    $option.text(parseFloat(taux.taux) + '%');
-                    if (taux.parDefaut || taux.taux == 20) {
-                        $option.prop('selected', true);
-                    }
-                    $select.append($option);
-                });
-            },
-            error: function() {
-                console.error('Erreur lors du chargement des taux de TVA depuis admin');
-                // Fallback avec taux standard français
-                $select.empty();
-                $select.append('<option value="0.00">0%</option>');
-                $select.append('<option value="5.50">5.5%</option>');
-                $select.append('<option value="10.00">10%</option>');
-                $select.append('<option value="20.00" selected>20%</option>');
-            }
-        });
-    }
+window.updateElement = updateElement;
 
-    // Fonction pour calculer les totaux
-    function calculateTotals() {
-        let totalHt = 0;
-        let totalTva = 0;
+// ==========================================
+// GESTION PANNEAU FLOTTANT
+// ==========================================
 
-        $('.devis-item').each(function() {
-            // Utiliser les nouvelles classes CSS pour les champs
-            const qte = parseFloat($(this).find('.quantity-input, [id$="_quantite"]').val()) || 0;
-            const prixUnitaire = parseFloat($(this).find('.price-input, [id$="_prixUnitaireHt"]').val()) || 0;
-            
-            // Gérer la remise - garder vide si pas de valeur
-            const remiseValue = $(this).find('.remise-input, [id$="_remisePercent"]').val();
-            let remisePercent = 0;
-            if (remiseValue && remiseValue !== '') {
-                remisePercent = parseFloat(remiseValue);
-                remisePercent = Math.min(Math.max(remisePercent, 0), 100); // Entre 0 et 100
-                // Ne pas remettre à jour le champ avec toFixed si c'est en cours d'édition
-            }
-            
-            let tvaPercent = parseFloat($(this).find('.tva-select, [id$="_tvaPercent"]').val()) || 20;
-            tvaPercent = Math.min(Math.max(tvaPercent, 0), 100); // Entre 0 et 100
-
-            // Calcul avec remise
-            const sousTotal = qte * prixUnitaire;
-            const montantRemise = sousTotal * remisePercent / 100;
-            const totalLigneHt = sousTotal - montantRemise;
-            const tvaLigne = totalLigneHt * tvaPercent / 100;
-
-            // Mettre à jour les champs cachés
-            $(this).find('.total-ligne-ht-input, [id$="_totalLigneHt"]').val(totalLigneHt.toFixed(2));
-            
-            // Mettre à jour l'affichage du montant net HT (sans signe euro)
-            $(this).find('.total-display, .total-line-display, .total-ligne-display').text(totalLigneHt.toFixed(2));
-
-            totalHt += totalLigneHt;
-            totalTva += tvaLigne;
-        });
-
-        const totalTtc = totalHt + totalTva;
-
-        // Mettre à jour les totaux dans le récapitulatif
-        $('.subtotal-ht, .total-ht').text(totalHt.toFixed(2) + '€');
-        $('.total-tva').text(totalTva.toFixed(2) + '€');
-        $('.total-ttc').text(totalTtc.toFixed(2) + '€');
-
-        // Mettre à jour les champs cachés du formulaire principal
-        $('input[name*="[totalHt]"]').val(totalHt.toFixed(2));
-        $('input[name*="[totalTva]"]').val(totalTva.toFixed(2));
-        $('input[name*="[totalTtc]"]').val(totalTtc.toFixed(2));
-    }
-
-    // Fonction pour lier les événements de calcul
-    function bindCalculationEvents($container) {
-        $container = $container || $(document);
-        
-        // Événements pour les anciens champs (lignes existantes)
-        $container.find('[id$="_quantite"], [id$="_prixUnitaireHt"], [id$="_tvaPercent"], [id$="_remisePercent"]')
-            .off('input change keyup')
-            .on('input change keyup', function() {
-                calculateTotals();
-            });
-            
-        // Événements pour les nouveaux champs (nouvelles lignes)
-        $container.find('.quantity-input, .price-input, .remise-input, .tva-select')
-            .off('input change keyup')
-            .on('input change keyup', function() {
-                // Validation des limites pour les champs de pourcentage
-                if ($(this).hasClass('remise-input')) {
-                    let val = parseFloat($(this).val());
-                    // Si la valeur est invalide, on la laisse vide plutôt que de forcer 0
-                    if (!isNaN(val)) {
-                        if (val < 0) $(this).val('0');
-                        else if (val > 100) $(this).val('100');
-                    }
-                }
-                calculateTotals();
-            });
-            
-        // Gestion des boutons de suppression
-        $container.find('.remove-item-btn').off('click').on('click', function() {
-            const $item = $(this).closest('.devis-item');
-            $item.remove();
-            calculateTotals();
-        });
-        
-        // Gestion des boutons catalogue
-        $container.find('.catalogue-btn').off('click').on('click', function() {
-            const $item = $(this).closest('.devis-item');
-            openCatalogueModal($item);
-        });
-    }
+function initLayoutPanel() {
+    const panel = document.getElementById('layout-elements-panel');
+    const openBtn = document.getElementById('open-layout-panel');
+    const closeBtn = document.getElementById('close-layout-panel');
     
-    // Fonction pour ouvrir la modal du catalogue
-    function openCatalogueModal() {
-        // Créer une modal Bootstrap pour sélectionner un produit
-        const modalHtml = `
-        <div class="modal fade" id="catalogueModal" tabindex="-1" aria-labelledby="catalogueModalLabel" aria-hidden="true">
-            <div class="modal-dialog modal-lg">
-                <div class="modal-content">
-                    <div class="modal-header">
-                        <h5 class="modal-title" id="catalogueModalLabel">
-                            <i class="fas fa-book me-2"></i>Sélectionner un produit du catalogue
-                        </h5>
-                        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
-                    </div>
-                    <div class="modal-body">
-                        <div class="mb-3">
-                            <input type="text" class="form-control" id="productSearch" placeholder="Rechercher un produit...">
-                        </div>
-                        <div id="productList" class="row">
-                            <div class="col-12 text-center">
-                                <i class="fas fa-spinner fa-spin"></i> Chargement des produits...
-                            </div>
-                        </div>
-                    </div>
-                    <div class="modal-footer">
-                        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Annuler</button>
-                    </div>
-                </div>
+    if (!panel || !openBtn || !closeBtn) return;
+    
+    // Ouvrir le panneau
+    openBtn.addEventListener('click', () => {
+        panel.classList.add('show');
+        openBtn.style.display = 'none';
+    });
+    
+    // Fermer le panneau
+    closeBtn.addEventListener('click', () => {
+        panel.classList.remove('show');
+        openBtn.style.display = 'block';
+    });
+    
+    // Gestion du drag & drop depuis le panneau
+    const layoutItems = panel.querySelectorAll('.layout-element-item');
+    layoutItems.forEach(item => {
+        item.addEventListener('click', () => {
+            const type = item.dataset.elementType;
+            addElement(type);
+        });
+        
+        item.addEventListener('dragstart', (e) => {
+            e.dataTransfer.setData('text/plain', item.dataset.elementType);
+        });
+    });
+    
+    // Zone de drop spécialement pour les éléments du panneau
+    const container = document.getElementById('elements-container');
+    if (container) {
+        container.addEventListener('dragover', (e) => {
+            // Seulement accepter si c'est depuis le panneau flottant
+            if (e.dataTransfer.types.includes('text/plain')) {
+                e.preventDefault();
+                e.dataTransfer.dropEffect = 'copy';
+            }
+        });
+        
+        container.addEventListener('drop', (e) => {
+            const elementType = e.dataTransfer.getData('text/plain');
+            if (elementType && !e.target.closest('.element-item')) {
+                e.preventDefault();
+                addElement(elementType);
+            }
+        });
+    }
+}
+
+// ==========================================
+// FONCTIONS UTILITAIRES
+// ==========================================
+
+function showProductCatalog() {
+    // TODO: Implémenter le catalogue de produits
+    console.log('Catalogue de produits à implémenter');
+}
+
+// ==========================================
+// AUTOCOMPLÉTION PRODUITS
+// ==========================================
+
+function initProductAutocomplete() {
+    // Autocomplétion sur les champs code article
+    document.querySelectorAll('.code-article-input').forEach(input => {
+        setupProductAutocomplete(input, 'reference');
+    });
+
+    // Autocomplétion sur les champs désignation
+    document.querySelectorAll('.designation-input').forEach(input => {
+        setupProductAutocomplete(input, 'designation');
+    });
+}
+
+function setupProductAutocomplete(input, searchField) {
+    if (input.hasAttribute('data-autocomplete-initialized')) {
+        return;
+    }
+    input.setAttribute('data-autocomplete-initialized', 'true');
+
+    let timeoutId = null;
+    let currentSuggestions = [];
+
+    // Créer le conteneur des suggestions
+    const suggestionsContainer = document.createElement('div');
+    suggestionsContainer.className = 'product-suggestions';
+    suggestionsContainer.style.display = 'none';
+    input.parentNode.style.position = 'relative';
+    input.parentNode.appendChild(suggestionsContainer);
+
+    input.addEventListener('input', function() {
+        const query = this.value.trim();
+        
+        // Nettoyer le timeout précédent
+        if (timeoutId) {
+            clearTimeout(timeoutId);
+        }
+
+        if (query.length < 2) {
+            hideSuggestions();
+            return;
+        }
+
+        // Attendre 300ms avant de chercher
+        timeoutId = setTimeout(() => {
+            searchProducts(query, searchField).then(products => {
+                showSuggestions(products, input);
+            });
+        }, 300);
+    });
+
+    input.addEventListener('blur', function() {
+        // Laisser un délai pour permettre le clic sur les suggestions
+        setTimeout(() => hideSuggestions(), 200);
+    });
+
+    input.addEventListener('keydown', function(e) {
+        if (e.key === 'ArrowDown') {
+            e.preventDefault();
+            navigateSuggestions('down');
+        } else if (e.key === 'ArrowUp') {
+            e.preventDefault();
+            navigateSuggestions('up');
+        } else if (e.key === 'Enter') {
+            e.preventDefault();
+            selectCurrentSuggestion();
+        } else if (e.key === 'Escape') {
+            hideSuggestions();
+        }
+    });
+
+    function showSuggestions(products, inputElement) {
+        currentSuggestions = products;
+        
+        if (products.length === 0) {
+            hideSuggestions();
+            return;
+        }
+
+        suggestionsContainer.innerHTML = products.map((product, index) => `
+            <div class="product-suggestion ${index === 0 ? 'active' : ''}" data-index="${index}">
+                <div class="product-reference">${product.reference}</div>
+                <div class="product-designation">${product.designation}</div>
+                <div class="product-price">${parseFloat(product.prixVenteHt || 0).toFixed(2)} €</div>
             </div>
-        </div>`;
-        
-        // Supprimer une éventuelle modal existante
-        $('#catalogueModal').remove();
-        
-        // Ajouter la modal au DOM
-        $('body').append(modalHtml);
-        
-        // Afficher la modal
-        const modal = new bootstrap.Modal(document.getElementById('catalogueModal'));
-        modal.show();
-        
-        // Charger les produits
-        loadProductsInModal();
-    }
-    
-    // Fonction pour charger les produits dans la modal
-    function loadProductsInModal() {
-        $.ajax({
-            url: '/devis/api/produits',
-            method: 'GET',
-            data: { q: '' }, // Tous les produits
-            success: function(products) {
-                const $productList = $('#productList');
-                $productList.empty();
-                
-                if (products.length === 0) {
-                    $productList.html('<div class="col-12 text-center text-muted">Aucun produit disponible</div>');
-                    return;
-                }
-                
-                products.forEach(function(product) {
-                    const productCard = `
-                    <div class="col-md-6 mb-2">
-                        <div class="card product-card" data-product-id="${product.id}" style="cursor: pointer;">
-                            <div class="card-body p-2">
-                                <h6 class="card-title mb-1">${product.designation}</h6>
-                                <small class="text-muted d-block mb-1">Code: ${product.reference}</small>
-                                <small class="text-success fw-bold">${product.prix_vente_ht}€ HT</small>
-                                ${product.taux_tva ? '<small class="text-info ms-2">TVA: ' + product.taux_tva + '%</small>' : ''}
-                            </div>
-                        </div>
-                    </div>`;
-                    $productList.append(productCard);
-                });
-                
-                // Ajouter les événements de clic sur les produits
-                $('.product-card').on('click', function() {
-                    const productId = $(this).data('product-id');
-                    const product = products.find(p => p.id == productId);
-                    if (product) {
-                        addNewDevisItemFromProduct(product);
-                        bootstrap.Modal.getInstance(document.getElementById('catalogueModal')).hide();
-                    }
-                });
-            },
-            error: function() {
-                $('#productList').html('<div class="col-12 text-center text-danger">Erreur lors du chargement des produits</div>');
-            }
+        `).join('');
+
+        // Ajouter les event listeners
+        suggestionsContainer.querySelectorAll('.product-suggestion').forEach(suggestionEl => {
+            suggestionEl.addEventListener('click', function() {
+                const index = parseInt(this.dataset.index);
+                selectProduct(products[index], inputElement);
+            });
         });
-    }
-    
-    // Fonction pour ajouter une ligne de devis à partir d'un produit du catalogue
-    function addNewDevisItemFromProduct(product) {
-        // Créer d'abord une ligne vide
-        addNewDevisItem();
-        
-        // Ensuite remplir avec les données du produit
-        setTimeout(function() {
-            const $lastItem = $('.devis-item').last();
-            $lastItem.find('.code-article-input').val(product.reference);
-            $lastItem.find('.designation-input').val(product.designation);
-            $lastItem.find('.description-input').val(product.description || '');
-            $lastItem.find('.price-input').val(parseFloat(product.prix_vente_ht));
-            $lastItem.find('.tva-select').val(product.taux_tva ? parseFloat(product.taux_tva).toFixed(2) : '20.00');
-            
-            // Recalculer les totaux
-            calculateTotals();
-        }, 100);
+
+        suggestionsContainer.style.display = 'block';
     }
 
-    // Charger les taux TVA et initialiser autocomplétion pour toutes les lignes existantes
-    $('.devis-item').each(function() {
-        const $item = $(this);
-        const $select = $item.find('.tva-select');
-        const currentValue = $select.data('current-value');
+    function hideSuggestions() {
+        suggestionsContainer.style.display = 'none';
+        currentSuggestions = [];
+    }
+
+    function navigateSuggestions(direction) {
+        const active = suggestionsContainer.querySelector('.product-suggestion.active');
+        if (!active) return;
+
+        active.classList.remove('active');
         
-        // Charger les taux de TVA
-        loadTauxTva($item);
-        
-        // Restaurer la valeur après chargement
-        if (currentValue) {
-            setTimeout(() => {
-                $select.val(parseFloat(currentValue).toFixed(2));
-            }, 200);
+        let next;
+        if (direction === 'down') {
+            next = active.nextElementSibling || suggestionsContainer.firstElementChild;
+        } else {
+            next = active.previousElementSibling || suggestionsContainer.lastElementChild;
         }
         
-        // Initialiser l'autocomplétion pour cette ligne
-        initAutocompleteForItem($item);
-    });
-    
-    // Lier les événements pour les lignes existantes
-    bindCalculationEvents();
-    
-    // Calculer les totaux au chargement
-    calculateTotals();
-
-    {% endif %}
-    
-    // =============================================
-    // SYSTÈME D'AUTO-SAUVEGARDE INTELLIGENT
-    // =============================================
-    
-    let autoSaveTimer;
-    let isAutoSaving = false;
-    let hasUnsavedChanges = false;
-    let lastSaveData = null;
-
-    // Configuration auto-sauvegarde
-    const AUTOSAVE_DELAY = 3000; // 3 secondes après la dernière modification
-    const AUTOSAVE_URL = '/devis/{{ devis.id }}/auto-save';
-
-    // Indicateur visuel de sauvegarde
-    function showSaveStatus(message, isError = false) {
-        let $indicator = $('#autosave-indicator');
-        if ($indicator.length === 0) {
-            $indicator = $('<div id="autosave-indicator" style="position: fixed; top: 70px; right: 20px; z-index: 1060; padding: 8px 12px; border-radius: 4px; font-size: 0.875rem; font-weight: 500; min-width: 200px; text-align: center;"></div>');
-            $('body').append($indicator);
+        if (next) {
+            next.classList.add('active');
         }
-        
-        $indicator
-            .removeClass('bg-success bg-warning bg-danger text-white')
-            .addClass(isError ? 'bg-danger text-white' : 'bg-success text-white')
-            .text(message)
-            .fadeIn(200);
-        
-        setTimeout(() => {
-            $indicator.fadeOut(200);
-        }, 2000);
     }
 
-    // Collecter les données du formulaire
-    function collectFormData() {
-        // Convertir les IDs en entiers ou null
-        const clientId = $('#devis_client').val();
-        const contactFacturationId = $('#devis_contactFacturation').val();
-        const contactLivraisonId = $('#devis_contactLivraison').val();
-        const adresseFacturationId = $('#devis_adresseFacturation').val();
-        const adresseLivraisonId = $('#devis_adresseLivraison').val();
+    function selectCurrentSuggestion() {
+        const active = suggestionsContainer.querySelector('.product-suggestion.active');
+        if (active && currentSuggestions.length > 0) {
+            const index = parseInt(active.dataset.index);
+            selectProduct(currentSuggestions[index], input);
+        }
+    }
+}
 
+async function searchProducts(query, field) {
+    try {
+        const response = await fetch(`/produit/search?q=${encodeURIComponent(query)}&field=${field}&limit=10`);
+        const data = await response.json();
+        return data.products || [];
+    } catch (error) {
+        console.error('Erreur recherche produits:', error);
+        return [];
+    }
+}
+
+function selectProduct(product, inputElement) {
+    const elementId = inputElement.dataset.elementId;
+    
+    // Mettre à jour l'élément avec toutes les données du produit
+    updateElementWithProduct(elementId, product);
+    
+    // Masquer les suggestions
+    const suggestionsContainer = inputElement.parentNode.querySelector('.product-suggestions');
+    if (suggestionsContainer) {
+        suggestionsContainer.style.display = 'none';
+    }
+}
+
+async function updateElementWithProduct(elementId, product) {
+    try {
         const data = {
-            client_id: (clientId && clientId !== '') ? parseInt(clientId) : null,
-            contact_facturation_id: (contactFacturationId && contactFacturationId !== '') ? parseInt(contactFacturationId) : null,
-            contact_livraison_id: (contactLivraisonId && contactLivraisonId !== '') ? parseInt(contactLivraisonId) : null,
-            adresse_facturation_id: (adresseFacturationId && adresseFacturationId !== '') ? parseInt(adresseFacturationId) : null,
-            adresse_livraison_id: (adresseLivraisonId && adresseLivraisonId !== '') ? parseInt(adresseLivraisonId) : null,
-            items: []
+            produit_id: product.id,
+            designation: product.designation,
+            prix_unitaire_ht: product.prixVenteHt,
+            tva_percent: product.tauxTva || 20,
+            produit_reference: product.reference
         };
 
-        // Collecter les données des lignes de devis
-        $('.devis-item').each(function(index) {
-            const $item = $(this);
-            let itemId = $item.find('[id$="_id"]').val();
-            // Convertir l'ID en integer si présent, sinon null
-            itemId = (itemId && itemId !== '') ? parseInt(itemId) : null;
-            
-            // Gérer les remises (peuvent être vides)
-            const remisePercentValue = $item.find('.remise-input, [id$="_remisePercent"]').val();
-            const remisePercent = (remisePercentValue && remisePercentValue !== '') ? parseFloat(remisePercentValue) : null;
-            
-            const remiseMontantValue = $item.find('.remise-montant-input, [id$="_remiseMontant"]').val();
-            const remiseMontant = (remiseMontantValue && remiseMontantValue !== '') ? parseFloat(remiseMontantValue) : null;
-            
-            // Validation des valeurs numériques
-            const quantite = parseFloat($item.find('.quantity-input, [id$="_quantite"]').val());
-            const prixUnitaireHt = parseFloat($item.find('.price-input, [id$="_prixUnitaireHt"]').val());
-            const tvaPercent = parseFloat($item.find('.tva-select, [id$="_tvaPercent"]').val());
-            
-            const itemData = {
-                id: itemId,
-                designation: $item.find('.designation-input, [id$="_designation"]').val() || '',
-                description: $item.find('.description-input, [id$="_description"]').val() || '',
-                quantite: isNaN(quantite) ? 1 : quantite,
-                prix_unitaire_ht: isNaN(prixUnitaireHt) ? 0 : prixUnitaireHt,
-                remise_percent: remisePercent,
-                remise_montant: remiseMontant,
-                tva_percent: isNaN(tvaPercent) ? 20 : tvaPercent,
-                ordre_affichage: index + 1
-            };
-            
-            data.items.push(itemData);
+        const response = await fetch(`/devis/${DEVIS_ID}/element/${elementId}`, {
+            method: 'PUT',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(data)
         });
 
-        return data;
+        const result = await response.json();
+        
+        if (result.success) {
+            // Recharger les éléments pour afficher les nouvelles données
+            await loadElements();
+            calculateTotals();
+        }
+        
+    } catch (error) {
+        console.error('Erreur mise à jour produit:', error);
     }
+}
 
-    // Vérifier si les données ont changé
-    function hasDataChanged() {
-        const currentData = JSON.stringify(collectFormData());
-        if (lastSaveData === null) {
-            lastSaveData = currentData;
-            return false;
-        }
-        return currentData !== lastSaveData;
+// ==========================================
+// UTILITAIRES
+// ==========================================
+
+function showSuccess(message) {
+    // Ne pas afficher d'alert pour les ajouts d'éléments
+    if (!message.includes('ajouté avec succès')) {
+        console.log('✓ ' + message);
     }
+}
 
-    // Fonction d'auto-sauvegarde
-    function performAutoSave() {
-        if (isAutoSaving || !hasUnsavedChanges) return;
-        
-        isAutoSaving = true;
-        const formData = collectFormData();
-        
-        // Afficher indicateur de sauvegarde en cours
-        showSaveStatus('💾 Sauvegarde en cours...');
-        
-        $.ajax({
-            url: AUTOSAVE_URL,
-            method: 'POST',
-            contentType: 'application/json',
-            data: JSON.stringify(formData),
-            success: function(response) {
-                if (response.success) {
-                    hasUnsavedChanges = false;
-                    lastSaveData = JSON.stringify(formData);
-                    showSaveStatus('✅ Sauvé à ' + response.saved_at);
-                    
-                    // Mettre à jour les totaux dans l'interface si fournis
-                    if (response.totals) {
-                        $('.total-ht').text(parseFloat(response.totals.total_ht).toFixed(2) + '€');
-                        $('.total-tva').text(parseFloat(response.totals.total_tva).toFixed(2) + '€');
-                        $('.total-ttc').text(parseFloat(response.totals.total_ttc).toFixed(2) + '€');
-                        $('.summary-total-display').text(parseFloat(response.totals.total_ttc).toFixed(2) + '€ TTC');
-                    }
-                } else {
-                    showSaveStatus('❌ ' + response.message, true);
-                }
-            },
-            error: function(xhr) {
-                let message = 'Erreur de sauvegarde';
-                try {
-                    const response = JSON.parse(xhr.responseText);
-                    message = response.message || message;
-                } catch (e) {
-                    // Garder le message par défaut
-                }
-                showSaveStatus('❌ ' + message, true);
-            },
-            complete: function() {
-                isAutoSaving = false;
-            }
-        });
+function showError(message) {
+    console.error('✗ ' + message);
+    // Seulement afficher les erreurs importantes
+    if (message.includes('Impossible de charger') || message.includes('Erreur lors du chargement')) {
+        alert('✗ ' + message);
     }
+}
 
-    // Déclencher l'auto-sauvegarde avec délai
-    function scheduleAutoSave() {
-        hasUnsavedChanges = true;
-        clearTimeout(autoSaveTimer);
-        autoSaveTimer = setTimeout(performAutoSave, AUTOSAVE_DELAY);
-    }
+// ==========================================
+// INITIALISATION AU CHARGEMENT
+// ==========================================
 
-    // Détecter les modifications sur tous les champs pertinents
-    $(document).on('input change keyup', 
-        '#devis_client, #devis_contactFacturation, #devis_contactLivraison, #devis_adresseFacturation, #devis_adresseLivraison, ' +
-        '.designation-input, [id$="_designation"], .description-input, [id$="_description"], ' +
-        '.quantity-input, [id$="_quantite"], .price-input, [id$="_prixUnitaireHt"], ' +
-        '.remise-input, [id$="_remisePercent"], .remise-montant-input, [id$="_remiseMontant"], .tva-select, [id$="_tvaPercent"]', 
-        function() {
-            if (hasDataChanged()) {
-                scheduleAutoSave();
-            }
-        }
-    );
-
-    // Forcer une sauvegarde avant fermeture/navigation
-    window.addEventListener('beforeunload', function(e) {
-        if (hasUnsavedChanges && !isAutoSaving) {
-            e.preventDefault();
-            e.returnValue = 'Vous avez des modifications non sauvegardées. Êtes-vous sûr de vouloir quitter ?';
-        }
-    });
-
-    // =============================================
-    // FILTRAGE CONTACTS ET ADRESSES PAR CLIENT
-    // =============================================
-    
-    // Stocker les données contacts et adresses pour éviter les doublons
-    let currentClientContacts = [];
-    let currentClientAddresses = [];
-    
-    // Fonction pour filtrer les contacts et adresses selon le client sélectionné
-    function filterContactsAndAddresses(clientId) {
-        console.log('🔄 DÉBUT filterContactsAndAddresses pour client:', clientId);
-        
-        // Compter les options AVANT vidage
-        console.log('📊 AVANT vidage:');
-        console.log('  - Contact Facturation:', $('#devis_contactFacturation option').length, 'options');
-        console.log('  - Contact Livraison:', $('#devis_contactLivraison option').length, 'options');
-        console.log('  - Adresse Facturation:', $('#devis_adresseFacturation option').length, 'options');
-        console.log('  - Adresse Livraison:', $('#devis_adresseLivraison option').length, 'options');
-        
-        // Vider complètement les dropdowns (y compris les options Symfony)
-        $('#devis_contactFacturation, #devis_contactLivraison').empty();
-        $('#devis_adresseFacturation, #devis_adresseLivraison').empty();
-        
-        // Vérifier le vidage
-        console.log('🧹 APRÈS vidage:');
-        console.log('  - Contact Facturation:', $('#devis_contactFacturation option').length, 'options');
-        console.log('  - Contact Livraison:', $('#devis_contactLivraison option').length, 'options');
-        
-        if (clientId && clientId !== '') {
-            // Charger les contacts du client sélectionné
-            $.ajax({
-                url: '/client/' + clientId + '/contacts',
-                method: 'GET',
-                success: function(contacts) {
-                    console.log('📞 Contacts reçus de l\'API:', contacts.length, 'contacts');
-                    console.log('📞 Détail des contacts:', contacts);
-                    currentClientContacts = contacts;
-                    
-                    // Ajouter option vide à chaque dropdown séparément
-                    console.log('➕ Ajout options vides...');
-                    $('#devis_contactFacturation').append('<option value="">Sélectionner un contact</option>');
-                    $('#devis_contactLivraison').append('<option value="">Sélectionner un contact</option>');
-                    
-                    // Vérifier après ajout options vides
-                    console.log('📊 Après options vides:');
-                    console.log('  - Contact Facturation:', $('#devis_contactFacturation option').length, 'options');
-                    console.log('  - Contact Livraison:', $('#devis_contactLivraison option').length, 'options');
-                    
-                    // Ajouter chaque contact aux deux dropdowns (options séparées)
-                    console.log('➕ Ajout des', contacts.length, 'contacts...');
-                    contacts.forEach(function(contact, index) {
-                        console.log(`  ➕ Ajout contact ${index + 1}:`, contact.label, 'ID:', contact.id);
-                        const optionFacturation = `<option value="${contact.id}" data-adresse-id="${contact.adresse_id || ''}">${contact.label}</option>`;
-                        const optionLivraison = `<option value="${contact.id}" data-adresse-id="${contact.adresse_id || ''}">${contact.label}</option>`;
-                        
-                        $('#devis_contactFacturation').append(optionFacturation);
-                        console.log('    ✅ Ajouté dans facturation, total maintenant:', $('#devis_contactFacturation option').length);
-                        
-                        $('#devis_contactLivraison').append(optionLivraison);
-                        console.log('    ✅ Ajouté dans livraison, total maintenant:', $('#devis_contactLivraison option').length);
-                    });
-                    
-                    // Compter le total final
-                    console.log('📊 TOTAL FINAL contacts:');
-                    console.log('  - Contact Facturation:', $('#devis_contactFacturation option').length, 'options');
-                    console.log('  - Contact Livraison:', $('#devis_contactLivraison option').length, 'options');
-                    
-                    // Mettre à jour les données pour la sélection automatique
-                    currentClientContacts = contacts;
-                },
-                error: function() {
-                    console.error('Erreur lors du chargement des contacts');
-                    $('#devis_contactFacturation').append('<option value="">Aucun contact trouvé</option>');
-                    $('#devis_contactLivraison').append('<option value="">Aucun contact trouvé</option>');
-                }
-            });
-            
-            // Charger les adresses du client sélectionné
-            $.ajax({
-                url: '/client/' + clientId + '/addresses',
-                method: 'GET',
-                success: function(adresses) {
-                    console.log('Adresses reçues:', adresses);
-                    currentClientAddresses = adresses;
-                    
-                    // Ajouter option vide à chaque dropdown séparément
-                    $('#devis_adresseFacturation').append('<option value="">Sélectionner une adresse</option>');
-                    $('#devis_adresseLivraison').append('<option value="">Sélectionner une adresse</option>');
-                    
-                    // Ajouter chaque adresse aux deux dropdowns (options séparées)
-                    adresses.forEach(function(adresse) {
-                        const optionFacturation = `<option value="${adresse.id}">${adresse.label}</option>`;
-                        const optionLivraison = `<option value="${adresse.id}">${adresse.label}</option>`;
-                        $('#devis_adresseFacturation').append(optionFacturation);
-                        $('#devis_adresseLivraison').append(optionLivraison);
-                    });
-                },
-                error: function() {
-                    console.error('Erreur lors du chargement des adresses');
-                    $('#devis_adresseFacturation').append('<option value="">Aucune adresse trouvée</option>');
-                    $('#devis_adresseLivraison').append('<option value="">Aucune adresse trouvée</option>');
-                }
-            });
-        } else {
-            // Aucun client sélectionné
-            $('#devis_contactFacturation').append('<option value="">Sélectionner d\'abord un client</option>');
-            $('#devis_contactLivraison').append('<option value="">Sélectionner d\'abord un client</option>');
-            $('#devis_adresseFacturation').append('<option value="">Sélectionner d\'abord un client</option>');
-            $('#devis_adresseLivraison').append('<option value="">Sélectionner d\'abord un client</option>');
-        }
-    }
-
-    // Gestion du changement de client - Mise à jour dynamique des contacts/adresses
-    $('#devis_client').off('change').on('change', function() {
-        const clientId = $(this).val();
-        console.log('Client changé:', clientId, '- Mise à jour des contacts/adresses');
-        
-        if (clientId) {
-            // Réactiver le filtrage dynamique car on change de client
-            filterContactsAndAddresses(clientId);
-        } else {
-            // Si aucun client sélectionné, vider les dropdowns
-            $('#devis_contactFacturation').empty().append('<option value="">Sélectionner d\'abord un client</option>');
-            $('#devis_contactLivraison').empty().append('<option value="">Sélectionner d\'abord un client</option>');
-            $('#devis_adresseFacturation').empty().append('<option value="">Sélectionner d\'abord un client</option>');
-            $('#devis_adresseLivraison').empty().append('<option value="">Sélectionner d\'abord un client</option>');
-        }
-    });
-
-    // Charger les données contacts au chargement pour permettre la sélection automatique d'adresses
-    function loadInitialContactsData() {
-        const initialClientId = $('#devis_client').val();
-        if (initialClientId) {
-            // Charger les contacts pour la sélection automatique d'adresses
-            $.ajax({
-                url: '/client/' + initialClientId + '/contacts',
-                method: 'GET',
-                success: function(contacts) {
-                    currentClientContacts = contacts;
-                    console.log('Contacts chargés pour sélection automatique:', contacts);
-                },
-                error: function() {
-                    console.error('Erreur lors du chargement des contacts pour sélection automatique');
-                }
-            });
-        }
-    }
-    
-    // Gestion de la sélection automatique d'adresse quand on choisit un contact
-    $('#devis_contactFacturation').off('change').on('change', function() {
-        const contactId = $(this).val();
-        if (contactId) {
-            // Récupérer l'adresse ID depuis l'attribut data de l'option sélectionnée
-            const selectedOption = $(this).find('option:selected');
-            const adresseId = selectedOption.data('adresse-id');
-            
-            if (adresseId) {
-                $('#devis_adresseFacturation').val(adresseId);
-                console.log('Adresse facturation auto-sélectionnée:', adresseId);
-            }
-        }
-    });
-
-    $('#devis_contactLivraison').off('change').on('change', function() {
-        const contactId = $(this).val();
-        if (contactId) {
-            // Récupérer l'adresse ID depuis l'attribut data de l'option sélectionnée
-            const selectedOption = $(this).find('option:selected');
-            const adresseId = selectedOption.data('adresse-id');
-            
-            if (adresseId) {
-                $('#devis_adresseLivraison').val(adresseId);
-                console.log('Adresse livraison auto-sélectionnée:', adresseId);
-            }
-        }
-    });
-
-    // Filtrage initial au chargement de la page - DÉSACTIVÉ pour éviter les doublons en édition
-    // En mode édition, les contacts et adresses sont déjà chargés via le formulaire Symfony
-    // $(document).ready(function() {
-    //     const initialClientId = $('#devis_client').val();
-    //     if (initialClientId) {
-    //         filterContactsAndAddresses(initialClientId);
-    //     }
-    // });
-
-    // Charger les données contacts au démarrage SEULEMENT pour la sélection automatique
-    // Pas de filtrage pour éviter les doublons au premier chargement
-    loadInitialContactsData();
-    
-    // Sauvegarde initiale après chargement complet
-    setTimeout(function() {
-        lastSaveData = JSON.stringify(collectFormData());
-    }, 1000);
-    
-    // Gestion du panneau récapitulatif flottant - avec délégation d'événement
-    $(document).on('click', '#summary-toggle', function(e) {
-        e.preventDefault();
-        e.stopPropagation();
-        console.log('Bouton summary cliqué'); // Debug
-        
-        const $summary = $('#floating-summary');
-        const $content = $('#summary-content');
-        
-        $summary.toggleClass('expanded');
-        
-        if ($summary.hasClass('expanded')) {
-            $content.slideDown(200);
-        } else {
-            $content.slideUp(200);
-        }
-    });
-    
-    // Fonction pour mettre à jour le récapitulatif flottant
-    function updateFloatingSummary() {
-        const totalHt = $('.total-ht').first().text();
-        const totalTva = $('.total-tva').first().text();
-        const totalTtc = $('.total-ttc').first().text();
-        
-        // Mettre à jour l'affichage dans le toggle
-        $('.summary-total-display').text(totalTtc + ' TTC');
-    }
-    
-    // Mettre à jour le récapitulatif après chaque calcul
-    const originalCalculateTotals = calculateTotals;
-    calculateTotals = function() {
-        originalCalculateTotals();
-        setTimeout(updateFloatingSummary, 50);
-    };
+document.addEventListener('DOMContentLoaded', function() {
+    init();
 });
 </script>
+
+<style>
+.sortable-ghost {
+    opacity: 0.4;
+}
+
+.sortable-chosen {
+    background-color: #e3f2fd !important;
+}
+
+.drag-handle {
+    width: 20px;
+}
+
+.element-item {
+    transition: all 0.2s;
+}
+
+.element-item:hover {
+    box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+}
+
+/* Panneau flottant pour éléments de mise en forme */
+.layout-panel {
+    position: fixed;
+    top: 50%;
+    right: -300px;
+    transform: translateY(-50%);
+    width: 280px;
+    background: #343a40;
+    color: white;
+    border-radius: 8px 0 0 8px;
+    box-shadow: -2px 0 10px rgba(0,0,0,0.3);
+    z-index: 1050;
+    transition: right 0.3s ease;
+}
+
+.layout-panel.show {
+    right: 0;
+}
+
+.layout-panel-header {
+    background: #495057;
+    padding: 1rem;
+    border-radius: 8px 0 0 0;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+}
+
+.layout-panel-body {
+    padding: 1rem;
+}
+
+.layout-element-item {
+    background: #495057;
+    border: 1px solid #6c757d;
+    border-radius: 4px;
+    padding: 0.75rem;
+    margin-bottom: 0.5rem;
+    cursor: grab;
+    transition: all 0.2s;
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+}
+
+.layout-element-item:hover {
+    background: #5a6268;
+    transform: translateX(-2px);
+}
+
+.layout-element-item:active {
+    cursor: grabbing;
+}
+
+.layout-panel-toggle {
+    position: fixed;
+    top: 50%;
+    right: 20px;
+    transform: translateY(-50%);
+    z-index: 1040;
+    width: 50px;
+    height: 50px;
+    border-radius: 50%;
+    transition: all 0.3s ease;
+}
+
+.layout-panel-toggle:hover {
+    transform: translateY(-50%) scale(1.1);
+}
+
+/* Autocomplétion produits */
+.product-suggestions {
+    position: absolute;
+    top: 100%;
+    left: 0;
+    right: 0;
+    background: white;
+    border: 1px solid #dee2e6;
+    border-top: none;
+    border-radius: 0 0 4px 4px;
+    box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+    max-height: 200px;
+    overflow-y: auto;
+    z-index: 1060;
+}
+
+.product-suggestion {
+    padding: 0.5rem;
+    border-bottom: 1px solid #f1f3f4;
+    cursor: pointer;
+    display: grid;
+    grid-template-columns: 80px 1fr auto;
+    gap: 0.5rem;
+    align-items: center;
+    font-size: 0.875rem;
+}
+
+.product-suggestion:hover,
+.product-suggestion.active {
+    background-color: #f8f9fa;
+}
+
+.product-reference {
+    font-weight: 600;
+    color: #6f42c1;
+}
+
+.product-designation {
+    color: #495057;
+}
+
+.product-price {
+    font-weight: 600;
+    color: #28a745;
+    text-align: right;
+}
+</style>
+
 {% endblock %}
 
 {% endblock %}
