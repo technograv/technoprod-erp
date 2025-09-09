@@ -137,29 +137,6 @@
                     <div class="d-flex justify-content-between align-items-center">
                         <div class="d-flex align-items-center">
                             <h5 class="mb-0 me-3"><i class="fas fa-list me-2"></i>Éléments du devis</h5>
-                            
-                            {% if devis.statut == 'brouillon' %}
-                            <div class="btn-group">
-                                <button type="button" class="btn btn-primary btn-sm" id="add-product-btn">
-                                    <i class="fas fa-plus"></i> Ajouter produit
-                                </button>
-                                <button type="button" class="btn btn-secondary btn-sm dropdown-toggle dropdown-toggle-split" data-bs-toggle="dropdown">
-                                    <span class="visually-hidden">Toggle Dropdown</span>
-                                </button>
-                                <ul class="dropdown-menu">
-                                    <li><a class="dropdown-item" href="#" data-element-type="section_title">
-                                        <i class="fas fa-heading"></i> Titre de section</a></li>
-                                    <li><a class="dropdown-item" href="#" data-element-type="subtotal">
-                                        <i class="fas fa-calculator"></i> Sous-total</a></li>
-                                    <li><a class="dropdown-item" href="#" data-element-type="line_break">
-                                        <i class="fas fa-minus"></i> Saut de ligne</a></li>
-                                    <li><a class="dropdown-item" href="#" data-element-type="page_break">
-                                        <i class="fas fa-file-alt"></i> Saut de page</a></li>
-                                    <li><a class="dropdown-item" href="#" data-element-type="separator">
-                                        <i class="fas fa-ellipsis-h"></i> Séparateur</a></li>
-                                </ul>
-                            </div>
-                            {% endif %}
                         </div>
                     </div>
                 </div>
@@ -690,12 +667,22 @@
 <script src="https://cdn.jsdelivr.net/npm/sortablejs@1.15.0/Sortable.min.js"></script>
 
 <script>
-// Configuration globale
-const DEVIS_ID = {{ devis.id }};
-const IS_EDITABLE = {{ devis.statut == 'brouillon' ? 'true' : 'false' }};
+(function() {
+    'use strict';
+    
+    // Éviter les redéclarations si le script est chargé plusieurs fois
+    if (window.devisEditLoaded) {
+        return;
+    }
+    window.devisEditLoaded = true;
 
-let elements = [];
-let sortable = null;
+    // Configuration globale
+    const DEVIS_ID = {{ devis.id }};
+    const devisId = DEVIS_ID; // Alias pour compatibilité
+    const IS_EDITABLE = {{ devis.statut == 'brouillon' ? 'true' : 'false' }};
+
+    let elements = [];
+    let devisSortable = null;
 
 // ==========================================
 // INITIALISATION
@@ -1029,11 +1016,11 @@ function renderLayoutElement(element) {
 function initSortable() {
     const container = document.getElementById('elements-container');
     
-    if (sortable) {
-        sortable.destroy();
+    if (devisSortable) {
+        devisSortable.destroy();
     }
 
-    sortable = new Sortable(container, {
+    devisSortable = new Sortable(container, {
         handle: '.drag-handle',
         animation: 150,
         ghostClass: 'sortable-ghost',
@@ -1281,19 +1268,7 @@ function preventEnterSubmit(event) {
 // ==========================================
 
 function initEventListeners() {
-    // Bouton ajouter produit
-    document.getElementById('add-product-btn').addEventListener('click', () => {
-        addElement('product');
-    });
-
-    // Boutons ajouter éléments de mise en page (seulement dropdown, pas panneau flottant)
-    document.querySelectorAll('.dropdown-item[data-element-type]').forEach(btn => {
-        btn.addEventListener('click', (e) => {
-            e.preventDefault();
-            const type = btn.dataset.elementType;
-            addElement(type);
-        });
-    });
+    // Event listeners pour les éléments de l'interface
 
     // Synchronisation contact/adresse
     initContactAddressSynchronization();
@@ -1629,7 +1604,7 @@ function initLayoutPanel() {
     });
     
     // Gestion du drag & drop depuis le panneau
-    const layoutItems = panel.querySelectorAll('.layout-element-item');
+    const layoutItems = panel.querySelectorAll('.layout-element-item[data-element-type]');
     layoutItems.forEach(item => {
         item.addEventListener('click', () => {
             const type = item.dataset.elementType;
@@ -1638,27 +1613,163 @@ function initLayoutPanel() {
         
         item.addEventListener('dragstart', (e) => {
             e.dataTransfer.setData('text/plain', item.dataset.elementType);
+            e.dataTransfer.effectAllowed = 'copy';
         });
     });
     
-    // Zone de drop spécialement pour les éléments du panneau
+    // Amélioration du système de drag & drop pour positionnement précis
+    initPreciseDragDrop();
+}
+
+// ==========================================
+// DRAG & DROP PRÉCIS
+// ==========================================
+
+function initPreciseDragDrop() {
     const container = document.getElementById('elements-container');
-    if (container) {
-        container.addEventListener('dragover', (e) => {
-            // Seulement accepter si c'est depuis le panneau flottant
-            if (e.dataTransfer.types.includes('text/plain')) {
-                e.preventDefault();
-                e.dataTransfer.dropEffect = 'copy';
-            }
-        });
+    if (!container) return;
+    
+    let dragIndicator = null;
+    let targetPosition = null;
+    
+    // Créer l'indicateur de drop
+    function createDragIndicator() {
+        if (dragIndicator) return dragIndicator;
         
-        container.addEventListener('drop', (e) => {
-            const elementType = e.dataTransfer.getData('text/plain');
-            if (elementType && !e.target.closest('.element-item')) {
-                e.preventDefault();
+        dragIndicator = document.createElement('div');
+        dragIndicator.className = 'drag-drop-indicator';
+        dragIndicator.innerHTML = '<i class="fas fa-arrow-right me-2"></i>Déposer ici';
+        return dragIndicator;
+    }
+    
+    // Supprimer l'indicateur
+    function removeDragIndicator() {
+        if (dragIndicator) {
+            dragIndicator.remove();
+            dragIndicator = null;
+        }
+        targetPosition = null;
+    }
+    
+    // Trouver la position d'insertion basée sur la position de la souris
+    function findInsertPosition(e) {
+        const elementItems = container.querySelectorAll('.element-item');
+        const mouseY = e.clientY;
+        
+        // Obtenir les coordonnées du container pour calcul relatif
+        const containerRect = container.getBoundingClientRect();
+        console.log('findInsertPosition: mouseY =', mouseY, 'container.top =', containerRect.top, 'éléments trouvés =', elementItems.length);
+        
+        for (let i = 0; i < elementItems.length; i++) {
+            const item = elementItems[i];
+            const rect = item.getBoundingClientRect();
+            const itemMiddle = rect.top + rect.height / 2;
+            
+            // Vérifier que l'élément est visible et dans la zone de container
+            if (rect.top >= containerRect.top && mouseY < itemMiddle) {
+                const targetPosition = i + 1;
+                console.log('Insertion AVANT élément index:', i, 'position cible:', targetPosition);
+                return { element: item, position: targetPosition, insertBefore: true };
+            }
+        }
+        
+        // Insérer à la fin
+        const nextPosition = elementItems.length + 1;
+        console.log('Insertion à la fin, position:', nextPosition);
+        return { 
+            element: elementItems[elementItems.length - 1] || null, 
+            position: nextPosition, 
+            insertBefore: false 
+        };
+    }
+    
+    container.addEventListener('dragover', (e) => {
+        if (e.dataTransfer.types.includes('text/plain')) {
+            e.preventDefault();
+            e.dataTransfer.dropEffect = 'copy';
+            
+            const insertInfo = findInsertPosition(e);
+            targetPosition = insertInfo.position;
+            
+            // Créer et positionner l'indicateur
+            const indicator = createDragIndicator();
+            
+            if (insertInfo.insertBefore && insertInfo.element) {
+                insertInfo.element.parentNode.insertBefore(indicator, insertInfo.element);
+            } else if (insertInfo.element) {
+                insertInfo.element.parentNode.insertBefore(indicator, insertInfo.element.nextSibling);
+            } else {
+                container.appendChild(indicator);
+            }
+        }
+    });
+    
+    container.addEventListener('dragleave', (e) => {
+        // Seulement supprimer si on sort vraiment du container
+        if (!container.contains(e.relatedTarget)) {
+            removeDragIndicator();
+        }
+    });
+    
+    container.addEventListener('drop', (e) => {
+        const elementType = e.dataTransfer.getData('text/plain');
+        console.log('Drop event déclenché:', { elementType, targetPosition });
+        
+        if (elementType) {
+            e.preventDefault();
+            
+            // Sauvegarder la position AVANT de supprimer l'indicateur
+            const savedPosition = targetPosition;
+            removeDragIndicator();
+            
+            if (savedPosition !== null) {
+                console.log('Appel addElementAtPosition avec position:', savedPosition);
+                addElementAtPosition(elementType, savedPosition);
+            } else {
+                console.log('Appel addElement sans position spécifique');
                 addElement(elementType);
             }
+        }
+    });
+}
+
+// Fonction pour ajouter un élément à une position spécifique
+async function addElementAtPosition(type, position) {
+    console.log('addElementAtPosition appelé avec:', { type, position });
+    try {
+        const requestBody = {
+            type: type,
+            position: position
+        };
+        console.log('Envoi de la requête avec:', requestBody);
+        
+        const response = await fetch(`/devis/${devisId}/element`, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'X-Requested-With': 'XMLHttpRequest'
+            },
+            body: JSON.stringify(requestBody)
         });
+
+        if (!response.ok) {
+            throw new Error(`HTTP error! status: ${response.status}`);
+        }
+
+        const result = await response.json();
+        
+        if (result.success) {
+            // Recharger tous les éléments pour afficher avec la bonne position
+            await loadElements();
+            calculateTotals();
+            showSuccess('Élément ajouté avec succès');
+        } else {
+            throw new Error(result.message || 'Erreur lors de l\'ajout');
+        }
+        
+    } catch (error) {
+        console.error('Erreur ajout élément:', error);
+        showError('Erreur lors de l\'ajout de l\'élément: ' + error.message);
     }
 }
 
@@ -1976,6 +2087,8 @@ function showError(message) {
 document.addEventListener('DOMContentLoaded', function() {
     init();
 });
+
+})(); // Fin de la fonction IIFE
 </script>
 
 <style>
@@ -2051,6 +2164,30 @@ document.addEventListener('DOMContentLoaded', function() {
 
 .layout-element-item:active {
     cursor: grabbing;
+}
+
+
+/* Indicateur de drag & drop */
+.drag-drop-indicator {
+    padding: 8px 16px;
+    margin: 4px 0;
+    background: linear-gradient(135deg, #4caf50, #45a049);
+    color: white;
+    border-radius: 4px;
+    font-size: 14px;
+    font-weight: 500;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    opacity: 0.9;
+    box-shadow: 0 2px 8px rgba(76, 175, 80, 0.3);
+    animation: pulse-green 1.5s infinite;
+}
+
+@keyframes pulse-green {
+    0% { transform: scale(1); }
+    50% { transform: scale(1.02); }
+    100% { transform: scale(1); }
 }
 
 .layout-panel-toggle {

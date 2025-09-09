@@ -30,6 +30,9 @@ class DevisElementController extends AbstractController
         try {
             $data = json_decode($request->getContent(), true);
             
+            // Log pour debug
+            error_log('DevisElementController::create - Data reçue: ' . json_encode($data));
+            
             if (!$data || !isset($data['type'])) {
                 return $this->json(['success' => false, 'message' => 'Type d\'élément requis'], 400);
             }
@@ -39,14 +42,18 @@ class DevisElementController extends AbstractController
             $element->setType($data['type']);
             
             // Position : insérer à la position demandée ou à la fin
-            $position = $data['position'] ?? $em->getRepository(DevisElement::class)->getNextPositionForDevis($devis);
-            
-            if (isset($data['position']) && $data['position'] < $position) {
-                // Faire de la place à la position demandée
-                $em->getRepository(DevisElement::class)->makeSpaceAtPosition($devis, $data['position']);
+            if (isset($data['position'])) {
+                // Position spécifique demandée - faire de la place et utiliser cette position
+                $requestedPosition = (int)$data['position'];
+                error_log("Position demandée: $requestedPosition - Faire de la place et assigner cette position");
+                $em->getRepository(DevisElement::class)->makeSpaceAtPosition($devis, $requestedPosition);
+                $element->setPosition($requestedPosition);
+            } else {
+                // Pas de position spécifiée - ajouter à la fin
+                $nextPosition = $em->getRepository(DevisElement::class)->getNextPositionForDevis($devis);
+                error_log("Pas de position spécifiée - Ajouter à la fin position: $nextPosition");
+                $element->setPosition($nextPosition);
             }
-            
-            $element->setPosition($position);
 
             // Remplir les champs selon le type
             if ($data['type'] === 'product') {
