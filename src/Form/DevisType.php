@@ -209,8 +209,20 @@ class DevisType extends AbstractType
                     $label = trim(($contact->getCivilite() ?? '') . ' ' . ($contact->getPrenom() ?? '') . ' ' . ($contact->getNom() ?? ''));
                     return $label ?: 'Contact sans nom';
                 },
+                'query_builder' => function($repository) use ($options) {
+                    $qb = $repository->createQueryBuilder('c');
+                    // Ne charger que les contacts du client actuel
+                    if (isset($options['data']) && $options['data'] instanceof Devis && $options['data']->getClient()) {
+                        $qb->andWhere('c.client = :client')
+                           ->setParameter('client', $options['data']->getClient());
+                    } else {
+                        // Si pas de client, ne retourner aucun résultat
+                        $qb->andWhere('1 = 0');
+                    }
+                    return $qb;
+                },
                 'choice_attr' => function(Contact $contact) {
-                    return ['data-client-id' => $contact->getClient() ? $contact->getClient()->getId() : ''];
+                    return ['data-adresse-id' => $contact->getAdresse() ? $contact->getAdresse()->getId() : ''];
                 },
                 'placeholder' => 'Choisir un contact de facturation',
                 'label' => 'Contact facturation',
@@ -222,8 +234,17 @@ class DevisType extends AbstractType
                 'choice_label' => function(Adresse $adresse) {
                     return ($adresse->getNom() ?? 'Adresse') . ' - ' . $adresse->getLigne1() . ' - ' . $adresse->getVille();
                 },
-                'choice_attr' => function(Adresse $adresse) {
-                    return ['data-client-id' => $adresse->getClient() ? $adresse->getClient()->getId() : ''];
+                'query_builder' => function($repository) use ($options) {
+                    $qb = $repository->createQueryBuilder('a');
+                    // Ne charger que les adresses du client actuel
+                    if (isset($options['data']) && $options['data'] instanceof Devis && $options['data']->getClient()) {
+                        $qb->andWhere('a.client = :client')
+                           ->setParameter('client', $options['data']->getClient());
+                    } else {
+                        // Si pas de client, ne retourner aucun résultat
+                        $qb->andWhere('1 = 0');
+                    }
+                    return $qb;
                 },
                 'placeholder' => 'Choisir une adresse de facturation',
                 'label' => 'Adresse de facturation',
@@ -236,8 +257,20 @@ class DevisType extends AbstractType
                     $label = trim(($contact->getCivilite() ?? '') . ' ' . ($contact->getPrenom() ?? '') . ' ' . ($contact->getNom() ?? ''));
                     return $label ?: 'Contact sans nom';
                 },
+                'query_builder' => function($repository) use ($options) {
+                    $qb = $repository->createQueryBuilder('c');
+                    // Ne charger que les contacts du client actuel
+                    if (isset($options['data']) && $options['data'] instanceof Devis && $options['data']->getClient()) {
+                        $qb->andWhere('c.client = :client')
+                           ->setParameter('client', $options['data']->getClient());
+                    } else {
+                        // Si pas de client, ne retourner aucun résultat
+                        $qb->andWhere('1 = 0');
+                    }
+                    return $qb;
+                },
                 'choice_attr' => function(Contact $contact) {
-                    return ['data-client-id' => $contact->getClient() ? $contact->getClient()->getId() : ''];
+                    return ['data-adresse-id' => $contact->getAdresse() ? $contact->getAdresse()->getId() : ''];
                 },
                 'placeholder' => 'Choisir un contact de livraison',
                 'label' => 'Contact livraison',
@@ -249,8 +282,17 @@ class DevisType extends AbstractType
                 'choice_label' => function(Adresse $adresse) {
                     return ($adresse->getNom() ?? 'Adresse') . ' - ' . $adresse->getLigne1() . ' - ' . $adresse->getVille();
                 },
-                'choice_attr' => function(Adresse $adresse) {
-                    return ['data-client-id' => $adresse->getClient() ? $adresse->getClient()->getId() : ''];
+                'query_builder' => function($repository) use ($options) {
+                    $qb = $repository->createQueryBuilder('a');
+                    // Ne charger que les adresses du client actuel
+                    if (isset($options['data']) && $options['data'] instanceof Devis && $options['data']->getClient()) {
+                        $qb->andWhere('a.client = :client')
+                           ->setParameter('client', $options['data']->getClient());
+                    } else {
+                        // Si pas de client, ne retourner aucun résultat
+                        $qb->andWhere('1 = 0');
+                    }
+                    return $qb;
                 },
                 'placeholder' => 'Choisir une adresse de livraison',
                 'label' => 'Adresse de livraison',

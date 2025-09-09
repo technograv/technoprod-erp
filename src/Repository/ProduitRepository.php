@@ -45,16 +45,18 @@ class ProduitRepository extends ServiceEntityRepository
     }
 
     /**
-     * Recherche de produits par terme
+     * Recherche de produits par terme (insensible à la casse)
      */
     public function search(string $terme): array
     {
+        $terme = strtolower($terme); // Convertir en minuscules
+        
         return $this->createQueryBuilder('p')
             ->andWhere('p.actif = :actif')
             ->andWhere('
-                p.designation LIKE :terme OR 
-                p.reference LIKE :terme OR 
-                p.description LIKE :terme
+                LOWER(p.designation) LIKE :terme OR 
+                LOWER(p.reference) LIKE :terme OR 
+                LOWER(p.description) LIKE :terme
             ')
             ->setParameter('actif', true)
             ->setParameter('terme', '%' . $terme . '%')

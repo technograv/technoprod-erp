@@ -5,6 +5,7 @@ namespace App\Controller;
 use App\Entity\Devis;
 use App\Entity\DevisItem;
 use App\Entity\DevisVersion;
+use App\Entity\LayoutElement;
 use App\Form\DevisType;
 use App\Repository\DevisRepository;
 use App\Repository\ClientRepository;
@@ -297,6 +298,9 @@ final class DevisController extends AbstractController
             // Recalculer les totaux globaux
             $devis->calculateTotals();
             
+            // CORRECTION ORDRE GLOBAL : Réorganiser tous les éléments selon un ordre unifié
+            $this->synchronizeGlobalOrder($devis, $entityManager);
+            
             $entityManager->flush();
 
             if ($shouldCreateVersion) {
@@ -312,6 +316,187 @@ final class DevisController extends AbstractController
             'devis' => $devis,
             'form' => $form->createView(),
         ]);
+    }
+
+    /**
+     * Nouvelle interface d'édition simplifiée (VERSION 2)
+     */
+    #[Route('/{id}/edit-v2', name: 'app_devis_edit_v2', methods: ['GET'])]
+    public function editV2(Devis $devis): Response
+    {
+        return $this->render('devis/edit_v2.html.twig', [
+            'devis' => $devis,
+        ]);
+    }
+
+    /**
+     * Auto-sauvegarde AJAX du devis pendant l'édition
+     */
+    #[Route('/{id}/auto-save', name: 'app_devis_auto_save', methods: ['POST'])]
+    public function autoSave(Request $request, Devis $devis, EntityManagerInterface $entityManager): JsonResponse
+    {
+        // Vérifier que le devis peut être modifié
+        if (!in_array($devis->getStatut(), ['brouillon', 'envoye', 'signe'])) {
+            return new JsonResponse(['success' => false, 'message' => 'Ce devis ne peut plus être modifié'], 400);
+        }
+
+        try {
+            $data = json_decode($request->getContent(), true);
+            
+            if (!$data) {
+                return new JsonResponse(['success' => false, 'message' => 'Données invalides'], 400);
+            }
+
+            // Debug : Logger les données reçues en cas d'erreur ultérieure
+            error_log('Auto-save data received: ' . json_encode($data, JSON_PRETTY_PRINT));
+
+            // Mettre à jour les champs principaux du devis si fournis
+            if (isset($data['client_id']) && is_numeric($data['client_id']) && $data['client_id'] > 0) {
+                $client = $entityManager->getRepository(Client::class)->find((int)$data['client_id']);
+                if ($client) {
+                    $devis->setClient($client);
+                }
+            }
+
+            if (isset($data['contact_facturation_id'])) {
+                if (is_numeric($data['contact_facturation_id']) && $data['contact_facturation_id'] > 0) {
+                    $contact = $entityManager->getRepository(Contact::class)->find((int)$data['contact_facturation_id']);
+                    $devis->setContactFacturation($contact);
+                } else {
+                    $devis->setContactFacturation(null);
+                }
+            }
+
+            if (isset($data['contact_livraison_id'])) {
+                if (is_numeric($data['contact_livraison_id']) && $data['contact_livraison_id'] > 0) {
+                    $contact = $entityManager->getRepository(Contact::class)->find((int)$data['contact_livraison_id']);
+                    $devis->setContactLivraison($contact);
+                } else {
+                    $devis->setContactLivraison(null);
+                }
+            }
+
+            if (isset($data['adresse_facturation_id'])) {
+                if (is_numeric($data['adresse_facturation_id']) && $data['adresse_facturation_id'] > 0) {
+                    $adresse = $entityManager->getRepository(Adresse::class)->find((int)$data['adresse_facturation_id']);
+                    $devis->setAdresseFacturation($adresse);
+                } else {
+                    $devis->setAdresseFacturation(null);
+                }
+            }
+
+            if (isset($data['adresse_livraison_id'])) {
+                if (is_numeric($data['adresse_livraison_id']) && $data['adresse_livraison_id'] > 0) {
+                    $adresse = $entityManager->getRepository(Adresse::class)->find((int)$data['adresse_livraison_id']);
+                    $devis->setAdresseLivraison($adresse);
+                } else {
+                    $devis->setAdresseLivraison(null);
+                }
+            }
+
+            // Mettre à jour les lignes de devis
+            if (isset($data['items']) && is_array($data['items'])) {
+                // Supprimer les anciennes lignes qui ne sont plus présentes
+                $existingItems = $devis->getDevisItems()->toArray();
+                $submittedItemIds = [];
+                
+                // Collecter uniquement les IDs valides (non null et numériques)
+                foreach ($data['items'] as $itemData) {
+                    if (isset($itemData['id']) && is_numeric($itemData['id']) && $itemData['id'] > 0) {
+                        $submittedItemIds[] = (int)$itemData['id'];
+                    }
+                }
+                
+                foreach ($existingItems as $existingItem) {
+                    if ($existingItem->getId() && !in_array($existingItem->getId(), $submittedItemIds)) {
+                        $devis->removeDevisItem($existingItem);
+                        $entityManager->remove($existingItem);
+                    }
+                }
+
+                // Traiter chaque ligne
+                foreach ($data['items'] as $itemData) {
+                    $devisItem = null;
+                    
+                    if (isset($itemData['id']) && is_numeric($itemData['id']) && $itemData['id'] > 0) {
+                        // Ligne existante - la modifier
+                        $devisItem = $entityManager->getRepository(DevisItem::class)->find((int)$itemData['id']);
+                    }
+                    
+                    if (!$devisItem) {
+                        // Nouvelle ligne - la créer
+                        $devisItem = new DevisItem();
+                        $devis->addDevisItem($devisItem);
+                    }
+
+                    // Mettre à jour les champs de la ligne
+                    if (isset($itemData['designation'])) {
+                        $devisItem->setDesignation($itemData['designation']);
+                    }
+                    if (isset($itemData['description'])) {
+                        $devisItem->setDescription($itemData['description']);
+                    }
+                    if (isset($itemData['quantite'])) {
+                        $devisItem->setQuantite((string)$itemData['quantite']);
+                    }
+                    if (isset($itemData['prix_unitaire_ht'])) {
+                        $devisItem->setPrixUnitaireHt((string)$itemData['prix_unitaire_ht']);
+                    }
+                    if (isset($itemData['remise_percent'])) {
+                        $remisePercent = $itemData['remise_percent'];
+                        if ($remisePercent === null || $remisePercent === '' || $remisePercent === 0) {
+                            $devisItem->setRemisePercent(null);
+                        } else {
+                            $devisItem->setRemisePercent((string)$remisePercent);
+                        }
+                    }
+                    if (isset($itemData['remise_montant'])) {
+                        $remiseMontant = $itemData['remise_montant'];
+                        if ($remiseMontant === null || $remiseMontant === '' || $remiseMontant === 0) {
+                            $devisItem->setRemiseMontant(null);
+                        } else {
+                            $devisItem->setRemiseMontant((string)$remiseMontant);
+                        }
+                    }
+                    if (isset($itemData['tva_percent'])) {
+                        $devisItem->setTvaPercent((string)$itemData['tva_percent']);
+                    }
+                    if (isset($itemData['ordre_affichage'])) {
+                        $devisItem->setOrdreAffichage((int)$itemData['ordre_affichage']);
+                    }
+
+                    // Calculer le total de la ligne
+                    $devisItem->calculateTotal();
+                }
+            }
+
+            // Recalculer les totaux généraux du devis
+            $devis->calculateTotals();
+            $devis->setUpdatedAt(new \DateTimeImmutable());
+
+            // CORRECTION ORDRE GLOBAL : Synchroniser l'ordre de tous les éléments
+            $this->synchronizeGlobalOrder($devis, $entityManager);
+
+            // Sauvegarder en base
+            $entityManager->flush();
+
+            return new JsonResponse([
+                'success' => true,
+                'message' => 'Devis sauvegardé automatiquement',
+                'saved_at' => (new \DateTime())->format('H:i:s'),
+                'totals' => [
+                    'total_ht' => $devis->getTotalHt(),
+                    'total_tva' => $devis->getTotalTva(), 
+                    'total_ttc' => $devis->getTotalTtc()
+                ]
+            ]);
+
+        } catch (\Exception $e) {
+            return new JsonResponse([
+                'success' => false,
+                'message' => 'Erreur lors de la sauvegarde: ' . $e->getMessage()
+            ], 500);
+        }
     }
 
     #[Route('/{id}/delete', name: 'app_devis_delete', methods: ['POST'])]
@@ -965,5 +1150,224 @@ final class DevisController extends AbstractController
 
         $this->addFlash('success', 'Version créée avec succès.');
         return $this->redirectToRoute('app_devis_versions', ['id' => $devis->getId()]);
+    }
+
+    /**
+     * Ajouter un élément de mise en page au devis
+     */
+    #[Route('/{id}/layout-element', name: 'app_devis_add_layout_element', methods: ['POST'])]
+    public function addLayoutElement(
+        int $id,
+        Request $request,
+        EntityManagerInterface $entityManager
+    ): JsonResponse {
+        $devis = $entityManager->getRepository(Devis::class)->find($id);
+        
+        if (!$devis) {
+            return $this->json(['success' => false, 'message' => 'Devis introuvable'], 404);
+        }
+
+        $data = json_decode($request->getContent(), true);
+        
+        if (!$data || !isset($data['type'], $data['position'])) {
+            return $this->json(['success' => false, 'message' => 'Données manquantes'], 400);
+        }
+
+        // Valider le type d'élément
+        $allowedTypes = ['line_break', 'page_break', 'subtotal', 'section_title', 'separator'];
+        if (!in_array($data['type'], $allowedTypes)) {
+            return $this->json(['success' => false, 'message' => 'Type d\'élément invalide'], 400);
+        }
+
+        try {
+            // Réorganiser les ordres des éléments existants pour faire de la place
+            $layoutRepo = $entityManager->getRepository(LayoutElement::class);
+            $layoutRepo->reorganizeOrderAfterInsert($devis, $data['position']);
+
+            // Créer le nouvel élément de mise en page
+            $layoutElement = new LayoutElement();
+            $layoutElement->setDevis($devis);
+            $layoutElement->setType($data['type']);
+            $layoutElement->setOrdreAffichage($data['position']);
+            
+            // Paramètres optionnels
+            if (isset($data['titre'])) {
+                $layoutElement->setTitre($data['titre']);
+            }
+            if (isset($data['contenu'])) {
+                $layoutElement->setContenu($data['contenu']);
+            }
+            if (isset($data['parametres']) && is_array($data['parametres'])) {
+                $layoutElement->setParametres($data['parametres']);
+            }
+
+            $entityManager->persist($layoutElement);
+            $entityManager->flush();
+
+            return $this->json([
+                'success' => true,
+                'message' => 'Élément de mise en page ajouté avec succès',
+                'element' => $layoutElement->toArray()
+            ]);
+
+        } catch (\Exception $e) {
+            return $this->json([
+                'success' => false,
+                'message' => 'Erreur lors de l\'ajout de l\'élément: ' . $e->getMessage()
+            ], 500);
+        }
+    }
+
+    /**
+     * Supprimer un élément de mise en page
+     */
+    #[Route('/{id}/layout-element/{elementId}', name: 'app_devis_remove_layout_element', methods: ['DELETE'])]
+    public function removeLayoutElement(
+        int $id,
+        int $elementId,
+        EntityManagerInterface $entityManager
+    ): JsonResponse {
+        $devis = $entityManager->getRepository(Devis::class)->find($id);
+        $layoutElement = $entityManager->getRepository(LayoutElement::class)->find($elementId);
+        
+        if (!$devis || !$layoutElement || $layoutElement->getDevis() !== $devis) {
+            return $this->json(['success' => false, 'message' => 'Élément introuvable'], 404);
+        }
+
+        try {
+            $deletedPosition = $layoutElement->getOrdreAffichage();
+            
+            $entityManager->remove($layoutElement);
+            $entityManager->flush();
+
+            // Réorganiser les ordres des éléments restants
+            $layoutRepo = $entityManager->getRepository(LayoutElement::class);
+            $layoutRepo->reorganizeOrderAfterDelete($devis, $deletedPosition);
+
+            return $this->json([
+                'success' => true,
+                'message' => 'Élément de mise en page supprimé avec succès'
+            ]);
+
+        } catch (\Exception $e) {
+            return $this->json([
+                'success' => false,
+                'message' => 'Erreur lors de la suppression: ' . $e->getMessage()
+            ], 500);
+        }
+    }
+
+    /**
+     * Mettre à jour l'ordre des éléments de mise en page
+     */
+    #[Route('/{id}/layout-elements/reorder', name: 'app_devis_reorder_layout_elements', methods: ['POST'])]
+    public function reorderLayoutElements(
+        int $id,
+        Request $request,
+        EntityManagerInterface $entityManager
+    ): JsonResponse {
+        $devis = $entityManager->getRepository(Devis::class)->find($id);
+        
+        if (!$devis) {
+            return $this->json(['success' => false, 'message' => 'Devis introuvable'], 404);
+        }
+
+        $data = json_decode($request->getContent(), true);
+        
+        if (!$data || !isset($data['orders']) || !is_array($data['orders'])) {
+            return $this->json(['success' => false, 'message' => 'Ordres manquants'], 400);
+        }
+
+        try {
+            $layoutRepo = $entityManager->getRepository(LayoutElement::class);
+            $updated = $layoutRepo->updateOrdersFromArray($devis, $data['orders']);
+
+            return $this->json([
+                'success' => true,
+                'message' => "Ordre des éléments mis à jour ($updated éléments modifiés)"
+            ]);
+
+        } catch (\Exception $e) {
+            return $this->json([
+                'success' => false,
+                'message' => 'Erreur lors de la réorganisation: ' . $e->getMessage()
+            ], 500);
+        }
+    }
+
+    /**
+     * Récupérer les éléments de mise en page d'un devis
+     */
+    #[Route('/{id}/layout-elements', name: 'app_devis_layout_elements', methods: ['GET'])]
+    public function getLayoutElements(int $id, EntityManagerInterface $entityManager): JsonResponse
+    {
+        $devis = $entityManager->getRepository(Devis::class)->find($id);
+        
+        if (!$devis) {
+            return $this->json(['success' => false, 'message' => 'Devis introuvable'], 404);
+        }
+
+        $layoutElements = $entityManager->getRepository(LayoutElement::class)->findByDevisOrdered($devis);
+        
+        $elements = [];
+        foreach ($layoutElements as $element) {
+            $elements[] = $element->toArray();
+        }
+
+        return $this->json([
+            'success' => true,
+            'elements' => $elements,
+            'count' => count($elements)
+        ]);
+    }
+
+    /**
+     * Synchronise l'ordre global de tous les éléments d'un devis (DevisItems + LayoutElements)
+     * pour résoudre les problèmes de réordonnancement après sauvegarde
+     */
+    private function synchronizeGlobalOrder(Devis $devis, EntityManagerInterface $entityManager): void
+    {
+        // Récupérer tous les DevisItems et LayoutElements du devis
+        $devisItems = $devis->getDevisItems()->toArray();
+        $layoutElements = $entityManager->getRepository(LayoutElement::class)->findByDevisOrdered($devis);
+        
+        // Créer un tableau unifié avec tous les éléments et leurs ordres actuels
+        $allElements = [];
+        
+        foreach ($devisItems as $item) {
+            $allElements[] = [
+                'type' => 'devis_item',
+                'entity' => $item,
+                'order' => $item->getOrdreAffichage() ?? 999999
+            ];
+        }
+        
+        foreach ($layoutElements as $element) {
+            $allElements[] = [
+                'type' => 'layout_element',
+                'entity' => $element,
+                'order' => $element->getOrdreAffichage() ?? 999999
+            ];
+        }
+        
+        // Trier tous les éléments par ordre d'affichage
+        usort($allElements, function($a, $b) {
+            return $a['order'] - $b['order'];
+        });
+        
+        // Réassigner les ordres de manière séquentielle (1, 2, 3, ...)
+        foreach ($allElements as $index => $elementData) {
+            $newOrder = $index + 1;
+            
+            if ($elementData['type'] === 'devis_item') {
+                $elementData['entity']->setOrdreAffichage($newOrder);
+                error_log("DevisController: DevisItem ID " . $elementData['entity']->getId() . " → ordre " . $newOrder);
+            } else {
+                $elementData['entity']->setOrdreAffichage($newOrder);
+                error_log("DevisController: LayoutElement ID " . $elementData['entity']->getId() . " → ordre " . $newOrder);
+            }
+        }
+        
+        error_log("DevisController: Synchronisation ordre global terminée - " . count($allElements) . " éléments réorganisés");
     }
 }

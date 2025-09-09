@@ -1,0 +1,586 @@
+{% extends 'base.html.twig' %}
+
+{% block title %}Édition devis {{ devis.numeroDevis }}{% endblock %}
+
+{% block body %}
+<div class="container-fluid">
+    <div class="row">
+        <div class="col-lg-12">
+            <div class="card">
+                <div class="card-header d-flex justify-content-between align-items-center">
+                    <h3 class="card-title">Édition du devis {{ devis.numeroDevis }}</h3>
+                    <div>
+                        <span class="badge badge-{{ devis.statut == 'brouillon' ? 'warning' : (devis.statut == 'envoye' ? 'info' : 'success') }}">
+                            {{ devis.statut|upper }}
+                        </span>
+                    </div>
+                </div>
+                
+                <div class="card-body">
+                    <!-- Informations client -->
+                    <div class="row mb-4">
+                        <div class="col-md-6">
+                            <h5>Client</h5>
+                            <div class="form-group">
+                                <label>Client</label>
+                                <select class="form-control" id="client-select">
+                                    <option value="">Sélectionner un client...</option>
+                                    <!-- Sera peuplé via JavaScript -->
+                                </select>
+                            </div>
+                        </div>
+                        <div class="col-md-6">
+                            <h5>Informations devis</h5>
+                            <div class="form-group">
+                                <label>Statut</label>
+                                <select class="form-control" id="statut-select">
+                                    <option value="brouillon" {{ devis.statut == 'brouillon' ? 'selected' : '' }}>Brouillon</option>
+                                    <option value="envoye" {{ devis.statut == 'envoye' ? 'selected' : '' }}>Envoyé</option>
+                                    <option value="signe" {{ devis.statut == 'signe' ? 'selected' : '' }}>Signé</option>
+                                </select>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Section éléments du devis -->
+                    <div class="row">
+                        <div class="col-12">
+                            <div class="d-flex justify-content-between align-items-center mb-3">
+                                <h5>Éléments du devis</h5>
+                                {% if devis.statut == 'brouillon' %}
+                                <div class="btn-group">
+                                    <button type="button" class="btn btn-primary btn-sm" id="add-product-btn">
+                                        <i class="fas fa-plus"></i> Ajouter produit
+                                    </button>
+                                    <button type="button" class="btn btn-secondary btn-sm dropdown-toggle dropdown-toggle-split" data-bs-toggle="dropdown">
+                                        <span class="visually-hidden">Toggle Dropdown</span>
+                                    </button>
+                                    <ul class="dropdown-menu">
+                                        <li><a class="dropdown-item" href="#" data-element-type="section_title">
+                                            <i class="fas fa-heading"></i> Titre de section</a></li>
+                                        <li><a class="dropdown-item" href="#" data-element-type="subtotal">
+                                            <i class="fas fa-calculator"></i> Sous-total</a></li>
+                                        <li><a class="dropdown-item" href="#" data-element-type="line_break">
+                                            <i class="fas fa-minus"></i> Saut de ligne</a></li>
+                                        <li><a class="dropdown-item" href="#" data-element-type="page_break">
+                                            <i class="fas fa-file-alt"></i> Saut de page</a></li>
+                                        <li><a class="dropdown-item" href="#" data-element-type="separator">
+                                            <i class="fas fa-ellipsis-h"></i> Séparateur</a></li>
+                                    </ul>
+                                </div>
+                                {% endif %}
+                            </div>
+
+                            <!-- Conteneur des éléments -->
+                            <div id="elements-container" class="border rounded p-3">
+                                <!-- Les éléments seront chargés ici via JavaScript -->
+                                <div class="text-center text-muted p-4">
+                                    <i class="fas fa-spinner fa-spin"></i> Chargement des éléments...
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Totaux -->
+                    <div class="row mt-4">
+                        <div class="col-md-8"></div>
+                        <div class="col-md-4">
+                            <div class="card bg-light">
+                                <div class="card-body">
+                                    <div class="d-flex justify-content-between">
+                                        <strong>Total HT:</strong>
+                                        <span id="total-ht">{{ devis.totalHt|number_format(2, ',', ' ') }} €</span>
+                                    </div>
+                                    <div class="d-flex justify-content-between">
+                                        <strong>TVA:</strong>
+                                        <span id="total-tva">{{ devis.totalTva|number_format(2, ',', ' ') }} €</span>
+                                    </div>
+                                    <hr>
+                                    <div class="d-flex justify-content-between">
+                                        <strong>Total TTC:</strong>
+                                        <strong id="total-ttc">{{ devis.totalTtc|number_format(2, ',', ' ') }} €</strong>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="card-footer d-flex justify-content-between">
+                    <a href="{{ path('app_devis_show', {'id': devis.id}) }}" class="btn btn-secondary">
+                        <i class="fas fa-arrow-left"></i> Retour
+                    </a>
+                    <button type="button" class="btn btn-success" id="save-devis-btn">
+                        <i class="fas fa-save"></i> Enregistrer les modifications
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Modal pour éditer un élément -->
+<div class="modal fade" id="element-modal" tabindex="-1">
+    <div class="modal-dialog modal-lg">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title" id="element-modal-title">Modifier l'élément</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <!-- Le contenu sera injecté dynamiquement -->
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Annuler</button>
+                <button type="button" class="btn btn-primary" id="save-element-btn">Enregistrer</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    // Configuration globale
+    const DEVIS_ID = {{ devis.id }};
+    const IS_EDITABLE = {{ devis.statut == 'brouillon' ? 'true' : 'false' }};
+    
+    let elements = [];
+    let sortable = null;
+
+    // ==========================================
+    // INITIALISATION
+    // ==========================================
+    
+    async function init() {
+        try {
+            await loadElements();
+            if (IS_EDITABLE) {
+                initSortable();
+                initEventListeners();
+            }
+            calculateTotals();
+        } catch (error) {
+            console.error('Erreur d\'initialisation:', error);
+            showError('Erreur lors du chargement des données');
+        }
+    }
+
+    // ==========================================
+    // CHARGEMENT DES ÉLÉMENTS
+    // ==========================================
+    
+    async function loadElements() {
+        try {
+            const response = await fetch(`/devis/${DEVIS_ID}/element`);
+            const data = await response.json();
+            
+            if (!data.success) {
+                throw new Error(data.message);
+            }
+            
+            elements = data.elements;
+            renderElements();
+            
+        } catch (error) {
+            console.error('Erreur chargement éléments:', error);
+            showError('Impossible de charger les éléments du devis');
+        }
+    }
+
+    // ==========================================
+    // RENDU DES ÉLÉMENTS
+    // ==========================================
+    
+    function renderElements() {
+        const container = document.getElementById('elements-container');
+        
+        if (elements.length === 0) {
+            container.innerHTML = `
+                <div class="text-center text-muted p-4">
+                    <i class="fas fa-inbox"></i>
+                    <p class="mt-2">Aucun élément dans ce devis</p>
+                    ${IS_EDITABLE ? '<p class="small">Utilisez le bouton "Ajouter produit" pour commencer</p>' : ''}
+                </div>
+            `;
+            return;
+        }
+
+        const html = elements.map(element => renderElement(element)).join('');
+        container.innerHTML = html;
+    }
+
+    function renderElement(element) {
+        if (element.is_product) {
+            return renderProductElement(element);
+        } else {
+            return renderLayoutElement(element);
+        }
+    }
+
+    function renderProductElement(element) {
+        const dragHandle = IS_EDITABLE ? `
+            <div class="drag-handle me-2" style="cursor: grab;">
+                <i class="fas fa-grip-vertical text-muted"></i>
+            </div>
+        ` : '';
+
+        const editButton = IS_EDITABLE ? `
+            <button class="btn btn-sm btn-outline-primary me-1" onclick="editElement(${element.id})">
+                <i class="fas fa-edit"></i>
+            </button>
+        ` : '';
+
+        const deleteButton = IS_EDITABLE ? `
+            <button class="btn btn-sm btn-outline-danger" onclick="deleteElement(${element.id})">
+                <i class="fas fa-trash"></i>
+            </button>
+        ` : '';
+
+        return `
+            <div class="element-item border rounded p-3 mb-2" data-element-id="${element.id}" data-element-type="product">
+                <div class="d-flex align-items-center">
+                    ${dragHandle}
+                    <div class="flex-grow-1">
+                        <div class="row">
+                            <div class="col-md-4">
+                                <strong>${element.designation || 'Produit sans nom'}</strong>
+                                ${element.description ? `<br><small class="text-muted">${element.description}</small>` : ''}
+                            </div>
+                            <div class="col-md-2 text-center">
+                                ${parseFloat(element.quantite || 0)}
+                            </div>
+                            <div class="col-md-2 text-end">
+                                ${parseFloat(element.prix_unitaire_ht || 0).toFixed(2)} €
+                            </div>
+                            <div class="col-md-2 text-center">
+                                ${parseFloat(element.remise_percent || 0)}%
+                            </div>
+                            <div class="col-md-2 text-end">
+                                <strong>${parseFloat(element.total_ligne_ht || 0).toFixed(2)} €</strong>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="ms-2">
+                        ${editButton}
+                        ${deleteButton}
+                    </div>
+                </div>
+            </div>
+        `;
+    }
+
+    function renderLayoutElement(element) {
+        const dragHandle = IS_EDITABLE ? `
+            <div class="drag-handle me-2" style="cursor: grab;">
+                <i class="fas fa-grip-vertical text-muted"></i>
+            </div>
+        ` : '';
+
+        const editButton = IS_EDITABLE && element.type === 'section_title' ? `
+            <button class="btn btn-sm btn-outline-primary me-1" onclick="editElement(${element.id})">
+                <i class="fas fa-edit"></i>
+            </button>
+        ` : '';
+
+        const deleteButton = IS_EDITABLE ? `
+            <button class="btn btn-sm btn-outline-danger" onclick="deleteElement(${element.id})">
+                <i class="fas fa-trash"></i>
+            </button>
+        ` : '';
+
+        let content = '';
+        switch(element.type) {
+            case 'section_title':
+                content = `<h5 class="mb-0"><i class="${element.icon}"></i> ${element.titre || element.display_label}</h5>`;
+                break;
+            case 'subtotal':
+                content = `<div class="d-flex justify-content-between align-items-center">
+                    <span><i class="${element.icon}"></i> ${element.display_label}</span>
+                    <strong class="subtotal-amount">${calculateSubtotalUpTo(element.position).toFixed(2)} €</strong>
+                </div>`;
+                break;
+            case 'line_break':
+                content = `<hr class="my-1">`;
+                break;
+            case 'page_break':
+                content = `<div class="text-center text-muted py-2">
+                    <i class="${element.icon}"></i> ${element.display_label}
+                    <hr class="border-2">
+                </div>`;
+                break;
+            case 'separator':
+                content = `<div class="text-center">
+                    <i class="${element.icon}"></i> ${element.display_label}
+                </div>`;
+                break;
+            default:
+                content = `<i class="${element.icon}"></i> ${element.display_label}`;
+        }
+
+        return `
+            <div class="element-item border rounded p-2 mb-2 bg-light" data-element-id="${element.id}" data-element-type="${element.type}">
+                <div class="d-flex align-items-center">
+                    ${dragHandle}
+                    <div class="flex-grow-1">
+                        ${content}
+                    </div>
+                    <div class="ms-2">
+                        ${editButton}
+                        ${deleteButton}
+                    </div>
+                </div>
+            </div>
+        `;
+    }
+
+    // ==========================================
+    // GESTION DU DRAG & DROP
+    // ==========================================
+    
+    function initSortable() {
+        const container = document.getElementById('elements-container');
+        
+        if (sortable) {
+            sortable.destroy();
+        }
+
+        sortable = new Sortable(container, {
+            handle: '.drag-handle',
+            animation: 150,
+            ghostClass: 'sortable-ghost',
+            chosenClass: 'sortable-chosen',
+            dragClass: 'sortable-drag',
+            onEnd: function(evt) {
+                const elementIds = Array.from(container.children)
+                    .map(child => parseInt(child.dataset.elementId))
+                    .filter(id => !isNaN(id));
+                    
+                reorderElements(elementIds);
+            }
+        });
+    }
+
+    // ==========================================
+    // ACTIONS SUR LES ÉLÉMENTS
+    // ==========================================
+    
+    async function addElement(type, position = null) {
+        try {
+            const data = { type };
+            if (position !== null) {
+                data.position = position;
+            }
+
+            const response = await fetch(`/devis/${DEVIS_ID}/element`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(data)
+            });
+
+            const result = await response.json();
+            
+            if (!result.success) {
+                throw new Error(result.message);
+            }
+
+            await loadElements();
+            calculateTotals();
+            showSuccess('Élément ajouté avec succès');
+            
+        } catch (error) {
+            console.error('Erreur ajout élément:', error);
+            showError('Impossible d\'ajouter l\'élément');
+        }
+    }
+
+    async function deleteElement(elementId) {
+        if (!confirm('Êtes-vous sûr de vouloir supprimer cet élément ?')) {
+            return;
+        }
+
+        try {
+            const response = await fetch(`/devis/${DEVIS_ID}/element/${elementId}`, {
+                method: 'DELETE'
+            });
+
+            const result = await response.json();
+            
+            if (!result.success) {
+                throw new Error(result.message);
+            }
+
+            await loadElements();
+            calculateTotals();
+            showSuccess('Élément supprimé avec succès');
+            
+        } catch (error) {
+            console.error('Erreur suppression élément:', error);
+            showError('Impossible de supprimer l\'élément');
+        }
+    }
+
+    async function reorderElements(elementIds) {
+        try {
+            const response = await fetch(`/devis/${DEVIS_ID}/element/reorder`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ elementIds })
+            });
+
+            const result = await response.json();
+            
+            if (!result.success) {
+                throw new Error(result.message);
+            }
+
+            // Mettre à jour l'ordre local
+            elements.sort((a, b) => {
+                const indexA = elementIds.indexOf(a.id);
+                const indexB = elementIds.indexOf(b.id);
+                return indexA - indexB;
+            });
+
+            calculateTotals();
+            
+        } catch (error) {
+            console.error('Erreur réorganisation:', error);
+            showError('Impossible de réorganiser les éléments');
+        }
+    }
+
+    // ==========================================
+    // CALCULS
+    // ==========================================
+    
+    function calculateTotals() {
+        const productElements = elements.filter(e => e.is_product);
+        
+        let totalHt = 0;
+        let totalTva = 0;
+        
+        productElements.forEach(element => {
+            const lineHt = parseFloat(element.total_ligne_ht || 0);
+            const tvaPercent = parseFloat(element.tva_percent || 0);
+            
+            totalHt += lineHt;
+            totalTva += lineHt * (tvaPercent / 100);
+        });
+        
+        const totalTtc = totalHt + totalTva;
+        
+        document.getElementById('total-ht').textContent = totalHt.toFixed(2) + ' €';
+        document.getElementById('total-tva').textContent = totalTva.toFixed(2) + ' €';
+        document.getElementById('total-ttc').textContent = totalTtc.toFixed(2) + ' €';
+        
+        // Mettre à jour les sous-totaux
+        updateSubtotals();
+    }
+
+    function calculateSubtotalUpTo(position) {
+        let subtotal = 0;
+        
+        elements.forEach(element => {
+            if (element.is_product && element.position < position) {
+                subtotal += parseFloat(element.total_ligne_ht || 0);
+            }
+        });
+        
+        return subtotal;
+    }
+
+    function updateSubtotals() {
+        document.querySelectorAll('.subtotal-amount').forEach(subtotalEl => {
+            const elementItem = subtotalEl.closest('.element-item');
+            const elementId = parseInt(elementItem.dataset.elementId);
+            const element = elements.find(e => e.id === elementId);
+            
+            if (element) {
+                const subtotal = calculateSubtotalUpTo(element.position);
+                subtotalEl.textContent = subtotal.toFixed(2) + ' €';
+            }
+        });
+    }
+
+    // ==========================================
+    // EVENT LISTENERS
+    // ==========================================
+    
+    function initEventListeners() {
+        // Bouton ajouter produit
+        document.getElementById('add-product-btn').addEventListener('click', () => {
+            addElement('product');
+        });
+
+        // Boutons ajouter éléments de mise en page
+        document.querySelectorAll('[data-element-type]').forEach(btn => {
+            btn.addEventListener('click', (e) => {
+                e.preventDefault();
+                const type = btn.dataset.elementType;
+                addElement(type);
+            });
+        });
+
+        // Bouton sauvegarder
+        document.getElementById('save-devis-btn').addEventListener('click', () => {
+            showSuccess('Devis sauvegardé avec succès');
+        });
+    }
+
+    // ==========================================
+    // FONCTIONS GLOBALES (appelées depuis le HTML)
+    // ==========================================
+    
+    window.editElement = function(elementId) {
+        console.log('Edit element:', elementId);
+        // TODO: Implémenter l'édition
+    };
+
+    window.deleteElement = deleteElement;
+
+    // ==========================================
+    // UTILITAIRES
+    // ==========================================
+    
+    function showSuccess(message) {
+        // Utiliser Bootstrap toasts ou une notification simple
+        alert('✓ ' + message);
+    }
+
+    function showError(message) {
+        alert('✗ ' + message);
+    }
+
+    // ==========================================
+    // INITIALISATION AU CHARGEMENT
+    // ==========================================
+    
+    init();
+});
+</script>
+
+<style>
+.sortable-ghost {
+    opacity: 0.4;
+}
+
+.sortable-chosen {
+    background-color: #e3f2fd !important;
+}
+
+.drag-handle {
+    width: 20px;
+}
+
+.element-item {
+    transition: all 0.2s;
+}
+
+.element-item:hover {
+    box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+}
+</style>
+
+<!-- Inclure SortableJS -->
+<script src="https://cdn.jsdelivr.net/npm/sortablejs@1.15.0/Sortable.min.js"></script>
+
+{% endblock %}

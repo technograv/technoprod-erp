@@ -1,0 +1,3485 @@
+{% extends 'base.html.twig' %}
+
+{% block title %}Modifier Devis {{ devis.numeroDevis }}{% endblock %}
+
+{% block body %}
+<!-- Messages Flash -->
+{% for type, messages in app.flashes %}
+    {% for message in messages %}
+        <div class="alert alert-{{ type == 'error' ? 'danger' : (type == 'warning' ? 'warning' : (type == 'info' ? 'info' : 'success')) }} alert-dismissible fade show" role="alert">
+            {{ message }}
+            <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+        </div>
+    {% endfor %}
+{% endfor %}
+
+<!-- En-tête -->
+<div class="page-header">
+    <div class="container-fluid">
+        <div class="row align-items-center">
+            <div class="col-md-8">
+                <h1 class="mb-1"><i class="fas fa-edit me-3"></i>Modifier Devis {{ devis.numeroDevis }}</h1>
+                <p class="mb-0">
+                    <span class="badge bg-{{ devis.statutCouleur }} status-badge">{{ devis.statutLibelle }}</span>
+                    {% if devis.client %}
+                        <span class="ms-2">{{ devis.client.nomComplet }}</span>
+                    {% endif %}
+                    <span class="badge bg-info ms-2" title="Sauvegarde automatique activée">
+                        <i class="fas fa-cloud-upload-alt me-1"></i>Auto-sauvegarde
+                    </span>
+                </p>
+            </div>
+            <div class="col-md-4 text-end">
+                <div class="btn-group">
+                    <a href="{{ path('app_devis_show', {'id': devis.id}) }}" class="btn btn-light">
+                        <i class="fas fa-eye"></i> Voir le devis
+                    </a>
+                    <a href="{{ path('app_devis_index') }}" class="btn btn-outline-light">
+                        <i class="fas fa-arrow-left"></i> Retour à la liste
+                    </a>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="container-fluid">
+    {{ form_start(form, {'attr': {'id': 'devis-form', 'class': 'devis-form'}}) }}
+    
+    <div class="row">
+        <div class="col-12">
+            <!-- Informations générales -->
+            <div class="form-section">
+                <div class="form-section-header">
+                    <h5 class="mb-0"><i class="fas fa-info-circle me-2"></i>Informations générales</h5>
+                </div>
+                <div class="form-section-body">
+                    <div class="row">
+                        <div class="col-md-6">
+                            {{ form_row(form.client, {
+                                'label': 'Client / Prospect *',
+                                'attr': {
+                                    'class': 'form-select prospect-select',
+                                    'data-placeholder': 'Sélectionnez un client ou prospect'
+                                }
+                            }) }}
+                        </div>
+                        <div class="col-md-6">
+                            {{ form_row(form.commercial, {
+                                'label': 'Commercial',
+                                'attr': {'class': 'form-select'}
+                            }) }}
+                        </div>
+                    </div>
+                    <div class="row">
+                        <div class="col-md-3">
+                            {{ form_row(form.numeroDevis, {
+                                'label': 'Numéro de devis',
+                                'attr': {'class': 'form-control', 'readonly': true}
+                            }) }}
+                        </div>
+                        <div class="col-md-3">
+                            {{ form_row(form.dateCreation, {
+                                'label': 'Date de création',
+                                'attr': {'class': 'form-control'}
+                            }) }}
+                        </div>
+                        <div class="col-md-3">
+                            {{ form_row(form.dateValidite, {
+                                'label': 'Date de validité',
+                                'attr': {'class': 'form-control'}
+                            }) }}
+                        </div>
+                        <div class="col-md-3">
+                            {{ form_row(form.statut, {
+                                'label': 'Statut',
+                                'attr': {'class': 'form-select'}
+                            }) }}
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Adresses et contacts -->
+            <div class="form-section">
+                <div class="form-section-header">
+                    <h5 class="mb-0"><i class="fas fa-address-card me-2"></i>Adresses et contacts</h5>
+                </div>
+                <div class="form-section-body">
+                    <div class="row">
+                        <div class="col-md-6">
+                            {{ form_row(form.contactFacturation, {
+                                'label': 'Contact facturation',
+                                'attr': {'class': 'form-select'}
+                            }) }}
+                            {{ form_row(form.adresseFacturation, {
+                                'label': 'Adresse facturation',
+                                'attr': {'class': 'form-select'}
+                            }) }}
+                        </div>
+                        <div class="col-md-6">
+                            {{ form_row(form.contactLivraison, {
+                                'label': 'Contact livraison',
+                                'attr': {'class': 'form-select'}
+                            }) }}
+                            {{ form_row(form.adresseLivraison, {
+                                'label': 'Adresse livraison',
+                                'attr': {'class': 'form-select'}
+                            }) }}
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Éléments du devis -->
+            <div class="form-section">
+                <div class="form-section-header">
+                    <div class="d-flex justify-content-between align-items-center">
+                        <div class="d-flex align-items-center">
+                            <h5 class="mb-0 me-3"><i class="fas fa-list me-2"></i>Éléments du devis</h5>
+                            
+                            {% if devis.statut == 'brouillon' %}
+                            <div class="btn-group">
+                                <button type="button" class="btn btn-primary btn-sm" id="add-product-btn">
+                                    <i class="fas fa-plus"></i> Ajouter produit
+                                </button>
+                                <button type="button" class="btn btn-secondary btn-sm dropdown-toggle dropdown-toggle-split" data-bs-toggle="dropdown">
+                                    <span class="visually-hidden">Toggle Dropdown</span>
+                                </button>
+                                <ul class="dropdown-menu">
+                                    <li><a class="dropdown-item" href="#" data-element-type="section_title">
+                                        <i class="fas fa-heading"></i> Titre de section</a></li>
+                                    <li><a class="dropdown-item" href="#" data-element-type="subtotal">
+                                        <i class="fas fa-calculator"></i> Sous-total</a></li>
+                                    <li><a class="dropdown-item" href="#" data-element-type="line_break">
+                                        <i class="fas fa-minus"></i> Saut de ligne</a></li>
+                                    <li><a class="dropdown-item" href="#" data-element-type="page_break">
+                                        <i class="fas fa-file-alt"></i> Saut de page</a></li>
+                                    <li><a class="dropdown-item" href="#" data-element-type="separator">
+                                        <i class="fas fa-ellipsis-h"></i> Séparateur</a></li>
+                                </ul>
+                            </div>
+                            {% endif %}
+                        </div>
+                    </div>
+                </div>
+                <div class="form-section-body">
+                    <!-- Conteneur des éléments -->
+                    <div id="elements-container" class="border rounded p-3">
+                        <!-- Les éléments seront chargés ici via JavaScript -->
+                        <div class="text-center text-muted p-4">
+                            <i class="fas fa-spinner fa-spin"></i> Chargement des éléments...
+                        </div>
+                    </div>
+
+                </div>
+            </div>
+
+            <!-- Conditions commerciales -->
+            <div class="form-section">
+                <div class="form-section-header">
+                    <h5 class="mb-0"><i class="fas fa-handshake me-2"></i>Conditions commerciales</h5>
+                </div>
+                <div class="form-section-body">
+                    <div class="row">
+                        <div class="col-md-6">
+                            {{ form_row(form.acomptePercent, {
+                                'label': 'Acompte (%)',
+                                'attr': {'class': 'form-control', 'min': 0, 'max': 100, 'step': 0.01}
+                            }) }}
+                        </div>
+                        <div class="col-md-6">
+                            {{ form_row(form.acompteMontant, {
+                                'label': 'Acompte (montant fixe)',
+                                'attr': {'class': 'form-control', 'min': 0, 'step': 0.01}
+                            }) }}
+                        </div>
+                    </div>
+                    <div class="row">
+                        <div class="col-md-6">
+                            {{ form_row(form.remiseGlobalePercent, {
+                                'label': 'Remise globale (%)',
+                                'attr': {'class': 'form-control', 'min': 0, 'max': 100, 'step': 0.01}
+                            }) }}
+                        </div>
+                        <div class="col-md-6">
+                            {{ form_row(form.delaiLivraison, {
+                                'label': 'Délai de livraison',
+                                'attr': {'class': 'form-control', 'placeholder': 'Ex: 2-3 semaines'}
+                            }) }}
+                        </div>
+                    </div>
+                    <div class="row">
+                        <div class="col-md-12">
+                            {{ form_row(form.notesClient, {
+                                'label': 'Notes client',
+                                'attr': {'class': 'form-control', 'rows': 3, 'placeholder': 'Notes visibles par le client'}
+                            }) }}
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Historique -->
+            <div class="form-section">
+                <div class="form-section-header">
+                    <h5 class="mb-0"><i class="fas fa-history me-2"></i>Historique</h5>
+                </div>
+                <div class="form-section-body">
+                    <div class="row">
+                        <div class="col-md-6">
+                            <p><strong>Créé le :</strong> {{ devis.createdAt|date('d/m/Y à H:i') }}</p>
+                            {% if devis.dateEnvoi %}
+                                <p><strong>Envoyé le :</strong> {{ devis.dateEnvoi|date('d/m/Y à H:i') }}</p>
+                            {% endif %}
+                        </div>
+                        <div class="col-md-6">
+                            {% if devis.updatedAt %}
+                                <p><strong>Modifié le :</strong> {{ devis.updatedAt|date('d/m/Y à H:i') }}</p>
+                            {% endif %}
+                            {% if devis.dateSignature %}
+                                <p><strong>Signé le :</strong> {{ devis.dateSignature|date('d/m/Y à H:i') }}</p>
+                                <p><strong>Par :</strong> {{ devis.signatureNom }} ({{ devis.signatureEmail }})</p>
+                            {% endif %}
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <!-- Message d'alerte pour devis envoyé -->
+            {% if devis.statut in ['envoye', 'signe'] %}
+                <div class="alert alert-warning mt-3">
+                    <i class="fas fa-exclamation-triangle me-2"></i>
+                    <strong>Attention :</strong> Ce devis a déjà été envoyé. 
+                    Toute modification créera automatiquement une version pour conserver l'historique.
+                </div>
+            {% endif %}
+        </div>
+    </div>
+
+    {# Render devisItems field as hidden to prevent form_rest from creating duplicate buttons #}
+    <div style="display: none;">
+        {{ form_widget(form.devisItems) }}
+    </div>
+    
+    {{ form_rest(form) }}
+    {{ form_end(form) }}
+</div>
+
+<!-- Panneau récapitulatif flottant -->
+<div class="floating-summary" id="floating-summary">
+    <div class="floating-summary-toggle" id="summary-toggle">
+        <i class="fas fa-calculator me-2"></i>
+        <span class="summary-total-display">{{ devis.totalTtc }}€ TTC</span>
+        <i class="fas fa-chevron-up toggle-icon"></i>
+    </div>
+    <div class="floating-summary-content" id="summary-content">
+        <div class="row">
+            <div class="col-md-3">
+                <div class="summary-item">
+                    <span class="summary-label">Total HT :</span>
+                    <span class="summary-value total-ht">{{ devis.totalHt }}€</span>
+                </div>
+            </div>
+            <div class="col-md-3">
+                <div class="summary-item">
+                    <span class="summary-label">TVA :</span>
+                    <span class="summary-value total-tva">{{ devis.totalTva }}€</span>
+                </div>
+            </div>
+            <div class="col-md-3">
+                <div class="summary-item">
+                    <span class="summary-label">Total TTC :</span>
+                    <span class="summary-value total-ttc fw-bold text-success">{{ devis.totalTtc }}€</span>
+                </div>
+            </div>
+            {% if devis.acomptePercent or devis.acompteMontant %}
+            <div class="col-md-3">
+                <div class="summary-item">
+                    <span class="summary-label">Acompte :</span>
+                    <span class="summary-value acompte-montant">{{ devis.calculateAcompte }}€</span>
+                </div>
+            </div>
+            {% endif %}
+        </div>
+    </div>
+</div>
+
+<!-- Barre flottante d'actions -->
+<div class="floating-action-bar" id="floating-actions">
+    <div class="container-fluid">
+        <div class="d-flex justify-content-between align-items-center">
+            <div>
+                <span class="text-white me-3">
+                    <i class="fas fa-file-invoice me-2"></i>
+                    <strong>{{ devis.numeroDevis }}</strong>
+                    <span class="badge bg-{{ devis.statutCouleur }} ms-2">{{ devis.statutLibelle }}</span>
+                </span>
+            </div>
+            <div class="d-flex gap-2">
+                <button type="submit" name="action" value="save" class="btn btn-light" form="devis-form">
+                    <i class="fas fa-save me-1"></i>
+                    {% if devis.statut in ['envoye', 'signe'] %}
+                        Modifier et créer une version
+                    {% else %}
+                        Enregistrer les modifications
+                    {% endif %}
+                </button>
+                
+                {% if devis.statut == 'brouillon' %}
+                    <button type="submit" name="action" value="save_and_send" class="btn btn-success" form="devis-form">
+                        <i class="fas fa-paper-plane me-1"></i>Enregistrer et envoyer
+                    </button>
+                {% endif %}
+                
+                <a href="{{ path('app_devis_pdf', {'id': devis.id}) }}" target="_blank" class="btn btn-info">
+                    <i class="fas fa-file-pdf me-1"></i>PDF
+                </a>
+                
+                <a href="{{ path('app_devis_show', {'id': devis.id}) }}" class="btn btn-secondary">
+                    <i class="fas fa-eye me-1"></i>Voir
+                </a>
+                
+                <a href="{{ path('app_devis_index') }}" class="btn btn-outline-light">
+                    <i class="fas fa-times me-1"></i>Annuler
+                </a>
+            </div>
+        </div>
+    </div>
+</div>
+
+{% block stylesheets %}
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
+    <link href="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/css/select2.min.css" rel="stylesheet">
+    <link href="https://cdn.jsdelivr.net/npm/select2-bootstrap-5-theme@1.3.0/dist/select2-bootstrap-5-theme.min.css" rel="stylesheet">
+    <style>
+        .page-header {
+            background: linear-gradient(135deg, #6f42c1 0%, #e83e8c 100%);
+            color: white;
+            padding: 1.5rem 0;
+            margin-bottom: 2rem;
+        }
+        .form-section {
+            background: white;
+            border-radius: 8px;
+            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+            margin-bottom: 1.5rem;
+        }
+        .form-section-header {
+            background: #f8f9fa;
+            border-bottom: 1px solid #dee2e6;
+            border-radius: 8px 8px 0 0;
+            padding: 1rem 1.5rem;
+            font-weight: 600;
+        }
+        .form-section-body {
+            padding: 1.5rem;
+        }
+        
+        /* Alignement parfait des lignes de devis */
+        .devis-item .d-flex > div {
+            display: flex;
+            align-items: flex-start !important;
+        }
+        
+        .devis-item .form-control,
+        .devis-item .form-select {
+            margin: 0 !important;
+            padding-top: 0.25rem !important;
+            padding-bottom: 0.25rem !important;
+            height: 31px !important;
+            line-height: 1.2 !important;
+        }
+        
+        .devis-headers > div,
+        .devis-item .d-flex > div {
+            vertical-align: top !important;
+            display: flex !important;
+            align-items: flex-start !important;
+        }
+        
+        /* Forcer l'alignement des en-têtes avec les colonnes */
+        .devis-headers {
+            border: 1px solid #dee2e6;
+        }
+        
+        .devis-headers > div {
+            border-right: 1px solid #e9ecef;
+            padding-left: 4px !important;
+            padding-right: 4px !important;
+        }
+        
+        .devis-item .d-flex > div {
+            border-right: 1px solid rgba(0,0,0,0.05);
+            padding-left: 4px !important;
+            padding-right: 4px !important;
+        }
+        /* Barre flottante d'actions */
+        .floating-action-bar {
+            position: fixed;
+            bottom: 0;
+            left: 0;
+            right: 0;
+            background: linear-gradient(135deg, #6f42c1 0%, #e83e8c 100%);
+            box-shadow: 0 -2px 10px rgba(0,0,0,0.1);
+            z-index: 1050;
+            padding: 12px 0;
+        }
+        
+        /* Lignes de devis compactes */
+        .devis-item {
+            transition: background-color 0.2s;
+        }
+        
+        .devis-item:hover {
+            background-color: #f8f9fa;
+        }
+        
+        .devis-headers {
+            position: sticky;
+            top: 0;
+            z-index: 10;
+        }
+        
+        /* Ajustement pour éviter que le contenu passe sous les barres flottantes */
+        body {
+            padding-bottom: 140px; /* Augmenté pour la double barre */
+        }
+        
+        /* Panneau récapitulatif flottant */
+        .floating-summary {
+            position: fixed;
+            bottom: 70px; /* Au-dessus de la barre d'actions */
+            right: 20px;
+            background: white;
+            border: 1px solid #dee2e6;
+            border-radius: 8px;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+            z-index: 1040;
+            min-width: 320px;
+            max-width: 600px;
+        }
+        
+        .floating-summary-toggle {
+            background: linear-gradient(135deg, #28a745 0%, #20c997 100%);
+            color: white;
+            padding: 12px 16px;
+            border-radius: 8px 8px 0 0;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            font-weight: 600;
+            transition: background 0.2s;
+        }
+        
+        .floating-summary-toggle:hover {
+            background: linear-gradient(135deg, #218838 0%, #1fa085 100%);
+        }
+        
+        .floating-summary-content {
+            padding: 16px;
+            border-radius: 0 0 8px 8px;
+            display: none; /* Caché par défaut */
+        }
+        
+        .floating-summary.expanded .floating-summary-content {
+            display: block;
+        }
+        
+        .floating-summary.expanded .toggle-icon {
+            transform: rotate(180deg);
+        }
+        
+        .toggle-icon {
+            transition: transform 0.2s;
+        }
+        
+        .summary-item {
+            display: flex;
+            justify-content: space-between;
+            padding: 4px 0;
+            border-bottom: 1px solid #f8f9fa;
+        }
+        
+        .summary-item:last-child {
+            border-bottom: none;
+        }
+        
+        .summary-label {
+            color: #6c757d;
+            font-size: 0.875rem;
+        }
+        
+        .summary-value {
+            font-weight: 600;
+            color: #495057;
+        }
+        
+        .summary-total-display {
+            font-size: 1.1rem;
+            font-weight: 700;
+        }
+        
+        /* Champs compacts */
+        .form-control-sm {
+            font-size: 0.875rem;
+        }
+        
+        /* Totaux mis en évidence */
+        .total-display, .total-ligne-display {
+            font-weight: 600;
+            color: #198754;
+        }
+        
+        /* Responsive pour écrans plus petits */
+        @media (max-width: 768px) {
+            .floating-action-bar .d-flex {
+                flex-direction: column;
+                gap: 8px;
+            }
+            .floating-action-bar {
+                padding: 8px 0;
+            }
+        }
+        
+        /* === STYLES DRAG & DROP === */
+        .devis-item.dragging {
+            opacity: 0.6;
+            z-index: 1000;
+            transform: rotate(2deg);
+            box-shadow: 0 5px 15px rgba(0,0,0,0.3);
+            background-color: #fff3cd;
+            border: 2px dashed #ffc107;
+        }
+        
+        .devis-item.drag-over {
+            border-top: 3px solid #007bff;
+            margin-top: 8px;
+            background-color: rgba(0,123,255,0.05);
+        }
+        
+        .drag-handle {
+            transition: all 0.2s ease;
+        }
+        
+        .drag-handle:hover {
+            color: #007bff !important;
+            transform: scale(1.1);
+        }
+        
+        .drag-handle.dragging {
+            cursor: grabbing !important;
+            color: #ffc107 !important;
+        }
+        
+        .drop-zone {
+            height: 0; /* Pas de hauteur par défaut pour éviter les espaces */
+            background: linear-gradient(90deg, transparent, rgba(0, 123, 255, 0.2), transparent);
+            margin: 0; /* Pas de marge par défaut */
+            border-radius: 8px;
+            border: 2px dashed transparent;
+            opacity: 0;
+            transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1); /* Transition plus rapide */
+            position: relative;
+            cursor: pointer; /* Indicateur visuel que c'est cliquable */
+            overflow: hidden; /* Empêcher tout débordement */
+        }
+        
+        .drop-zone::before {
+            content: '';
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            width: 40px; /* Augmenté de 30px à 40px */
+            height: 40px; /* Augmenté de 30px à 40px */
+            border-radius: 50%;
+            background: rgba(0, 123, 255, 0.1);
+            opacity: 0;
+            transition: all 0.2s ease; /* Plus rapide */
+        }
+        
+        .drop-zone.active {
+            opacity: 1;
+            height: 35px; /* Hauteur seulement quand actif */
+            margin: 4px 0; /* Marge seulement quand actif */
+            background: linear-gradient(90deg, transparent, rgba(0, 123, 255, 0.4), transparent);
+            border-color: rgba(0, 123, 255, 0.6);
+            animation: dropZonePulse 1.5s infinite;
+            transform: scaleY(1.2);
+        }
+        
+        .drop-zone.active::before {
+            opacity: 1;
+            width: 50px; /* Augmenté de 40px à 50px */
+            height: 50px; /* Augmenté de 40px à 50px */
+            background: radial-gradient(circle, rgba(0, 123, 255, 0.3) 0%, transparent 70%);
+        }
+        
+        .drop-zone.drag-over {
+            opacity: 1;
+            height: 45px; /* Hauteur maximale pour zone de drop plus grande */
+            margin: 6px 0; /* Marge augmentée quand prêt pour drop */
+            background: linear-gradient(90deg, transparent, rgba(40, 167, 69, 0.6), transparent);
+            border-color: rgba(40, 167, 69, 0.9);
+            animation: dropZoneAccept 0.6s infinite;
+            transform: scaleY(1.5); /* Légèrement plus de mise à l'échelle */
+            box-shadow: 0 4px 12px rgba(40, 167, 69, 0.3); /* Ombre pour plus de visibilité */
+        }
+        
+        .drop-zone.drag-over::before {
+            opacity: 1;
+            width: 60px; /* Augmenté de 50px à 60px */
+            height: 60px; /* Augmenté de 50px à 60px */
+            background: radial-gradient(circle, rgba(40, 167, 69, 0.5) 0%, transparent 70%);
+        }
+        
+        @keyframes dropZonePulse {
+            0%, 100% { 
+                opacity: 0.7;
+                box-shadow: 0 0 10px rgba(0, 123, 255, 0.3);
+            }
+            50% { 
+                opacity: 1;
+                box-shadow: 0 0 20px rgba(0, 123, 255, 0.5);
+            }
+        }
+        
+        @keyframes dropZoneAccept {
+            0%, 100% { 
+                box-shadow: 0 0 15px rgba(40, 167, 69, 0.4);
+            }
+            50% { 
+                box-shadow: 0 0 25px rgba(40, 167, 69, 0.7);
+            }
+        }
+        
+        .drop-zone.drop-success {
+            animation: dropSuccess 0.6s ease-out;
+        }
+        
+        @keyframes dropSuccess {
+            0% {
+                transform: scaleY(1.4);
+                box-shadow: 0 0 25px rgba(40, 167, 69, 0.7);
+            }
+            50% {
+                transform: scaleY(1.8);
+                box-shadow: 0 0 35px rgba(40, 167, 69, 1);
+            }
+            100% {
+                transform: scaleY(1.2);
+                box-shadow: 0 0 15px rgba(40, 167, 69, 0.5);
+            }
+        }
+        
+        /* Palette d'éléments de mise en page */
+        .layout-elements-palette .btn {
+            border-radius: 20px;
+            padding: 4px 8px;
+            font-size: 0.75rem;
+            transition: all 0.2s ease;
+        }
+        
+        .layout-elements-palette .btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 3px 8px rgba(0,0,0,0.15);
+        }
+        
+        .layout-element-btn.dragging {
+            opacity: 0.7;
+            transform: scale(1.05);
+            z-index: 1001;
+        }
+        
+        /* === NOUVEAUX STYLES DRAG & DROP OPTIMISÉS === */
+        .drag-ghost {
+            opacity: 0.4;
+            transform: rotate(3deg);
+            box-shadow: 0 8px 25px rgba(0,0,0,0.25);
+            background: linear-gradient(135deg, #f8f9fa 0%, #e9ecef 100%);
+            border: 2px dashed #6c757d;
+            z-index: 1000;
+        }
+        
+        .drag-chosen {
+            background-color: #e3f2fd !important;
+            border: 2px solid #2196f3 !important;
+            box-shadow: 0 0 0 3px rgba(33, 150, 243, 0.1) !important;
+            transform: scale(1.02);
+            transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+        }
+        
+        .drag-moving {
+            opacity: 0.8;
+            transform: rotate(1deg) scale(1.05);
+            background: linear-gradient(135deg, #fff3e0 0%, #ffe0b2 100%);
+            border: 2px solid #ff9800;
+            box-shadow: 0 10px 30px rgba(255, 152, 0, 0.3);
+            z-index: 1001;
+        }
+        
+        /* Animation pour les transitions drag */
+        .devis-item, .layout-element {
+            transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+        }
+        
+        /* État hover amélioré pour les drag handles */
+        .drag-handle:hover {
+            color: #007bff !important;
+            transform: scale(1.15);
+            text-shadow: 0 1px 3px rgba(0, 123, 255, 0.3);
+        }
+        
+        /* Feedback visuel pour la dernière ligne */
+        .devis-item:last-child .drag-handle {
+            position: relative;
+        }
+        
+        .devis-item:last-child .drag-handle::after {
+            content: '';
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            width: 24px;
+            height: 24px;
+            border-radius: 50%;
+            background: rgba(40, 167, 69, 0.1);
+            border: 2px solid rgba(40, 167, 69, 0.3);
+            opacity: 0;
+            transition: opacity 0.3s ease;
+            z-index: -1;
+        }
+        
+        .devis-item:last-child .drag-handle:hover::after {
+            opacity: 1;
+        }
+        
+        /* === NOUVEAUX STYLES POUR DRAG FLUIDE DES LIGNES === */
+        .drag-ghost-smooth {
+            opacity: 0.3;
+            transform: rotate(2deg) scale(1.02);
+            box-shadow: 0 12px 35px rgba(0,0,0,0.2);
+            background: linear-gradient(135deg, #f8f9fa 0%, #e9ecef 100%);
+            border: 2px dashed #007bff;
+            transition: all 0.3s cubic-bezier(0.25, 0.46, 0.45, 0.94);
+            z-index: 1000;
+        }
+        
+        .drag-chosen-smooth {
+            background: linear-gradient(135deg, #e3f2fd 0%, #bbdefb 100%) !important;
+            border: 2px solid #2196f3 !important;
+            box-shadow: 0 0 0 4px rgba(33, 150, 243, 0.15) !important;
+            transform: scale(1.03);
+            transition: all 0.3s cubic-bezier(0.25, 0.46, 0.45, 0.94);
+        }
+        
+        .drag-moving-smooth {
+            opacity: 0.85;
+            transform: rotate(1deg) scale(1.05);
+            background: linear-gradient(135deg, #fff3e0 0%, #ffcc02 100%);
+            border: 2px solid #ff9800;
+            box-shadow: 0 15px 40px rgba(255, 152, 0, 0.4);
+            z-index: 1001;
+            transition: all 0.3s cubic-bezier(0.25, 0.46, 0.45, 0.94);
+        }
+        
+        /* Animation de transition fluide pour toutes les lignes */
+        .devis-item {
+            transition: all 0.4s cubic-bezier(0.25, 0.46, 0.45, 0.94);
+        }
+        
+        /* États hover améliorés pour les handles de lignes */
+        .devis-item .drag-handle {
+            transition: all 0.3s cubic-bezier(0.25, 0.46, 0.45, 0.94);
+        }
+        
+        .devis-item .drag-handle:hover {
+            color: #007bff !important;
+            transform: scale(1.2);
+            text-shadow: 0 2px 8px rgba(0, 123, 255, 0.4);
+            background: rgba(0, 123, 255, 0.1);
+            border-radius: 6px;
+        }
+        
+        /* Effet de glow pour les lignes en cours de drag */
+        .drag-moving-smooth .drag-handle {
+            color: #ff9800 !important;
+            animation: handleGlow 1s infinite alternate;
+        }
+        
+        @keyframes handleGlow {
+            0% { 
+                box-shadow: 0 0 5px rgba(255, 152, 0, 0.5); 
+            }
+            100% { 
+                box-shadow: 0 0 15px rgba(255, 152, 0, 0.8); 
+            }
+        }
+        
+        /* Améliorer la visibilité pendant le drag */
+        .drag-chosen-smooth .drag-handle {
+            color: #2196f3 !important;
+            transform: scale(1.3);
+        }
+        
+        /* Éléments de mise en page dans la liste */
+        .layout-element {
+            background: linear-gradient(135deg, #e9ecef, #f8f9fa);
+            border: 1px dashed #6c757d;
+            border-radius: 8px;
+            padding: 12px;
+            margin: 8px 0;
+            text-align: center;
+            color: #6c757d;
+            font-style: italic;
+            position: relative;
+        }
+        
+        .layout-element.line-break {
+            height: 20px;
+            background: linear-gradient(90deg, transparent, #dee2e6, transparent);
+            padding: 0;
+            border: none;
+        }
+        
+        .layout-element.page-break {
+            background: linear-gradient(135deg, #fff3cd, #ffeaa7);
+            border-color: #ffc107;
+            color: #856404;
+        }
+        
+        .layout-element.subtotal {
+            background: linear-gradient(135deg, #d1ecf1, #bee5eb);
+            border-color: #17a2b8;
+            color: #0c5460;
+        }
+        
+        .layout-element.section-title input {
+            background: transparent;
+            border: none;
+            text-align: center;
+            font-weight: bold;
+            font-size: 1.1rem;
+            color: #495057;
+            width: 100%;
+        }
+        
+        .layout-element.separator {
+            background: linear-gradient(90deg, transparent, #6c757d, transparent);
+            height: 1px;
+            padding: 0;
+            border: none;
+        }
+    </style>
+{% endblock %}
+
+{% block javascripts %}
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/js/bootstrap.bundle.min.js"></script>
+<script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/js/select2.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/sortablejs@1.15.0/Sortable.min.js"></script>
+
+
+<script>
+$(document).ready(function() {
+    // Désactiver la modification des lignes si le devis n'est pas en brouillon
+    {% if devis.statut != 'brouillon' %}
+        $('.devis-item input, .devis-item select, .devis-item textarea').each(function() {
+            $(this).attr('readonly', true).attr('disabled', true);
+        });
+        
+        // Masquer les boutons d'ajout/suppression
+        $('.add-item-btn, .remove-item-btn').hide();
+        
+        // Message d'information
+        const info = $('<div class="alert alert-info"><i class="fas fa-info-circle me-2"></i>Ce devis a été envoyé. Les modifications créeront une version pour conserver l\'historique.</div>');
+        $('.devis-items-collection').before(info);
+    {% else %}
+    
+    // Gestion de la collection de lignes de devis (seulement si brouillon)
+    const $collectionHolder = $('#devis_devisItems');
+    let index = $collectionHolder.find('.devis-item').length;
+
+    function addNewDevisItem() {
+        // Protection contre les doubles appels
+        if (window.addingInProgress) {
+            return;
+        }
+        window.addingInProgress = true;
+        
+        // Utiliser le prototype du formulaire Symfony
+        const prototype = $collectionHolder.data('prototype');
+        const newForm = prototype.replace(/__name__/g, index);
+        index++;
+
+        const $newItem = $('<div class="devis-item"></div>').html(newForm);
+        
+        // Créer une nouvelle ligne avec largeurs uniformes (90px à droite)
+        const $newItemCompact = $(`
+        <div class="devis-item mb-1 border-bottom" data-index="${index}" data-ordre="${index}">
+            <div class="d-flex align-items-start" style="gap: 2px; min-height: 35px;">
+                <!-- Poignée de drag -->
+                {% if devis.statut == 'brouillon' %}
+                <div style="width: 25px; padding: 4px;" class="text-center drag-handle" title="Glisser pour réorganiser">
+                    <i class="fas fa-grip-vertical text-muted" style="cursor: grab;"></i>
+                </div>
+                {% endif %}
+                
+                <!-- Code article (120px) -->
+                <div style="width: 120px; padding: 4px;">
+                    <input type="text" class="form-control form-control-sm code-article-input" placeholder="Code..." />
+                </div>
+                
+                <!-- Désignation (225px) -->
+                <div style="width: 225px; padding: 4px;">
+                </div>
+                
+                <!-- Description détaillée (espace restant) -->
+                <div class="flex-fill" style="padding: 4px;">
+                </div>
+                
+                <!-- Quantité (90px) -->
+                <div style="width: 90px; padding: 4px;">
+                </div>
+                
+                <!-- Prix unitaire HT (90px uniforme) -->
+                <div style="width: 90px; padding: 4px;">
+                </div>
+                
+                <!-- % Remise (90px uniforme) -->
+                <div style="width: 90px; padding: 4px;">
+                </div>
+                
+                <!-- TVA (90px uniforme) -->
+                <div style="width: 90px; padding: 4px;">
+                </div>
+                
+                <!-- Total HT ligne (90px uniforme) -->
+                <div style="width: 90px; padding: 4px;" class="text-center">
+                    <small class="total-ligne-display fw-bold text-success" style="font-size: 0.75rem; line-height: 23px;">0.00</small>
+                </div>
+                
+                <!-- Action -->
+                <div style="width: 30px; padding: 4px;" class="text-center action-column">
+                    <button type="button" class="btn btn-outline-danger btn-sm remove-item-btn" title="Supprimer" style="padding: 2px 4px; font-size: 10px;">
+                        <i class="fas fa-trash"></i>
+                    </button>
+                </div>
+            </div>
+            <!-- Champs Symfony cachés -->
+            <div style="display: none;" class="symfony-fields"></div>
+        </div>
+        `);
+        
+        // Déplacer les champs Symfony dans la partie cachée et les adapter
+        const $symFields = $newItem.find('input, select, textarea').clone();
+        $newItemCompact.find('.symfony-fields').append($symFields);
+        
+        // Remplacer les champs visibles par les bons
+        const designationField = $newItemCompact.find('.symfony-fields').find('[id$="_designation"]');
+        const descriptionField = $newItemCompact.find('.symfony-fields').find('[id$="_description"]');
+        const quantiteField = $newItemCompact.find('.symfony-fields').find('[id$="_quantite"]');
+        const prixField = $newItemCompact.find('.symfony-fields').find('[id$="_prixUnitaireHt"]');
+        const remiseField = $newItemCompact.find('.symfony-fields').find('[id$="_remisePercent"]');
+        const tvaField = $newItemCompact.find('.symfony-fields').find('[id$="_tvaPercent"]');
+        const produitField = $newItemCompact.find('.symfony-fields').find('[id$="_produit"]');
+        
+        // Intégrer les champs avec largeurs uniformes (90px à droite)
+        $newItemCompact.find('div[style*="width: 225px"]').append(designationField.addClass('form-control form-control-sm designation-input'));
+        $newItemCompact.find('div.flex-fill').append(descriptionField.addClass('form-control form-control-sm description-input').attr('placeholder', 'Description détaillée...'));
+        $newItemCompact.find('div[style*="width: 90px"]').eq(0).append(quantiteField.addClass('form-control form-control-sm text-center quantity-input').val('1'));
+        $newItemCompact.find('div[style*="width: 90px"]').eq(1).append(prixField.addClass('form-control form-control-sm text-end price-input').val('0.00').attr('placeholder', '0.00').attr('type', 'number').attr('step', '0.01'));
+        $newItemCompact.find('div[style*="width: 90px"]').eq(2).append(remiseField.addClass('form-control form-control-sm text-center remise-input').attr('max', '100').attr('min', '0').attr('step', '0.1').attr('placeholder', ''));
+        $newItemCompact.find('div[style*="width: 90px"]').eq(3).append(tvaField.addClass('form-select form-select-sm tva-select'));
+        
+        // Ajouter champ produit caché pour l'autocomplétion
+        $newItemCompact.find('.symfony-fields').append(produitField.addClass('produit-id-input'));
+        
+        $collectionHolder.append($newItemCompact);
+        
+        // Masquer la colonne d'action si le devis n'est pas en brouillon
+        {% if devis.statut != 'brouillon' %}
+        $newItemCompact.find('.action-column').hide();
+        {% endif %}
+        
+        // Initialiser l'autocomplétion pour cette ligne
+        initAutocompleteForItem($newItemCompact);
+        
+        // Charger les taux de TVA
+        loadTauxTva($newItemCompact);
+        
+        // Lier les événements de calcul
+        bindCalculationEvents($newItemCompact);
+        
+        // Calculer les totaux
+        calculateTotals();
+        
+        // Libérer le verrou
+        setTimeout(function() {
+            window.addingInProgress = false;
+        }, 100);
+    }
+
+    // Attacher l'événement au bouton principal "Ajouter une ligne" (par défaut: ligne libre)
+    $('.add-item-btn').off('click').on('click', function(e) {
+        e.preventDefault();
+        e.stopPropagation();
+        addNewDevisItem();
+    });
+    
+    // Attacher l'événement au lien "Ligne libre" du dropdown
+    $('.add-free-line').off('click').on('click', function(e) {
+        e.preventDefault();
+        e.stopPropagation();
+        addNewDevisItem();
+    });
+    
+    // Attacher l'événement au lien "Produit du catalogue" du dropdown
+    $('.catalogue-product-btn').off('click').on('click', function(e) {
+        e.preventDefault();
+        e.stopPropagation();
+        openCatalogueModal();
+    });
+
+    // Fonction d'initialisation de l'autocomplétion pour une ligne
+    function initAutocompleteForItem($item) {
+        const $codeInput = $item.find('.code-article-input');
+        const $designationInput = $item.find('[id$="_designation"], .designation-input');
+        const $produitIdInput = $item.find('[id$="_produit"], .produit-id-input');
+        const $priceInput = $item.find('[id$="_prixUnitaireHt"], .price-input');
+        const $tvaSelect = $item.find('[id$="_tvaPercent"], .tva-select');
+        
+        // Fonction commune de recherche produit
+        function searchProducts(term, $inputField) {
+            if (term.length < 2) {
+                return;
+            }
+            
+            $.ajax({
+                url: '/devis/api/produits',
+                method: 'GET',
+                data: { q: term },
+                success: function(products) {
+                    // Supprimer les dropdowns existantes de cette ligne
+                    $item.find('.autocomplete-dropdown').remove();
+                    
+                    if (products.length > 0) {
+                        const $dropdown = $('<div class="autocomplete-dropdown list-group position-absolute" style="z-index: 1000; max-height: 200px; overflow-y: auto; width: 100%; background: white; border: 1px solid #ddd; border-radius: 4px; box-shadow: 0 4px 6px rgba(0,0,0,0.1);"></div>');
+                        
+                        products.forEach(function(product) {
+                            const $option = $('<a href="#" class="list-group-item list-group-item-action small py-2"></a>');
+                            $option.html(`
+                                <div class="fw-bold">${product.designation}</div>
+                                <small class="text-muted">Code: ${product.reference} - Prix: ${product.prix_vente_ht}€ HT</small>
+                            `);
+                            
+                            $option.on('click', function(e) {
+                                e.preventDefault();
+                                
+                                // Remplir tous les champs avec les données du produit
+                                $codeInput.val(product.reference);
+                                $produitIdInput.val(product.id);
+                                $designationInput.val(product.designation);
+                                $priceInput.val(parseFloat(product.prix_vente_ht));
+                                
+                                // Sélectionner le taux de TVA correspondant
+                                if (product.taux_tva) {
+                                    $tvaSelect.val(product.taux_tva);
+                                }
+                                
+                                $dropdown.remove();
+                                
+                                // Déclencher le calcul
+                                calculateTotals();
+                                
+                                // Déclencher auto-sauvegarde
+                                if (hasDataChanged()) {
+                                    scheduleAutoSave();
+                                }
+                            });
+                            $dropdown.append($option);
+                        });
+                        
+                        $inputField.parent().append($dropdown);
+                    }
+                },
+                error: function() {
+                    console.error('Erreur lors de la recherche de produits');
+                }
+            });
+        }
+        
+        // Autocomplétion sur le champ Code
+        $codeInput.on('input', function() {
+            const term = $(this).val();
+            searchProducts(term, $codeInput);
+        });
+        
+        // Autocomplétion sur le champ Désignation
+        $designationInput.on('input', function() {
+            const term = $(this).val();
+            searchProducts(term, $designationInput);
+        });
+        
+        // Fermer les dropdowns quand on clique ailleurs
+        $(document).on('click', function(e) {
+            if (!$(e.target).closest($item).length) {
+                $item.find('.autocomplete-dropdown').remove();
+            }
+        });
+    }
+
+    // Fonction de chargement des taux de TVA depuis admin
+    function loadTauxTva($item) {
+        const $select = $item.find('[id$="_tvaPercent"], .tva-select');
+        
+        $.ajax({
+            url: '/devis/api/taux-tva',
+            method: 'GET',
+            success: function(tauxList) {
+                $select.empty();
+                $select.append('<option value="">Sélectionner TVA</option>');
+                
+                tauxList.forEach(function(taux) {
+                    const $option = $('<option></option>');
+                    // Format avec 2 décimales pour compatibilité
+                    const tauxValue = parseFloat(taux.taux).toFixed(2);
+                    $option.val(tauxValue);
+                    // Affichage simplifié : juste le pourcentage
+                    $option.text(parseFloat(taux.taux) + '%');
+                    if (taux.parDefaut || taux.taux == 20) {
+                        $option.prop('selected', true);
+                    }
+                    $select.append($option);
+                });
+            },
+            error: function() {
+                console.error('Erreur lors du chargement des taux de TVA depuis admin');
+                // Fallback avec taux standard français
+                $select.empty();
+                $select.append('<option value="0.00">0%</option>');
+                $select.append('<option value="5.50">5.5%</option>');
+                $select.append('<option value="10.00">10%</option>');
+                $select.append('<option value="20.00" selected>20%</option>');
+            }
+        });
+    }
+
+    // Fonction pour calculer les totaux
+    function calculateTotals() {
+        let totalHt = 0;
+        let totalTva = 0;
+
+        $('.devis-item').each(function() {
+            // Utiliser les nouvelles classes CSS pour les champs
+            const qte = parseFloat($(this).find('.quantity-input, [id$="_quantite"]').val()) || 0;
+            const prixUnitaire = parseFloat($(this).find('.price-input, [id$="_prixUnitaireHt"]').val()) || 0;
+            
+            // Gérer la remise - garder vide si pas de valeur
+            const remiseValue = $(this).find('.remise-input, [id$="_remisePercent"]').val();
+            let remisePercent = 0;
+            if (remiseValue && remiseValue !== '') {
+                remisePercent = parseFloat(remiseValue);
+                remisePercent = Math.min(Math.max(remisePercent, 0), 100); // Entre 0 et 100
+                // Ne pas remettre à jour le champ avec toFixed si c'est en cours d'édition
+            }
+            
+            let tvaPercent = parseFloat($(this).find('.tva-select, [id$="_tvaPercent"]').val()) || 20;
+            tvaPercent = Math.min(Math.max(tvaPercent, 0), 100); // Entre 0 et 100
+
+            // Calcul avec remise
+            const sousTotal = qte * prixUnitaire;
+            const montantRemise = sousTotal * remisePercent / 100;
+            const totalLigneHt = sousTotal - montantRemise;
+            const tvaLigne = totalLigneHt * tvaPercent / 100;
+
+            // Mettre à jour les champs cachés
+            $(this).find('.total-ligne-ht-input, [id$="_totalLigneHt"]').val(totalLigneHt.toFixed(2));
+            
+            // Mettre à jour l'affichage du montant net HT (sans signe euro)
+            $(this).find('.total-display, .total-line-display, .total-ligne-display').text(totalLigneHt.toFixed(2));
+
+            totalHt += totalLigneHt;
+            totalTva += tvaLigne;
+        });
+
+        const totalTtc = totalHt + totalTva;
+
+        // Mettre à jour les totaux dans le récapitulatif
+        $('.subtotal-ht, .total-ht').text(totalHt.toFixed(2) + '€');
+        $('.total-tva').text(totalTva.toFixed(2) + '€');
+        $('.total-ttc').text(totalTtc.toFixed(2) + '€');
+
+        // Mettre à jour les champs cachés du formulaire principal
+        $('input[name*="[totalHt]"]').val(totalHt.toFixed(2));
+        $('input[name*="[totalTva]"]').val(totalTva.toFixed(2));
+        $('input[name*="[totalTtc]"]').val(totalTtc.toFixed(2));
+    }
+
+    // Fonction pour lier les événements de calcul
+    function bindCalculationEvents($container) {
+        $container = $container || $(document);
+        
+        // Événements pour les anciens champs (lignes existantes)
+        $container.find('[id$="_quantite"], [id$="_prixUnitaireHt"], [id$="_tvaPercent"], [id$="_remisePercent"]')
+            .off('input change keyup')
+            .on('input change keyup', function() {
+                calculateTotals();
+            });
+            
+        // Événements pour les nouveaux champs (nouvelles lignes)
+        $container.find('.quantity-input, .price-input, .remise-input, .tva-select')
+            .off('input change keyup')
+            .on('input change keyup', function() {
+                // Validation des limites pour les champs de pourcentage
+                if ($(this).hasClass('remise-input')) {
+                    let val = parseFloat($(this).val());
+                    // Si la valeur est invalide, on la laisse vide plutôt que de forcer 0
+                    if (!isNaN(val)) {
+                        if (val < 0) $(this).val('0');
+                        else if (val > 100) $(this).val('100');
+                    }
+                }
+                calculateTotals();
+            });
+            
+        // Gestion des boutons de suppression
+        $container.find('.remove-item-btn').off('click').on('click', function() {
+            const $item = $(this).closest('.devis-item');
+            $item.remove();
+            calculateTotals();
+        });
+        
+        // Gestion des boutons catalogue
+        $container.find('.catalogue-btn').off('click').on('click', function() {
+            const $item = $(this).closest('.devis-item');
+            openCatalogueModal($item);
+        });
+    }
+    
+    // Fonction pour ouvrir la modal du catalogue
+    function openCatalogueModal() {
+        // Créer une modal Bootstrap pour sélectionner un produit
+        const modalHtml = `
+        <div class="modal fade" id="catalogueModal" tabindex="-1" aria-labelledby="catalogueModalLabel" aria-hidden="true">
+            <div class="modal-dialog modal-lg">
+                <div class="modal-content">
+                    <div class="modal-header">
+                        <h5 class="modal-title" id="catalogueModalLabel">
+                            <i class="fas fa-book me-2"></i>Sélectionner un produit du catalogue
+                        </h5>
+                        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                    </div>
+                    <div class="modal-body">
+                        <div class="mb-3">
+                            <input type="text" class="form-control" id="productSearch" placeholder="Rechercher un produit...">
+                        </div>
+                        <div id="productList" class="row">
+                            <div class="col-12 text-center">
+                                <i class="fas fa-spinner fa-spin"></i> Chargement des produits...
+                            </div>
+                        </div>
+                    </div>
+                    <div class="modal-footer">
+                        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Annuler</button>
+                    </div>
+                </div>
+            </div>
+        </div>`;
+        
+        // Supprimer une éventuelle modal existante
+        $('#catalogueModal').remove();
+        
+        // Ajouter la modal au DOM
+        $('body').append(modalHtml);
+        
+        // Afficher la modal
+        const modal = new bootstrap.Modal(document.getElementById('catalogueModal'));
+        modal.show();
+        
+        // Charger les produits
+        loadProductsInModal();
+    }
+    
+    // Fonction pour charger les produits dans la modal
+    function loadProductsInModal() {
+        $.ajax({
+            url: '/devis/api/produits',
+            method: 'GET',
+            data: { q: '' }, // Tous les produits
+            success: function(products) {
+                const $productList = $('#productList');
+                $productList.empty();
+                
+                if (products.length === 0) {
+                    $productList.html('<div class="col-12 text-center text-muted">Aucun produit disponible</div>');
+                    return;
+                }
+                
+                products.forEach(function(product) {
+                    const productCard = `
+                    <div class="col-md-6 mb-2">
+                        <div class="card product-card" data-product-id="${product.id}" style="cursor: pointer;">
+                            <div class="card-body p-2">
+                                <h6 class="card-title mb-1">${product.designation}</h6>
+                                <small class="text-muted d-block mb-1">Code: ${product.reference}</small>
+                                <small class="text-success fw-bold">${product.prix_vente_ht}€ HT</small>
+                                ${product.taux_tva ? '<small class="text-info ms-2">TVA: ' + product.taux_tva + '%</small>' : ''}
+                            </div>
+                        </div>
+                    </div>`;
+                    $productList.append(productCard);
+                });
+                
+                // Ajouter les événements de clic sur les produits
+                $('.product-card').on('click', function() {
+                    const productId = $(this).data('product-id');
+                    const product = products.find(p => p.id == productId);
+                    if (product) {
+                        addNewDevisItemFromProduct(product);
+                        bootstrap.Modal.getInstance(document.getElementById('catalogueModal')).hide();
+                    }
+                });
+            },
+            error: function() {
+                $('#productList').html('<div class="col-12 text-center text-danger">Erreur lors du chargement des produits</div>');
+            }
+        });
+    }
+    
+    // Fonction pour ajouter une ligne de devis à partir d'un produit du catalogue
+    function addNewDevisItemFromProduct(product) {
+        // Créer d'abord une ligne vide
+        addNewDevisItem();
+        
+        // Ensuite remplir avec les données du produit
+        setTimeout(function() {
+            const $lastItem = $('.devis-item').last();
+            $lastItem.find('.code-article-input').val(product.reference);
+            $lastItem.find('.designation-input').val(product.designation);
+            $lastItem.find('.description-input').val(product.description || '');
+            $lastItem.find('.price-input').val(parseFloat(product.prix_vente_ht));
+            $lastItem.find('.tva-select').val(product.taux_tva ? parseFloat(product.taux_tva).toFixed(2) : '20.00');
+            
+            // Recalculer les totaux
+            calculateTotals();
+        }, 100);
+    }
+
+    // Charger les taux TVA et initialiser autocomplétion pour toutes les lignes existantes
+    $('.devis-item').each(function() {
+        const $item = $(this);
+        const $select = $item.find('.tva-select');
+        const currentValue = $select.data('current-value');
+        
+        // Charger les taux de TVA
+        loadTauxTva($item);
+        
+        // Restaurer la valeur après chargement
+        if (currentValue) {
+            setTimeout(() => {
+                $select.val(parseFloat(currentValue).toFixed(2));
+            }, 200);
+        }
+        
+        // Initialiser l'autocomplétion pour cette ligne
+        initAutocompleteForItem($item);
+    });
+    
+    // Lier les événements pour les lignes existantes
+    bindCalculationEvents();
+    
+    // Calculer les totaux au chargement
+    calculateTotals();
+
+    {% endif %}
+    
+    // =============================================
+    // SYSTÈME D'AUTO-SAUVEGARDE INTELLIGENT
+    // =============================================
+    
+    let autoSaveTimer;
+    let isAutoSaving = false;
+    let hasUnsavedChanges = false;
+    let lastSaveData = null;
+
+    // Configuration auto-sauvegarde
+    const AUTOSAVE_DELAY = 3000; // 3 secondes après la dernière modification
+    const AUTOSAVE_URL = '/devis/{{ devis.id }}/auto-save';
+
+    // Indicateur visuel de sauvegarde
+    function showSaveStatus(message, isError = false, isPersistent = false) {
+        let $indicator = $('#autosave-indicator');
+        if ($indicator.length === 0) {
+            $indicator = $('<div id="autosave-indicator" style="position: fixed; top: 70px; right: 20px; z-index: 1060; padding: 8px 12px; border-radius: 4px; font-size: 0.875rem; font-weight: 500; min-width: 200px; text-align: center;"></div>');
+            $('body').append($indicator);
+        }
+        
+        // Couleurs selon le type de message
+        let bgClass = 'bg-success text-white';
+        if (isError) {
+            bgClass = 'bg-danger text-white';
+        } else if (message.includes('en cours')) {
+            bgClass = 'bg-warning text-dark'; // Plus visible pour les messages en cours
+        }
+        
+        $indicator
+            .removeClass('bg-success bg-warning bg-danger text-white text-dark')
+            .addClass(bgClass)
+            .text(message)
+            .fadeIn(200);
+        
+        // Ne pas masquer automatiquement si c'est persistant
+        if (!isPersistent) {
+            setTimeout(() => {
+                $indicator.fadeOut(200);
+            }, 2000);
+        }
+    }
+
+    // Collecter les données du formulaire
+    function collectFormData() {
+        // Convertir les IDs en entiers ou null
+        const clientId = $('#devis_client').val();
+        const contactFacturationId = $('#devis_contactFacturation').val();
+        const contactLivraisonId = $('#devis_contactLivraison').val();
+        const adresseFacturationId = $('#devis_adresseFacturation').val();
+        const adresseLivraisonId = $('#devis_adresseLivraison').val();
+
+        const data = {
+            client_id: (clientId && clientId !== '') ? parseInt(clientId) : null,
+            contact_facturation_id: (contactFacturationId && contactFacturationId !== '') ? parseInt(contactFacturationId) : null,
+            contact_livraison_id: (contactLivraisonId && contactLivraisonId !== '') ? parseInt(contactLivraisonId) : null,
+            adresse_facturation_id: (adresseFacturationId && adresseFacturationId !== '') ? parseInt(adresseFacturationId) : null,
+            adresse_livraison_id: (adresseLivraisonId && adresseLivraisonId !== '') ? parseInt(adresseLivraisonId) : null,
+            items: []
+        };
+
+        // Collecter les données des lignes de devis
+        $('.devis-item').each(function(index) {
+            const $item = $(this);
+            let itemId = $item.find('[id$="_id"]').val();
+            // Convertir l'ID en integer si présent, sinon null
+            itemId = (itemId && itemId !== '') ? parseInt(itemId) : null;
+            
+            // Gérer les remises (peuvent être vides)
+            const remisePercentValue = $item.find('.remise-input, [id$="_remisePercent"]').val();
+            const remisePercent = (remisePercentValue && remisePercentValue !== '') ? parseFloat(remisePercentValue) : null;
+            
+            const remiseMontantValue = $item.find('.remise-montant-input, [id$="_remiseMontant"]').val();
+            const remiseMontant = (remiseMontantValue && remiseMontantValue !== '') ? parseFloat(remiseMontantValue) : null;
+            
+            // Validation des valeurs numériques
+            const quantite = parseFloat($item.find('.quantity-input, [id$="_quantite"]').val());
+            const prixUnitaireHt = parseFloat($item.find('.price-input, [id$="_prixUnitaireHt"]').val());
+            const tvaPercent = parseFloat($item.find('.tva-select, [id$="_tvaPercent"]').val());
+            
+            const itemData = {
+                id: itemId,
+                designation: $item.find('.designation-input, [id$="_designation"]').val() || '',
+                description: $item.find('.description-input, [id$="_description"]').val() || '',
+                quantite: isNaN(quantite) ? 1 : quantite,
+                prix_unitaire_ht: isNaN(prixUnitaireHt) ? 0 : prixUnitaireHt,
+                remise_percent: remisePercent,
+                remise_montant: remiseMontant,
+                tva_percent: isNaN(tvaPercent) ? 20 : tvaPercent,
+                ordre_affichage: index + 1
+            };
+            
+            data.items.push(itemData);
+        });
+
+        return data;
+    }
+
+    // Vérifier si les données ont changé
+    function hasDataChanged() {
+        const currentData = JSON.stringify(collectFormData());
+        if (lastSaveData === null) {
+            lastSaveData = currentData;
+            return false;
+        }
+        return currentData !== lastSaveData;
+    }
+
+    // Fonction d'auto-sauvegarde
+    function performAutoSave() {
+        if (isAutoSaving || !hasUnsavedChanges) return;
+        
+        isAutoSaving = true;
+        const formData = collectFormData();
+        
+        // Afficher indicateur de sauvegarde en cours
+        showSaveStatus('💾 Sauvegarde en cours...');
+        
+        $.ajax({
+            url: AUTOSAVE_URL,
+            method: 'POST',
+            contentType: 'application/json',
+            data: JSON.stringify(formData),
+            success: function(response) {
+                if (response.success) {
+                    hasUnsavedChanges = false;
+                    lastSaveData = JSON.stringify(formData);
+                    showSaveStatus('✅ Sauvé à ' + response.saved_at);
+                    
+                    // Mettre à jour les totaux dans l'interface si fournis
+                    if (response.totals) {
+                        $('.total-ht').text(parseFloat(response.totals.total_ht).toFixed(2) + '€');
+                        $('.total-tva').text(parseFloat(response.totals.total_tva).toFixed(2) + '€');
+                        $('.total-ttc').text(parseFloat(response.totals.total_ttc).toFixed(2) + '€');
+                        $('.summary-total-display').text(parseFloat(response.totals.total_ttc).toFixed(2) + '€ TTC');
+                    }
+                } else {
+                    showSaveStatus('❌ ' + response.message, true);
+                }
+            },
+            error: function(xhr) {
+                let message = 'Erreur de sauvegarde';
+                try {
+                    const response = JSON.parse(xhr.responseText);
+                    message = response.message || message;
+                } catch (e) {
+                    // Garder le message par défaut
+                }
+                showSaveStatus('❌ ' + message, true);
+            },
+            complete: function() {
+                isAutoSaving = false;
+            }
+        });
+    }
+
+    // Déclencher l'auto-sauvegarde avec délai
+    function scheduleAutoSave() {
+        hasUnsavedChanges = true;
+        clearTimeout(autoSaveTimer);
+        autoSaveTimer = setTimeout(performAutoSave, AUTOSAVE_DELAY);
+    }
+
+    // Détecter les modifications sur tous les champs pertinents
+    $(document).on('input change keyup', 
+        '#devis_client, #devis_contactFacturation, #devis_contactLivraison, #devis_adresseFacturation, #devis_adresseLivraison, ' +
+        '.designation-input, [id$="_designation"], .description-input, [id$="_description"], ' +
+        '.quantity-input, [id$="_quantite"], .price-input, [id$="_prixUnitaireHt"], ' +
+        '.remise-input, [id$="_remisePercent"], .remise-montant-input, [id$="_remiseMontant"], .tva-select, [id$="_tvaPercent"]', 
+        function() {
+            if (hasDataChanged()) {
+                scheduleAutoSave();
+            }
+        }
+    );
+
+    // Variable pour indiquer qu'une sauvegarde manuelle est en cours
+    let isManuallySaving = false;
+    
+    // Détecter les clics sur les boutons de sauvegarde pour éviter l'alerte beforeunload
+    $(document).on('click', 'button[type="submit"], input[type="submit"]', function() {
+        const $button = $(this);
+        const buttonText = $button.text().trim();
+        
+        console.log(`🖱️ Clic sur bouton sauvegarde détecté: "${buttonText}" - désactivation alerte beforeunload`);
+        
+        // Feedback visuel immédiat mais non persistant
+        showSaveStatus('💾 Enregistrement en cours...', false, false);
+        
+        // Désactiver l'alerte beforeunload immédiatement
+        isManuallySaving = true;
+        hasUnsavedChanges = false;
+        
+        // Désactiver temporairement le bouton pour éviter les doubles clics SEULEMENT
+        // Ne pas modifier le texte pour ne pas interférer avec le formulaire
+        $button.prop('disabled', true);
+        
+        // Réactiver après un court délai pour permettre au formulaire de se soumettre
+        setTimeout(() => {
+            $button.prop('disabled', false);
+        }, 1000); // Délai réduit à 1 seconde
+        
+        // Réinitialiser le flag après le délai normal
+        setTimeout(() => {
+            isManuallySaving = false;
+        }, 3000);
+    });
+
+    // Forcer une sauvegarde avant fermeture/navigation (sauf si sauvegarde en cours)
+    window.addEventListener('beforeunload', function(e) {
+        if (hasUnsavedChanges && !isAutoSaving && !isManuallySaving) {
+            e.preventDefault();
+            e.returnValue = 'Vous avez des modifications non sauvegardées. Êtes-vous sûr de vouloir quitter ?';
+        }
+    });
+
+    // =============================================
+    // FILTRAGE CONTACTS ET ADRESSES PAR CLIENT
+    // =============================================
+    
+    // Stocker les données contacts et adresses pour éviter les doublons
+    let currentClientContacts = [];
+    let currentClientAddresses = [];
+    
+    // Fonction pour filtrer les contacts et adresses selon le client sélectionné
+    function filterContactsAndAddresses(clientId) {
+        console.log('🔄 DÉBUT filterContactsAndAddresses pour client:', clientId);
+        
+        // Compter les options AVANT vidage
+        console.log('📊 AVANT vidage:');
+        console.log('  - Contact Facturation:', $('#devis_contactFacturation option').length, 'options');
+        console.log('  - Contact Livraison:', $('#devis_contactLivraison option').length, 'options');
+        console.log('  - Adresse Facturation:', $('#devis_adresseFacturation option').length, 'options');
+        console.log('  - Adresse Livraison:', $('#devis_adresseLivraison option').length, 'options');
+        
+        // Vider complètement les dropdowns (y compris les options Symfony)
+        $('#devis_contactFacturation, #devis_contactLivraison').empty();
+        $('#devis_adresseFacturation, #devis_adresseLivraison').empty();
+        
+        // Vérifier le vidage
+        console.log('🧹 APRÈS vidage:');
+        console.log('  - Contact Facturation:', $('#devis_contactFacturation option').length, 'options');
+        console.log('  - Contact Livraison:', $('#devis_contactLivraison option').length, 'options');
+        
+        if (clientId && clientId !== '') {
+            // Charger les contacts du client sélectionné
+            $.ajax({
+                url: '/client/' + clientId + '/contacts',
+                method: 'GET',
+                success: function(contacts) {
+                    console.log('📞 Contacts reçus de l\'API:', contacts.length, 'contacts');
+                    console.log('📞 Détail des contacts:', contacts);
+                    currentClientContacts = contacts;
+                    
+                    // Ajouter option vide à chaque dropdown séparément
+                    console.log('➕ Ajout options vides...');
+                    $('#devis_contactFacturation').append('<option value="">Sélectionner un contact</option>');
+                    $('#devis_contactLivraison').append('<option value="">Sélectionner un contact</option>');
+                    
+                    // Vérifier après ajout options vides
+                    console.log('📊 Après options vides:');
+                    console.log('  - Contact Facturation:', $('#devis_contactFacturation option').length, 'options');
+                    console.log('  - Contact Livraison:', $('#devis_contactLivraison option').length, 'options');
+                    
+                    // Ajouter chaque contact aux deux dropdowns (options séparées)
+                    console.log('➕ Ajout des', contacts.length, 'contacts...');
+                    contacts.forEach(function(contact, index) {
+                        console.log(`  ➕ Ajout contact ${index + 1}:`, contact.label, 'ID:', contact.id);
+                        const optionFacturation = `<option value="${contact.id}" data-adresse-id="${contact.adresse_id || ''}">${contact.label}</option>`;
+                        const optionLivraison = `<option value="${contact.id}" data-adresse-id="${contact.adresse_id || ''}">${contact.label}</option>`;
+                        
+                        $('#devis_contactFacturation').append(optionFacturation);
+                        console.log('    ✅ Ajouté dans facturation, total maintenant:', $('#devis_contactFacturation option').length);
+                        
+                        $('#devis_contactLivraison').append(optionLivraison);
+                        console.log('    ✅ Ajouté dans livraison, total maintenant:', $('#devis_contactLivraison option').length);
+                    });
+                    
+                    // Compter le total final
+                    console.log('📊 TOTAL FINAL contacts:');
+                    console.log('  - Contact Facturation:', $('#devis_contactFacturation option').length, 'options');
+                    console.log('  - Contact Livraison:', $('#devis_contactLivraison option').length, 'options');
+                    
+                    // Mettre à jour les données pour la sélection automatique
+                    currentClientContacts = contacts;
+                },
+                error: function() {
+                    console.error('Erreur lors du chargement des contacts');
+                    $('#devis_contactFacturation').append('<option value="">Aucun contact trouvé</option>');
+                    $('#devis_contactLivraison').append('<option value="">Aucun contact trouvé</option>');
+                }
+            });
+            
+            // Charger les adresses du client sélectionné
+            $.ajax({
+                url: '/client/' + clientId + '/addresses',
+                method: 'GET',
+                success: function(adresses) {
+                    console.log('Adresses reçues:', adresses);
+                    currentClientAddresses = adresses;
+                    
+                    // Ajouter option vide à chaque dropdown séparément
+                    $('#devis_adresseFacturation').append('<option value="">Sélectionner une adresse</option>');
+                    $('#devis_adresseLivraison').append('<option value="">Sélectionner une adresse</option>');
+                    
+                    // Ajouter chaque adresse aux deux dropdowns (options séparées)
+                    adresses.forEach(function(adresse) {
+                        const optionFacturation = `<option value="${adresse.id}">${adresse.label}</option>`;
+                        const optionLivraison = `<option value="${adresse.id}">${adresse.label}</option>`;
+                        $('#devis_adresseFacturation').append(optionFacturation);
+                        $('#devis_adresseLivraison').append(optionLivraison);
+                    });
+                },
+                error: function() {
+                    console.error('Erreur lors du chargement des adresses');
+                    $('#devis_adresseFacturation').append('<option value="">Aucune adresse trouvée</option>');
+                    $('#devis_adresseLivraison').append('<option value="">Aucune adresse trouvée</option>');
+                }
+            });
+        } else {
+            // Aucun client sélectionné
+            $('#devis_contactFacturation').append('<option value="">Sélectionner d\'abord un client</option>');
+            $('#devis_contactLivraison').append('<option value="">Sélectionner d\'abord un client</option>');
+            $('#devis_adresseFacturation').append('<option value="">Sélectionner d\'abord un client</option>');
+            $('#devis_adresseLivraison').append('<option value="">Sélectionner d\'abord un client</option>');
+        }
+    }
+
+    // Gestion du changement de client - Mise à jour dynamique des contacts/adresses
+    $('#devis_client').off('change').on('change', function() {
+        const clientId = $(this).val();
+        console.log('Client changé:', clientId, '- Mise à jour des contacts/adresses');
+        
+        if (clientId) {
+            // Réactiver le filtrage dynamique car on change de client
+            filterContactsAndAddresses(clientId);
+        } else {
+            // Si aucun client sélectionné, vider les dropdowns
+            $('#devis_contactFacturation').empty().append('<option value="">Sélectionner d\'abord un client</option>');
+            $('#devis_contactLivraison').empty().append('<option value="">Sélectionner d\'abord un client</option>');
+            $('#devis_adresseFacturation').empty().append('<option value="">Sélectionner d\'abord un client</option>');
+            $('#devis_adresseLivraison').empty().append('<option value="">Sélectionner d\'abord un client</option>');
+        }
+    });
+
+    // Charger les données contacts au chargement pour permettre la sélection automatique d'adresses
+    function loadInitialContactsData() {
+        const initialClientId = $('#devis_client').val();
+        if (initialClientId) {
+            // Charger les contacts pour la sélection automatique d'adresses
+            $.ajax({
+                url: '/client/' + initialClientId + '/contacts',
+                method: 'GET',
+                success: function(contacts) {
+                    currentClientContacts = contacts;
+                    console.log('Contacts chargés pour sélection automatique:', contacts);
+                },
+                error: function() {
+                    console.error('Erreur lors du chargement des contacts pour sélection automatique');
+                }
+            });
+        }
+    }
+    
+    // Gestion de la sélection automatique d'adresse quand on choisit un contact
+    $('#devis_contactFacturation').off('change').on('change', function() {
+        const contactId = $(this).val();
+        if (contactId) {
+            // Récupérer l'adresse ID depuis l'attribut data de l'option sélectionnée
+            const selectedOption = $(this).find('option:selected');
+            const adresseId = selectedOption.data('adresse-id');
+            
+            if (adresseId) {
+                $('#devis_adresseFacturation').val(adresseId);
+                console.log('Adresse facturation auto-sélectionnée:', adresseId);
+            }
+        }
+    });
+
+    $('#devis_contactLivraison').off('change').on('change', function() {
+        const contactId = $(this).val();
+        if (contactId) {
+            // Récupérer l'adresse ID depuis l'attribut data de l'option sélectionnée
+            const selectedOption = $(this).find('option:selected');
+            const adresseId = selectedOption.data('adresse-id');
+            
+            if (adresseId) {
+                $('#devis_adresseLivraison').val(adresseId);
+                console.log('Adresse livraison auto-sélectionnée:', adresseId);
+            }
+        }
+    });
+
+    // Filtrage initial au chargement de la page - DÉSACTIVÉ pour éviter les doublons en édition
+    // En mode édition, les contacts et adresses sont déjà chargés via le formulaire Symfony
+    // $(document).ready(function() {
+    //     const initialClientId = $('#devis_client').val();
+    //     if (initialClientId) {
+    //         filterContactsAndAddresses(initialClientId);
+    //     }
+    // });
+
+    // Charger les données contacts au démarrage SEULEMENT pour la sélection automatique
+    // Pas de filtrage pour éviter les doublons au premier chargement
+    loadInitialContactsData();
+    
+    // Charger et positionner correctement les layout elements existants
+    loadExistingLayoutElements();
+    
+    // Trier tous les éléments selon leur ordre d'affichage après chargement
+    setTimeout(function() {
+        console.log('🔄 Tri initial de tous les éléments après chargement...');
+        
+        // D'abord, vérifier et corriger les ordres manquants des DevisItems
+        let hasOrderIssues = false;
+        $('.devis-item').each(function(index) {
+            const $item = $(this);
+            const currentOrder = parseInt($item.attr('data-ordre'));
+            const hiddenFieldValue = parseInt($item.find('[id$="_ordreAffichage"]').val());
+            
+            if (!currentOrder || !hiddenFieldValue || currentOrder !== hiddenFieldValue) {
+                console.log(`⚠️ Problème d'ordre détecté sur DevisItem - DOM: ${currentOrder}, Hidden: ${hiddenFieldValue}`);
+                hasOrderIssues = true;
+            }
+        });
+        
+        if (hasOrderIssues) {
+            console.log('🔧 Correction des ordres des DevisItems...');
+            // Réassigner tous les ordres séquentiellement
+            $('.devis-item, .layout-element').each(function(index) {
+                const correctOrder = index + 1;
+                const $element = $(this);
+                $element.attr('data-ordre', correctOrder);
+                if ($element.hasClass('devis-item')) {
+                    $element.find('[id$="_ordreAffichage"]').val(correctOrder);
+                }
+                console.log(`🔧 ${$element.hasClass('devis-item') ? 'DevisItem' : 'LayoutElement'} → ordre corrigé: ${correctOrder}`);
+            });
+        }
+        
+        sortAllElementsByOrder();
+        updateItemsOrder();
+        lastSaveData = JSON.stringify(collectFormData());
+    }, 1000);
+    
+    // Gestion du panneau récapitulatif flottant - avec délégation d'événement
+    $(document).on('click', '#summary-toggle', function(e) {
+        e.preventDefault();
+        e.stopPropagation();
+        console.log('Bouton summary cliqué'); // Debug
+        
+        const $summary = $('#floating-summary');
+        const $content = $('#summary-content');
+        
+        $summary.toggleClass('expanded');
+        
+        if ($summary.hasClass('expanded')) {
+            $content.slideDown(200);
+        } else {
+            $content.slideUp(200);
+        }
+    });
+    
+    // Fonction pour mettre à jour le récapitulatif flottant
+    function updateFloatingSummary() {
+        const totalHt = $('.total-ht').first().text();
+        const totalTva = $('.total-tva').first().text();
+        const totalTtc = $('.total-ttc').first().text();
+        
+        // Mettre à jour l'affichage dans le toggle
+        $('.summary-total-display').text(totalTtc + ' TTC');
+    }
+    
+    // Mettre à jour le récapitulatif après chaque calcul
+    const originalCalculateTotals = calculateTotals;
+    calculateTotals = function() {
+        originalCalculateTotals();
+        setTimeout(function() {
+            updateFloatingSummary();
+            updateAllSubtotals();
+        }, 50);
+    };
+    
+    // =============================================
+    // SYSTÈME DRAG & DROP POUR RÉORGANISATION
+    // =============================================
+    
+    let sortableInstance = null;
+    
+    // Initialiser le drag & drop pour les lignes de devis
+    function initDragAndDrop() {
+        {% if devis.statut == 'brouillon' %}
+        const devisItemsContainer = document.getElementById('devis_devisItems');
+        
+        // Détruire l'instance existante si elle existe (avec gestion d'erreur)
+        if (sortableInstance) {
+            try {
+                sortableInstance.destroy();
+            } catch(e) {
+                console.warn('Erreur lors de la destruction de Sortable:', e);
+            }
+            sortableInstance = null;
+        }
+        
+        // Configuration ultra-fluide pour un drag & drop ergonomique
+        if (devisItemsContainer) {
+            const sortableConfig = {
+                handle: '.drag-handle',
+                animation: 250, // Animation plus courte pour plus de réactivité
+                easing: 'cubic-bezier(0.25, 0.46, 0.45, 0.94)', // Easing plus fluide
+                
+                // Classes pour les états visuels améliorés
+                ghostClass: 'drag-ghost-smooth',
+                chosenClass: 'drag-chosen-smooth', 
+                dragClass: 'drag-moving-smooth',
+                
+                // Configuration optimisée pour résoudre le problème de la dernière ligne
+                filter: '.drop-zone', // Exclure les zones de drop du dragging
+                preventOnFilter: false,
+                forceFallback: false,
+                fallbackOnBody: false,
+                
+                // Configuration PERMISSIVE pour dernière ligne - valeurs optimisées
+                swapThreshold: 0.65, // Plus modéré mais efficace pour toutes les positions
+                invertSwap: false, // DÉSACTIVÉ pour éviter les conflits avec la dernière ligne
+                invertedSwapThreshold: 0, // Non utilisé si invertSwap = false
+                
+                // Tolérance augmentée pour la détection
+                fallbackTolerance: 5, // Tolérance de mouvement avant déclenchement
+                
+                // Éléments draggables - spécification claire
+                draggable: '.devis-item, .layout-element',
+                
+                // Direction et scroll optimisés
+                direction: 'vertical',
+                scroll: true,
+                scrollSensitivity: 25, // Légèrement moins sensible pour éviter les conflits
+                scrollSpeed: 15, // Plus modéré
+                bubbleScroll: true,
+                
+                // Options pour une compatibilité maximale
+                delayOnTouchStart: false, // Désactivé pour éviter les conflits
+                delay: 0, // Pas de délai
+                delayOnTouchOnly: false,
+                touchStartThreshold: 3, // Moins sensible pour éviter les déclenchements accidentels
+                
+                onStart: function(evt) {
+                    evt.item.classList.add('dragging');
+                    $('.drag-handle', evt.item).addClass('dragging');
+                    $('.drop-zone').hide();
+                    
+                    const totalItems = devisItemsContainer.children.length;
+                    const isLastItem = evt.oldIndex === totalItems - 1;
+                    console.log(`🎯 DÉBUT DRAG - Position: ${evt.oldIndex}/${totalItems}${isLastItem ? ' (DERNIÈRE LIGNE)' : ''}`);
+                    
+                    // Diagnostic spécial pour la dernière ligne
+                    if (isLastItem) {
+                        console.log(`🔍 DIAGNOSTIC DERNIÈRE LIGNE:`, {
+                            itemId: evt.item.getAttribute('data-item-id') || evt.item.getAttribute('data-element-id'),
+                            hasHandle: !!evt.item.querySelector('.drag-handle'),
+                            classList: evt.item.classList.toString(),
+                            sortableEnabled: !!sortableInstance,
+                            swapThreshold: sortableInstance.option('swapThreshold'),
+                            invertSwap: sortableInstance.option('invertSwap')
+                        });
+                        
+                        // Marquer visuellement la dernière ligne en cours de drag
+                        evt.item.setAttribute('data-is-last-item-dragging', 'true');
+                    }
+                },
+                
+                onEnd: function(evt) {
+                    evt.item.classList.remove('dragging');
+                    $('.drag-handle', evt.item).removeClass('dragging');
+                    $('.drop-zone').show();
+                    
+                    const totalItems = devisItemsContainer.children.length;
+                    const wasLastItem = evt.oldIndex === totalItems - 1;
+                    const isNowLastItem = evt.newIndex === totalItems - 1;
+                    const wasLastItemDragging = evt.item.getAttribute('data-is-last-item-dragging') === 'true';
+                    
+                    // Nettoyer l'attribut de diagnostic
+                    evt.item.removeAttribute('data-is-last-item-dragging');
+                    
+                    console.log(`🎯 FIN DRAG: ${evt.oldIndex} → ${evt.newIndex} (Total: ${totalItems})`);
+                    if (wasLastItem || wasLastItemDragging) {
+                        console.log(`✅ Ex-dernière ligne déplacée avec succès de ${evt.oldIndex} vers ${evt.newIndex}`);
+                    }
+                    if (isNowLastItem) {
+                        console.log(`🔄 Nouvel élément en dernière position: ${evt.newIndex}`);
+                    }
+                    
+                    if (evt.oldIndex !== evt.newIndex) {
+                        // Traitement immédiat sans délai pour éviter les conflits
+                        try {
+                            updateItemsOrder();
+                            updateAllSubtotals();
+                            calculateTotals();
+                            createDropZones();
+                            
+                            // Sauvegarder l'ordre des éléments (lignes + layout elements)
+                            saveElementsOrder();
+                            
+                            const message = wasLastItemDragging ? 
+                                '✅ Dernière ligne déplacée avec succès !' :
+                                '✅ Ligne déplacée avec succès !';
+                            showReorderNotification(message);
+                        } catch (error) {
+                            console.error('❌ Erreur lors de la réorganisation:', error);
+                            showReorderNotification('Erreur lors du déplacement', true);
+                        }
+                    } else if (wasLastItemDragging) {
+                        console.log('ℹ️ Dernière ligne relâchée à sa position originale');
+                    }
+                },
+                
+                // Callbacks pour améliorer la gestion des mouvements
+                onMove: function(evt, originalEvent) {
+                    // Toujours autoriser le mouvement interne
+                    return evt.from === evt.to;
+                },
+                
+                onChange: function(evt) {
+                    console.log(`🔄 Position changée: ${evt.oldIndex} → ${evt.newIndex}`);
+                }
+            };
+            
+            try {
+                sortableInstance = Sortable.create(devisItemsContainer, sortableConfig);
+                console.log(`✅ Sortable créé avec ${devisItemsContainer.children.length} éléments`);
+                
+                // Diagnostic et validation spéciale pour la dernière ligne
+                setTimeout(() => {
+                    validateLastItemDragging();
+                }, 100);
+                
+            } catch (error) {
+                console.error('❌ Erreur création Sortable:', error);
+                showReorderNotification('Erreur d\'initialisation du drag & drop', true);
+                
+                // Tentative de récupération avec configuration simplifiée
+                try {
+                    const fallbackConfig = {
+                        handle: '.drag-handle',
+                        animation: 150,
+                        ghostClass: 'drag-ghost-smooth',
+                        chosenClass: 'drag-chosen-smooth',
+                        draggable: '.devis-item, .layout-element',
+                        swapThreshold: 0.5,
+                        invertSwap: false,
+                        fallbackTolerance: 10
+                    };
+                    sortableInstance = Sortable.create(devisItemsContainer, fallbackConfig);
+                    console.log('✅ Sortable créé avec configuration de secours');
+                } catch (fallbackError) {
+                    console.error('❌ Échec configuration de secours:', fallbackError);
+                }
+            }
+        }
+        
+        // Initialiser le drag & drop pour les éléments de mise en page
+        initLayoutElementsDragDrop();
+        {% endif %}
+    }
+    
+    // Fonction pour mettre à jour l'ordre GLOBAL de tous les éléments après drag & drop
+    function updateItemsOrder() {
+        console.log('🔄 Mise à jour ordre GLOBAL de tous les éléments...');
+        
+        // Mettre à jour l'ordre de TOUS les éléments (devis-item ET layout-element)
+        $('#devis_devisItems').children('.devis-item, .layout-element').each(function(index) {
+            const $element = $(this);
+            const globalOrder = index + 1;
+            
+            // Mettre à jour l'attribut data-ordre pour tous les types d'éléments
+            $element.attr('data-ordre', globalOrder);
+            
+            if ($element.hasClass('devis-item')) {
+                // Spécifique aux devis items : mettre à jour les champs cachés
+                $element.find('[id$="_ordreAffichage"]').val(globalOrder);
+                console.log(`  📋 Devis item → ordre ${globalOrder}`);
+            } else if ($element.hasClass('layout-element')) {
+                // Spécifique aux layout elements : logging
+                const elementId = $element.attr('data-element-id');
+                console.log(`  🎨 Layout element ${elementId} → ordre ${globalOrder}`);
+            }
+        });
+        
+        console.log('✅ Ordre global de tous les éléments mis à jour');
+    }
+    
+    // Fonction de validation spécifique pour la dernière ligne
+    function validateLastItemDragging() {
+        const container = document.getElementById('devis_devisItems');
+        if (!container || !sortableInstance) {
+            console.log('⚠️ Container ou instance Sortable manquant');
+            return;
+        }
+        
+        const items = container.querySelectorAll('.devis-item, .layout-element');
+        if (items.length === 0) {
+            console.log('ℹ️ Aucun élément à valider');
+            return;
+        }
+        
+        const lastItem = items[items.length - 1];
+        const lastItemId = lastItem.getAttribute('data-item-id') || lastItem.getAttribute('data-element-id') || 'unknown';
+        
+        console.log(`🔍 VALIDATION DERNIÈRE LIGNE: ${lastItemId} (position ${items.length - 1})`);
+        
+        // Vérifications de base
+        const hasHandle = !!lastItem.querySelector('.drag-handle');
+        const isDraggable = sortableInstance.options.draggable;
+        const matchesSelector = lastItem.matches(isDraggable);
+        
+        console.log(`  - Handle présent: ${hasHandle}`);
+        console.log(`  - Sélecteur draggable: ${isDraggable}`);
+        console.log(`  - Match sélecteur: ${matchesSelector}`);
+        console.log(`  - Classes: ${lastItem.classList.toString()}`);
+        
+        // Test de dragging simulé
+        if (hasHandle && matchesSelector) {
+            console.log('✅ Dernière ligne semble correctement configurée');
+            
+            // Ajouter un attribut pour identification facile
+            lastItem.setAttribute('data-last-item-validated', 'true');
+            
+            // Test événement mousedown sur le handle
+            const handle = lastItem.querySelector('.drag-handle');
+            if (handle) {
+                // Ajouter des event listeners de test temporaires
+                const testMouseDown = (e) => {
+                    console.log('🖱️ Test mousedown sur dernière ligne réussi');
+                    handle.removeEventListener('mousedown', testMouseDown);
+                };
+                handle.addEventListener('mousedown', testMouseDown);
+                
+                // Nettoyer après 5 secondes si pas utilisé
+                setTimeout(() => {
+                    handle.removeEventListener('mousedown', testMouseDown);
+                }, 5000);
+            }
+        } else {
+            console.log('❌ Problème détecté avec la dernière ligne');
+            
+            // Tentative de correction
+            if (!hasHandle) {
+                console.log('🔧 Ajout d\'un handle manquant...');
+                const newHandle = document.createElement('div');
+                newHandle.className = 'text-center drag-handle';
+                newHandle.style.cssText = 'width: 25px; padding: 4px;';
+                newHandle.innerHTML = '<i class="fas fa-grip-vertical text-muted" style="cursor: grab;"></i>';
+                newHandle.title = 'Glisser pour réorganiser';
+                lastItem.insertBefore(newHandle, lastItem.firstChild);
+                console.log('✅ Handle ajouté à la dernière ligne');
+            }
+        }
+    }
+    
+    // Fonction pour calculer le sous-total jusqu'à un élément donné
+    function calculateSubtotalUpTo($element) {
+        let subtotal = 0;
+        
+        // Parcourir tous les éléments précédents
+        $element.prevAll('.devis-item').each(function() {
+            const $item = $(this);
+            const qte = parseFloat($item.find('.quantity-input, [id$="_quantite"]').val()) || 0;
+            const prix = parseFloat($item.find('.price-input, [id$="_prixUnitaireHt"]').val()) || 0;
+            const remisePercent = parseFloat($item.find('.remise-input, [id$="_remisePercent"]').val()) || 0;
+            
+            const totalLigne = qte * prix * (1 - remisePercent / 100);
+            subtotal += totalLigne;
+        });
+        
+        return subtotal;
+    }
+    
+    // Mettre à jour tous les sous-totaux
+    function updateAllSubtotals() {
+        $('.layout-element.subtotal').each(function() {
+            const $subtotalElement = $(this);
+            const subtotal = calculateSubtotalUpTo($subtotalElement);
+            $subtotalElement.find('.subtotal-value').text(subtotal.toFixed(2) + '€');
+        });
+    }
+    
+    // Notification de réorganisation avec support des erreurs
+    function showReorderNotification(message, isError = false) {
+        let $notification = $('#reorder-notification');
+        if ($notification.length === 0) {
+            $notification = $('<div id="reorder-notification" style="position: fixed; top: 70px; right: 20px; z-index: 1060; padding: 10px 16px; border-radius: 6px; font-size: 0.875rem; font-weight: 500; min-width: 280px; text-align: center; box-shadow: 0 4px 12px rgba(0,0,0,0.15);"></div>');
+            $('body').append($notification);
+        }
+        
+        const iconClass = isError ? 'fas fa-exclamation-triangle' : 'fas fa-check-circle';
+        const bgClass = isError ? 'bg-danger' : 'bg-success';
+        
+        $notification
+            .removeClass('bg-success bg-danger bg-info text-white')
+            .addClass(bgClass + ' text-white')
+            .html(`<i class="${iconClass} me-2"></i>${message}`)
+            .fadeIn(300);
+        
+        setTimeout(() => {
+            $notification.fadeOut(300);
+        }, isError ? 5000 : 2500);
+    }
+    
+    // Fonction de diagnostic avancé pour le drag & drop
+    function diagnoseDragAndDropState() {
+        const container = document.getElementById('devis_devisItems');
+        if (!container) {
+            console.log('❌ Container devis_devisItems introuvable');
+            return;
+        }
+        
+        const items = container.querySelectorAll('.devis-item, .layout-element');
+        console.log('\n🔍 DIAGNOSTIC DRAG & DROP COMPLET:');
+        console.log(`📊 Nombre total d'éléments: ${items.length}`);
+        console.log(`🎯 Instance Sortable: ${sortableInstance ? 'Présente' : 'Absente'}`);
+        
+        if (sortableInstance) {
+            console.log('⚙️ Configuration Sortable:', {
+                handle: sortableInstance.option('handle'),
+                draggable: sortableInstance.option('draggable'),
+                swapThreshold: sortableInstance.option('swapThreshold'),
+                invertSwap: sortableInstance.option('invertSwap')
+            });
+        }
+        
+        items.forEach((item, index) => {
+            const dragHandle = item.querySelector('.drag-handle');
+            const itemId = item.getAttribute('data-item-id') || `layout-${index}`;
+            const isLastItem = index === items.length - 1;
+            
+            console.log(`\n${isLastItem ? '⭐' : '📄'} Élément ${index + 1}/${items.length}${isLastItem ? ' (DERNIÈRE LIGNE)' : ''}:`);
+            console.log(`  - ID: ${itemId}`);
+            console.log(`  - Drag handle: ${dragHandle ? '✅' : '❌'}`);
+            console.log(`  - Classes: ${item.className}`);
+            
+            if (isLastItem && !dragHandle) {
+                console.log('  ⚠️ PROBLÈME DÉTECTÉ: Drag handle manquant sur la dernière ligne !');
+            }
+        });
+    }
+    
+    // Fonction pour recréer complètement le système drag & drop
+    function recreateDragAndDropSystem() {
+        console.log('🔄 RECRÉATION COMPLÈTE DU SYSTÈME DRAG & DROP...');
+        
+        // Détruire proprement l'instance existante
+        if (sortableInstance) {
+            try {
+                sortableInstance.destroy();
+                console.log('🗑️ Ancienne instance détruite');
+            } catch (error) {
+                console.warn('⚠️ Erreur destruction:', error);
+            } finally {
+                sortableInstance = null;
+            }
+        }
+        
+        // Recréer après un court délai
+        setTimeout(() => {
+            initDragAndDrop();
+            console.log('✅ Système drag & drop recréé');
+            
+            // Diagnostic post-création
+            setTimeout(diagnoseDragAndDropState, 100);
+        }, 100);
+    }
+    
+    // =============================================
+    // SYSTÈME DRAG & DROP ÉLÉMENTS DE MISE EN PAGE
+    // =============================================
+    
+    let layoutElementCounter = 0;
+    
+    function initLayoutElementsDragDrop() {
+        // Rendre les boutons de la palette draggables
+        $('.layout-element-btn').each(function() {
+            const $btn = $(this);
+            const elementType = $btn.data('element-type');
+            
+            $btn.prop('draggable', true);
+            
+            $btn.on('dragstart', function(e) {
+                $btn.addClass('dragging');
+                
+                // Stocker le type d'élément dans le dataTransfer
+                e.originalEvent.dataTransfer.setData('text/plain', elementType);
+                e.originalEvent.dataTransfer.effectAllowed = 'copy';
+                
+                console.log('🎨 Début drag élément:', elementType);
+                
+                // Afficher les zones de drop
+                showDropZones();
+            });
+            
+            $btn.on('dragend', function(e) {
+                $btn.removeClass('dragging');
+                hideDropZones();
+                console.log('🎨 Fin drag élément');
+            });
+        });
+        
+        // Créer les zones de drop entre les lignes
+        createDropZones();
+    }
+    
+    // Créer les zones de drop invisibles entre les lignes
+    function createDropZones() {
+        // Supprimer toutes les zones existantes pour éviter les doublons
+        $('.drop-zone').remove();
+        
+        const container = $('#devis_devisItems');
+        const $items = container.children('.devis-item, .layout-element');
+        
+        console.log(`🔍 Éléments trouvés dans le conteneur pour zones de drop: ${$items.length}`);
+        
+        if ($items.length === 0) {
+            console.log('ℹ️ Aucun élément trouvé, pas de zones de drop créées');
+            return;
+        }
+        
+        // Zone de drop AVANT la première ligne (dans le conteneur seulement)
+        const $firstDropZone = $('<div class="drop-zone" data-position="0" style="pointer-events: auto;"></div>');
+        setupDropZone($firstDropZone, 0);
+        container.prepend($firstDropZone);
+        console.log('📍 Zone de drop créée avant le premier élément');
+        
+        // Zones de drop ENTRE les lignes (uniquement pour les éléments dans le bon conteneur)
+        $items.each(function(index) {
+            const $item = $(this);
+            const $nextDropZone = $('<div class="drop-zone" data-position="' + (index + 1) + '" style="pointer-events: auto;"></div>');
+            setupDropZone($nextDropZone, index + 1);
+            $item.after($nextDropZone);
+            console.log(`📍 Zone de drop créée après l'élément ${index + 1}`);
+        });
+        
+        const totalZones = $('.drop-zone').length;
+        console.log(`✅ ${totalZones} zones de drop créées (1 avant + ${$items.length} après éléments)`);
+    }
+    
+    // Configurer une zone de drop avec UX améliorée
+    function setupDropZone($dropZone, position) {
+        let hoverTimeout = null;
+        
+        $dropZone.on('dragenter', function(e) {
+            e.preventDefault();
+            clearTimeout(hoverTimeout);
+            $dropZone.addClass('active');
+            console.log(`💫 Drag enter zone ${position}`);
+        });
+        
+        $dropZone.on('dragover', function(e) {
+            e.preventDefault();
+            e.originalEvent.dataTransfer.dropEffect = 'copy';
+            
+            // Passage à l'état "drag-over" après seulement 30ms pour une UX ultra-réactive
+            clearTimeout(hoverTimeout);
+            hoverTimeout = setTimeout(() => {
+                $dropZone.addClass('drag-over');
+                console.log(`✨ Zone ${position} prête pour drop`);
+            }, 30); // Délai réduit à 30ms pour une réactivité maximale
+        });
+        
+        $dropZone.on('dragleave', function(e) {
+            clearTimeout(hoverTimeout);
+            $dropZone.removeClass('active drag-over');
+            console.log(`🚪 Drag leave zone ${position}`);
+        });
+        
+        $dropZone.on('drop', function(e) {
+            e.preventDefault();
+            clearTimeout(hoverTimeout);
+            $dropZone.removeClass('active drag-over');
+            
+            const elementType = e.originalEvent.dataTransfer.getData('text/plain');
+            console.log(`📥 Drop élément: ${elementType} à la position: ${position}`);
+            
+            // Feedback visuel immédiat de succès
+            $dropZone.addClass('drop-success');
+            $dropZone.css({
+                'background': 'linear-gradient(90deg, transparent, rgba(40, 167, 69, 0.7), transparent)',
+                'height': '40px',
+                'border-color': 'rgba(40, 167, 69, 1)'
+            });
+            
+            setTimeout(() => {
+                $dropZone.removeClass('drop-success');
+                insertLayoutElement(elementType, position);
+                hideDropZones();
+                
+                // Recréer les zones de drop pour les nouveaux éléments
+                setTimeout(createDropZones, 200);
+            }, 300);
+        });
+    }
+    
+    // Afficher les zones de drop
+    function showDropZones() {
+        $('.drop-zone').addClass('active');
+    }
+    
+    // Masquer les zones de drop
+    function hideDropZones() {
+        $('.drop-zone').removeClass('active');
+    }
+    
+    // Insérer un élément de mise en page avec sauvegarde en base de données
+    function insertLayoutElement(elementType, position) {
+        console.log(`💾 Insertion ${elementType} à la position ${position}`);
+        
+        // Préparer les données pour l'API
+        const data = {
+            type: elementType,
+            position: position,
+            titre: elementType === 'section_title' ? 'Nouveau titre' : null,
+            parametres: {}
+        };
+
+        // Sauvegarder en base de données d'abord
+        $.ajax({
+            url: `/devis/{{ devis.id }}/layout-element`,
+            method: 'POST',
+            contentType: 'application/json',
+            data: JSON.stringify(data),
+            success: function(response) {
+                if (response.success) {
+                    console.log('✅ Élément sauvegardé en base:', response.element);
+                    
+                    // Créer l'élément DOM avec l'ID de base de données
+                    const element = response.element;
+                    const $element = createLayoutElementDOM(element);
+                    
+                    // Insérer l'élément dans le DOM à la bonne position
+                    insertElementAtPosition($element, position);
+                    
+                    // Configuration post-insertion
+                    setupLayoutElementEvents($element, element.id);
+                    
+                    // Mettre à jour l'interface
+                    updateAfterLayoutElementInsert($element, elementType);
+                    
+                    showReorderNotification('✅ Élément de mise en page ajouté et sauvegardé !');
+                } else {
+                    console.error('❌ Erreur sauvegarde:', response.message);
+                    showReorderNotification('❌ ' + response.message, true);
+                }
+            },
+            error: function(xhr) {
+                console.error('❌ Erreur AJAX:', xhr);
+                let message = 'Erreur lors de la sauvegarde';
+                try {
+                    const errorResponse = JSON.parse(xhr.responseText);
+                    message = errorResponse.message || message;
+                } catch (e) {}
+                showReorderNotification('❌ ' + message, true);
+            }
+        });
+    }
+
+    // Créer l'élément DOM à partir des données de base
+    function createLayoutElementDOM(element) {
+        const elementId = element.id;
+        const elementType = element.type;
+        
+        let $element;
+        
+        switch(elementType) {
+            case 'line_break':
+                $element = $('<div class="layout-element line-break" data-element-type="line_break" data-element-id="' + elementId + '" style="display: flex; align-items: center; position: relative;">' +
+                           '<div style="width: 25px; padding: 4px;" class="text-center drag-handle" title="Glisser pour réorganiser">' +
+                           '<i class="fas fa-grip-vertical text-muted" style="cursor: grab;"></i>' +
+                           '</div>' +
+                           '<div class="flex-grow-1" style="height: 20px; background: linear-gradient(90deg, transparent, #dee2e6, transparent); border-radius: 2px;"></div>' +
+                           '<span style="position: absolute; right: 30px; top: 50%; transform: translateY(-50%); opacity: 0.5; font-size: 0.75rem;">Saut de ligne</span>' +
+                           '<span style="position: absolute; right: 8px; top: -8px;" class="remove-layout-element" title="Supprimer" data-element-id="' + elementId + '"><i class="fas fa-times text-danger"></i></span>' +
+                           '</div>');
+                break;
+                
+            case 'page_break':
+                $element = $('<div class="layout-element page-break" data-element-type="page_break" data-element-id="' + elementId + '" style="display: flex; align-items: center;">' +
+                           '<div style="width: 25px; padding: 4px;" class="text-center drag-handle" title="Glisser pour réorganiser">' +
+                           '<i class="fas fa-grip-vertical text-muted" style="cursor: grab;"></i>' +
+                           '</div>' +
+                           '<div class="flex-grow-1">' +
+                           '<i class="fas fa-file-medical me-2 text-info"></i>Saut de page' +
+                           '</div>' +
+                           '<span style="position: absolute; right: 8px; top: 8px;" class="remove-layout-element" title="Supprimer" data-element-id="' + elementId + '"><i class="fas fa-times text-danger"></i></span>' +
+                           '</div>');
+                break;
+                
+            case 'subtotal':
+                $element = $('<div class="layout-element subtotal" data-element-type="subtotal" data-element-id="' + elementId + '" style="display: flex; align-items: center; position: relative;">' +
+                           '<div style="width: 25px; padding: 4px;" class="text-center drag-handle" title="Glisser pour réorganiser">' +
+                           '<i class="fas fa-grip-vertical text-muted" style="cursor: grab;"></i>' +
+                           '</div>' +
+                           '<div class="flex-grow-1">' +
+                           '<i class="fas fa-calculator me-2 text-success"></i>Sous-total jusqu\'ici : <span class="subtotal-value fw-bold text-success">0.00€</span>' +
+                           '</div>' +
+                           '<span style="position: absolute; right: 8px; top: 8px;" class="remove-layout-element" title="Supprimer" data-element-id="' + elementId + '"><i class="fas fa-times text-danger"></i></span>' +
+                           '</div>');
+                break;
+                
+            case 'section_title':
+                const titre = element.titre || 'Nouveau titre de section';
+                $element = $('<div class="layout-element section-title" data-element-type="section_title" data-element-id="' + elementId + '" style="display: flex; align-items: center; position: relative;">' +
+                           '<div style="width: 25px; padding: 4px;" class="text-center drag-handle" title="Glisser pour réorganiser">' +
+                           '<i class="fas fa-grip-vertical text-muted" style="cursor: grab;"></i>' +
+                           '</div>' +
+                           '<div class="flex-grow-1">' +
+                           '<i class="fas fa-heading me-2 text-primary"></i>' +
+                           '<input type="text" class="section-title-input" value="' + titre + '" maxlength="100" style="background: transparent; border: none; font-weight: bold; font-size: 1.1rem; color: #495057; width: 100%;">' +
+                           '</div>' +
+                           '<span style="position: absolute; right: 8px; top: 8px;" class="remove-layout-element" title="Supprimer" data-element-id="' + elementId + '"><i class="fas fa-times text-danger"></i></span>' +
+                           '</div>');
+                break;
+                
+            case 'separator':
+                $element = $('<div class="layout-element separator" data-element-type="separator" data-element-id="' + elementId + '" style="display: flex; align-items: center; position: relative;">' +
+                           '<div style="width: 25px; padding: 4px;" class="text-center drag-handle" title="Glisser pour réorganiser">' +
+                           '<i class="fas fa-grip-vertical text-muted" style="cursor: grab;"></i>' +
+                           '</div>' +
+                           '<div class="flex-grow-1" style="height: 2px; background: linear-gradient(90deg, transparent, #6c757d, transparent); border-radius: 1px;"></div>' +
+                           '<span style="position: absolute; right: 30px; top: 50%; transform: translateY(-50%); opacity: 0.5; font-size: 0.75rem;">Séparateur</span>' +
+                           '<span style="position: absolute; right: 8px; top: 50%; transform: translateY(-50%);" class="remove-layout-element" title="Supprimer" data-element-id="' + elementId + '"><i class="fas fa-times text-danger"></i></span>' +
+                           '</div>');
+                break;
+        }
+        
+        return $element;
+    }
+
+    // Insérer l'élément à la bonne position dans le DOM
+    function insertElementAtPosition($element, position) {
+        const $items = $('.devis-item, .layout-element');
+        if (position >= $items.length) {
+            $('#devis_devisItems').append($element);
+        } else {
+            $items.eq(position).before($element);
+        }
+    }
+
+    // Configurer les événements pour l'élément de layout
+    function setupLayoutElementEvents($element, elementId) {
+        // Événement de suppression
+        $element.find('.remove-layout-element').on('click', function(e) {
+            e.preventDefault();
+            removeLayoutElement(elementId);
+        });
+        
+        // Événement de modification du titre pour les section_title
+        if ($element.hasClass('section-title')) {
+            $element.find('.section-title-input').on('blur change', function() {
+                const newTitle = $(this).val();
+                updateLayoutElementTitle(elementId, newTitle);
+            });
+        }
+    }
+
+    // Actions post-insertion
+    function updateAfterLayoutElementInsert($element, elementType) {
+        // Calculer le sous-total si c'est un élément subtotal
+        if (elementType === 'subtotal') {
+            const subtotal = calculateSubtotalUpTo($element);
+            $element.find('.subtotal-value').text(subtotal.toFixed(2) + '€');
+        }
+        
+        // Animation d'apparition
+        $element.hide().fadeIn(400);
+        
+        // Recréer Sortable pour inclure le nouvel élément
+        setTimeout(function() {
+            initDragAndDrop();
+            createDropZones();
+        }, 100);
+        
+        // Déclencher l'auto-sauvegarde si disponible
+        if (typeof scheduleAutoSave === 'function') {
+            scheduleAutoSave();
+        }
+    }
+
+    // Supprimer un élément de mise en page (sans confirmation)
+    function removeLayoutElement(elementId) {
+        console.log(`🗑️ Suppression layout element: ${elementId}`);
+        
+        // Trouver l'élément spécifique avec cet ID exact
+        const $element = $(`.layout-element[data-element-id="${elementId}"]`).first();
+        
+        if ($element.length === 0) {
+            console.error(`❌ Élément ${elementId} introuvable dans le DOM`);
+            showReorderNotification('❌ Élément introuvable', true);
+            return;
+        }
+        
+        console.log(`🎯 Élément trouvé:`, $element[0]);
+        
+        $.ajax({
+            url: `/devis/{{ devis.id }}/layout-element/${elementId}`,
+            method: 'DELETE',
+            success: function(response) {
+                if (response.success) {
+                    console.log('✅ Élément supprimé de la base');
+                    
+                    // Supprimer SEULEMENT cet élément spécifique
+                    $element.fadeOut(300, function() {
+                        $element.remove();
+                        console.log(`✅ Élément ${elementId} supprimé du DOM`);
+                        
+                        // Vérifier qu'il n'y a plus de doublons
+                        const remainingElements = $(`.layout-element[data-element-id="${elementId}"]`);
+                        if (remainingElements.length > 0) {
+                            console.warn(`⚠️ ${remainingElements.length} éléments restants avec l'ID ${elementId}, nettoyage...`);
+                            remainingElements.remove();
+                        }
+                        
+                        createDropZones();
+                        updateAllSubtotals();
+                        
+                        if (typeof scheduleAutoSave === 'function') {
+                            scheduleAutoSave();
+                        }
+                    });
+                    showReorderNotification('✅ Élément supprimé');
+                } else {
+                    console.error('❌ Erreur suppression:', response.message);
+                    showReorderNotification('❌ ' + response.message, true);
+                }
+            },
+            error: function(xhr) {
+                console.error('❌ Erreur AJAX suppression:', xhr);
+                showReorderNotification('❌ Erreur lors de la suppression', true);
+            }
+        });
+    }
+
+    // Mettre à jour le titre d'un élément section_title
+    function updateLayoutElementTitle(elementId, newTitle) {
+        console.log(`📝 Mise à jour titre élément ${elementId}: ${newTitle}`);
+        // Cette fonction sera implémentée plus tard si nécessaire
+        // Pour l'instant on garde le titre local, la sauvegarde se fera via l'auto-save global
+    }
+
+    // Sauvegarder l'ordre de tous les éléments (lignes de devis + layout elements) - ORDRE GLOBAL UNIFIÉ
+    function saveElementsOrder() {
+        console.log('💾 Sauvegarde de l\'ordre GLOBAL des éléments...');
+        
+        const layoutElementOrders = {};
+        const devisItemOrders = {};
+        
+        // Parcourir tous les éléments dans l'ordre actuel du DOM avec un compteur GLOBAL
+        $('#devis_devisItems').children('.devis-item, .layout-element').each(function(index) {
+            const $element = $(this);
+            const globalOrder = index + 1; // Ordre global unifié : 1, 2, 3, 4, 5...
+            
+            if ($element.hasClass('layout-element')) {
+                // Élément de layout : sauvegarder avec ordre global
+                const elementId = $element.attr('data-element-id');
+                if (elementId && elementId !== 'undefined') {
+                    layoutElementOrders[elementId] = globalOrder;
+                    $element.attr('data-ordre', globalOrder); // Mettre à jour l'attribut DOM
+                    console.log(`📍 Layout element ${elementId} → ordre global ${globalOrder}`);
+                }
+            } else if ($element.hasClass('devis-item')) {
+                // Ligne de devis : sauvegarder avec ordre global
+                const itemId = $element.find('[id$="_id"]').val();
+                if (itemId) {
+                    devisItemOrders[itemId] = globalOrder;
+                }
+                $element.attr('data-ordre', globalOrder); // Mettre à jour l'attribut DOM
+                $element.find('[id$="_ordreAffichage"]').val(globalOrder); // Mettre à jour le champ caché
+                console.log(`📍 Devis item ${itemId || 'nouveau'} → ordre global ${globalOrder}`);
+            }
+        });
+        
+        // Sauvegarder les layout elements avec leur ordre global
+        if (Object.keys(layoutElementOrders).length > 0) {
+            $.ajax({
+                url: `/devis/{{ devis.id }}/layout-elements/reorder`,
+                method: 'POST',
+                contentType: 'application/json',
+                data: JSON.stringify({ orders: layoutElementOrders }),
+                success: function(response) {
+                    console.log(response.success ? 
+                        `✅ Layout elements sauvegardés: ${response.message}` : 
+                        `❌ Erreur layout: ${response.message}`);
+                },
+                error: function(xhr) {
+                    console.error('❌ Erreur AJAX layout elements:', xhr);
+                }
+            });
+        }
+        
+        // Déclencher l'auto-sauvegarde pour les devis items avec leurs nouveaux ordres
+        if (typeof scheduleAutoSave === 'function') {
+            console.log('💾 Déclenchement auto-save pour sauvegarder ordres devis items...');
+            scheduleAutoSave();
+        }
+        
+        console.log(`✅ Sauvegarde ordre global terminée (${Object.keys(layoutElementOrders).length} layout + ${Object.keys(devisItemOrders).length} items)`);
+    }
+    
+    // Fonction de debug pour les problèmes de drag
+    function debugDragIssues() {
+        console.log('🔍 DEBUG - État actuel du système:');
+        console.log('- Nombre de .devis-item:', $('.devis-item').length);
+        console.log('- Nombre de .layout-element:', $('.layout-element').length);  
+        console.log('- Nombre de .drop-zone:', $('.drop-zone').length);
+        console.log('- Instance Sortable:', sortableInstance ? 'Présente' : 'Absente');
+        
+        $('.devis-item').each(function(index) {
+            const $item = $(this);
+            const hasHandle = $item.find('.drag-handle').length > 0;
+            console.log(`- Ligne ${index + 1}: Handle=${hasHandle}, Classes=${$item.attr('class')}`);
+        });
+        
+        if (sortableInstance) {
+            console.log('- Options Sortable:', {
+                handle: sortableInstance.options.handle,
+                filter: sortableInstance.options.filter
+            });
+        }
+    }
+    
+    // Ajouter un listener pour diagnostiquer les problèmes
+    $(document).on('click', '.drag-handle', function(e) {
+        const $handle = $(this);
+        const $item = $handle.closest('.devis-item, .layout-element');
+        const index = $('.devis-item, .layout-element').index($item);
+        
+        console.log('🖱️ Clic sur handle - Index:', index, '- Type:', $item.hasClass('devis-item') ? 'devis-item' : 'layout-element');
+        
+        // Si c'est la dernière ligne, faire un debug complet
+        if (index === $('.devis-item, .layout-element').length - 1) {
+            console.log('⚠️ DERNIÈRE LIGNE CLIQUÉE - Debug complet:');
+            debugDragIssues();
+            
+            // Test : forcer la recréation de Sortable pour la dernière ligne
+            console.log('🔄 Test: Recréation Sortable pour dernière ligne');
+            setTimeout(function() {
+                initDragAndDrop();
+                console.log('✅ Sortable recréé pour test dernière ligne');
+            }, 100);
+        }
+    });
+    
+    // Fonction spéciale pour forcer le drag de la dernière ligne
+    window.forceDragLastItem = function() {
+        console.log('🚀 FORCE DRAG - Dernière ligne');
+        debugDragIssues();
+        initDragAndDrop();
+        console.log('✅ Drag forcé terminé');
+    };
+    
+    // Fonction pour insérer un élément à la position correcte selon son ordre d'affichage
+    function insertElementAtPosition($element, targetPosition) {
+        const container = $('#devis_devisItems');
+        const allElements = container.children('.devis-item, .layout-element');
+        
+        console.log(`🔍 Insertion à position ${targetPosition} parmi ${allElements.length} éléments existants`);
+        
+        // Si c'est la première position (0 ou 1)
+        if (targetPosition <= 1) {
+            container.prepend($element);
+            console.log('📍 Élément inséré au début');
+            return;
+        }
+        
+        // Chercher l'élément à la position targetPosition - 1 pour insérer après
+        let insertAfter = null;
+        let currentPosition = 1;
+        
+        allElements.each(function() {
+            const $currentElement = $(this);
+            
+            // Compter les positions en fonction du type d'élément
+            if ($currentElement.hasClass('devis-item')) {
+                const itemOrder = parseInt($currentElement.attr('data-ordre')) || currentPosition;
+                if (itemOrder < targetPosition) {
+                    insertAfter = $currentElement;
+                    console.log(`📍 Candidat insertion après devis-item ordre ${itemOrder}`);
+                }
+            } else if ($currentElement.hasClass('layout-element')) {
+                // Pour les layout elements existants, utiliser leur position actuelle
+                if (currentPosition < targetPosition) {
+                    insertAfter = $currentElement;
+                    console.log(`📍 Candidat insertion après layout-element position ${currentPosition}`);
+                }
+            }
+            
+            currentPosition++;
+        });
+        
+        // Insérer après l'élément trouvé ou au début si rien trouvé
+        if (insertAfter) {
+            insertAfter.after($element);
+            console.log(`✅ Élément inséré après la position ${targetPosition - 1}`);
+        } else {
+            container.prepend($element);
+            console.log('✅ Élément inséré au début (aucun élément précédent trouvé)');
+        }
+    }
+    
+    // Fonction pour trier tous les éléments selon leur ordre d'affichage
+    function sortAllElementsByOrder() {
+        const container = $('#devis_devisItems');
+        
+        // S'assurer que le conteneur existe
+        if (!container.length) {
+            console.error('❌ Conteneur #devis_devisItems introuvable');
+            return;
+        }
+        
+        // SEULEMENT les éléments à l'intérieur du conteneur
+        const allElements = container.children('.devis-item, .layout-element').get();
+        
+        console.log(`🔄 Tri de ${allElements.length} éléments dans le conteneur #devis_devisItems`);
+        
+        if (allElements.length === 0) {
+            console.log('ℹ️ Aucun élément à trier');
+            return;
+        }
+        
+        // Trier par ordre d'affichage (data-ordre), les éléments sans ordre vont à la fin
+        allElements.sort(function(a, b) {
+            const orderA = parseInt($(a).attr('data-ordre')) || 999999; // Éléments sans ordre → fin
+            const orderB = parseInt($(b).attr('data-ordre')) || 999999;
+            
+            // Logging pour débugger le tri
+            if (orderA !== orderB) {
+                const typeA = $(a).hasClass('devis-item') ? 'DevisItem' : 'LayoutElement';
+                const typeB = $(b).hasClass('devis-item') ? 'DevisItem' : 'LayoutElement';
+                const idA = $(a).hasClass('devis-item') ? $(a).find('[id$="_id"]').val() || 'nouveau' : $(a).attr('data-element-id');
+                const idB = $(b).hasClass('devis-item') ? $(b).find('[id$="_id"]').val() || 'nouveau' : $(b).attr('data-element-id');
+                console.log(`  📋 Tri: ${typeA} ${idA} (ordre ${orderA === 999999 ? 'undefined' : orderA}) avant ${typeB} ${idB} (ordre ${orderB === 999999 ? 'undefined' : orderB})`);
+            }
+            
+            return orderA - orderB;
+        });
+        
+        // Vider le conteneur et réinsérer dans l'ordre correct
+        container.empty();
+        allElements.forEach(function(element, index) {
+            const $element = $(element);
+            const ordre = $element.attr('data-ordre');
+            container.append($element);
+            
+            console.log(`  ✅ Position ${index + 1}: ${$element.hasClass('devis-item') ? 'devis-item' : 'layout-element'} (ordre ${ordre})`);
+        });
+        
+        console.log('✅ Tri terminé, éléments réorganisés dans le bon ordre');
+    }
+    
+    // Charger les layout elements existants depuis la base de données
+    function loadExistingLayoutElements() {
+        console.log('📂 Chargement des layout elements existants...');
+        
+        // D'abord, nettoyer tous les layout elements existants pour éviter les doublons
+        $('.layout-element').each(function() {
+            const $element = $(this);
+            const elementId = $element.attr('data-element-id');
+            console.log('🧹 Nettoyage élément existant:', elementId);
+            $element.remove();
+        });
+        
+        $.ajax({
+            url: `/devis/{{ devis.id }}/layout-elements`,
+            method: 'GET',
+            success: function(response) {
+                if (response.success && response.elements.length > 0) {
+                    console.log(`✅ ${response.elements.length} layout elements chargés depuis la base`);
+                    
+                    // Insérer les éléments selon leur ordre d'affichage correct
+                    response.elements.forEach(function(element) {
+                        // Vérifier qu'il n'existe pas déjà
+                        if ($(`[data-element-id="${element.id}"]`).length > 0) {
+                            console.log(`⚠️ Élément ${element.id} déjà présent, ignoré`);
+                            return;
+                        }
+                        
+                        const $element = createLayoutElementDOM(element);
+                        const targetPosition = element.ordre_affichage;
+                        
+                        console.log(`📍 Insertion layout element ${element.id} (${element.type}) à la position ${targetPosition}`);
+                        
+                        // Ajouter temporairement à la fin
+                        $('#devis_devisItems').append($element);
+                        
+                        // Marquer avec l'ordre d'affichage pour tri ultérieur
+                        $element.attr('data-ordre', targetPosition);
+                        
+                        // Configurer les événements
+                        setupLayoutElementEvents($element, element.id);
+                        
+                        // Calculer les sous-totaux si nécessaire
+                        if (element.type === 'subtotal') {
+                            setTimeout(() => {
+                                const subtotal = calculateSubtotalUpTo($element);
+                                $element.find('.subtotal-value').text(subtotal.toFixed(2) + '€');
+                            }, 100);
+                        }
+                        
+                        console.log(`✅ Layout element ${element.id} (${element.type}) ajouté avec ordre ${targetPosition}`);
+                    });
+                    
+                    // Maintenant trier tous les éléments selon leur ordre d'affichage
+                    setTimeout(() => {
+                        sortAllElementsByOrder();
+                        console.log('✅ Layout elements triés selon leur ordre d\'affichage');
+                        
+                        // Recréer les zones de drop APRÈS le tri
+                        setTimeout(() => {
+                            createDropZones();
+                            console.log('✅ Zones de drop recréées après tri');
+                        }, 100);
+                    }, 200);
+                    
+                    // Nettoyage final des doublons par sécurité
+                    const duplicatesRemoved = cleanDuplicateLayoutElements();
+                    if (duplicatesRemoved > 0) {
+                        console.log(`🧹 ${duplicatesRemoved} doublons supprimés après chargement`);
+                    }
+                } else {
+                    console.log('ℹ️ Aucun layout element existant');
+                }
+            },
+            error: function(xhr) {
+                console.error('❌ Erreur chargement layout elements:', xhr);
+            }
+        });
+    }
+
+    // Initialiser le système au chargement avec diagnostic
+    setTimeout(function() {
+        console.log('🚀 INITIALISATION SYSTÈME DRAG & DROP AVANCÉ...');
+        
+        // Charger d'abord les layout elements existants
+        loadExistingLayoutElements();
+        
+        // Puis initialiser le drag & drop après un court délai
+        setTimeout(() => {
+            initDragAndDrop();
+            console.log('✅ Système drag & drop initialisé');
+            
+            // Diagnostic initial approfondi
+            setTimeout(() => {
+                diagnoseDragAndDropState();
+                
+                // Test spécial pour la dernière ligne si elle existe
+                const container = document.getElementById('devis_devisItems');
+                if (container) {
+                    const items = container.querySelectorAll('.devis-item');
+                    if (items.length > 0) {
+                        const lastItem = items[items.length - 1];
+                        const lastItemId = lastItem.getAttribute('data-item-id');
+                        console.log(`\n🎯 TEST DERNIÈRE LIGNE: ${lastItemId}`);
+                        console.log(`  - Possède drag handle: ${!!lastItem.querySelector('.drag-handle')}`);
+                        console.log(`  - Position dans le DOM: ${items.length - 1}`);
+                    }
+                }
+            }, 300);
+        }, 300);
+    }, 500);
+    
+    // Fonction de nettoyage des doublons layout elements
+    function cleanDuplicateLayoutElements() {
+        console.log('🧹 NETTOYAGE DES DOUBLONS...');
+        
+        const seenIds = new Set();
+        const duplicates = [];
+        
+        $('.layout-element').each(function() {
+            const $element = $(this);
+            const elementId = $element.attr('data-element-id');
+            
+            if (elementId) {
+                if (seenIds.has(elementId)) {
+                    console.log(`🚫 Doublon détecté: ${elementId}`);
+                    duplicates.push($element);
+                } else {
+                    seenIds.add(elementId);
+                    console.log(`✅ Element unique: ${elementId}`);
+                }
+            } else {
+                console.log('⚠️ Element sans ID trouvé, suppression:', $element[0]);
+                duplicates.push($element);
+            }
+        });
+        
+        // Supprimer tous les doublons
+        duplicates.forEach($duplicate => {
+            console.log('🗑️ Suppression doublon:', $duplicate.attr('data-element-id'));
+            $duplicate.remove();
+        });
+        
+        console.log(`✅ Nettoyage terminé. ${duplicates.length} doublons supprimés.`);
+        return duplicates.length;
+    }
+
+    // Exposer les fonctions de diagnostic globalement pour le debug manuel
+    window.diagnoseDragAndDropState = diagnoseDragAndDropState;
+    window.recreateDragAndDropSystem = recreateDragAndDropSystem;
+    window.cleanDuplicateLayoutElements = cleanDuplicateLayoutElements;
+    window.showLastLineDragTest = function() {
+        console.log('\n🧪 TEST MANUEL - DERNIÈRE LIGNE');
+        diagnoseDragAndDropState();
+        recreateDragAndDropSystem();
+    };
+    window.debugLayoutElements = function() {
+        console.log('\n🔍 DEBUG LAYOUT ELEMENTS:');
+        $('.layout-element').each(function(index) {
+            const $el = $(this);
+            console.log(`  ${index + 1}. ID: ${$el.attr('data-element-id')}, Type: ${$el.attr('data-element-type')}, Classes: ${$el.attr('class')}`);
+        });
+    };
+});
+</script>
+
+<!-- Modal pour éditer un élément -->
+<div class="modal fade" id="element-modal" tabindex="-1">
+    <div class="modal-dialog modal-lg">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title" id="element-modal-title">Modifier l'élément</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <!-- Le contenu sera injecté dynamiquement -->
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Annuler</button>
+                <button type="button" class="btn btn-primary" id="save-element-btn">Enregistrer</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+// Configuration globale
+const DEVIS_ID = {{ devis.id }};
+const IS_EDITABLE = {{ devis.statut == 'brouillon' ? 'true' : 'false' }};
+
+let elements = [];
+let sortable = null;
+
+// ==========================================
+// INITIALISATION
+// ==========================================
+
+async function init() {
+    try {
+        await loadElements();
+        if (IS_EDITABLE) {
+            initSortable();
+            initEventListeners();
+        }
+        calculateTotals();
+    } catch (error) {
+        console.error('Erreur d\'initialisation:', error);
+        showError('Erreur lors du chargement des données');
+    }
+}
+
+// ==========================================
+// CHARGEMENT DES ÉLÉMENTS
+// ==========================================
+
+async function loadElements() {
+    try {
+        const response = await fetch(`/devis/${DEVIS_ID}/element`);
+        const data = await response.json();
+        
+        if (!data.success) {
+            throw new Error(data.message);
+        }
+        
+        elements = data.elements;
+        renderElements();
+        
+    } catch (error) {
+        console.error('Erreur chargement éléments:', error);
+        showError('Impossible de charger les éléments du devis');
+    }
+}
+
+// ==========================================
+// RENDU DES ÉLÉMENTS
+// ==========================================
+
+function renderElements() {
+    const container = document.getElementById('elements-container');
+    
+    if (elements.length === 0) {
+        container.innerHTML = `
+            <div class="text-center text-muted p-4">
+                <i class="fas fa-inbox"></i>
+                <p class="mt-2">Aucun élément dans ce devis</p>
+                ${IS_EDITABLE ? '<p class="small">Utilisez le bouton "Ajouter produit" pour commencer</p>' : ''}
+            </div>
+        `;
+        return;
+    }
+
+    const html = elements.map(element => renderElement(element)).join('');
+    container.innerHTML = html;
+}
+
+function renderElement(element) {
+    if (element.is_product) {
+        return renderProductElement(element);
+    } else {
+        return renderLayoutElement(element);
+    }
+}
+
+function renderProductElement(element) {
+    const dragHandle = IS_EDITABLE ? `
+        <div class="drag-handle me-2" style="cursor: grab;">
+            <i class="fas fa-grip-vertical text-muted"></i>
+        </div>
+    ` : '';
+
+    const editButton = IS_EDITABLE ? `
+        <button class="btn btn-sm btn-outline-primary me-1" onclick="editElement(${element.id})">
+            <i class="fas fa-edit"></i>
+        </button>
+    ` : '';
+
+    const deleteButton = IS_EDITABLE ? `
+        <button class="btn btn-sm btn-outline-danger" onclick="deleteElement(${element.id})">
+            <i class="fas fa-trash"></i>
+        </button>
+    ` : '';
+
+    return `
+        <div class="element-item border rounded p-3 mb-2" data-element-id="${element.id}" data-element-type="product">
+            <div class="d-flex align-items-center">
+                ${dragHandle}
+                <div class="flex-grow-1">
+                    <div class="row">
+                        <div class="col-md-4">
+                            <strong>${element.designation || 'Produit sans nom'}</strong>
+                            ${element.description ? `<br><small class="text-muted">${element.description}</small>` : ''}
+                        </div>
+                        <div class="col-md-2 text-center">
+                            ${parseFloat(element.quantite || 0)}
+                        </div>
+                        <div class="col-md-2 text-end">
+                            ${parseFloat(element.prix_unitaire_ht || 0).toFixed(2)} €
+                        </div>
+                        <div class="col-md-2 text-center">
+                            ${parseFloat(element.remise_percent || 0)}%
+                        </div>
+                        <div class="col-md-2 text-end">
+                            <strong>${parseFloat(element.total_ligne_ht || 0).toFixed(2)} €</strong>
+                        </div>
+                    </div>
+                </div>
+                <div class="ms-2">
+                    ${editButton}
+                    ${deleteButton}
+                </div>
+            </div>
+        </div>
+    `;
+}
+
+function renderLayoutElement(element) {
+    const dragHandle = IS_EDITABLE ? `
+        <div class="drag-handle me-2" style="cursor: grab;">
+            <i class="fas fa-grip-vertical text-muted"></i>
+        </div>
+    ` : '';
+
+    const editButton = IS_EDITABLE && element.type === 'section_title' ? `
+        <button class="btn btn-sm btn-outline-primary me-1" onclick="editElement(${element.id})">
+            <i class="fas fa-edit"></i>
+        </button>
+    ` : '';
+
+    const deleteButton = IS_EDITABLE ? `
+        <button class="btn btn-sm btn-outline-danger" onclick="deleteElement(${element.id})">
+            <i class="fas fa-trash"></i>
+        </button>
+    ` : '';
+
+    let content = '';
+    switch(element.type) {
+        case 'section_title':
+            content = `<h5 class="mb-0"><i class="${element.icon}"></i> ${element.titre || element.display_label}</h5>`;
+            break;
+        case 'subtotal':
+            content = `<div class="d-flex justify-content-between align-items-center">
+                <span><i class="${element.icon}"></i> ${element.display_label}</span>
+                <strong class="subtotal-amount">${calculateSubtotalUpTo(element.position).toFixed(2)} €</strong>
+            </div>`;
+            break;
+        case 'line_break':
+            content = `<hr class="my-1">`;
+            break;
+        case 'page_break':
+            content = `<div class="text-center text-muted py-2">
+                <i class="${element.icon}"></i> ${element.display_label}
+                <hr class="border-2">
+            </div>`;
+            break;
+        case 'separator':
+            content = `<div class="text-center">
+                <i class="${element.icon}"></i> ${element.display_label}
+            </div>`;
+            break;
+        default:
+            content = `<i class="${element.icon}"></i> ${element.display_label}`;
+    }
+
+    return `
+        <div class="element-item border rounded p-2 mb-2 bg-light" data-element-id="${element.id}" data-element-type="${element.type}">
+            <div class="d-flex align-items-center">
+                ${dragHandle}
+                <div class="flex-grow-1">
+                    ${content}
+                </div>
+                <div class="ms-2">
+                    ${editButton}
+                    ${deleteButton}
+                </div>
+            </div>
+        </div>
+    `;
+}
+
+// ==========================================
+// GESTION DU DRAG & DROP
+// ==========================================
+
+function initSortable() {
+    const container = document.getElementById('elements-container');
+    
+    if (sortable) {
+        sortable.destroy();
+    }
+
+    sortable = new Sortable(container, {
+        handle: '.drag-handle',
+        animation: 150,
+        ghostClass: 'sortable-ghost',
+        chosenClass: 'sortable-chosen',
+        dragClass: 'sortable-drag',
+        onEnd: function(evt) {
+            const elementIds = Array.from(container.children)
+                .map(child => parseInt(child.dataset.elementId))
+                .filter(id => !isNaN(id));
+                
+            reorderElements(elementIds);
+        }
+    });
+}
+
+// ==========================================
+// ACTIONS SUR LES ÉLÉMENTS
+// ==========================================
+
+async function addElement(type, position = null) {
+    try {
+        const data = { type };
+        if (position !== null) {
+            data.position = position;
+        }
+
+        const response = await fetch(`/devis/${DEVIS_ID}/element`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(data)
+        });
+
+        const result = await response.json();
+        
+        if (!result.success) {
+            throw new Error(result.message);
+        }
+
+        await loadElements();
+        calculateTotals();
+        showSuccess('Élément ajouté avec succès');
+        
+    } catch (error) {
+        console.error('Erreur ajout élément:', error);
+        showError('Impossible d\'ajouter l\'élément');
+    }
+}
+
+async function deleteElement(elementId) {
+    if (!confirm('Êtes-vous sûr de vouloir supprimer cet élément ?')) {
+        return;
+    }
+
+    try {
+        const response = await fetch(`/devis/${DEVIS_ID}/element/${elementId}`, {
+            method: 'DELETE'
+        });
+
+        const result = await response.json();
+        
+        if (!result.success) {
+            throw new Error(result.message);
+        }
+
+        await loadElements();
+        calculateTotals();
+        showSuccess('Élément supprimé avec succès');
+        
+    } catch (error) {
+        console.error('Erreur suppression élément:', error);
+        showError('Impossible de supprimer l\'élément');
+    }
+}
+
+async function reorderElements(elementIds) {
+    try {
+        const response = await fetch(`/devis/${DEVIS_ID}/element/reorder`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ elementIds })
+        });
+
+        const result = await response.json();
+        
+        if (!result.success) {
+            throw new Error(result.message);
+        }
+
+        // Mettre à jour l'ordre local
+        elements.sort((a, b) => {
+            const indexA = elementIds.indexOf(a.id);
+            const indexB = elementIds.indexOf(b.id);
+            return indexA - indexB;
+        });
+
+        calculateTotals();
+        
+    } catch (error) {
+        console.error('Erreur réorganisation:', error);
+        showError('Impossible de réorganiser les éléments');
+    }
+}
+
+// ==========================================
+// CALCULS
+// ==========================================
+
+function calculateTotals() {
+    const productElements = elements.filter(e => e.is_product);
+    
+    let totalHt = 0;
+    let totalTva = 0;
+    
+    productElements.forEach(element => {
+        const lineHt = parseFloat(element.total_ligne_ht || 0);
+        const tvaPercent = parseFloat(element.tva_percent || 0);
+        
+        totalHt += lineHt;
+        totalTva += lineHt * (tvaPercent / 100);
+    });
+    
+    const totalTtc = totalHt + totalTva;
+    
+    // Mettre à jour les totaux dans l'interface si les éléments existent
+    const totalHtEl = document.getElementById('total-ht');
+    const totalTvaEl = document.getElementById('total-tva');
+    const totalTtcEl = document.getElementById('total-ttc');
+    
+    if (totalHtEl) totalHtEl.textContent = totalHt.toFixed(2) + ' €';
+    if (totalTvaEl) totalTvaEl.textContent = totalTva.toFixed(2) + ' €';
+    if (totalTtcEl) totalTtcEl.textContent = totalTtc.toFixed(2) + ' €';
+    
+    // Mettre à jour les sous-totaux
+    updateSubtotals();
+}
+
+function calculateSubtotalUpTo(position) {
+    let subtotal = 0;
+    
+    elements.forEach(element => {
+        if (element.is_product && element.position < position) {
+            subtotal += parseFloat(element.total_ligne_ht || 0);
+        }
+    });
+    
+    return subtotal;
+}
+
+function updateSubtotals() {
+    document.querySelectorAll('.subtotal-amount').forEach(subtotalEl => {
+        const elementItem = subtotalEl.closest('.element-item');
+        const elementId = parseInt(elementItem.dataset.elementId);
+        const element = elements.find(e => e.id === elementId);
+        
+        if (element) {
+            const subtotal = calculateSubtotalUpTo(element.position);
+            subtotalEl.textContent = subtotal.toFixed(2) + ' €';
+        }
+    });
+}
+
+// ==========================================
+// EVENT LISTENERS
+// ==========================================
+
+function initEventListeners() {
+    // Bouton ajouter produit
+    document.getElementById('add-product-btn').addEventListener('click', () => {
+        addElement('product');
+    });
+
+    // Boutons ajouter éléments de mise en page
+    document.querySelectorAll('[data-element-type]').forEach(btn => {
+        btn.addEventListener('click', (e) => {
+            e.preventDefault();
+            const type = btn.dataset.elementType;
+            addElement(type);
+        });
+    });
+}
+
+// ==========================================
+// FONCTIONS GLOBALES (appelées depuis le HTML)
+// ==========================================
+
+window.editElement = function(elementId) {
+    console.log('Edit element:', elementId);
+    // TODO: Implémenter l'édition
+};
+
+window.deleteElement = deleteElement;
+
+// ==========================================
+// UTILITAIRES
+// ==========================================
+
+function showSuccess(message) {
+    // Utiliser Bootstrap toasts ou une notification simple
+    alert('✓ ' + message);
+}
+
+function showError(message) {
+    alert('✗ ' + message);
+}
+
+// ==========================================
+// INITIALISATION AU CHARGEMENT
+// ==========================================
+
+document.addEventListener('DOMContentLoaded', function() {
+    init();
+});
+</script>
+
+<style>
+.sortable-ghost {
+    opacity: 0.4;
+}
+
+.sortable-chosen {
+    background-color: #e3f2fd !important;
+}
+
+.drag-handle {
+    width: 20px;
+}
+
+.element-item {
+    transition: all 0.2s;
+}
+
+.element-item:hover {
+    box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+}
+</style>
+
+<!-- Inclure SortableJS -->
+<script src="https://cdn.jsdelivr.net/npm/sortablejs@1.15.0/Sortable.min.js"></script>
+
+{% endblock %}

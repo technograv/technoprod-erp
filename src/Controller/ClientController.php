@@ -349,7 +349,11 @@ final class ClientController extends AbstractController
             
             $contacts[] = [
                 'id' => $contact->getId(),
-                'label' => $label
+                'label' => $label,
+                'adresse_id' => $contact->getAdresse() ? $contact->getAdresse()->getId() : null,
+                'prenom' => $contact->getPrenom(),
+                'nom' => $contact->getNom(),
+                'fonction' => $contact->getFonction()
             ];
         }
 
@@ -360,15 +364,19 @@ final class ClientController extends AbstractController
     public function getAddresses(Client $client): JsonResponse
     {
         $addresses = [];
+        $addressesAdded = []; // Pour éviter les doublons
+        
         foreach ($client->getContacts() as $contact) {
             $adresse = $contact->getAdresse();
-            if ($adresse) {
+            if ($adresse && !in_array($adresse->getId(), $addressesAdded)) {
                 $label = ($adresse->getNom() ?? 'Adresse') . ' - ' . $adresse->getLigne1() . ' - ' . $adresse->getVille();
                 
                 $addresses[] = [
                     'id' => $adresse->getId(),
                     'label' => $label
                 ];
+                
+                $addressesAdded[] = $adresse->getId(); // Marquer comme ajoutée
             }
         }
 
