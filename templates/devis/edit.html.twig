@@ -1124,14 +1124,22 @@ async function reorderElements(elementIds) {
             return;
         }
 
-        // Mettre à jour l'ordre local
+        // Mettre à jour l'ordre local et les nouvelles positions
         elements.sort((a, b) => {
             const indexA = elementIds.indexOf(a.id);
             const indexB = elementIds.indexOf(b.id);
             return indexA - indexB;
         });
 
+        // Mettre à jour les positions dans le tableau elements (1-indexed)
+        elements.forEach((element, index) => {
+            element.position = index + 1;
+        });
+
         calculateTotals();
+        
+        // Forcer la mise à jour des sous-totaux après réorganisation
+        updateSubtotals();
         
     } catch (error) {
         console.error('Erreur réorganisation:', error);
