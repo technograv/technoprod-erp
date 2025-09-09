@@ -731,6 +731,62 @@
             font-size: 14px;
             line-height: 1.6;
         }
+
+        /* Styles pour les polices personnalisées dans Quill */
+        .ql-font-arial {
+            font-family: Arial, sans-serif;
+        }
+        .ql-font-helvetica {
+            font-family: Helvetica, sans-serif;
+        }
+        .ql-font-times {
+            font-family: 'Times New Roman', serif;
+        }
+        .ql-font-georgia {
+            font-family: Georgia, serif;
+        }
+        .ql-font-verdana {
+            font-family: Verdana, sans-serif;
+        }
+        .ql-font-courier {
+            font-family: 'Courier New', monospace;
+        }
+
+        /* Styles pour les tailles personnalisées */
+        .ql-size-10px {
+            font-size: 10px;
+        }
+        .ql-size-12px {
+            font-size: 12px;
+        }
+        .ql-size-14px {
+            font-size: 14px;
+        }
+        .ql-size-16px {
+            font-size: 16px;
+        }
+        .ql-size-18px {
+            font-size: 18px;
+        }
+        .ql-size-20px {
+            font-size: 20px;
+        }
+        .ql-size-22px {
+            font-size: 22px;
+        }
+        .ql-size-24px {
+            font-size: 24px;
+        }
+
+        /* Personnalisation des menus déroulants */
+        .ql-picker-label {
+            padding: 4px 8px;
+        }
+        
+        .ql-picker-options {
+            max-height: 200px;
+            overflow-y: auto;
+        }
     </style>
 {% endblock %}
 
@@ -2349,16 +2405,26 @@ window.openDescriptionEditor = function(elementId, currentDescription) {
 function initQuillEditor() {
     console.log('🔧 Initialisation Quill Editor...');
     
+    // Configuration des polices personnalisées
+    const Font = Quill.import('formats/font');
+    Font.whitelist = ['arial', 'helvetica', 'times', 'georgia', 'verdana', 'courier'];
+    Quill.register(Font, true);
+    
+    // Configuration des tailles personnalisées
+    const Size = Quill.import('formats/size');
+    Size.whitelist = ['10px', '12px', '14px', '16px', '18px', '20px', '22px', '24px'];
+    Quill.register(Size, true);
+    
     quillEditor = new Quill('#description-editor', {
         theme: 'snow',
         placeholder: 'Saisissez ici la description détaillée...',
         modules: {
             toolbar: [
+                [{ 'font': ['arial', 'helvetica', 'times', 'georgia', 'verdana', 'courier'] }],
+                [{ 'size': ['10px', '12px', '14px', '16px', '18px', '20px', '22px', '24px'] }],
                 ['bold', 'italic', 'underline', 'strike'],
-                ['blockquote', 'code-block'],
                 [{ 'header': 1 }, { 'header': 2 }],
                 [{ 'list': 'ordered'}, { 'list': 'bullet' }],
-                [{ 'script': 'sub'}, { 'script': 'super' }],
                 [{ 'indent': '-1'}, { 'indent': '+1' }],
                 [{ 'color': [] }, { 'background': [] }],
                 [{ 'align': [] }],
