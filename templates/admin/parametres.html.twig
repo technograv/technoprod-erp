@@ -80,7 +80,21 @@
                     </div>
                 </div>
                 <div class="col-md-6">
-                    <!-- Espace pour futurs paramètres -->
+                    <div class="mb-3">
+                        <label for="acompte-defaut-percent" class="form-label">
+                            <i class="fas fa-percentage me-1"></i>Acompte par défaut (%)
+                        </label>
+                        <input type="number" class="form-control" id="acompte-defaut-percent" 
+                               min="0" max="100" step="0.01"
+                               value="{{ current_societe.acompteDefautPercent }}"
+                               placeholder="{{ is_societe_mere ? '30' : 'Hériter de la société mère (' ~ (current_societe.societeParent ? current_societe.societeParent.acompteDefautPercent : 30) ~ '%)' }}">
+                        <small class="form-text text-muted">
+                            Pourcentage d'acompte proposé par défaut lors de la création des devis
+                            {% if not is_societe_mere and current_societe.societeParent %}
+                                <br><strong>Valeur héritée :</strong> {{ current_societe.societeParent.acompteDefautPercent }}%
+                            {% endif %}
+                        </small>
+                    </div>
                 </div>
             </div>
             
@@ -166,11 +180,13 @@ function sauvegarderDelaisWorkflow() {
     const delaiRelance = document.getElementById('delai-relance-devis').value;
     const delaiFacturation = document.getElementById('delai-facturation').value;
     const frequenceVisite = document.getElementById('frequence-visite-clients').value;
+    const acompteDefaut = document.getElementById('acompte-defaut-percent').value;
     
     const data = {
         delaiRelanceDevis: delaiRelance ? parseInt(delaiRelance) : null,
         delaiFacturation: delaiFacturation ? parseInt(delaiFacturation) : null,
-        frequenceVisiteClients: frequenceVisite ? parseInt(frequenceVisite) : null
+        frequenceVisiteClients: frequenceVisite ? parseInt(frequenceVisite) : null,
+        acompteDefautPercent: acompteDefaut ? parseFloat(acompteDefaut) : null
     };
     
     fetch('/admin/parametres/delais-workflow', {

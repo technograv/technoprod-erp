@@ -1360,12 +1360,15 @@ final class AdminController extends AbstractController
             if (isset($data['frequenceVisiteClients'])) {
                 $societe->setFrequenceVisiteClients($data['frequenceVisiteClients']);
             }
+            if (isset($data['acompteDefautPercent'])) {
+                $societe->setAcompteDefautPercent($data['acompteDefautPercent']);
+            }
             
             $this->entityManager->flush();
 
             return $this->json([
                 'success' => true,
-                'message' => 'Délais workflow mis à jour avec succès'
+                'message' => 'Paramètres workflow mis à jour avec succès'
             ]);
             
         } catch (\Exception $e) {

@@ -173,10 +173,16 @@
                         </div>
                     </div>
                     <div class="row">
-                        <div class="col-md-6">
+                        <div class="col-md-3">
                             {{ form_row(form.remiseGlobalePercent, {
                                 'label': 'Remise globale (%)',
-                                'attr': {'class': 'form-control', 'min': 0, 'max': 100, 'step': 0.01}
+                                'attr': {'class': 'form-control', 'min': 0, 'max': 100, 'step': 0.01, 'id': 'remise-percent-main'}
+                            }) }}
+                        </div>
+                        <div class="col-md-3">
+                            {{ form_row(form.remiseGlobaleMontant, {
+                                'label': 'Remise globale (€)',
+                                'attr': {'class': 'form-control', 'min': 0, 'step': 0.01, 'id': 'remise-montant-main'}
                             }) }}
                         </div>
                         <div class="col-md-6">
@@ -257,28 +263,19 @@
                 <span class="summary-value total-ht">{{ devis.totalHt }}€</span>
             </div>
             
-            <!-- Remise globale -->
-            <div class="summary-line remise-line">
+            <!-- Remise globale (affichage dynamique) -->
+            <div class="summary-line remise-line" style="display: none;">
                 <span class="summary-label">Remise globale :</span>
-                <div class="remise-controls">
-                    <div class="input-group input-group-sm">
-                        <input type="number" class="form-control" id="remise-percent" 
-                               placeholder="%" min="0" max="100" step="0.1"
-                               value="{{ devis.remiseGlobalePercent ?? 0 }}">
-                        <span class="input-group-text">%</span>
-                        <input type="number" class="form-control" id="remise-montant" 
-                               placeholder="€" min="0" step="0.01"
-                               value="{{ devis.remiseGlobaleMontant ?? 0 }}">
-                        <span class="input-group-text">€</span>
-                    </div>
-                </div>
+                <span class="summary-value remise-display"></span>
             </div>
             
-            <!-- Total HT après remise -->
+            <!-- Total HT après remise (seulement si remise > 0) -->
+            {% if (devis.remiseGlobalePercent and devis.remiseGlobalePercent > 0) or (devis.remiseGlobaleMontant and devis.remiseGlobaleMontant > 0) %}
             <div class="summary-line total-ht-remise-line">
                 <span class="summary-label">Total HT remisé :</span>
                 <span class="summary-value total-ht-remise">{{ (devis.totalHt - (devis.remiseGlobaleMontant ?? 0)) }}€</span>
             </div>
+            {% endif %}
             
             <!-- TVA globale -->
             <div class="summary-line tva-line">
@@ -971,10 +968,25 @@ function renderLayoutElement(element) {
             }
             break;
         case 'subtotal':
-            content = `<div class="d-flex justify-content-between align-items-center">
-                <span><i class="${element.icon}"></i> ${element.display_label}</span>
-                <strong class="subtotal-amount">${calculateSubtotalUpTo(element.position).toFixed(2)} €</strong>
-            </div>`;
+            const subtotalLabel = element.titre || element.display_label;
+            if (IS_EDITABLE) {
+                content = `<div class="d-flex justify-content-between align-items-center">
+                    <div class="d-flex align-items-center">
+                        <i class="${element.icon} me-2"></i>
+                        <input type="text" class="form-control form-control-sm subtotal-title-input" 
+                               style="width: 150px; border: 1px solid #ddd;" 
+                               value="${subtotalLabel}" 
+                               onchange="updateElementTitle(${element.id}, this.value)"
+                               placeholder="Libellé du sous-total">
+                    </div>
+                    <strong class="subtotal-amount">${calculateSubtotalUpTo(element.position).toFixed(2)} €</strong>
+                </div>`;
+            } else {
+                content = `<div class="d-flex justify-content-between align-items-center">
+                    <span><i class="${element.icon}"></i> ${subtotalLabel}</span>
+                    <strong class="subtotal-amount">${calculateSubtotalUpTo(element.position).toFixed(2)} €</strong>
+                </div>`;
+            }
             break;
         case 'line_break':
             content = `<hr class="my-1">`;
@@ -1180,8 +1192,21 @@ function calculateTotals() {
         window.updateTotalHtForRemise(totalHt);
     }
     
-    // Calculer la remise globale
-    const remiseMontant = parseFloat(document.getElementById('remise-montant')?.value || 0);
+    // Calculer la remise globale depuis les champs des conditions commerciales
+    let remisePercentEl = document.getElementById('remise-percent-main') || document.getElementById('devis_remiseGlobalePercent');
+    let remiseMontantEl = document.getElementById('remise-montant-main') || document.getElementById('devis_remiseGlobaleMontant');
+    
+    const remisePercent = parseFloat(remisePercentEl?.value || 0);
+    const remiseMontantSaisie = parseFloat(remiseMontantEl?.value || 0);
+    
+    // Calculer la remise : priorité au pourcentage si les deux sont renseignés
+    let remiseMontant = 0;
+    if (remisePercent > 0) {
+        remiseMontant = totalHt * (remisePercent / 100);
+    } else if (remiseMontantSaisie > 0) {
+        remiseMontant = remiseMontantSaisie;
+    }
+    
     const totalHtRemise = totalHt - remiseMontant;
     const totalTvaRemise = totalHtRemise * (totalTva / totalHt || 0); // Proportionnelle
     const totalTtc = totalHtRemise + totalTvaRemise;
@@ -1191,22 +1216,63 @@ function calculateTotals() {
     const totalTvaEl = document.getElementById('total-tva');
     const totalTtcEl = document.getElementById('total-ttc');
     
-    if (totalHtEl) totalHtEl.textContent = totalTtc.toFixed(2) + ' €'; // Afficher TTC dans l'interface principale
+    if (totalHtEl) totalHtEl.textContent = totalHtRemise.toFixed(2) + ' €'; // Afficher HT remisé dans l'interface principale
     if (totalTvaEl) totalTvaEl.textContent = totalTvaRemise.toFixed(2) + ' €';
     if (totalTtcEl) totalTtcEl.textContent = totalTtc.toFixed(2) + ' €';
     
     // Mettre à jour les totaux dans le panneau flottant avec la nouvelle structure
     const floatingTotalHt = document.querySelector('.floating-summary .total-ht');
     const floatingTotalHtRemise = document.querySelector('.floating-summary .total-ht-remise');
+    const floatingTotalHtRemiseLine = document.querySelector('.floating-summary .total-ht-remise-line');
     const floatingTotalTva = document.querySelector('.floating-summary .total-tva');
     const floatingTotalTtc = document.querySelector('.floating-summary .total-ttc');
     const floatingSummaryDisplay = document.querySelector('.summary-total-display');
     
     if (floatingTotalHt) floatingTotalHt.textContent = totalHt.toFixed(2) + '€';
-    if (floatingTotalHtRemise) floatingTotalHtRemise.textContent = totalHtRemise.toFixed(2) + '€';
+    
+    // Gestion de l'affichage de la remise globale
+    const floatingRemiseLine = document.querySelector('.floating-summary .remise-line');
+    const floatingRemiseDisplay = document.querySelector('.floating-summary .remise-display');
+    
+    if (floatingRemiseLine && floatingRemiseDisplay) {
+        if (remiseMontant > 0) {
+            floatingRemiseLine.style.display = 'flex';
+            let remiseText = '';
+            if (remisePercent > 0) {
+                remiseText += remisePercent + '%';
+            }
+            if (remisePercent > 0 && remiseMontantSaisie > 0) {
+                remiseText += ' / ';
+            }
+            if (remiseMontantSaisie > 0) {
+                remiseText += remiseMontantSaisie.toFixed(2) + '€';
+            }
+            floatingRemiseDisplay.textContent = remiseText;
+        } else {
+            floatingRemiseLine.style.display = 'none';
+        }
+    }
+    
+    // Afficher/masquer et mettre à jour le total HT remisé seulement si il y a une remise
+    if (floatingTotalHtRemiseLine) {
+        if (remiseMontant > 0) {
+            floatingTotalHtRemiseLine.style.display = 'flex';
+            if (floatingTotalHtRemise) floatingTotalHtRemise.textContent = totalHtRemise.toFixed(2) + '€';
+        } else {
+            floatingTotalHtRemiseLine.style.display = 'none';
+        }
+    }
+    
     if (floatingTotalTva) floatingTotalTva.textContent = totalTvaRemise.toFixed(2) + '€';
     if (floatingTotalTtc) floatingTotalTtc.textContent = totalTtc.toFixed(2) + '€';
-    if (floatingSummaryDisplay) floatingSummaryDisplay.textContent = totalHt.toFixed(2) + '€ HT';
+    // Affichage dans la barre de résumé : TTC final ou HT selon présence de remise
+    if (floatingSummaryDisplay) {
+        if (remiseMontant > 0) {
+            floatingSummaryDisplay.textContent = totalTtc.toFixed(2) + '€ TTC';
+        } else {
+            floatingSummaryDisplay.textContent = totalHt.toFixed(2) + '€ HT';
+        }
+    }
     
     // Mettre à jour les sous-totaux
     updateSubtotals();
@@ -1292,35 +1358,83 @@ function initEventListeners() {
 // ==========================================
 
 function initGlobalRemise() {
-    const remisePercent = document.getElementById('remise-percent');
-    const remiseMontant = document.getElementById('remise-montant');
+    console.log('initGlobalRemise appelée');
     
-    if (!remisePercent || !remiseMontant) return;
+    // Essayons de trouver les vrais IDs générés par Symfony
+    let remisePercent = document.getElementById('remise-percent-main');
+    let remiseMontant = document.getElementById('remise-montant-main');
     
-    let totalHtBeforeRemise = 0;
+    // Si pas trouvés avec nos IDs, cherchons avec les IDs Symfony standards
+    if (!remisePercent) {
+        remisePercent = document.getElementById('devis_remiseGlobalePercent');
+        console.log('Champ % trouvé avec ID Symfony:', remisePercent);
+    }
+    if (!remiseMontant) {
+        remiseMontant = document.getElementById('devis_remiseGlobaleMontant');
+        console.log('Champ € trouvé avec ID Symfony:', remiseMontant);
+    }
     
-    remisePercent.addEventListener('input', function() {
-        const percent = parseFloat(this.value) || 0;
-        if (percent >= 0 && percent <= 100) {
-            const montant = (totalHtBeforeRemise * percent / 100);
-            remiseMontant.value = montant.toFixed(2);
-            calculateTotals();
-        }
-    });
+    console.log('Champs finaux:', remisePercent, remiseMontant);
     
-    remiseMontant.addEventListener('input', function() {
-        const montant = parseFloat(this.value) || 0;
-        if (montant >= 0 && totalHtBeforeRemise > 0) {
-            const percent = (montant / totalHtBeforeRemise * 100);
-            remisePercent.value = Math.min(100, percent.toFixed(1));
-            calculateTotals();
-        }
-    });
+    if (!remisePercent || !remiseMontant) {
+        console.log('ERREUR: Champs remise non trouvés!');
+        // Listons tous les inputs pour voir quels IDs existent vraiment
+        const allInputs = document.querySelectorAll('input[type="number"]');
+        console.log('Tous les inputs number:', allInputs);
+        allInputs.forEach(input => console.log('Input ID:', input.id, 'Name:', input.name));
+        return;
+    }
     
-    // Mettre à jour le total HT pour les calculs de remise
-    window.updateTotalHtForRemise = function(totalHt) {
-        totalHtBeforeRemise = totalHt;
+    let totalHt = 0;
+    
+    // Fonction simple pour mettre à jour le total HT
+    window.updateTotalHtForRemise = function(ht) {
+        totalHt = ht;
+        console.log('Total HT mis à jour:', totalHt);
     };
+    
+    // Quand on change le pourcentage, calculer le montant
+    remisePercent.addEventListener('input', function() {
+        console.log('Pourcentage changé:', this.value, 'Total HT:', totalHt);
+        const percent = parseFloat(this.value) || 0;
+        if (percent > 0 && totalHt > 0) {
+            const montant = (totalHt * percent / 100);
+            remiseMontant.value = montant.toFixed(2);
+            console.log('Montant calculé:', montant.toFixed(2));
+        } else {
+            remiseMontant.value = '';
+        }
+        calculateTotals();
+    });
+    
+    // Quand on change le montant, calculer le pourcentage
+    remiseMontant.addEventListener('input', function() {
+        console.log('Montant changé:', this.value, 'Total HT:', totalHt);
+        const montant = parseFloat(this.value) || 0;
+        if (montant > 0 && totalHt > 0) {
+            const percent = (montant / totalHt * 100);
+            remisePercent.value = percent.toFixed(1);
+            console.log('Pourcentage calculé:', percent.toFixed(1));
+        } else {
+            remisePercent.value = '';
+        }
+        calculateTotals();
+    });
+    
+    // Event listeners pour détecter quand les champs sont vidés manuellement
+    remisePercent.addEventListener('keyup', function() {
+        if (this.value === '' || this.value === '0') {
+            remiseMontant.value = '';
+            calculateTotals();
+        }
+    });
+    
+    remiseMontant.addEventListener('keyup', function() {
+        if (this.value === '' || this.value === '0') {
+            remisePercent.value = '';
+            calculateTotals();
+        }
+    });
 }
 
 // ==========================================
@@ -1731,6 +1845,45 @@ function initPreciseDragDrop() {
             }
         }
     });
+}
+
+// Fonction pour mettre à jour le titre d'un élément
+async function updateElementTitle(elementId, newTitle) {
+    try {
+        const response = await fetch(`/devis/${devisId}/element/${elementId}`, {
+            method: 'PUT',
+            headers: {
+                'Content-Type': 'application/json',
+                'X-Requested-With': 'XMLHttpRequest'
+            },
+            body: JSON.stringify({
+                titre: newTitle
+            })
+        });
+
+        if (!response.ok) {
+            throw new Error(`HTTP error! status: ${response.status}`);
+        }
+
+        const result = await response.json();
+        
+        if (result.success) {
+            // Mettre à jour l'élément dans notre array local
+            const element = elements.find(e => e.id === elementId);
+            if (element) {
+                element.titre = newTitle;
+            }
+            showSuccess('Titre mis à jour');
+        } else {
+            throw new Error(result.message || 'Erreur lors de la mise à jour');
+        }
+        
+    } catch (error) {
+        console.error('Erreur mise à jour titre:', error);
+        showError('Erreur lors de la mise à jour du titre: ' + error.message);
+        // Recharger pour annuler le changement
+        await loadElements();
+    }
 }
 
 // Fonction pour ajouter un élément à une position spécifique

@@ -449,6 +449,33 @@ class Devis
     }
 
     /**
+     * Calcule le sous-total jusqu'à une position donnée (pour PDF et affichage)
+     */
+    public function calculateSubtotalUpTo(int $position): float
+    {
+        $subtotal = 0;
+        $lastSubtotalPosition = 0;
+        
+        // Trouver le dernier sous-total avant cette position
+        foreach ($this->getElementsOrdered() as $element) {
+            if ($element->getType() === 'subtotal' && $element->getPosition() < $position) {
+                $lastSubtotalPosition = $element->getPosition();
+            }
+        }
+        
+        // Sommer les produits depuis le dernier sous-total jusqu'à cette position
+        foreach ($this->getElementsOrdered() as $element) {
+            if ($element->getType() === 'product' 
+                && $element->getPosition() > $lastSubtotalPosition 
+                && $element->getPosition() < $position) {
+                $subtotal += (float)$element->getTotalLigneHt();
+            }
+        }
+        
+        return $subtotal;
+    }
+
+    /**
      * Récupère seulement les éléments produit
      */
     public function getProductElements(): Collection
