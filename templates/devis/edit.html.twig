@@ -367,14 +367,7 @@
             </div>
             <div class="modal-body">
                 <div class="mb-3">
-                    <label class="form-label">
-                        Description détaillée du produit/service
-                    </label>
                     <div id="description-editor" style="height: 400px;"></div>
-                </div>
-                <div class="text-muted small">
-                    <i class="fas fa-info-circle me-1"></i>
-                    Utilisez la barre d'outils pour formater votre texte (gras, italique, listes, etc.)
                 </div>
             </div>
             <div class="modal-footer">
@@ -2518,7 +2511,6 @@ window.openDescriptionEditor = function(elementId, currentDescription) {
 
 // Initialiser Quill Editor
 function initQuillEditor() {
-    console.log('🔧 Initialisation Quill Editor...');
     
     // Configuration des polices personnalisées avec labels
     const Font = Quill.import('formats/font');
@@ -2593,18 +2585,15 @@ function initQuillEditor() {
             fontPicker.style.width = '180px';
             fontPicker.style.minWidth = '180px';
             fontPicker.style.maxWidth = '180px';
-            console.log('Font picker élargi à 180px');
         }
         
         if (sizePicker) {
             sizePicker.style.width = '140px';
             sizePicker.style.minWidth = '140px';
             sizePicker.style.maxWidth = '140px';
-            console.log('Size picker élargi à 140px');
         }
     }, 200);
     
-    console.log('✅ Quill Editor initialisé');
 }
 
 // Gestionnaire de sauvegarde de la description
