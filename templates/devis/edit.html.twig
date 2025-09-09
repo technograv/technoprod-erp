@@ -787,6 +787,40 @@
             max-height: 200px;
             overflow-y: auto;
         }
+
+        /* Affichage des labels personnalisés */
+        .ql-picker-label[data-label]:before {
+            content: attr(data-label);
+        }
+        
+        .ql-picker-label[data-label] .ql-picker-label-content {
+            display: none;
+        }
+        
+        /* Styles pour les options de police dans le menu */
+        .ql-font .ql-picker-item[data-value="arial"]:before {
+            font-family: Arial, sans-serif;
+        }
+        
+        .ql-font .ql-picker-item[data-value="helvetica"]:before {
+            font-family: Helvetica, sans-serif;
+        }
+        
+        .ql-font .ql-picker-item[data-value="times"]:before {
+            font-family: 'Times New Roman', serif;
+        }
+        
+        .ql-font .ql-picker-item[data-value="georgia"]:before {
+            font-family: Georgia, serif;
+        }
+        
+        .ql-font .ql-picker-item[data-value="verdana"]:before {
+            font-family: Verdana, sans-serif;
+        }
+        
+        .ql-font .ql-picker-item[data-value="courier"]:before {
+            font-family: 'Courier New', monospace;
+        }
     </style>
 {% endblock %}
 
@@ -2419,22 +2453,73 @@ function initQuillEditor() {
         theme: 'snow',
         placeholder: 'Saisissez ici la description détaillée...',
         modules: {
-            toolbar: [
-                [{ 'font': ['arial', 'helvetica', 'times', 'georgia', 'verdana', 'courier'] }],
-                [{ 'size': ['10px', '12px', '14px', '16px', '18px', '20px', '22px', '24px'] }],
-                ['bold', 'italic', 'underline', 'strike'],
-                [{ 'header': 1 }, { 'header': 2 }],
-                [{ 'list': 'ordered'}, { 'list': 'bullet' }],
-                [{ 'indent': '-1'}, { 'indent': '+1' }],
-                [{ 'color': [] }, { 'background': [] }],
-                [{ 'align': [] }],
-                ['link'],
-                ['clean']
-            ]
+            toolbar: {
+                container: [
+                    [{ 'font': ['arial', 'helvetica', 'times', 'georgia', 'verdana', 'courier'] }],
+                    [{ 'size': ['10px', '12px', '14px', '16px', '18px', '20px', '22px', '24px'] }],
+                    ['bold', 'italic', 'underline', 'strike'],
+                    [{ 'header': 1 }, { 'header': 2 }],
+                    [{ 'list': 'ordered'}, { 'list': 'bullet' }],
+                    [{ 'indent': '-1'}, { 'indent': '+1' }],
+                    [{ 'color': [] }, { 'background': [] }],
+                    [{ 'align': [] }],
+                    ['link'],
+                    ['clean']
+                ],
+                handlers: {}
+            }
         }
     });
     
+    // Personnaliser les labels des menus après initialisation
+    setTimeout(() => {
+        customizeQuillLabels();
+    }, 100);
+    
     console.log('✅ Quill Editor initialisé');
+}
+
+// Fonction pour personnaliser les labels des menus Quill
+function customizeQuillLabels() {
+    // Labels pour les polices
+    const fontPicker = document.querySelector('.ql-font .ql-picker');
+    if (fontPicker) {
+        const fontOptions = fontPicker.querySelectorAll('.ql-picker-item');
+        const fontLabels = ['Default', 'Arial', 'Helvetica', 'Times New Roman', 'Georgia', 'Verdana', 'Courier New'];
+        
+        fontOptions.forEach((option, index) => {
+            if (fontLabels[index]) {
+                option.textContent = fontLabels[index];
+                option.setAttribute('data-label', fontLabels[index]);
+            }
+        });
+        
+        // Label par défaut
+        const fontLabel = fontPicker.querySelector('.ql-picker-label');
+        if (fontLabel) {
+            fontLabel.setAttribute('data-label', 'Police');
+        }
+    }
+    
+    // Labels pour les tailles
+    const sizePicker = document.querySelector('.ql-size .ql-picker');
+    if (sizePicker) {
+        const sizeOptions = sizePicker.querySelectorAll('.ql-picker-item');
+        const sizeLabels = ['Default', '10px', '12px', '14px', '16px', '18px', '20px', '22px', '24px'];
+        
+        sizeOptions.forEach((option, index) => {
+            if (sizeLabels[index]) {
+                option.textContent = sizeLabels[index];
+                option.setAttribute('data-label', sizeLabels[index]);
+            }
+        });
+        
+        // Label par défaut
+        const sizeLabel = sizePicker.querySelector('.ql-picker-label');
+        if (sizeLabel) {
+            sizeLabel.setAttribute('data-label', 'Taille');
+        }
+    }
 }
 
 // Gestionnaire de sauvegarde de la description
