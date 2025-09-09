@@ -1234,10 +1234,10 @@ function renderLayoutElement(element) {
             const subtotalLabel = element.titre || element.display_label;
             if (IS_EDITABLE) {
                 content = `<div class="d-flex justify-content-between align-items-center">
-                    <div class="d-flex align-items-center">
+                    <div class="d-flex align-items-center flex-grow-1 me-3">
                         <i class="${element.icon} me-2"></i>
                         <input type="text" class="form-control form-control-sm subtotal-title-input" 
-                               style="width: 250px; border: 1px solid #ddd;" 
+                               style="border: 1px solid #ddd;" 
                                value="${subtotalLabel}" 
                                onchange="updateElementTitle(${element.id}, this.value)"
                                placeholder="Libellé du sous-total">
