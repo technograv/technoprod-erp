@@ -95,11 +95,6 @@ class DevisElementController extends AbstractController
         try {
             $data = json_decode($request->getContent(), true);
             
-            // Log pour debug
-            error_log('🔄 DevisElementController::update - Element ID: ' . $elementId);
-            error_log('📤 Données reçues: ' . json_encode($data));
-            error_log('🏷️ Type élément: ' . $element->getType());
-            
             if (!$data) {
                 return $this->json(['success' => false, 'message' => 'Données invalides'], 400);
             }
@@ -109,9 +104,7 @@ class DevisElementController extends AbstractController
                 $this->fillProductData($element, $data, $em);
                 $element->calculateTotal();
             } else {
-                error_log('📝 Mise à jour layout element avec fillLayoutData');
                 $this->fillLayoutData($element, $data);
-                error_log('✅ Après fillLayoutData - Titre: ' . $element->getTitre());
             }
 
             $em->flush();
@@ -265,28 +258,17 @@ class DevisElementController extends AbstractController
 
     private function fillLayoutData(DevisElement $element, array $data): void
     {
-        error_log('🔧 fillLayoutData - Avant modification:');
-        error_log('   - Titre actuel: ' . ($element->getTitre() ?? 'null'));
-        error_log('   - Données titre: ' . ($data['titre'] ?? 'null'));
-        error_log('   - Type élément: ' . $element->getType());
-
         $element->setTitre($data['titre'] ?? null);
         $element->setContenu($data['contenu'] ?? null);
         $element->setParametres($data['parametres'] ?? []);
 
-        error_log('🔧 fillLayoutData - Après setTitre: ' . ($element->getTitre() ?? 'null'));
-
         // Titre par défaut selon le type
         if (!$element->getTitre()) {
-            $defaultTitle = match($element->getType()) {
+            $element->setTitre(match($element->getType()) {
                 'section_title' => 'Nouveau titre',
                 'subtotal' => 'Sous-total',
                 default => null
-            };
-            $element->setTitre($defaultTitle);
-            error_log('🔧 fillLayoutData - Titre par défaut appliqué: ' . ($defaultTitle ?? 'null'));
+            });
         }
-
-        error_log('🔧 fillLayoutData - Titre final: ' . ($element->getTitre() ?? 'null'));
     }
 }

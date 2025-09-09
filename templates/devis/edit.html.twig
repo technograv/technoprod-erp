@@ -1923,11 +1923,9 @@ function initPreciseDragDrop() {
 
 // Fonction pour mettre à jour le titre d'un élément
 window.updateElementTitle = async function(elementId, newTitle) {
-    console.log('🔄 updateElementTitle appelée:', {elementId, newTitle, devisId});
     try {
         const requestUrl = `/devis/${devisId}/element/${elementId}`;
         const requestBody = {titre: newTitle};
-        console.log('📤 Requête PUT:', requestUrl, requestBody);
         
         const response = await fetch(requestUrl, {
             method: 'PUT',
@@ -1943,18 +1941,15 @@ window.updateElementTitle = async function(elementId, newTitle) {
         }
 
         const result = await response.json();
-        console.log('📥 Réponse serveur:', result);
         
         if (result.success) {
             // Mettre à jour l'élément dans notre array local
             const element = elements.find(e => e.id === elementId);
             if (element) {
                 element.titre = newTitle;
-                console.log('✅ Élément mis à jour localement:', element);
             }
             showSuccess('Titre mis à jour');
         } else {
-            console.error('❌ Échec de la mise à jour:', result.message);
             throw new Error(result.message || 'Erreur lors de la mise à jour');
         }
         
