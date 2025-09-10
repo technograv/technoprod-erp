@@ -3339,24 +3339,23 @@ async function loadProductImages(elementId, element) {
     const gallery = document.getElementById('imageGallery');
     
     try {
-        // Pour maintenant, simuler une réponse vide car nous n'avons pas encore l'ID du produit
-        // TODO: Récupérer l'ID du produit depuis l'élément pour faire l'appel API réel
+        // Si nous n'avons pas l'ID du produit, on ne peut pas charger les images
+        if (!element.produit_id) {
+            gallery.innerHTML = `
+                <div class="col-12 text-center p-4">
+                    <i class="fas fa-info-circle fa-3x text-muted mb-3"></i>
+                    <h6>Produit non défini</h6>
+                    <p class="text-muted">Ce produit doit d'abord être associé à un article du catalogue pour pouvoir gérer ses images.</p>
+                </div>
+            `;
+            return;
+        }
         
-        // Simuler pas d'images pour l'instant
-        gallery.innerHTML = `
-            <div class="col-12 text-center p-4">
-                <i class="fas fa-image fa-3x text-muted mb-3"></i>
-                <h6>Aucune image disponible</h6>
-                <p class="text-muted">Utilisez le formulaire ci-contre pour ajouter la première image de ce produit.</p>
-            </div>
-        `;
-        
-        // TODO: Appel API réel quand on aura l'ID produit
-        /*
-        const response = await fetch(`/api/product-images/produit/${produitId}`);
+        // Appel API pour récupérer les images du produit
+        const response = await fetch(`/api/product-images/produit/${element.produit_id}`);
         const result = await response.json();
         
-        if (result.success && result.images.length > 0) {
+        if (result.success && result.images && result.images.length > 0) {
             renderImageGallery(result.images, elementId);
         } else {
             gallery.innerHTML = `
@@ -3367,7 +3366,6 @@ async function loadProductImages(elementId, element) {
                 </div>
             `;
         }
-        */
         
     } catch (error) {
         console.error('Erreur chargement images:', error);
