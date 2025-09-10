@@ -2512,27 +2512,34 @@ function updateCollapsedView(elementId, product) {
         return;
     }
     
-    // Trouver l'affichage collapsed
-    const collapsedView = elementDiv.querySelector('.collapsed-view');
-    if (!collapsedView) {
-        console.error('❌ Vue collapsed non trouvée pour elementId:', elementId);
+    // Vérifier si on est en mode édition ou en mode lecture seule
+    const isReadOnlyMode = elementDiv.querySelector('.col-md-4'); // Mode lecture seule a des colonnes
+    const isEditMode = elementDiv.querySelector('.description-inline-input'); // Mode édition a des inputs
+    
+    if (isEditMode) {
+        console.log('📝 Mode édition détecté - pas de mise à jour collapsed nécessaire');
+        // En mode édition, les champs sont déjà mis à jour par updateElementFields
+        // Pas besoin de mettre à jour l'affichage collapsed
         return;
     }
     
-    // Mettre à jour la désignation et description (première colonne)
-    const designationDiv = collapsedView.querySelector('.col-md-4');
-    if (designationDiv) {
-        let content = `<strong>${product.designation || 'Produit sans nom'}</strong>`;
-        if (product.description && product.description.trim()) {
-            content += `<br><div class="text-muted" style="font-size: 0.875rem; line-height: 1.4;">${product.description}</div>`;
+    if (isReadOnlyMode) {
+        console.log('👁️ Mode lecture seule détecté - mise à jour collapsed');
+        // Mettre à jour l'affichage collapsed en mode lecture seule
+        const designationDiv = elementDiv.querySelector('.col-md-4');
+        if (designationDiv) {
+            let content = `<strong>${product.designation || 'Produit sans nom'}</strong>`;
+            if (product.description && product.description.trim()) {
+                content += `<br><div class="text-muted" style="font-size: 0.875rem; line-height: 1.4;">${product.description}</div>`;
+            }
+            designationDiv.innerHTML = content;
         }
-        designationDiv.innerHTML = content;
-    }
-    
-    // Mettre à jour le prix (troisième colonne)
-    const prixDiv = collapsedView.querySelector('.col-md-2.text-end');
-    if (prixDiv && product.prixVenteHt) {
-        prixDiv.innerHTML = `${parseFloat(product.prixVenteHt).toFixed(2)} €`;
+        
+        // Mettre à jour le prix (troisième colonne)
+        const prixDiv = elementDiv.querySelector('.col-md-2.text-end');
+        if (prixDiv && product.prixVenteHt) {
+            prixDiv.innerHTML = `${parseFloat(product.prixVenteHt).toFixed(2)} €`;
+        }
     }
 }
 
