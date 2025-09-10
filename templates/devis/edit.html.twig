@@ -1802,10 +1802,13 @@ function initContactAddressSynchronization() {
     if (contactLivraisonSelect) {
         contactLivraisonSelect.addEventListener('change', function() {
             const contactId = this.value;
+            console.log('🔄 Contact livraison changé:', contactId);
+            
             if (contactId && adresseLivraisonSelect) {
                 syncContactAddress(contactId, adresseLivraisonSelect);
             }
             // Synchroniser l'email automatiquement
+            console.log('📧 Déclenchement syncContactEmail...');
             syncContactEmail(contactId);
         });
     }
@@ -1942,36 +1945,41 @@ function syncContactAddress(contactId, adresseSelect) {
 }
 
 function syncContactEmail(contactId) {
+    console.log('🔄 syncContactEmail appelée avec contactId:', contactId);
+    
     // Utiliser les données déjà chargées pour synchroniser l'email
     if (!window.clientContacts) {
-        console.log('Pas de contacts chargés pour email');
+        console.log('❌ Pas de contacts chargés pour email');
         return;
     }
     
+    console.log('📋 Contacts disponibles:', window.clientContacts);
+    
     const emailDisplayField = document.getElementById('email_envoi_automatique_display');
     if (!emailDisplayField) {
-        console.log('Champ email display introuvable');
+        console.log('❌ Champ email display introuvable');
         return;
     }
     
     // Trouver le contact sélectionné
     const selectedContact = window.clientContacts.find(contact => contact.id == contactId);
     if (!selectedContact) {
-        console.log('Contact non trouvé pour email:', contactId);
+        console.log('❌ Contact non trouvé pour email:', contactId);
+        console.log('🔍 Contacts disponibles IDs:', window.clientContacts.map(c => c.id));
         emailDisplayField.value = '';
         updateHiddenEmailField('');
         return;
     }
     
-    console.log('Contact trouvé pour email:', selectedContact);
+    console.log('✅ Contact trouvé pour email:', selectedContact);
     
     // Mettre à jour le champ email avec l'email du contact
     if (selectedContact.email) {
-        console.log('Mise à jour email:', selectedContact.email);
+        console.log('📧 Mise à jour email:', selectedContact.email);
         emailDisplayField.value = selectedContact.email;
         updateHiddenEmailField(selectedContact.email);
     } else {
-        console.log('Aucun email associé au contact');
+        console.log('⚠️ Aucun email associé au contact');
         emailDisplayField.value = '';
         updateHiddenEmailField('');
     }

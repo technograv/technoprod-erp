@@ -353,7 +353,8 @@ final class ClientController extends AbstractController
                 'adresse_id' => $contact->getAdresse() ? $contact->getAdresse()->getId() : null,
                 'prenom' => $contact->getPrenom(),
                 'nom' => $contact->getNom(),
-                'fonction' => $contact->getFonction()
+                'fonction' => $contact->getFonction(),
+                'email' => $contact->getEmail()
             ];
         }
 
