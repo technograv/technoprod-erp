@@ -84,9 +84,14 @@ class Produit
     #[ORM\OneToMany(mappedBy: 'produit', targetEntity: DevisItem::class)]
     private Collection $devisItems;
 
+    #[ORM\OneToMany(mappedBy: 'produit', targetEntity: ProductImage::class, cascade: ['persist', 'remove'])]
+    #[ORM\OrderBy(['isDefault' => 'DESC', 'createdAt' => 'ASC'])]
+    private Collection $images;
+
     public function __construct()
     {
         $this->devisItems = new ArrayCollection();
+        $this->images = new ArrayCollection();
         $this->createdAt = new \DateTimeImmutable();
         $this->updatedAt = new \DateTimeImmutable();
     }
@@ -369,6 +374,71 @@ class Produit
         }
         
         return $this->stockQuantite !== null && $this->stockQuantite <= 0;
+    }
+
+    /**
+     * @return Collection<int, ProductImage>
+     */
+    public function getImages(): Collection
+    {
+        return $this->images;
+    }
+
+    public function addImage(ProductImage $image): static
+    {
+        if (!$this->images->contains($image)) {
+            $this->images->add($image);
+            $image->setProduit($this);
+        }
+
+        return $this;
+    }
+
+    public function removeImage(ProductImage $image): static
+    {
+        if ($this->images->removeElement($image)) {
+            // set the owning side to null (unless already changed)
+            if ($image->getProduit() === $this) {
+                $image->setProduit(null);
+            }
+        }
+
+        return $this;
+    }
+
+    /**
+     * Retourne l'image par défaut du produit
+     */
+    public function getDefaultImage(): ?ProductImage
+    {
+        foreach ($this->images as $image) {
+            if ($image->getIsDefault()) {
+                return $image;
+            }
+        }
+        
+        // Si aucune image par défaut, retourner la première
+        return $this->images->first() ?: null;
+    }
+
+    /**
+     * Définit une image comme image par défaut (et retire le statut des autres)
+     */
+    public function setDefaultImage(ProductImage $image): static
+    {
+        if (!$this->images->contains($image)) {
+            $this->addImage($image);
+        }
+
+        // Retirer le statut par défaut des autres images
+        foreach ($this->images as $img) {
+            $img->setIsDefault(false);
+        }
+
+        // Définir celle-ci comme par défaut
+        $image->setIsDefault(true);
+
+        return $this;
     }
 
     public function __toString(): string

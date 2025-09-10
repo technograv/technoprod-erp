@@ -5,6 +5,7 @@ namespace App\Controller;
 use App\Entity\Devis;
 use App\Entity\DevisElement;
 use App\Entity\Produit;
+use App\Entity\ProductImage;
 use App\Entity\TauxTVA;
 use App\Repository\DevisElementRepository;
 use Doctrine\ORM\EntityManagerInterface;
@@ -260,6 +261,13 @@ class DevisElementController extends AbstractController
         }
         if (array_key_exists('tva_percent', $data)) {
             $element->setTvaPercent($data['tva_percent'] ?: $this->getDefaultTvaRate($em));
+        }
+        if (array_key_exists('image_visible', $data)) {
+            $element->setImageVisible((bool)$data['image_visible']);
+        }
+        if (array_key_exists('product_image_id', $data) && $data['product_image_id']) {
+            $productImage = $em->getRepository(ProductImage::class)->find($data['product_image_id']);
+            $element->setProductImage($productImage);
         }
 
         $element->calculateTotal();
