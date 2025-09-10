@@ -3179,10 +3179,16 @@ function selectProductImage(elementId) {
     showImageSelectionModal(elementId, element);
 }
 
-function showImageSelectionModal(elementId, element) {
+async function showImageSelectionModal(elementId, element) {
+    // Si l'élément n'est pas associé à un produit, on ne peut pas charger d'images
+    if (!element.produit_reference) {
+        showBasicImageModal(elementId, element);
+        return;
+    }
+    
     const modalHtml = `
         <div class="modal fade" id="imageSelectionModal" tabindex="-1">
-            <div class="modal-dialog modal-lg">
+            <div class="modal-dialog modal-xl">
                 <div class="modal-content">
                     <div class="modal-header">
                         <h5 class="modal-title">
@@ -3192,34 +3198,91 @@ function showImageSelectionModal(elementId, element) {
                         <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
                     </div>
                     <div class="modal-body">
-                        <div class="text-center p-4">
-                            <div class="mb-3">
-                                <i class="fas fa-image fa-3x text-muted mb-3"></i>
-                                <h6>Fonctionnalité en cours de développement</h6>
-                                <p class="text-muted">
-                                    La sélection d'images sera bientôt disponible.<br>
-                                    Vous pourrez choisir parmi les images du produit ou en télécharger de nouvelles.
-                                </p>
+                        <div class="row">
+                            <div class="col-md-8">
+                                <h6 class="mb-3">Images disponibles</h6>
+                                <div id="imageGallery" class="row">
+                                    <div class="col-12 text-center p-4">
+                                        <i class="fas fa-spinner fa-spin fa-2x text-muted"></i>
+                                        <p class="mt-2">Chargement des images...</p>
+                                    </div>
+                                </div>
                             </div>
-                            
-                            <div class="alert alert-info">
-                                <i class="fas fa-info-circle me-2"></i>
-                                <strong>Prochaines étapes :</strong>
-                                <ul class="list-unstyled mt-2 mb-0">
-                                    <li>• Galerie d'images par produit</li>
-                                    <li>• Upload de nouvelles images</li>
-                                    <li>• Aperçu et sélection</li>
-                                    <li>• Intégration dans le PDF</li>
-                                </ul>
+                            <div class="col-md-4">
+                                <h6 class="mb-3">Upload nouvelle image</h6>
+                                <div class="border rounded p-3">
+                                    <form id="imageUploadForm" enctype="multipart/form-data">
+                                        <div class="mb-3">
+                                            <label class="form-label">Choisir une image</label>
+                                            <input type="file" class="form-control" id="imageFile" accept="image/*" required>
+                                            <div class="form-text">Formats acceptés: JPG, PNG, GIF, WebP (max 5MB)</div>
+                                        </div>
+                                        <button type="submit" class="btn btn-primary w-100">
+                                            <i class="fas fa-upload me-2"></i>Télécharger
+                                        </button>
+                                    </form>
+                                </div>
                             </div>
                         </div>
                     </div>
                     <div class="modal-footer">
                         <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">
-                            Fermer
+                            Annuler
                         </button>
-                        <button type="button" class="btn btn-primary" disabled>
-                            <i class="fas fa-upload me-2"></i>Télécharger une image
+                    </div>
+                </div>
+            </div>
+        </div>
+    `;
+    
+    // Supprimer la modal existante si elle existe
+    const existingModal = document.getElementById('imageSelectionModal');
+    if (existingModal) {
+        existingModal.remove();
+    }
+    
+    // Ajouter la nouvelle modal au DOM
+    document.body.insertAdjacentHTML('beforeend', modalHtml);
+    
+    // Afficher la modal
+    const modal = new bootstrap.Modal(document.getElementById('imageSelectionModal'));
+    modal.show();
+    
+    // Charger les images du produit
+    await loadProductImages(elementId, element);
+    
+    // Gérer l'upload d'image
+    setupImageUploadForm(elementId, element);
+    
+    // Nettoyer la modal après fermeture
+    document.getElementById('imageSelectionModal').addEventListener('hidden.bs.modal', function() {
+        this.remove();
+    });
+}
+
+function showBasicImageModal(elementId, element) {
+    const modalHtml = `
+        <div class="modal fade" id="imageSelectionModal" tabindex="-1">
+            <div class="modal-dialog modal-lg">
+                <div class="modal-content">
+                    <div class="modal-header">
+                        <h5 class="modal-title">
+                            <i class="fas fa-images me-2"></i>
+                            Images pour "${element.designation || 'ce produit'}"
+                        </h5>
+                        <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                    </div>
+                    <div class="modal-body">
+                        <div class="alert alert-warning">
+                            <i class="fas fa-exclamation-triangle me-2"></i>
+                            <strong>Produit non défini</strong><br>
+                            Pour gérer les images, ce produit doit d'abord être associé à un article du catalogue.
+                        </div>
+                        <p class="text-muted">Ajoutez un code article dans la colonne "Code" pour pouvoir gérer les images de ce produit.</p>
+                    </div>
+                    <div class="modal-footer">
+                        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">
+                            Fermer
                         </button>
                     </div>
                 </div>
@@ -3244,6 +3307,143 @@ function showImageSelectionModal(elementId, element) {
     document.getElementById('imageSelectionModal').addEventListener('hidden.bs.modal', function() {
         this.remove();
     });
+}
+
+async function loadProductImages(elementId, element) {
+    const gallery = document.getElementById('imageGallery');
+    
+    try {
+        // Pour maintenant, simuler une réponse vide car nous n'avons pas encore l'ID du produit
+        // TODO: Récupérer l'ID du produit depuis l'élément pour faire l'appel API réel
+        
+        // Simuler pas d'images pour l'instant
+        gallery.innerHTML = `
+            <div class="col-12 text-center p-4">
+                <i class="fas fa-image fa-3x text-muted mb-3"></i>
+                <h6>Aucune image disponible</h6>
+                <p class="text-muted">Utilisez le formulaire ci-contre pour ajouter la première image de ce produit.</p>
+            </div>
+        `;
+        
+        // TODO: Appel API réel quand on aura l'ID produit
+        /*
+        const response = await fetch(`/api/product-images/produit/${produitId}`);
+        const result = await response.json();
+        
+        if (result.success && result.images.length > 0) {
+            renderImageGallery(result.images, elementId);
+        } else {
+            gallery.innerHTML = `
+                <div class="col-12 text-center p-4">
+                    <i class="fas fa-image fa-3x text-muted mb-3"></i>
+                    <h6>Aucune image disponible</h6>
+                    <p class="text-muted">Utilisez le formulaire ci-contre pour ajouter la première image de ce produit.</p>
+                </div>
+            `;
+        }
+        */
+        
+    } catch (error) {
+        console.error('Erreur chargement images:', error);
+        gallery.innerHTML = `
+            <div class="col-12 text-center p-4">
+                <i class="fas fa-exclamation-triangle fa-2x text-warning mb-3"></i>
+                <h6>Erreur de chargement</h6>
+                <p class="text-muted">Impossible de charger les images. Veuillez réessayer.</p>
+            </div>
+        `;
+    }
+}
+
+function setupImageUploadForm(elementId, element) {
+    const form = document.getElementById('imageUploadForm');
+    const fileInput = document.getElementById('imageFile');
+    
+    form.addEventListener('submit', async (e) => {
+        e.preventDefault();
+        
+        if (!fileInput.files[0]) {
+            alert('Veuillez sélectionner une image');
+            return;
+        }
+        
+        const submitBtn = form.querySelector('button[type="submit"]');
+        const originalText = submitBtn.innerHTML;
+        submitBtn.innerHTML = '<i class="fas fa-spinner fa-spin me-2"></i>Upload...';
+        submitBtn.disabled = true;
+        
+        try {
+            // Pour l'instant, simuler un upload réussi
+            // TODO: Implémenter upload réel avec l'ID produit
+            
+            await new Promise(resolve => setTimeout(resolve, 1000)); // Simuler upload
+            
+            // Simuler succès
+            alert('Image uploadée avec succès!\n(Fonctionnalité simulée - sera implémentée avec la liaison produits)');
+            
+            // Recharger la galerie
+            await loadProductImages(elementId, element);
+            
+            // Reset form
+            form.reset();
+            
+        } catch (error) {
+            console.error('Erreur upload:', error);
+            alert('Erreur lors de l\'upload de l\'image');
+        } finally {
+            submitBtn.innerHTML = originalText;
+            submitBtn.disabled = false;
+        }
+    });
+}
+
+function renderImageGallery(images, elementId) {
+    const gallery = document.getElementById('imageGallery');
+    
+    const imagesHtml = images.map(image => `
+        <div class="col-md-6 col-lg-4 mb-3">
+            <div class="card h-100">
+                <img src="${image.path}" class="card-img-top" style="height: 150px; object-fit: cover;" alt="${image.alt || image.originalName}">
+                <div class="card-body p-2">
+                    <h6 class="card-title small">${image.originalName}</h6>
+                    <p class="card-text small text-muted">
+                        ${image.width}x${image.height} px
+                        ${image.isDefault ? '<br><span class="badge bg-primary">Par défaut</span>' : ''}
+                    </p>
+                </div>
+                <div class="card-footer p-2">
+                    <button type="button" class="btn btn-primary btn-sm w-100" 
+                            onclick="selectImage(${elementId}, ${image.id})">
+                        <i class="fas fa-check me-1"></i>Sélectionner
+                    </button>
+                </div>
+            </div>
+        </div>
+    `).join('');
+    
+    gallery.innerHTML = imagesHtml || `
+        <div class="col-12 text-center p-4">
+            <i class="fas fa-image fa-3x text-muted mb-3"></i>
+            <h6>Aucune image disponible</h6>
+        </div>
+    `;
+}
+
+function selectImage(elementId, imageId) {
+    // Mettre à jour l'élément avec l'image sélectionnée
+    updateElement(elementId, 'product_image_id', imageId);
+    
+    // Fermer la modal
+    const modal = bootstrap.Modal.getInstance(document.getElementById('imageSelectionModal'));
+    modal.hide();
+    
+    // Recharger l'affichage pour montrer l'indicateur d'image sélectionnée
+    setTimeout(() => {
+        renderElements();
+        initSortable();
+    }, 300);
+    
+    showSuccess('Image sélectionnée avec succès');
 }
 </script>
 
