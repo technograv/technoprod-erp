@@ -1524,16 +1524,19 @@
 
         // Fonction pour mettre à jour l'affichage de l'adresse d'un contact
         function updateContactAddress(type, contactId) {
+            console.log('🏠 updateContactAddress appelée:', type, contactId);
             const addressDiv = $(`#adresse-contact-${type}`);
             const statusDiv = $(`#address-status-${type}`);
             
             if (!contactId) {
+                console.log('❌ Pas de contactId, masquage adresse');
                 addressDiv.hide();
                 return;
             }
 
             // Trouver le contact dans les données
             const contact = currentContacts.find(c => c.id == contactId);
+            console.log('👤 Contact trouvé:', contact);
             
             if (!contact) {
                 addressDiv.hide();
@@ -1541,9 +1544,11 @@
             }
 
             // Afficher la section d'adresse
+            console.log('📍 Affichage section adresse pour', type);
             addressDiv.show();
 
             if (contact.adresse) {
+                console.log('🏠 Contact avec adresse:', contact.adresse);
                 // Contact avec adresse : pré-remplir les champs
                 originalAddresses[type] = contact.adresse;
                 $(`#adresse_${type}_ligne1`).val(contact.adresse.ligne1 || '');
@@ -1552,6 +1557,7 @@
                 
                 statusDiv.text('Adresse du contact - modifiable pour ce projet');
             } else {
+                console.log('❌ Contact sans adresse');
                 // Contact sans adresse : champs vides
                 originalAddresses[type] = null;
                 $(`#adresse_${type}_ligne1`).val('');
