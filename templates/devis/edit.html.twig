@@ -1952,7 +1952,7 @@ window.deleteElement = deleteElement;
 async function updateElement(elementId, field, value) {
     try {
         // Normaliser les virgules en points pour les champs numériques
-        if (['quantite', 'prix_unitaire_ht', 'remise_percent'].includes(field)) {
+        if (['quantite', 'prix_unitaire_ht', 'remise_percent', 'tva_percent'].includes(field)) {
             value = String(value).replace(',', '.');
             const numValue = parseFloat(value);
             if (isNaN(numValue)) {
@@ -1967,7 +1967,7 @@ async function updateElement(elementId, field, value) {
         if (elementIndex !== -1) {
             elements[elementIndex][field] = value;
             // Recalculer immédiatement le total de ligne si c'est un champ qui l'affecte
-            if (['quantite', 'prix_unitaire_ht', 'remise_percent'].includes(field)) {
+            if (['quantite', 'prix_unitaire_ht', 'remise_percent', 'tva_percent'].includes(field)) {
                 recalculateLineTotal(elementId);
             }
         }
