@@ -1112,6 +1112,27 @@ function renderProductElement(element) {
                                 <i class="fas fa-palette"></i>
                             </button>
                         </div>
+                        <!-- Checkbox Photo sous la description -->
+                        <div class="mt-1">
+                            <div class="form-check form-check-sm">
+                                <input class="form-check-input" type="checkbox" 
+                                       id="photo_${element.id}" 
+                                       ${element.image_visible ? 'checked' : ''}
+                                       onchange="toggleImageVisibility(${element.id}, this.checked)">
+                                <label class="form-check-label text-muted small" for="photo_${element.id}">
+                                    <i class="fas fa-camera me-1"></i>Photo
+                                    ${element.image_visible && element.product_image_id ? '<i class="fas fa-check text-success ms-1" title="Image sélectionnée"></i>' : ''}
+                                </label>
+                                ${element.image_visible ? `
+                                <button type="button" class="btn btn-outline-primary btn-xs ms-2" 
+                                        onclick="selectProductImage(${element.id})" 
+                                        title="Sélectionner une image"
+                                        style="padding: 1px 4px; font-size: 10px;">
+                                    <i class="fas fa-images"></i>
+                                </button>
+                                ` : ''}
+                            </div>
+                        </div>
                     </div>
                     
                     <!-- Quantité (90px) -->
@@ -1178,6 +1199,7 @@ function renderProductElement(element) {
                             <div class="col-md-4">
                                 <strong>${element.designation || 'Produit sans nom'}</strong>
                                 ${element.description ? `<br><div class="text-muted" style="font-size: 0.875rem; line-height: 1.4;">${element.description}</div>` : ''}
+                                ${element.image_visible ? '<br><small class="text-info"><i class="fas fa-camera me-1"></i>Photo incluse dans le PDF</small>' : ''}
                             </div>
                             <div class="col-md-2 text-center">
                                 ${parseFloat(element.quantite || 0)}
@@ -3130,6 +3152,99 @@ document.addEventListener('DOMContentLoaded', function() {
 }
 </style>
 
-{% endblock %}
+<script>
+// ==========================================
+// FONCTIONS GESTION IMAGES PRODUITS  
+// ==========================================
+
+function toggleImageVisibility(elementId, isVisible) {
+    updateElement(elementId, 'image_visible', isVisible);
+    
+    // Recharger l'affichage pour montrer/cacher le bouton de sélection d'image
+    setTimeout(() => {
+        renderElements();
+        initSortable();
+    }, 200);
+}
+
+function selectProductImage(elementId) {
+    // Récupérer l'élément pour avoir les informations produit
+    const element = elements.find(e => e.id === elementId);
+    if (!element) {
+        showError('Élément introuvable');
+        return;
+    }
+    
+    // Pour l'instant, ouvrir une modal simple en attendant l'implémentation complète
+    showImageSelectionModal(elementId, element);
+}
+
+function showImageSelectionModal(elementId, element) {
+    const modalHtml = `
+        <div class="modal fade" id="imageSelectionModal" tabindex="-1">
+            <div class="modal-dialog modal-lg">
+                <div class="modal-content">
+                    <div class="modal-header">
+                        <h5 class="modal-title">
+                            <i class="fas fa-images me-2"></i>
+                            Sélectionner une image pour "${element.designation || 'ce produit'}"
+                        </h5>
+                        <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                    </div>
+                    <div class="modal-body">
+                        <div class="text-center p-4">
+                            <div class="mb-3">
+                                <i class="fas fa-image fa-3x text-muted mb-3"></i>
+                                <h6>Fonctionnalité en cours de développement</h6>
+                                <p class="text-muted">
+                                    La sélection d'images sera bientôt disponible.<br>
+                                    Vous pourrez choisir parmi les images du produit ou en télécharger de nouvelles.
+                                </p>
+                            </div>
+                            
+                            <div class="alert alert-info">
+                                <i class="fas fa-info-circle me-2"></i>
+                                <strong>Prochaines étapes :</strong>
+                                <ul class="list-unstyled mt-2 mb-0">
+                                    <li>• Galerie d'images par produit</li>
+                                    <li>• Upload de nouvelles images</li>
+                                    <li>• Aperçu et sélection</li>
+                                    <li>• Intégration dans le PDF</li>
+                                </ul>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="modal-footer">
+                        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">
+                            Fermer
+                        </button>
+                        <button type="button" class="btn btn-primary" disabled>
+                            <i class="fas fa-upload me-2"></i>Télécharger une image
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    `;
+    
+    // Supprimer la modal existante si elle existe
+    const existingModal = document.getElementById('imageSelectionModal');
+    if (existingModal) {
+        existingModal.remove();
+    }
+    
+    // Ajouter la nouvelle modal au DOM
+    document.body.insertAdjacentHTML('beforeend', modalHtml);
+    
+    // Afficher la modal
+    const modal = new bootstrap.Modal(document.getElementById('imageSelectionModal'));
+    modal.show();
+    
+    // Nettoyer la modal après fermeture
+    document.getElementById('imageSelectionModal').addEventListener('hidden.bs.modal', function() {
+        this.remove();
+    });
+}
+</script>
 
 {% endblock %}

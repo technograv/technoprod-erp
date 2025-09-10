@@ -54,6 +54,14 @@ class DevisElement
     #[ORM\Column(type: Types::DECIMAL, precision: 10, scale: 2, nullable: true)]
     private ?string $totalLigneHt = null;
 
+    // Champs pour la gestion des images produits
+    #[ORM\Column(type: Types::BOOLEAN)]
+    private ?bool $imageVisible = false;
+
+    #[ORM\ManyToOne(targetEntity: ProductImage::class)]
+    #[ORM\JoinColumn(nullable: true)]
+    private ?ProductImage $productImage = null;
+
     // Champs pour les éléments de mise en page (ex-LayoutElement)
     #[ORM\Column(type: Types::STRING, length: 255, nullable: true)]
     private ?string $titre = null;
@@ -348,6 +356,28 @@ class DevisElement
         return trim($baseClass . ' ' . $typeClass);
     }
 
+    public function getImageVisible(): ?bool
+    {
+        return $this->imageVisible;
+    }
+
+    public function setImageVisible(bool $imageVisible): static
+    {
+        $this->imageVisible = $imageVisible;
+        return $this;
+    }
+
+    public function getProductImage(): ?ProductImage
+    {
+        return $this->productImage;
+    }
+
+    public function setProductImage(?ProductImage $productImage): static
+    {
+        $this->productImage = $productImage;
+        return $this;
+    }
+
     public function toArray(): array
     {
         return [
@@ -370,7 +400,10 @@ class DevisElement
             'css_class' => $this->getCssClass(),
             'is_product' => $this->isProductElement(),
             'is_layout' => $this->isLayoutElement(),
-            'produit_reference' => $this->produit?->getReference()
+            'produit_reference' => $this->produit?->getReference(),
+            'image_visible' => $this->imageVisible,
+            'product_image_id' => $this->productImage?->getId(),
+            'product_image_path' => $this->productImage?->getImagePath()
         ];
     }
 }
