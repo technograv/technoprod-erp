@@ -1074,13 +1074,13 @@ function renderProductElement(element) {
 
     if (IS_EDITABLE) {
         return `
-            <div class="element-item mb-2 border-bottom" data-element-id="${element.id}" data-element-type="product">
+            <div class="element-item mb-1 border-bottom" data-element-id="${element.id}" data-element-type="product">
                 <!-- Première ligne -->
-                <div class="d-flex align-items-center" style="gap: 4px; min-height: 40px;">
+                <div class="d-flex align-items-center" style="gap: 4px; min-height: 35px;">
                     ${dragHandle}
                     
                     <!-- Code article (120px) -->
-                    <div style="width: 120px; padding: 4px;">
+                    <div style="width: 120px; padding: 2px;">
                         <input type="text" class="form-control form-control-sm code-article-input" 
                                placeholder="Code..." value="${element.produit_reference || ''}"
                                data-element-id="${element.id}"
@@ -1089,7 +1089,7 @@ function renderProductElement(element) {
                     </div>
                     
                     <!-- Désignation (225px) -->
-                    <div style="width: 225px; padding: 4px;">
+                    <div style="width: 225px; padding: 2px;">
                         <input type="text" class="form-control form-control-sm designation-input" 
                                placeholder="Désignation..."
                                value="${element.designation || ''}" 
@@ -1099,26 +1099,26 @@ function renderProductElement(element) {
                     </div>
                     
                     <!-- Description détaillée (flex-fill) sur 2 lignes -->
-                    <div class="flex-fill" style="padding: 4px;">
+                    <div class="flex-fill" style="padding: 2px;">
                         <textarea class="form-control form-control-sm description-textarea" 
                                   placeholder="Description détaillée..."
                                   rows="2"
                                   onchange="updateElement(${element.id}, 'description', this.value)"
                                   onkeypress="preventEnterSubmit(event)"
                                   onfocus="showDescriptionTooltip(this)" 
-                                  style="resize: vertical; min-height: 60px;">${element.description ? cleanDescriptionForInput(element.description) : ''}</textarea>
-                        <div class="d-flex align-items-center mt-1">
+                                  style="resize: vertical; min-height: 50px;">${element.description ? cleanDescriptionForInput(element.description) : ''}</textarea>
+                        <div class="d-flex align-items-center" style="margin-top: 2px;">
                             <button type="button" class="btn btn-outline-secondary btn-xs me-2" 
                                     onclick="openDescriptionEditor(${element.id}, \`${element.description ? element.description.replace(/`/g, '\\`').replace(/\\/g, '\\\\') : ''}\`)" 
                                     title="Éditeur avancé (formatage)"
-                                    style="padding: 2px 6px; font-size: 10px;">
+                                    style="padding: 1px 4px; font-size: 9px;">
                                 <i class="fas fa-palette me-1"></i>WYSIWYG
                             </button>
                         </div>
                     </div>
                     
                     <!-- Quantité (90px) - centré verticalement -->
-                    <div style="width: 90px; padding: 4px;" class="d-flex align-items-center justify-content-center" style="height: 80px;">
+                    <div style="width: 90px; padding: 2px; height: 60px;" class="d-flex align-items-center justify-content-center">
                         <input type="text" class="form-control form-control-sm text-center quantity-input no-spinners" 
                                value="${element.quantite || 1}" 
                                pattern="[0-9]*[.,]?[0-9]*"
@@ -1128,7 +1128,7 @@ function renderProductElement(element) {
                     </div>
                     
                     <!-- Prix unitaire HT (90px) - centré verticalement -->
-                    <div style="width: 90px; padding: 4px;" class="d-flex align-items-center justify-content-center" style="height: 80px;">
+                    <div style="width: 90px; padding: 2px; height: 60px;" class="d-flex align-items-center justify-content-center">
                         <input type="text" class="form-control form-control-sm text-end price-input no-spinners" 
                                placeholder="0.00"
                                value="${parseFloat(element.prix_unitaire_ht || 0).toFixed(2)}"
@@ -1138,7 +1138,7 @@ function renderProductElement(element) {
                     </div>
                     
                     <!-- % Remise (90px) - centré verticalement -->
-                    <div style="width: 90px; padding: 4px;" class="d-flex align-items-center justify-content-center" style="height: 80px;">
+                    <div style="width: 90px; padding: 2px; height: 60px;" class="d-flex align-items-center justify-content-center">
                         <input type="text" class="form-control form-control-sm text-center remise-input no-spinners" 
                                placeholder="0.0"
                                value="${parseFloat(element.remise_percent || 0).toFixed(1)}"
@@ -1149,7 +1149,7 @@ function renderProductElement(element) {
                     </div>
                     
                     <!-- TVA (90px) - centré verticalement -->
-                    <div style="width: 90px; padding: 4px;" class="d-flex align-items-center justify-content-center" style="height: 80px;">
+                    <div style="width: 90px; padding: 2px; height: 60px;" class="d-flex align-items-center justify-content-center">
                         <select class="form-select form-select-sm tva-select" 
                                 onchange="updateElement(${element.id}, 'tva_percent', this.value)">
                             <option value="0" ${element.tva_percent == 0 ? 'selected' : ''}>0%</option>
@@ -1160,7 +1160,7 @@ function renderProductElement(element) {
                     </div>
                     
                     <!-- Total HT ligne (90px) - centré verticalement -->
-                    <div style="width: 90px; padding: 4px;" class="d-flex align-items-center justify-content-center text-center" style="height: 80px;">
+                    <div style="width: 90px; padding: 2px; height: 60px;" class="d-flex align-items-center justify-content-center text-center">
                         <small class="total-ligne-display fw-bold text-success" style="font-size: 0.75rem;">
                             ${parseFloat(element.total_ligne_ht || 0).toFixed(2)} €
                         </small>
@@ -1170,32 +1170,32 @@ function renderProductElement(element) {
                 </div>
                 
                 <!-- Deuxième ligne -->
-                <div class="d-flex align-items-start" style="gap: 4px; margin-top: 5px;">
+                <div class="d-flex align-items-start" style="gap: 4px; margin-top: 1px;">
                     <!-- Espace drag handle -->
-                    <div style="width: 25px; padding: 4px;"></div>
+                    <div style="width: 25px; padding: 1px;"></div>
                     
                     <!-- Checkbox Photo sous le code article (120px) -->
-                    <div style="width: 120px; padding: 4px;">
+                    <div style="width: 120px; padding: 1px;">
                         <div class="form-check form-check-sm">
                             <input class="form-check-input" type="checkbox" 
                                    id="photo_${element.id}" 
                                    ${element.image_visible ? 'checked' : ''}
                                    onchange="toggleImageVisibility(${element.id}, this.checked)">
-                            <label class="form-check-label text-muted small" for="photo_${element.id}" style="font-size: 0.75rem;">
+                            <label class="form-check-label text-muted small" for="photo_${element.id}" style="font-size: 0.7rem;">
                                 <i class="fas fa-camera me-1"></i>Photo
                             </label>
                             <button type="button" class="btn btn-outline-primary btn-xs ms-1 photo-btn-${element.id}" 
                                     onclick="selectProductImage(${element.id})" 
                                     title="Gérer les images"
-                                    style="padding: 1px 4px; font-size: 8px; ${element.image_visible ? '' : 'display: none;'}">
+                                    style="padding: 1px 3px; font-size: 7px; ${element.image_visible ? '' : 'display: none;'}">
                                 <i class="fas fa-images"></i>
                             </button>
                         </div>
                     </div>
                     
                     <!-- Nom de fichier sous la désignation (225px) -->
-                    <div style="width: 225px; padding: 4px;">
-                        <small class="text-muted image-filename-${element.id}" style="font-size: 0.7rem; ${element.image_visible && element.product_image_filename ? '' : 'display: none;'}">
+                    <div style="width: 225px; padding: 1px;">
+                        <small class="text-muted image-filename-${element.id}" style="font-size: 0.65rem; ${element.image_visible && element.product_image_filename ? '' : 'display: none;'}">
                             <i class="fas fa-file-image me-1"></i>
                             <span class="filename-text">${element.product_image_filename || ''}</span>
                         </small>
