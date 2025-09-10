@@ -3201,14 +3201,21 @@ function selectProductImage(elementId) {
 async function showImageSelectionModal(elementId, element) {
     console.log('showImageSelectionModal appelée avec:', { elementId, element });
     
-    // Si l'élément n'est pas associé à un produit, on ne peut pas charger d'images
-    if (!element.produit_reference) {
-        console.log('Pas de produit_reference, ouverture modal basique');
-        showBasicImageModal(elementId, element);
+    try {
+        // Si l'élément n'est pas associé à un produit, on ne peut pas charger d'images
+        if (!element.produit_reference) {
+            console.log('Pas de produit_reference, ouverture modal basique');
+            showBasicImageModal(elementId, element);
+            return;
+        }
+        
+        console.log('Produit_reference trouvé, ouverture modal avancée');
+        console.log('Vérification Bootstrap:', typeof bootstrap);
+    } catch (error) {
+        console.error('Erreur dans showImageSelectionModal:', error);
+        alert('Erreur lors de l\'ouverture de la modal: ' + error.message);
         return;
     }
-    
-    console.log('Produit_reference trouvé, ouverture modal avancée');
     
     const modalHtml = `
         <div class="modal fade" id="imageSelectionModal" tabindex="-1">
@@ -3287,7 +3294,9 @@ async function showImageSelectionModal(elementId, element) {
 function showBasicImageModal(elementId, element) {
     console.log('showBasicImageModal appelée avec:', { elementId, element });
     
-    const modalHtml = `
+    try {
+        console.log('Création du HTML de la modal...');
+        const modalHtml = `
         <div class="modal fade" id="imageSelectionModal" tabindex="-1">
             <div class="modal-dialog modal-lg">
                 <div class="modal-content">
@@ -3315,24 +3324,46 @@ function showBasicImageModal(elementId, element) {
             </div>
         </div>
     `;
-    
-    // Supprimer la modal existante si elle existe
-    const existingModal = document.getElementById('imageSelectionModal');
-    if (existingModal) {
-        existingModal.remove();
+        
+        console.log('Suppression modal existante...');
+        // Supprimer la modal existante si elle existe
+        const existingModal = document.getElementById('imageSelectionModal');
+        if (existingModal) {
+            console.log('Modal existante trouvée, suppression...');
+            existingModal.remove();
+        }
+        
+        console.log('Ajout de la modal au DOM...');
+        // Ajouter la nouvelle modal au DOM
+        document.body.insertAdjacentHTML('beforeend', modalHtml);
+        
+        console.log('Vérification Bootstrap avant création modal:', typeof bootstrap);
+        if (typeof bootstrap === 'undefined') {
+            throw new Error('Bootstrap n\'est pas chargé !');
+        }
+        
+        console.log('Création et affichage de la modal...');
+        // Afficher la modal
+        const modalElement = document.getElementById('imageSelectionModal');
+        if (!modalElement) {
+            throw new Error('Element modal non trouvé après insertion');
+        }
+        
+        const modal = new bootstrap.Modal(modalElement);
+        modal.show();
+        
+        console.log('Modal affichée avec succès !');
+        
+        // Nettoyer la modal après fermeture
+        modalElement.addEventListener('hidden.bs.modal', function() {
+            console.log('Modal fermée, nettoyage...');
+            this.remove();
+        });
+        
+    } catch (error) {
+        console.error('Erreur dans showBasicImageModal:', error);
+        alert('Erreur lors de l\'ouverture de la modal basique: ' + error.message);
     }
-    
-    // Ajouter la nouvelle modal au DOM
-    document.body.insertAdjacentHTML('beforeend', modalHtml);
-    
-    // Afficher la modal
-    const modal = new bootstrap.Modal(document.getElementById('imageSelectionModal'));
-    modal.show();
-    
-    // Nettoyer la modal après fermeture
-    document.getElementById('imageSelectionModal').addEventListener('hidden.bs.modal', function() {
-        this.remove();
-    });
 }
 
 async function loadProductImages(elementId, element) {
