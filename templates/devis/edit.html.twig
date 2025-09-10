@@ -116,6 +116,12 @@
                                 'label': 'Adresse facturation',
                                 'attr': {'class': 'form-select'}
                             }) }}
+                            <!-- Libellé email aligné à droite -->
+                            <div class="mt-2 text-end">
+                                <label class="form-label mb-0" for="email_envoi_automatique_display">
+                                    <i class="fas fa-paper-plane me-2 text-primary"></i>Ce devis sera envoyé automatiquement à l'adresse :
+                                </label>
+                            </div>
                         </div>
                         <div class="col-md-6">
                             {{ form_row(form.contactLivraison, {
@@ -126,23 +132,15 @@
                                 'label': 'Adresse livraison',
                                 'attr': {'class': 'form-select'}
                             }) }}
-                        </div>
-                    </div>
-                    <div class="row mt-3">
-                        <div class="col-md-12">
-                            <div class="email-envoi-section border-start border-primary border-3 ps-3 py-2" style="background-color: #f8f9ff;">
-                                <label class="form-label mb-2" for="email_envoi_automatique_display">
-                                    <i class="fas fa-paper-plane me-2 text-primary"></i>Ce devis sera envoyé automatiquement à l'adresse :
-                                </label>
+                            <!-- Champ email aligné à gauche -->
+                            <div class="mt-2">
                                 <input type="email" 
                                        class="form-control" 
                                        id="email_envoi_automatique_display"
                                        placeholder="Email du contact de livraison"
                                        value="{{ devis.emailEnvoiAutomatique ?? '' }}"
-                                       onchange="updateHiddenEmailField(this.value)" />
-                                <small class="form-text text-muted mt-1">
-                                    <i class="fas fa-info-circle me-1"></i>Cette adresse sera automatiquement mise à jour selon le contact de livraison sélectionné.
-                                </small>
+                                       onchange="updateHiddenEmailField(this.value)" 
+                                       style="max-width: 350px;" />
                             </div>
                         </div>
                     </div>
@@ -1802,21 +1800,15 @@ function initContactAddressSynchronization() {
     if (contactLivraisonSelect) {
         contactLivraisonSelect.addEventListener('change', function() {
             const contactId = this.value;
-            console.log('🔄 Contact livraison changé:', contactId);
             
             if (contactId && adresseLivraisonSelect) {
                 syncContactAddress(contactId, adresseLivraisonSelect);
             }
             // Synchroniser l'email automatiquement
-            console.log('📧 Déclenchement syncContactEmail...');
             syncContactEmail(contactId);
         });
     }
 
-    // Vérifier que le champ email display est présent
-    const emailDisplayField = document.getElementById('email_envoi_automatique_display');
-    console.log('🔍 Champ email display trouvé:', emailDisplayField);
-    
     // Charger les données initiales si un client est sélectionné
     if (clientSelect.value) {
         loadClientContactsAndAddresses(clientSelect.value);
@@ -1843,13 +1835,8 @@ async function loadClientContactsAndAddresses(clientId) {
         
         // Synchroniser l'email si un contact de livraison est déjà sélectionné
         const contactLivraisonSelect = document.getElementById('devis_contactLivraison');
-        console.log('🔍 Contact livraison select trouvé:', contactLivraisonSelect);
-        console.log('🔍 Valeur actuelle:', contactLivraisonSelect?.value);
-        
         if (contactLivraisonSelect && contactLivraisonSelect.value) {
-            console.log('⏰ Planification syncContactEmail dans 100ms...');
             setTimeout(() => {
-                console.log('⏰ Exécution syncContactEmail après timeout');
                 syncContactEmail(contactLivraisonSelect.value);
             }, 100);
         }
@@ -1954,41 +1941,29 @@ function syncContactAddress(contactId, adresseSelect) {
 }
 
 function syncContactEmail(contactId) {
-    console.log('🔄 syncContactEmail appelée avec contactId:', contactId);
-    
     // Utiliser les données déjà chargées pour synchroniser l'email
     if (!window.clientContacts) {
-        console.log('❌ Pas de contacts chargés pour email');
         return;
     }
     
-    console.log('📋 Contacts disponibles:', window.clientContacts);
-    
     const emailDisplayField = document.getElementById('email_envoi_automatique_display');
     if (!emailDisplayField) {
-        console.log('❌ Champ email display introuvable');
         return;
     }
     
     // Trouver le contact sélectionné
     const selectedContact = window.clientContacts.find(contact => contact.id == contactId);
     if (!selectedContact) {
-        console.log('❌ Contact non trouvé pour email:', contactId);
-        console.log('🔍 Contacts disponibles IDs:', window.clientContacts.map(c => c.id));
         emailDisplayField.value = '';
         updateHiddenEmailField('');
         return;
     }
     
-    console.log('✅ Contact trouvé pour email:', selectedContact);
-    
     // Mettre à jour le champ email avec l'email du contact
     if (selectedContact.email) {
-        console.log('📧 Mise à jour email:', selectedContact.email);
         emailDisplayField.value = selectedContact.email;
         updateHiddenEmailField(selectedContact.email);
     } else {
-        console.log('⚠️ Aucun email associé au contact');
         emailDisplayField.value = '';
         updateHiddenEmailField('');
     }
@@ -2022,9 +1997,6 @@ function updateHiddenEmailField(value) {
     const hiddenEmailField = document.getElementById('devis_emailEnvoiAutomatique');
     if (hiddenEmailField) {
         hiddenEmailField.value = value;
-        console.log('Champ caché email mis à jour:', value);
-    } else {
-        console.log('Champ caché email introuvable');
     }
 }
 
