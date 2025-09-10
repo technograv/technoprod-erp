@@ -3178,13 +3178,20 @@ function selectProductImage(elementId) {
     console.log('window.elements:', window.elements);
     
     // Récupérer l'élément pour avoir les informations produit
-    const element = window.elements.find(e => e.id == elementId);
-    console.log('element trouvé:', element);
+    let element = null;
+    if (window.elements && window.elements.length > 0) {
+        element = window.elements.find(e => e.id == elementId);
+        console.log('element trouvé dans window.elements:', element);
+    }
     
+    // Si pas trouvé dans window.elements, créer un objet basique
     if (!element) {
-        console.error('Élément introuvable pour ID:', elementId);
-        alert('Élément introuvable - ID: ' + elementId + '\nNombre d\'éléments: ' + (window.elements ? window.elements.length : 'undefined'));
-        return;
+        console.log('Element non trouvé, création d\'un objet basique...');
+        element = {
+            id: elementId,
+            designation: 'Produit #' + elementId,
+            produit_reference: ''
+        };
     }
     
     console.log('Appel de showImageSelectionModal...');
