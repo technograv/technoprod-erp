@@ -250,9 +250,31 @@ final class DevisController extends AbstractController
 
             // Sauvegarder le devis
             $entityManager->persist($devis);
+            $entityManager->flush(); // Flush pour obtenir l'ID du devis
+            
+            // Créer 3 lignes produits par défaut pour améliorer l'UX
+            for ($i = 1; $i <= 3; $i++) {
+                $element = new \App\Entity\DevisElement();
+                $element->setDevis($devis);
+                $element->setType('product');
+                $element->setPosition($i);
+                $element->setQuantite('1');
+                $element->setPrixUnitaireHt('0.00');
+                $element->setRemisePercent('0.00');
+                
+                // Utiliser le taux de TVA par défaut
+                $defaultTva = $entityManager->getRepository(\App\Entity\TauxTVA::class)
+                    ->findOneBy(['parDefaut' => true, 'actif' => true]);
+                $tvaRate = $defaultTva ? (string) $defaultTva->getTaux() : '20.00';
+                $element->setTvaPercent($tvaRate);
+                
+                $element->calculateTotal();
+                $entityManager->persist($element);
+            }
+            
             $entityManager->flush();
             
-            $this->addFlash('success', 'Devis créé avec succès ! Vous pouvez maintenant ajouter les lignes.');
+            $this->addFlash('success', 'Devis créé avec succès ! 3 lignes produits ont été ajoutées par défaut.');
             return $this->redirectToRoute('app_devis_edit', ['id' => $devis->getId()]);
         }
         

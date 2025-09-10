@@ -2896,26 +2896,29 @@ document.addEventListener('DOMContentLoaded', function() {
     position: absolute;
     top: 100%;
     left: 0;
-    right: 0;
+    right: auto;
+    min-width: 450px; /* Largeur minimale fixe pour plus de lisibilité */
+    width: max-content; /* S'adapte au contenu */
+    max-width: 600px; /* Limite maximale */
     background: white;
     border: 1px solid #dee2e6;
     border-top: none;
     border-radius: 0 0 4px 4px;
-    box-shadow: 0 2px 8px rgba(0,0,0,0.1);
-    max-height: 200px;
+    box-shadow: 0 4px 12px rgba(0,0,0,0.15); /* Ombre plus marquée */
+    max-height: 300px; /* Plus haute pour plus de suggestions */
     overflow-y: auto;
     z-index: 1060;
 }
 
 .product-suggestion {
-    padding: 0.5rem;
+    padding: 0.75rem; /* Padding augmenté */
     border-bottom: 1px solid #f1f3f4;
     cursor: pointer;
     display: grid;
-    grid-template-columns: 80px 1fr auto;
-    gap: 0.5rem;
+    grid-template-columns: 120px 1fr 100px; /* Colonnes plus larges */
+    gap: 0.75rem; /* Espace augmenté */
     align-items: center;
-    font-size: 0.875rem;
+    font-size: 0.9rem; /* Police légèrement plus grande */
 }
 
 .product-suggestion:hover,
