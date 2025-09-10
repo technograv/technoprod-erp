@@ -1813,6 +1813,10 @@ function initContactAddressSynchronization() {
         });
     }
 
+    // Vérifier que le champ email display est présent
+    const emailDisplayField = document.getElementById('email_envoi_automatique_display');
+    console.log('🔍 Champ email display trouvé:', emailDisplayField);
+    
     // Charger les données initiales si un client est sélectionné
     if (clientSelect.value) {
         loadClientContactsAndAddresses(clientSelect.value);
@@ -1839,8 +1843,13 @@ async function loadClientContactsAndAddresses(clientId) {
         
         // Synchroniser l'email si un contact de livraison est déjà sélectionné
         const contactLivraisonSelect = document.getElementById('devis_contactLivraison');
+        console.log('🔍 Contact livraison select trouvé:', contactLivraisonSelect);
+        console.log('🔍 Valeur actuelle:', contactLivraisonSelect?.value);
+        
         if (contactLivraisonSelect && contactLivraisonSelect.value) {
+            console.log('⏰ Planification syncContactEmail dans 100ms...');
             setTimeout(() => {
+                console.log('⏰ Exécution syncContactEmail après timeout');
                 syncContactEmail(contactLivraisonSelect.value);
             }, 100);
         }
