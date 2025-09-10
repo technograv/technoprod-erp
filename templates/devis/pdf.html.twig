@@ -365,27 +365,40 @@
     <!-- Totaux -->
     <div class="totals-section">
         <table class="totals-table">
-            {% if devis.remiseGlobalePercent %}
+            {% if devis.remiseGlobalePercent or devis.remiseGlobaleMontant %}
+                {% set sousTotal = 0 %}
+                {% for element in devis.elementsOrdered %}
+                    {% if element.type == 'product' %}
+                        {% set sousTotal = sousTotal + element.totalLigneHt %}
+                    {% endif %}
+                {% endfor %}
                 <tr>
                     <td>Sous-total HT:</td>
-                    <td class="text-right">{{ devis.totalHt }}€</td>
+                    <td class="text-right">{{ sousTotal|number_format(2, ',', ' ') }}€</td>
                 </tr>
-                <tr>
-                    <td>Remise globale ({{ devis.remiseGlobalePercent }}%):</td>
-                    <td class="text-right">-{{ devis.remiseGlobaleMontant }}€</td>
-                </tr>
+                {% if devis.remiseGlobalePercent and devis.remiseGlobalePercent > 0 %}
+                    <tr>
+                        <td>Remise globale ({{ devis.remiseGlobalePercent }}%):</td>
+                        <td class="text-right">-{{ (sousTotal * devis.remiseGlobalePercent / 100)|number_format(2, ',', ' ') }}€</td>
+                    </tr>
+                {% elseif devis.remiseGlobaleMontant and devis.remiseGlobaleMontant > 0 %}
+                    <tr>
+                        <td>Remise globale:</td>
+                        <td class="text-right">-{{ devis.remiseGlobaleMontant|number_format(2, ',', ' ') }}€</td>
+                    </tr>
+                {% endif %}
             {% endif %}
             <tr>
                 <td><strong>Total HT:</strong></td>
-                <td class="text-right"><strong>{{ devis.totalHt }}€</strong></td>
+                <td class="text-right"><strong>{{ devis.totalHt|number_format(2, ',', ' ') }}€</strong></td>
             </tr>
             <tr>
                 <td>TVA:</td>
-                <td class="text-right">{{ devis.totalTva }}€</td>
+                <td class="text-right">{{ devis.totalTva|number_format(2, ',', ' ') }}€</td>
             </tr>
             <tr class="total-row">
                 <td><strong>TOTAL TTC:</strong></td>
-                <td class="text-right"><strong>{{ devis.totalTtc }}€</strong></td>
+                <td class="text-right"><strong>{{ devis.totalTtc|number_format(2, ',', ' ') }}€</strong></td>
             </tr>
             {% if devis.acomptePercent or devis.acompteMontant %}
                 <tr style="border-top: 2px solid #6f42c1;">
