@@ -309,7 +309,7 @@
                     {% if devis.statut in ['envoye', 'signe'] %}
                         Modifier et créer une version
                     {% else %}
-                        Enregistrer les modifications
+                        Enregistrer et quitter
                     {% endif %}
                 </button>
                 
@@ -321,10 +321,6 @@
                 
                 <a href="{{ path('app_devis_pdf', {'id': devis.id}) }}" target="_blank" class="btn btn-info">
                     <i class="fas fa-file-pdf me-1"></i>PDF
-                </a>
-                
-                <a href="{{ path('app_devis_show', {'id': devis.id}) }}" class="btn btn-secondary">
-                    <i class="fas fa-eye me-1"></i>Voir
                 </a>
                 
                 <a href="{{ path('app_devis_index') }}" class="btn btn-outline-light">
