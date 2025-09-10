@@ -3457,6 +3457,12 @@ function selectImage(elementId, imageId) {
     // Mettre à jour l'élément avec l'image sélectionnée
     updateElement(elementId, 'product_image_id', imageId);
     
+    // Mettre à jour immédiatement les données locales
+    const elementIndex = window.elements.findIndex(e => e.id === elementId);
+    if (elementIndex !== -1) {
+        window.elements[elementIndex].product_image_id = imageId;
+    }
+    
     // Fermer la modal
     const modal = bootstrap.Modal.getInstance(document.getElementById('imageSelectionModal'));
     modal.hide();
