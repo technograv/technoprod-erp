@@ -1588,7 +1588,8 @@ function updateSubtotals() {
 // GESTION TOUCHES CLAVIER
 // ==========================================
 
-function preventEnterSubmit(event) {
+// Fonction globale pour prévenir la soumission par Entrée
+window.preventEnterSubmit = function(event) {
     if (event.key === 'Enter') {
         event.preventDefault();
         event.target.blur(); // Retire le focus du champ pour déclencher onblur/onchange
@@ -2483,6 +2484,7 @@ function updateElementFields(elementId, product) {
     }
     
     // Mettre à jour l'affichage collapsed 
+    console.log('📝 Appel updateCollapsedView avec elementId:', elementId, 'product:', product);
     updateCollapsedView(elementId, product);
     
     // Mettre à jour le prix unitaire
@@ -2503,12 +2505,19 @@ function updateElementFields(elementId, product) {
 }
 
 function updateCollapsedView(elementId, product) {
+    console.log('🔄 updateCollapsedView appelée pour elementId:', elementId, 'product:', product);
     const elementDiv = document.querySelector(`[data-element-id="${elementId}"]`);
-    if (!elementDiv) return;
+    if (!elementDiv) {
+        console.error('❌ Élément non trouvé pour elementId:', elementId);
+        return;
+    }
     
     // Trouver l'affichage collapsed
     const collapsedView = elementDiv.querySelector('.collapsed-view');
-    if (!collapsedView) return;
+    if (!collapsedView) {
+        console.error('❌ Vue collapsed non trouvée pour elementId:', elementId);
+        return;
+    }
     
     // Mettre à jour la désignation et description (première colonne)
     const designationDiv = collapsedView.querySelector('.col-md-4');
