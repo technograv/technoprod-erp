@@ -214,4 +214,20 @@ class ProductImage
         return '/uploads/products/thumbnails/' . $pathInfo['filename'] . '_thumb.' . $pathInfo['extension'];
     }
 
+    /**
+     * Retourne l'image encodée en base64 pour intégration dans PDF
+     */
+    public function getBase64Image(): string
+    {
+        $filePath = $this->getAbsolutePath();
+        if (!file_exists($filePath)) {
+            return '';
+        }
+        
+        $imageData = file_get_contents($filePath);
+        $mimeType = $this->getMimeType() ?: 'image/png';
+        
+        return 'data:' . $mimeType . ';base64,' . base64_encode($imageData);
+    }
+
 }
