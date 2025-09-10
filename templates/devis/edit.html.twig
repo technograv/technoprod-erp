@@ -1137,6 +1137,7 @@ function renderProductElement(element) {
                                placeholder="0.00"
                                value="${parseFloat(element.prix_unitaire_ht || 0).toFixed(2)}"
                                pattern="[0-9]*[.,]?[0-9]*"
+                               onchange="updateElement(${element.id}, 'prix_unitaire_ht', this.value)"
                                oninput="this.value = this.value.replace(/[^0-9.,]/g, '')"
                                onkeypress="preventEnterSubmit(event)" />
                     </div>
@@ -2545,12 +2546,12 @@ function updateElementFields(elementId, product) {
         descriptionInput.value = product.description || '';
     }
     
-    // Mettre à jour aussi le champ description-inline-input (mode édition)
-    const descriptionInlineInput = elementDiv.querySelector('.description-inline-input');
-    if (descriptionInlineInput) {
-        descriptionInlineInput.value = product.description || '';
+    // Mettre à jour aussi le champ description-textarea (mode édition)
+    const descriptionTextarea = elementDiv.querySelector('.description-textarea');
+    if (descriptionTextarea) {
+        descriptionTextarea.value = product.description || '';
         // Déclencher l'événement change pour synchroniser avec le backend
-        descriptionInlineInput.dispatchEvent(new Event('change', { bubbles: true }));
+        descriptionTextarea.dispatchEvent(new Event('change', { bubbles: true }));
     }
     
     // Mettre à jour l'affichage collapsed si nécessaire
@@ -2579,7 +2580,7 @@ function updateCollapsedView(elementId, product) {
     
     // Vérifier si on est en mode lecture seule (affichage collapsed)
     const isReadOnlyMode = elementDiv.querySelector('.col-md-4'); // Mode lecture seule a des colonnes
-    const isEditMode = elementDiv.querySelector('.description-inline-input'); // Mode édition a des inputs
+    const isEditMode = elementDiv.querySelector('.description-textarea'); // Mode édition a des textareas
     
     // En mode édition, les champs sont déjà mis à jour par updateElementFields
     if (isEditMode) return;
