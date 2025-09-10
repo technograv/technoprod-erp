@@ -1380,4 +1380,35 @@ final class DevisController extends AbstractController
         
         error_log("DevisController: Synchronisation ordre global terminée - " . count($allElements) . " éléments réorganisés");
     }
+
+    #[Route('/{id}/update-totals', name: 'app_devis_update_totals', methods: ['POST'])]
+    public function updateTotals(Request $request, Devis $devis, EntityManagerInterface $entityManager): JsonResponse
+    {
+        $data = json_decode($request->getContent(), true);
+        
+        if (!$data || !isset($data['totalHt'], $data['totalTva'], $data['totalTtc'])) {
+            return $this->json(['error' => 'Données manquantes'], 400);
+        }
+        
+        // Mettre à jour les totaux
+        $devis->setTotalHt($data['totalHt']);
+        $devis->setTotalTva($data['totalTva']);
+        $devis->setTotalTtc($data['totalTtc']);
+        
+        // Mettre à jour les remises globales si présentes
+        if (isset($data['remiseGlobalePercent'])) {
+            $devis->setRemiseGlobalePercent($data['remiseGlobalePercent'] > 0 ? (string)$data['remiseGlobalePercent'] : null);
+        }
+        
+        if (isset($data['remiseGlobaleMontant'])) {
+            $devis->setRemiseGlobaleMontant($data['remiseGlobaleMontant'] > 0 ? (string)$data['remiseGlobaleMontant'] : null);
+        }
+        
+        $entityManager->flush();
+        
+        return $this->json([
+            'success' => true,
+            'message' => 'Totaux et remise mis à jour automatiquement'
+        ]);
+    }
 }

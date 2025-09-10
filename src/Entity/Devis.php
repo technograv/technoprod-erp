@@ -496,19 +496,20 @@ class Devis
         $totalHt = 0;
         $totalTva = 0;
 
-        foreach ($this->devisItems as $item) {
-            $totalHt += floatval($item->getTotalLigneHt());
-            $tvaLigne = floatval($item->getTotalLigneHt()) * floatval($item->getTvaPercent()) / 100;
-            $totalTva += $tvaLigne;
+        // Utiliser les nouveaux DevisElement au lieu des anciens devisItems
+        foreach ($this->elements as $element) {
+            if ($element->getType() === 'product') {
+                $totalHt += floatval($element->getTotalLigneHt());
+                $tvaLigne = floatval($element->getTotalLigneHt()) * floatval($element->getTvaPercent()) / 100;
+                $totalTva += $tvaLigne;
+            }
         }
 
-        // Appliquer la remise globale si elle existe
-        if ($this->remiseGlobalePercent) {
+        // Appliquer la remise globale : priorité au pourcentage, sinon montant fixe
+        if ($this->remiseGlobalePercent && floatval($this->remiseGlobalePercent) > 0) {
             $totalHt = $totalHt * (1 - floatval($this->remiseGlobalePercent) / 100);
             $totalTva = $totalTva * (1 - floatval($this->remiseGlobalePercent) / 100);
-        }
-
-        if ($this->remiseGlobaleMontant) {
+        } elseif ($this->remiseGlobaleMontant && floatval($this->remiseGlobaleMontant) > 0) {
             $totalHt -= floatval($this->remiseGlobaleMontant);
         }
 

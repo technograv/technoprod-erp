@@ -5,6 +5,7 @@ namespace App\Controller;
 use App\Entity\Devis;
 use App\Entity\DevisElement;
 use App\Entity\Produit;
+use App\Entity\TauxTVA;
 use App\Repository\DevisElementRepository;
 use Doctrine\ORM\EntityManagerInterface;
 use Symfony\Bundle\FrameworkBundle\Controller\AbstractController;
@@ -233,6 +234,14 @@ class DevisElementController extends AbstractController
             $element->setProduit($produit);
         }
 
+        // Initialiser les valeurs par défaut pour un nouvel élément
+        if (!$element->getId()) {
+            $element->setQuantite('1');
+            $element->setPrixUnitaireHt('0.00');
+            $element->setRemisePercent('0.00');
+            $element->setTvaPercent($this->getDefaultTvaRate($em));
+        }
+
         // Ne mettre à jour que les champs fournis dans $data
         if (array_key_exists('designation', $data)) {
             $element->setDesignation($data['designation']);
@@ -250,7 +259,7 @@ class DevisElementController extends AbstractController
             $element->setRemisePercent($data['remise_percent'] ?: '0.00');
         }
         if (array_key_exists('tva_percent', $data)) {
-            $element->setTvaPercent($data['tva_percent'] ?: '20.00');
+            $element->setTvaPercent($data['tva_percent'] ?: $this->getDefaultTvaRate($em));
         }
 
         $element->calculateTotal();
@@ -270,5 +279,11 @@ class DevisElementController extends AbstractController
                 default => null
             });
         }
+    }
+
+    private function getDefaultTvaRate(EntityManagerInterface $em): string
+    {
+        $defaultTva = $em->getRepository(TauxTVA::class)->findOneBy(['parDefaut' => true, 'actif' => true]);
+        return $defaultTva ? (string) $defaultTva->getTaux() : '20.00';
     }
 }

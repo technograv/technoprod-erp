@@ -1537,6 +1537,9 @@ function calculateTotals() {
         }
     }
     
+    // Sauvegarder automatiquement les totaux en base
+    saveDevisTotalsAutomatically(totalHtRemise, totalTvaRemise, totalTtc);
+    
     // Mettre à jour les sous-totaux
     updateSubtotals();
 }
@@ -1617,6 +1620,47 @@ function initEventListeners() {
 }
 
 // ==========================================
+// SAUVEGARDE AUTOMATIQUE DES TOTAUX
+// ==========================================
+
+function saveDevisTotalsAutomatically(totalHt, totalTva, totalTtc) {
+    // Debounce pour éviter trop d'appels
+    if (window.saveDevisTotalsTimeout) {
+        clearTimeout(window.saveDevisTotalsTimeout);
+    }
+    
+    window.saveDevisTotalsTimeout = setTimeout(async () => {
+        try {
+            // Récupérer les valeurs de remise actuelles
+            let remisePercent = document.getElementById('remise-percent-main') || document.getElementById('devis_remiseGlobalePercent');
+            let remiseMontant = document.getElementById('remise-montant-main') || document.getElementById('devis_remiseGlobaleMontant');
+            
+            const response = await fetch(`/devis/${DEVIS_ID}/update-totals`, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify({
+                    totalHt: totalHt.toFixed(2),
+                    totalTva: totalTva.toFixed(2),
+                    totalTtc: totalTtc.toFixed(2),
+                    remiseGlobalePercent: parseFloat(remisePercent?.value || 0),
+                    remiseGlobaleMontant: parseFloat(remiseMontant?.value || 0)
+                })
+            });
+            
+            if (!response.ok) {
+                console.warn('Erreur sauvegarde automatique totaux:', response.status);
+            } else {
+                console.log('💾 Totaux + remise sauvés automatiquement - HT:', totalHt.toFixed(2), '€, TTC:', totalTtc.toFixed(2), '€, Remise:', remisePercent?.value || 0, '%');
+            }
+        } catch (error) {
+            console.warn('Erreur réseau sauvegarde totaux:', error);
+        }
+    }, 1000); // Attendre 1 seconde après le dernier changement
+}
+
+// ==========================================
 // GESTION REMISE GLOBALE
 // ==========================================
 
@@ -1641,10 +1685,31 @@ function initGlobalRemise() {
     
     let totalHt = 0;
     
-    // Fonction simple pour mettre à jour le total HT
+    // Fonction pour mettre à jour le total HT et synchroniser automatiquement
     window.updateTotalHtForRemise = function(ht) {
         totalHt = ht;
         console.log('Total HT mis à jour:', totalHt);
+        
+        // Synchronisation automatique quand le total change
+        const percentValue = parseFloat(remisePercent.value) || 0;
+        const montantValue = parseFloat(remiseMontant.value) || 0;
+        
+        // Si un pourcentage est défini, recalculer le montant automatiquement
+        if (percentValue > 0 && totalHt > 0) {
+            const nouveauMontant = (totalHt * percentValue / 100);
+            if (Math.abs(nouveauMontant - montantValue) > 0.01) { // Éviter les micro-changements
+                remiseMontant.value = nouveauMontant.toFixed(2);
+                console.log('💰 Montant auto-synchronisé:', nouveauMontant.toFixed(2), '€ (', percentValue, '% de', totalHt, '€)');
+            }
+        }
+        // Sinon si un montant fixe est défini, recalculer le pourcentage
+        else if (montantValue > 0 && totalHt > 0) {
+            const nouveauPourcentage = (montantValue / totalHt * 100);
+            if (Math.abs(nouveauPourcentage - percentValue) > 0.1) { // Éviter les micro-changements
+                remisePercent.value = nouveauPourcentage.toFixed(1);
+                console.log('📊 Pourcentage auto-synchronisé:', nouveauPourcentage.toFixed(1), '% (', montantValue, '€ sur', totalHt, '€)');
+            }
+        }
     };
     
     // Quand on change le pourcentage, calculer le montant
