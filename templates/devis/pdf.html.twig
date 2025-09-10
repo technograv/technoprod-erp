@@ -302,7 +302,7 @@
                             {% if element.imageVisible and element.productImage %}
                                 <div style="display: table; width: 100%;">
                                     <div style="display: table-cell; width: 120px; vertical-align: top; padding-right: 10px;">
-                                        <img src="{{ element.productImage.imagePath }}" 
+                                        <img src="{{ element.productImage.base64Image }}" 
                                              style="max-width: 110px; max-height: 80px; object-fit: contain; border: 1px solid #ddd; border-radius: 4px;" 
                                              alt="{{ element.productImage.alt ?: element.designation }}" />
                                     </div>
