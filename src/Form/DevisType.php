@@ -307,6 +307,14 @@ class DevisType extends AbstractType
                     'placeholder' => 'Ex: 2-3 semaines'
                 ]
             ])
+            ->add('emailEnvoiAutomatique', EmailType::class, [
+                'label' => 'Email d\'envoi automatique',
+                'required' => false,
+                'attr' => [
+                    'class' => 'form-control',
+                    'placeholder' => 'email@example.com'
+                ]
+            ])
             
             // Onglet Notes
             ->add('notesClient', TextareaType::class, [

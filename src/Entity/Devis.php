@@ -111,6 +111,9 @@ class Devis
     #[ORM\Column(length: 255, nullable: true)]
     private ?string $delaiLivraison = null;
 
+    #[ORM\Column(length: 255, nullable: true)]
+    private ?string $emailEnvoiAutomatique = null;
+
     // Champs Tiers éditables pour ce devis spécifiquement
     #[ORM\Column(length: 10, nullable: true)]
     private ?string $tiersCivilite = null;
@@ -655,6 +658,17 @@ class Devis
     public function setDelaiLivraison(?string $delaiLivraison): static
     {
         $this->delaiLivraison = $delaiLivraison;
+        return $this;
+    }
+
+    public function getEmailEnvoiAutomatique(): ?string
+    {
+        return $this->emailEnvoiAutomatique;
+    }
+
+    public function setEmailEnvoiAutomatique(?string $emailEnvoiAutomatique): static
+    {
+        $this->emailEnvoiAutomatique = $emailEnvoiAutomatique;
         return $this;
     }
 
