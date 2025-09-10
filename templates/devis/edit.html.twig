@@ -1126,7 +1126,7 @@ function renderProductElement(element) {
                                     ${element.image_visible && element.product_image_id ? '<i class="fas fa-check text-success ms-1" title="Image sélectionnée"></i>' : ''}
                                 </label>
                                 <button type="button" class="btn btn-outline-primary btn-xs photo-btn-${element.id}" 
-                                        onclick="selectProductImage(${element.id})" 
+                                        onclick="console.log('Clic bouton element:', ${element.id}); selectProductImage(${element.id}); window.testImageModal && window.testImageModal(${element.id});" 
                                         title="Gérer les images"
                                         style="padding: 1px 4px; font-size: 10px; ${element.image_visible ? '' : 'display: none;'}">
                                     <i class="fas fa-images"></i>
@@ -3174,23 +3174,35 @@ function toggleImageVisibility(elementId, isVisible) {
 }
 
 function selectProductImage(elementId) {
+    console.log('selectProductImage appelée avec elementId:', elementId);
+    console.log('elements array:', elements);
+    
     // Récupérer l'élément pour avoir les informations produit
-    const element = elements.find(e => e.id === elementId);
+    const element = elements.find(e => e.id == elementId); // Utiliser == au lieu de === pour comparaison flexible
+    console.log('element trouvé:', element);
+    
     if (!element) {
-        showError('Élément introuvable');
+        console.error('Élément introuvable pour ID:', elementId);
+        alert('Élément introuvable - ID: ' + elementId);
         return;
     }
     
+    console.log('Appel de showImageSelectionModal...');
     // Pour l'instant, ouvrir une modal simple en attendant l'implémentation complète
     showImageSelectionModal(elementId, element);
 }
 
 async function showImageSelectionModal(elementId, element) {
+    console.log('showImageSelectionModal appelée avec:', { elementId, element });
+    
     // Si l'élément n'est pas associé à un produit, on ne peut pas charger d'images
     if (!element.produit_reference) {
+        console.log('Pas de produit_reference, ouverture modal basique');
         showBasicImageModal(elementId, element);
         return;
     }
+    
+    console.log('Produit_reference trouvé, ouverture modal avancée');
     
     const modalHtml = `
         <div class="modal fade" id="imageSelectionModal" tabindex="-1">
@@ -3267,6 +3279,8 @@ async function showImageSelectionModal(elementId, element) {
 }
 
 function showBasicImageModal(elementId, element) {
+    console.log('showBasicImageModal appelée avec:', { elementId, element });
+    
     const modalHtml = `
         <div class="modal fade" id="imageSelectionModal" tabindex="-1">
             <div class="modal-dialog modal-lg">
@@ -3451,6 +3465,12 @@ function selectImage(elementId, imageId) {
     
     showSuccess('Image sélectionnée avec succès');
 }
+
+// Fonction de test pour vérifier que le JavaScript fonctionne
+window.testImageModal = function(elementId) {
+    console.log('Test modal avec elementId:', elementId);
+    alert('Test modal pour element ID: ' + elementId + '\nFonction JavaScript bien appelée!');
+};
 </script>
 
 {% endblock %}
