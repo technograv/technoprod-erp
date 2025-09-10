@@ -2482,6 +2482,9 @@ function updateElementFields(elementId, product) {
         descriptionInput.value = product.description || '';
     }
     
+    // Mettre à jour l'affichage collapsed 
+    updateCollapsedView(elementId, product);
+    
     // Mettre à jour le prix unitaire
     const prixInput = elementDiv.querySelector('.price-input');
     if (prixInput) {
@@ -2497,6 +2500,31 @@ function updateElementFields(elementId, product) {
     
     // Recalculer le total de la ligne
     recalculateLineTotal(elementId);
+}
+
+function updateCollapsedView(elementId, product) {
+    const elementDiv = document.querySelector(`[data-element-id="${elementId}"]`);
+    if (!elementDiv) return;
+    
+    // Trouver l'affichage collapsed
+    const collapsedView = elementDiv.querySelector('.collapsed-view');
+    if (!collapsedView) return;
+    
+    // Mettre à jour la désignation et description (première colonne)
+    const designationDiv = collapsedView.querySelector('.col-md-4');
+    if (designationDiv) {
+        let content = `<strong>${product.designation || 'Produit sans nom'}</strong>`;
+        if (product.description && product.description.trim()) {
+            content += `<br><div class="text-muted" style="font-size: 0.875rem; line-height: 1.4;">${product.description}</div>`;
+        }
+        designationDiv.innerHTML = content;
+    }
+    
+    // Mettre à jour le prix (troisième colonne)
+    const prixDiv = collapsedView.querySelector('.col-md-2.text-end');
+    if (prixDiv && product.prixVenteHt) {
+        prixDiv.innerHTML = `${parseFloat(product.prixVenteHt).toFixed(2)} €`;
+    }
 }
 
 function recalculateLineTotal(elementId) {
