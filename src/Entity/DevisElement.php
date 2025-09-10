@@ -400,6 +400,7 @@ class DevisElement
             'css_class' => $this->getCssClass(),
             'is_product' => $this->isProductElement(),
             'is_layout' => $this->isLayoutElement(),
+            'produit_id' => $this->produit?->getId(),
             'produit_reference' => $this->produit?->getReference(),
             'image_visible' => $this->imageVisible,
             'product_image_id' => $this->productImage?->getId(),
