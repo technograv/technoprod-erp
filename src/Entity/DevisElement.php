@@ -404,7 +404,8 @@ class DevisElement
             'produit_reference' => $this->produit?->getReference(),
             'image_visible' => $this->imageVisible,
             'product_image_id' => $this->productImage?->getId(),
-            'product_image_path' => $this->productImage?->getImagePath()
+            'product_image_path' => $this->productImage?->getImagePath(),
+            'product_image_filename' => $this->productImage?->getOriginalName()
         ];
     }
 }
