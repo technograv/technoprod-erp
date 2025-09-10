@@ -407,7 +407,7 @@
                 </tr>
                 <tr>
                     <td>Solde à la livraison:</td>
-                    <td class="text-right">{{ (devis.totalTtc|number_format(2) - devis.calculateAcompte|number_format(2))|number_format(2) }}€</td>
+                    <td class="text-right">{{ (devis.totalTtc - devis.calculateAcompte)|number_format(2, ',', ' ') }}€</td>
                 </tr>
             {% endif %}
         </table>

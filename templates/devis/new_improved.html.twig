@@ -978,11 +978,22 @@
                 
                 // Appel direct pour s'assurer que les adresses s'affichent
                 setTimeout(() => {
+                    console.log('🔄 Vérification contacts après 200ms:');
+                    console.log('  📋 contactSelect.val():', contactSelect.val());
+                    console.log('  💼 contactFacturationSelect.val():', contactFacturationSelect.val());
+                    
                     if (contactSelect.val()) {
+                        console.log('✅ Appel updateContactAddress pour PROJET');
                         updateContactAddress('projet', contactSelect.val());
+                    } else {
+                        console.log('❌ contactSelect.val() est vide - pas d\'appel pour projet');
                     }
+                    
                     if (contactFacturationSelect.val()) {
+                        console.log('✅ Appel updateContactAddress pour FACTURATION');
                         updateContactAddress('facturation', contactFacturationSelect.val());
+                    } else {
+                        console.log('❌ contactFacturationSelect.val() est vide - pas d\'appel pour facturation');
                     }
                 }, 200);
             } else {
