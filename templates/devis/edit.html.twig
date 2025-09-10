@@ -933,7 +933,7 @@
     const devisId = DEVIS_ID; // Alias pour compatibilité
     const IS_EDITABLE = {{ devis.statut == 'brouillon' ? 'true' : 'false' }};
 
-    let elements = [];
+    window.elements = []; // Rendre elements accessible globalement
     let devisSortable = null;
 
 // ==========================================
@@ -968,7 +968,7 @@ async function loadElements() {
             throw new Error(data.message);
         }
         
-        elements = data.elements;
+        window.elements = data.elements;
         renderElements();
         
     } catch (error) {
@@ -987,7 +987,7 @@ function renderElements() {
     let html = '';
     
     // En-têtes colonnes si on a des éléments ou si éditable
-    if (elements.length > 0 || IS_EDITABLE) {
+    if (window.elements.length > 0 || IS_EDITABLE) {
         html += `
             <!-- En-têtes colonnes uniformes (90px à droite) -->
             <div class="d-flex devis-headers mb-2 py-2 bg-light rounded align-items-start" style="gap: 2px; height: 35px;">
@@ -1005,7 +1005,7 @@ function renderElements() {
         `;
     }
     
-    if (elements.length === 0) {
+    if (window.elements.length === 0) {
         html += `
             <div class="text-center text-muted p-4">
                 <i class="fas fa-inbox"></i>
@@ -1014,7 +1014,7 @@ function renderElements() {
             </div>
         `;
     } else {
-        html += elements.map(element => renderElement(element)).join('');
+        html += window.elements.map(element => renderElement(element)).join('');
     }
     
     // Bouton d'ajout de produit en bas
@@ -3167,28 +3167,27 @@ function toggleImageVisibility(elementId, isVisible) {
     }
     
     // Mettre à jour l'élément local pour éviter les incohérences
-    const elementIndex = elements.findIndex(e => e.id === elementId);
+    const elementIndex = window.elements.findIndex(e => e.id === elementId);
     if (elementIndex !== -1) {
-        elements[elementIndex].image_visible = isVisible;
+        window.elements[elementIndex].image_visible = isVisible;
     }
 }
 
 function selectProductImage(elementId) {
     console.log('selectProductImage appelée avec elementId:', elementId);
-    console.log('elements array:', elements);
+    console.log('window.elements:', window.elements);
     
     // Récupérer l'élément pour avoir les informations produit
-    const element = elements.find(e => e.id == elementId); // Utiliser == au lieu de === pour comparaison flexible
+    const element = window.elements.find(e => e.id == elementId);
     console.log('element trouvé:', element);
     
     if (!element) {
         console.error('Élément introuvable pour ID:', elementId);
-        alert('Élément introuvable - ID: ' + elementId);
+        alert('Élément introuvable - ID: ' + elementId + '\nNombre d\'éléments: ' + (window.elements ? window.elements.length : 'undefined'));
         return;
     }
     
     console.log('Appel de showImageSelectionModal...');
-    // Pour l'instant, ouvrir une modal simple en attendant l'implémentation complète
     showImageSelectionModal(elementId, element);
 }
 
