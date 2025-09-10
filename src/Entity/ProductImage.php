@@ -213,4 +213,5 @@ class ProductImage
         $pathInfo = pathinfo($this->filename);
         return '/uploads/products/thumbnails/' . $pathInfo['filename'] . '_thumb.' . $pathInfo['extension'];
     }
+
 }
