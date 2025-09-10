@@ -2618,6 +2618,22 @@ function cleanQuillHTML(html) {
 
 // Fonction pour ouvrir l'éditeur de description
 window.openDescriptionEditor = function(elementId, currentDescription) {
+    // Déterminer la taille de la modale selon l'écran
+    const screenWidth = window.innerWidth;
+    const screenHeight = window.innerHeight;
+    
+    // Taille adaptative : plus petite sur petits écrans
+    let modalWidth = '80%';
+    let modalHeight = '600px';
+    
+    if (screenWidth < 992) { // Écrans moyens/petits (< 992px)
+        modalWidth = '95%';
+        modalHeight = '500px';
+    }
+    if (screenWidth < 768) { // Écrans mobiles
+        modalWidth = '98%';
+        modalHeight = '450px';
+    }
     
     currentEditingElementId = elementId;
     
@@ -2627,7 +2643,18 @@ window.openDescriptionEditor = function(elementId, currentDescription) {
     }
     
     // Afficher la modale
-    const modal = new bootstrap.Modal(document.getElementById('description-editor-modal'));
+    const modalElement = document.getElementById('description-editor-modal');
+    const modal = new bootstrap.Modal(modalElement);
+    
+    // Appliquer la taille adaptative
+    const modalDialog = modalElement.querySelector('.modal-dialog');
+    modalDialog.style.width = modalWidth;
+    modalDialog.style.maxWidth = modalWidth;
+    modalDialog.querySelector('#description-editor').style.height = modalHeight.replace('px', '') * 0.6 + 'px';
+    
+    // Rendre la modale redimensionnable
+    makeModalResizable(modalElement);
+    
     modal.show();
     
     // Définir le contenu dans l'éditeur après affichage de la modale
@@ -2639,6 +2666,77 @@ window.openDescriptionEditor = function(elementId, currentDescription) {
         }
     }, 200);
 };
+
+// Fonction pour rendre une modale redimensionnable
+function makeModalResizable(modalElement) {
+    const modalContent = modalElement.querySelector('.modal-content');
+    const modalDialog = modalElement.querySelector('.modal-dialog');
+    
+    // Ajouter la classe resizable et le handle de redimensionnement
+    modalDialog.classList.add('modal-resizable');
+    
+    // Créer le handle de redimensionnement s'il n'existe pas
+    let resizeHandle = modalContent.querySelector('.modal-resize-handle');
+    if (!resizeHandle) {
+        resizeHandle = document.createElement('div');
+        resizeHandle.className = 'modal-resize-handle';
+        modalContent.appendChild(resizeHandle);
+    }
+    
+    let isResizing = false;
+    let startX, startY, startWidth, startHeight;
+    
+    resizeHandle.addEventListener('mousedown', function(e) {
+        isResizing = true;
+        startX = e.clientX;
+        startY = e.clientY;
+        
+        const computedStyle = window.getComputedStyle(modalDialog);
+        startWidth = parseInt(computedStyle.width, 10);
+        startHeight = parseInt(computedStyle.height, 10);
+        
+        document.addEventListener('mousemove', resize);
+        document.addEventListener('mouseup', stopResize);
+        e.preventDefault();
+    });
+    
+    function resize(e) {
+        if (!isResizing) return;
+        
+        const width = startWidth + (e.clientX - startX);
+        const height = startHeight + (e.clientY - startY);
+        
+        // Largeurs minimales selon la taille d'écran
+        const screenWidth = window.innerWidth;
+        let minWidth = 400;
+        if (screenWidth < 992) minWidth = 350;
+        if (screenWidth < 768) minWidth = 300;
+        
+        const minHeight = 300;
+        const maxWidth = window.innerWidth * 0.95;
+        const maxHeight = window.innerHeight * 0.9;
+        
+        if (width >= minWidth && width <= maxWidth) {
+            modalDialog.style.width = width + 'px';
+            modalDialog.style.maxWidth = width + 'px';
+        }
+        
+        if (height >= minHeight && height <= maxHeight) {
+            modalDialog.style.height = height + 'px';
+            // Ajuster la hauteur de l'éditeur proportionnellement
+            const editor = modalElement.querySelector('#description-editor');
+            if (editor) {
+                editor.style.height = (height * 0.6) + 'px';
+            }
+        }
+    }
+    
+    function stopResize() {
+        isResizing = false;
+        document.removeEventListener('mousemove', resize);
+        document.removeEventListener('mouseup', stopResize);
+    }
+}
 
 // Initialiser Quill Editor
 function initQuillEditor() {
@@ -2919,6 +3017,17 @@ document.addEventListener('DOMContentLoaded', function() {
     gap: 0.75rem; /* Espace augmenté */
     align-items: center;
     font-size: 0.9rem; /* Police légèrement plus grande */
+    user-select: none; /* Empêche la sélection de texte */
+}
+
+/* Assurer que tous les enfants héritent du cursor pointer */
+.product-suggestion * {
+    cursor: pointer;
+    pointer-events: none; /* Empêche les événements sur les enfants, force sur le parent */
+}
+
+.product-suggestion:first-child {
+    border-top: none;
 }
 
 .product-suggestion:hover,
@@ -2929,6 +3038,43 @@ document.addEventListener('DOMContentLoaded', function() {
 .product-reference {
     font-weight: 600;
     color: #6f42c1;
+}
+
+/* Modale WYSIWYG redimensionnable */
+.modal-resizable {
+    resize: both;
+    min-width: 400px;
+    min-height: 300px;
+}
+
+.modal-resize-handle {
+    position: absolute;
+    bottom: 0;
+    right: 0;
+    width: 20px;
+    height: 20px;
+    background: linear-gradient(-45deg, transparent 0%, transparent 40%, #aaa 40%, #aaa 60%, transparent 60%);
+    cursor: nw-resize;
+    z-index: 1000;
+}
+
+.modal-resize-handle:hover {
+    background: linear-gradient(-45deg, transparent 0%, transparent 40%, #666 40%, #666 60%, transparent 60%);
+}
+
+/* Amélioration responsive de la modale */
+@media (max-width: 991px) {
+    .modal-resizable {
+        min-width: 350px;
+        min-height: 250px;
+    }
+}
+
+@media (max-width: 767px) {
+    .modal-resizable {
+        min-width: 300px;
+        min-height: 200px;
+    }
 }
 
 .product-designation {
