@@ -1075,20 +1075,36 @@ function renderProductElement(element) {
     if (IS_EDITABLE) {
         return `
             <div class="element-item mb-1 border-bottom" data-element-id="${element.id}" data-element-type="product">
-                <!-- Première ligne -->
-                <div class="d-flex align-items-center" style="gap: 4px; min-height: 35px;">
+                <!-- Ligne unique avec éléments photo intégrés -->
+                <div class="d-flex align-items-start" style="gap: 4px; min-height: 35px;">
                     ${dragHandle}
                     
-                    <!-- Code article (120px) -->
+                    <!-- Code article avec checkbox photo (120px) -->
                     <div style="width: 120px; padding: 2px;">
                         <input type="text" class="form-control form-control-sm code-article-input" 
                                placeholder="Code..." value="${element.produit_reference || ''}"
                                data-element-id="${element.id}"
                                onchange="updateElement(${element.id}, 'produit_reference', this.value)"
                                onkeypress="preventEnterSubmit(event)" />
+                        <!-- Checkbox Photo directement sous le code -->
+                        <div class="form-check form-check-sm" style="margin-top: 2px;">
+                            <input class="form-check-input" type="checkbox" 
+                                   id="photo_${element.id}" 
+                                   ${element.image_visible ? 'checked' : ''}
+                                   onchange="toggleImageVisibility(${element.id}, this.checked)">
+                            <label class="form-check-label text-muted small" for="photo_${element.id}" style="font-size: 0.75rem;">
+                                <i class="fas fa-camera me-1"></i>Photo
+                            </label>
+                            <button type="button" class="btn btn-outline-primary btn-xs ms-1 photo-btn-${element.id}" 
+                                    onclick="selectProductImage(${element.id})" 
+                                    title="Gérer les images"
+                                    style="padding: 1px 4px; font-size: 8px; ${element.image_visible ? '' : 'display: none;'}">
+                                <i class="fas fa-images"></i>
+                            </button>
+                        </div>
                     </div>
                     
-                    <!-- Désignation (225px) -->
+                    <!-- Désignation avec nom de fichier (225px) -->
                     <div style="width: 225px; padding: 2px;">
                         <input type="text" class="form-control form-control-sm designation-input" 
                                placeholder="Désignation..."
@@ -1096,6 +1112,11 @@ function renderProductElement(element) {
                                data-element-id="${element.id}"
                                onchange="updateElement(${element.id}, 'designation', this.value)"
                                onkeypress="preventEnterSubmit(event)" />
+                        <!-- Nom de fichier directement sous la désignation -->
+                        <small class="text-muted image-filename-${element.id}" style="font-size: 0.7rem; margin-top: 2px; display: block; ${element.image_visible && element.product_image_filename ? '' : 'display: none !important;'}">
+                            <i class="fas fa-file-image me-1"></i>
+                            <span class="filename-text">${element.product_image_filename || ''}</span>
+                        </small>
                     </div>
                     
                     <!-- Description détaillée (flex-fill) sur 2 lignes -->
@@ -1167,48 +1188,6 @@ function renderProductElement(element) {
                     </div>
                     
                     ${deleteButton}
-                </div>
-                
-                <!-- Deuxième ligne - collée aux champs du dessus -->
-                <div class="d-flex align-items-start" style="gap: 4px; margin-top: -2px;">
-                    <!-- Espace drag handle -->
-                    <div style="width: 25px; padding: 4px;"></div>
-                    
-                    <!-- Checkbox Photo sous le code article (120px) -->
-                    <div style="width: 120px; padding: 4px;">
-                        <div class="form-check form-check-sm">
-                            <input class="form-check-input" type="checkbox" 
-                                   id="photo_${element.id}" 
-                                   ${element.image_visible ? 'checked' : ''}
-                                   onchange="toggleImageVisibility(${element.id}, this.checked)">
-                            <label class="form-check-label text-muted small" for="photo_${element.id}" style="font-size: 0.75rem;">
-                                <i class="fas fa-camera me-1"></i>Photo
-                            </label>
-                            <button type="button" class="btn btn-outline-primary btn-xs ms-1 photo-btn-${element.id}" 
-                                    onclick="selectProductImage(${element.id})" 
-                                    title="Gérer les images"
-                                    style="padding: 1px 4px; font-size: 8px; ${element.image_visible ? '' : 'display: none;'}">
-                                <i class="fas fa-images"></i>
-                            </button>
-                        </div>
-                    </div>
-                    
-                    <!-- Nom de fichier sous la désignation (225px) -->
-                    <div style="width: 225px; padding: 4px;">
-                        <small class="text-muted image-filename-${element.id}" style="font-size: 0.7rem; ${element.image_visible && element.product_image_filename ? '' : 'display: none;'}">
-                            <i class="fas fa-file-image me-1"></i>
-                            <span class="filename-text">${element.product_image_filename || ''}</span>
-                        </small>
-                    </div>
-                    
-                    <!-- Espace pour aligner avec le reste -->
-                    <div class="flex-fill"></div>
-                    <div style="width: 90px;"></div>
-                    <div style="width: 90px;"></div>
-                    <div style="width: 90px;"></div>
-                    <div style="width: 90px;"></div>
-                    <div style="width: 90px;"></div>
-                    <div style="width: 30px;"></div>
                 </div>
             </div>
         `;
