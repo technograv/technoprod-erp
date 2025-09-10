@@ -216,6 +216,10 @@ final class DevisController extends AbstractController
                 $contact = $entityManager->getRepository(Contact::class)->find($contactDefaut);
                 if ($contact) {
                     $devis->setContactLivraison($contact);
+                    // Définir l'adresse de livraison depuis l'adresse du contact si elle existe
+                    if ($contact->getAdresse()) {
+                        $devis->setAdresseLivraison($contact->getAdresse());
+                    }
                 }
             }
             
