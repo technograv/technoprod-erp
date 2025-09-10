@@ -298,7 +298,22 @@
                                 <br><small style="color: #666;">Réf: {{ element.produit.reference }}</small>
                             {% endif %}
                         </td>
-                        <td>{{ element.description|raw }}</td>
+                        <td>
+                            {% if element.imageVisible and element.productImage %}
+                                <div style="display: table; width: 100%;">
+                                    <div style="display: table-cell; width: 120px; vertical-align: top; padding-right: 10px;">
+                                        <img src="{{ absolute_url(element.productImage.imagePath) }}" 
+                                             style="max-width: 110px; max-height: 80px; object-fit: contain; border: 1px solid #ddd; border-radius: 4px;" 
+                                             alt="{{ element.productImage.alt ?: element.designation }}" />
+                                    </div>
+                                    <div style="display: table-cell; vertical-align: top;">
+                                        {{ element.description|raw }}
+                                    </div>
+                                </div>
+                            {% else %}
+                                {{ element.description|raw }}
+                            {% endif %}
+                        </td>
                         <td class="text-center">{{ element.quantite }}</td>
                         <td class="text-right">{{ element.prixUnitaireHt }}€</td>
                         <td class="text-center">{{ element.tvaPercent }}%</td>
