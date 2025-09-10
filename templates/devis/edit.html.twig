@@ -2480,21 +2480,18 @@ function updateElementFields(elementId, product) {
     // Mettre à jour le champ description
     const descriptionInput = elementDiv.querySelector('.description-input');
     if (descriptionInput) {
-        console.log('📝 Mise à jour description-input classique:', product.description);
         descriptionInput.value = product.description || '';
     }
     
     // Mettre à jour aussi le champ description-inline-input (mode édition)
     const descriptionInlineInput = elementDiv.querySelector('.description-inline-input');
     if (descriptionInlineInput) {
-        console.log('📝 Mise à jour description-inline-input (mode édition):', product.description);
         descriptionInlineInput.value = product.description || '';
         // Déclencher l'événement change pour synchroniser avec le backend
         descriptionInlineInput.dispatchEvent(new Event('change', { bubbles: true }));
     }
     
-    // Mettre à jour l'affichage collapsed 
-    console.log('📝 Appel updateCollapsedView avec elementId:', elementId, 'product:', product);
+    // Mettre à jour l'affichage collapsed si nécessaire
     updateCollapsedView(elementId, product);
     
     // Mettre à jour le prix unitaire
@@ -2515,27 +2512,18 @@ function updateElementFields(elementId, product) {
 }
 
 function updateCollapsedView(elementId, product) {
-    console.log('🔄 updateCollapsedView appelée pour elementId:', elementId, 'product:', product);
     const elementDiv = document.querySelector(`[data-element-id="${elementId}"]`);
-    if (!elementDiv) {
-        console.error('❌ Élément non trouvé pour elementId:', elementId);
-        return;
-    }
+    if (!elementDiv) return;
     
-    // Vérifier si on est en mode édition ou en mode lecture seule
+    // Vérifier si on est en mode lecture seule (affichage collapsed)
     const isReadOnlyMode = elementDiv.querySelector('.col-md-4'); // Mode lecture seule a des colonnes
     const isEditMode = elementDiv.querySelector('.description-inline-input'); // Mode édition a des inputs
     
-    if (isEditMode) {
-        console.log('📝 Mode édition détecté - pas de mise à jour collapsed nécessaire');
-        // En mode édition, les champs sont déjà mis à jour par updateElementFields
-        // Pas besoin de mettre à jour l'affichage collapsed
-        return;
-    }
+    // En mode édition, les champs sont déjà mis à jour par updateElementFields
+    if (isEditMode) return;
     
+    // Mettre à jour l'affichage collapsed en mode lecture seule
     if (isReadOnlyMode) {
-        console.log('👁️ Mode lecture seule détecté - mise à jour collapsed');
-        // Mettre à jour l'affichage collapsed en mode lecture seule
         const designationDiv = elementDiv.querySelector('.col-md-4');
         if (designationDiv) {
             let content = `<strong>${product.designation || 'Produit sans nom'}</strong>`;
