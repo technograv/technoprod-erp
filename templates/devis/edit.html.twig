@@ -2480,7 +2480,17 @@ function updateElementFields(elementId, product) {
     // Mettre à jour le champ description
     const descriptionInput = elementDiv.querySelector('.description-input');
     if (descriptionInput) {
+        console.log('📝 Mise à jour description-input classique:', product.description);
         descriptionInput.value = product.description || '';
+    }
+    
+    // Mettre à jour aussi le champ description-inline-input (mode édition)
+    const descriptionInlineInput = elementDiv.querySelector('.description-inline-input');
+    if (descriptionInlineInput) {
+        console.log('📝 Mise à jour description-inline-input (mode édition):', product.description);
+        descriptionInlineInput.value = product.description || '';
+        // Déclencher l'événement change pour synchroniser avec le backend
+        descriptionInlineInput.dispatchEvent(new Event('change', { bubbles: true }));
     }
     
     // Mettre à jour l'affichage collapsed 
