@@ -1758,61 +1758,37 @@ function initGlobalRemise() {
     
     let totalHt = 0;
     
-    // Fonction pour mettre à jour le total HT et synchroniser automatiquement
+    // Fonction pour mettre à jour le total HT SANS synchronisation automatique
     window.updateTotalHtForRemise = function(ht) {
         totalHt = ht;
         console.log('Total HT mis à jour:', totalHt);
-        
-        // Synchronisation automatique quand le total change
-        const percentValue = parseFloat(remisePercent.value) || 0;
-        const montantValue = parseFloat(remiseMontant.value) || 0;
-        
-        // Si un pourcentage est défini, recalculer le montant automatiquement
-        if (percentValue > 0 && totalHt > 0) {
-            const nouveauMontant = (totalHt * percentValue / 100);
-            if (Math.abs(nouveauMontant - montantValue) > 0.01) { // Éviter les micro-changements
-                remiseMontant.value = nouveauMontant.toFixed(2);
-                console.log('💰 Montant auto-synchronisé:', nouveauMontant.toFixed(2), '€ (', percentValue, '% de', totalHt, '€)');
-            }
-        }
-        // Sinon si un montant fixe est défini, recalculer le pourcentage
-        else if (montantValue > 0 && totalHt > 0) {
-            const nouveauPourcentage = (montantValue / totalHt * 100);
-            if (Math.abs(nouveauPourcentage - percentValue) > 0.1) { // Éviter les micro-changements
-                remisePercent.value = nouveauPourcentage.toFixed(1);
-                console.log('📊 Pourcentage auto-synchronisé:', nouveauPourcentage.toFixed(1), '% (', montantValue, '€ sur', totalHt, '€)');
-            }
-        }
+        // PAS de synchronisation automatique - laissons l'utilisateur saisir librement
     };
     
-    // Quand on change le pourcentage, calculer le montant
-    remisePercent.addEventListener('input', function() {
-        console.log('Pourcentage changé:', this.value, 'Total HT:', totalHt);
-        const percent = parseFloat(this.value) || 0;
-        if (percent > 0 && totalHt > 0) {
+    // SIMPLE: Synchroniser uniquement quand on QUITTE le champ
+    remisePercent.addEventListener('blur', function() {
+        if (this.value && totalHt > 0) {
+            const percent = parseFloat(this.value) || 0;
             const montant = (totalHt * percent / 100);
             remiseMontant.value = montant.toFixed(2);
-            console.log('Montant calculé:', montant.toFixed(2));
-        } else {
-            remiseMontant.value = '';
         }
         calculateTotals();
     });
     
-    // Quand on change le montant, calculer le pourcentage
-    remiseMontant.addEventListener('input', function() {
-        console.log('Montant changé:', this.value, 'Total HT:', totalHt);
-        const montant = parseFloat(this.value) || 0;
-        if (montant > 0 && totalHt > 0) {
+    remiseMontant.addEventListener('blur', function() {
+        if (this.value && totalHt > 0) {
+            const montant = parseFloat(this.value) || 0;
             const percent = (montant / totalHt * 100);
             remisePercent.value = percent.toFixed(1);
-            console.log('Pourcentage calculé:', percent.toFixed(1));
-        } else {
-            remisePercent.value = '';
         }
         calculateTotals();
     });
     
+    // Juste recalculer les totaux pendant la saisie
+    remisePercent.addEventListener('input', calculateTotals);
+    remiseMontant.addEventListener('input', calculateTotals);
+    
+
     // Event listeners pour détecter quand les champs sont vidés manuellement
     remisePercent.addEventListener('keyup', function() {
         if (this.value === '' || this.value === '0') {
