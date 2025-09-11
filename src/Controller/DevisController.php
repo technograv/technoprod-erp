@@ -323,6 +323,17 @@ final class DevisController extends AbstractController
         }
 
         $form = $this->createForm(DevisType::class, $devis);
+        
+        // Debug: Log du client avant traitement du formulaire
+        if ($request->isMethod('POST')) {
+            error_log("=== DEBUG DEVIS EDIT POST ===");
+            error_log("Devis ID: " . $devis->getId());
+            error_log("Client actuel avant traitement: " . ($devis->getClient() ? $devis->getClient()->getId() . " - " . $devis->getClient()->getNomComplet() : "null"));
+            
+            $devisData = $request->request->all('devis');
+            error_log("Client ID dans données POST: " . ($devisData['client'] ?? 'non défini'));
+        }
+        
         $form->handleRequest($request);
 
         if ($form->isSubmitted() && $form->isValid()) {
@@ -346,6 +357,23 @@ final class DevisController extends AbstractController
             }
             
             return $this->redirectToRoute('app_devis_show', ['id' => $devis->getId()], Response::HTTP_SEE_OTHER);
+        }
+
+        // Debug: Si le formulaire n'est pas valide, loguer et afficher les erreurs
+        if ($form->isSubmitted() && !$form->isValid()) {
+            $errorMessages = [];
+            foreach ($form->getErrors(true) as $error) {
+                $errorMessage = 'Erreur formulaire devis: ' . $error->getMessage();
+                error_log($errorMessage);
+                $errorMessages[] = $error->getMessage();
+            }
+            
+            if (!empty($errorMessages)) {
+                $this->addFlash('error', 'Erreurs de validation : ' . implode(', ', $errorMessages));
+            }
+            
+            // Log des détails supplémentaires
+            error_log('Formulaire soumis mais invalide. Client actuel: ' . ($devis->getClient() ? $devis->getClient()->getId() . ' - ' . $devis->getClient()->getNomComplet() : 'null'));
         }
 
         return $this->render('devis/edit.html.twig', [

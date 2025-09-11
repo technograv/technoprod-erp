@@ -13,6 +13,17 @@
     {% endfor %}
 {% endfor %}
 
+<!-- Erreurs de formulaire -->
+{% if form.vars.errors|length > 0 %}
+    <div class="alert alert-danger alert-dismissible fade show" role="alert">
+        <h6><i class="fas fa-exclamation-triangle me-2"></i>Erreurs de validation :</h6>
+        {% for error in form.vars.errors %}
+            <div>{{ error.message }}</div>
+        {% endfor %}
+        <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+    </div>
+{% endif %}
+
 <!-- En-tête -->
 <div class="page-header">
     <div class="container-fluid">
@@ -64,7 +75,7 @@
                                            class="form-control client-autocomplete" 
                                            placeholder="Rechercher un client..." 
                                            autocomplete="off"
-                                           value="{{ devis.client ? (devis.client.formeJuridique ? devis.client.formeJuridique.libelle ~ ' ' ~ devis.client.nomEntreprise : devis.client.nomEntreprise) : '' }}" />
+                                           value="{{ devis.client ? devis.client.nomComplet : '' }}" />
                                     <div id="client_suggestions" class="autocomplete-suggestions" style="display: none;"></div>
                                 </div>
                                 <input type="hidden" id="devis_client" name="devis[client]" value="{{ devis.client ? devis.client.id : '' }}" />
@@ -114,14 +125,18 @@
                 <div class="form-section-body">
                     <div class="row">
                         <div class="col-md-6">
-                            {{ form_row(form.contactFacturation, {
-                                'label': 'Contact facturation',
-                                'attr': {'class': 'form-select'}
-                            }) }}
-                            {{ form_row(form.adresseFacturation, {
-                                'label': 'Adresse facturation',
-                                'attr': {'class': 'form-select'}
-                            }) }}
+                            <div class="mb-3">
+                                <label for="devis_contactFacturation" class="form-label">Contact facturation</label>
+                                <select id="devis_contactFacturation" name="contact_facturation" class="form-select">
+                                    <option value="">Sélectionner un contact...</option>
+                                </select>
+                            </div>
+                            <div class="mb-3">
+                                <label for="devis_adresseFacturation" class="form-label">Adresse facturation</label>
+                                <select id="devis_adresseFacturation" name="adresse_facturation" class="form-select">
+                                    <option value="">Sélectionner une adresse...</option>
+                                </select>
+                            </div>
                             <!-- Libellé email aligné à droite -->
                             <div class="mt-2 text-end d-flex align-items-center justify-content-end" style="height: 38px;">
                                 <label class="form-label mb-0" for="email_envoi_automatique_display">
@@ -130,14 +145,18 @@
                             </div>
                         </div>
                         <div class="col-md-6">
-                            {{ form_row(form.contactLivraison, {
-                                'label': 'Contact livraison',
-                                'attr': {'class': 'form-select'}
-                            }) }}
-                            {{ form_row(form.adresseLivraison, {
-                                'label': 'Adresse livraison',
-                                'attr': {'class': 'form-select'}
-                            }) }}
+                            <div class="mb-3">
+                                <label for="devis_contactLivraison" class="form-label">Contact livraison</label>
+                                <select id="devis_contactLivraison" name="contact_livraison" class="form-select">
+                                    <option value="">Sélectionner un contact...</option>
+                                </select>
+                            </div>
+                            <div class="mb-3">
+                                <label for="devis_adresseLivraison" class="form-label">Adresse livraison</label>
+                                <select id="devis_adresseLivraison" name="adresse_livraison" class="form-select">
+                                    <option value="">Sélectionner une adresse...</option>
+                                </select>
+                            </div>
                             <!-- Champ email aligné à gauche -->
                             <div class="mt-2 d-flex align-items-center" style="height: 38px;">
                                 <input type="email" 
@@ -305,7 +324,11 @@
     <div style="display: none;">
         {{ form_widget(form.devisItems) }}
         {{ form_widget(form.emailEnvoiAutomatique) }}
-        {{ form_widget(form.client) }}
+        {{ form_widget(form.client, {'value': devis.client ? devis.client.id : '', 'attr': {'data-custom-client': 'true'}}) }}
+        {{ form_widget(form.contactFacturation, {'value': devis.contactFacturation ? devis.contactFacturation.id : ''}) }}
+        {{ form_widget(form.adresseFacturation, {'value': devis.adresseFacturation ? devis.adresseFacturation.id : ''}) }}
+        {{ form_widget(form.contactLivraison, {'value': devis.contactLivraison ? devis.contactLivraison.id : ''}) }}
+        {{ form_widget(form.adresseLivraison, {'value': devis.adresseLivraison ? devis.adresseLivraison.id : ''}) }}
         {{ form_widget(form.notesClient) }}
         
         {# Masquer tous les champs indésirables après les conditions commerciales #}
@@ -1976,6 +1999,12 @@ function initContactAddressSynchronization() {
     // Synchroniser adresse quand contact change
     if (contactFacturationSelect) {
         contactFacturationSelect.addEventListener('change', function() {
+            // Mettre à jour le champ Symfony caché
+            const symfonyField = document.querySelector('select[name="devis[contactFacturation]"]');
+            if (symfonyField) {
+                symfonyField.value = this.value;
+            }
+            
             const contactId = this.value;
             if (contactId && adresseFacturationSelect) {
                 syncContactAddress(contactId, adresseFacturationSelect);
@@ -1985,6 +2014,12 @@ function initContactAddressSynchronization() {
 
     if (contactLivraisonSelect) {
         contactLivraisonSelect.addEventListener('change', function() {
+            // Mettre à jour le champ Symfony caché
+            const symfonyField = document.querySelector('select[name="devis[contactLivraison]"]');
+            if (symfonyField) {
+                symfonyField.value = this.value;
+            }
+            
             const contactId = this.value;
             
             if (contactId && adresseLivraisonSelect) {
@@ -1992,6 +2027,25 @@ function initContactAddressSynchronization() {
             }
             // Synchroniser l'email automatiquement
             syncContactEmail(contactId);
+        });
+    }
+
+    // Synchroniser les adresses avec les champs Symfony
+    if (adresseFacturationSelect) {
+        adresseFacturationSelect.addEventListener('change', function() {
+            const symfonyField = document.querySelector('select[name="devis[adresseFacturation]"]');
+            if (symfonyField) {
+                symfonyField.value = this.value;
+            }
+        });
+    }
+
+    if (adresseLivraisonSelect) {
+        adresseLivraisonSelect.addEventListener('change', function() {
+            const symfonyField = document.querySelector('select[name="devis[adresseLivraison]"]');
+            if (symfonyField) {
+                symfonyField.value = this.value;
+            }
         });
     }
 
@@ -2356,6 +2410,13 @@ function initClientAutocomplete() {
         
         clientInput.value = nomComplet;
         hiddenClientField.value = client.id;
+        
+        // Mettre à jour aussi le champ Symfony caché
+        const symfonyClientField = document.querySelector('select[name="devis[client]"][data-custom-client]');
+        if (symfonyClientField) {
+            symfonyClientField.value = client.id;
+        }
+        
         hideSuggestions();
         
         // Déclencher l'événement change sur le champ caché

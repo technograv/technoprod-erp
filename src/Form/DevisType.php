@@ -63,6 +63,7 @@ class DevisType extends AbstractType
                 'choice_label' => 'nomComplet',
                 'placeholder' => 'Choisir un prospect/client',
                 'label' => 'Prospect / Client',
+                'required' => false,
                 'attr' => ['class' => 'form-select', 'data-populate-tiers' => 'true']
             ])
             ->add('commercial', EntityType::class, [
@@ -159,7 +160,7 @@ class DevisType extends AbstractType
             ->add('remiseGlobaleMontant', MoneyType::class, [
                 'label' => 'Remise globale (€)',
                 'required' => false,
-                'currency' => 'EUR'
+                'currency' => false
             ])
             ->add('acomptePercent', NumberType::class, [
                 'label' => 'Acompte (%)',
@@ -175,7 +176,7 @@ class DevisType extends AbstractType
             ->add('acompteMontant', MoneyType::class, [
                 'label' => 'Acompte (€)',
                 'required' => false,
-                'currency' => 'EUR',
+                'currency' => false,
                 'attr' => ['class' => 'form-control']
             ])
             ->add('modePaiement', ChoiceType::class, [
@@ -209,21 +210,6 @@ class DevisType extends AbstractType
                     $label = trim(($contact->getCivilite() ?? '') . ' ' . ($contact->getPrenom() ?? '') . ' ' . ($contact->getNom() ?? ''));
                     return $label ?: 'Contact sans nom';
                 },
-                'query_builder' => function($repository) use ($options) {
-                    $qb = $repository->createQueryBuilder('c');
-                    // Ne charger que les contacts du client actuel
-                    if (isset($options['data']) && $options['data'] instanceof Devis && $options['data']->getClient()) {
-                        $qb->andWhere('c.client = :client')
-                           ->setParameter('client', $options['data']->getClient());
-                    } else {
-                        // Si pas de client, ne retourner aucun résultat
-                        $qb->andWhere('1 = 0');
-                    }
-                    return $qb;
-                },
-                'choice_attr' => function(Contact $contact) {
-                    return ['data-adresse-id' => $contact->getAdresse() ? $contact->getAdresse()->getId() : ''];
-                },
                 'placeholder' => 'Choisir un contact de facturation',
                 'label' => 'Contact facturation',
                 'required' => false,
@@ -233,18 +219,6 @@ class DevisType extends AbstractType
                 'class' => Adresse::class,
                 'choice_label' => function(Adresse $adresse) {
                     return ($adresse->getNom() ?? 'Adresse') . ' - ' . $adresse->getLigne1() . ' - ' . $adresse->getVille();
-                },
-                'query_builder' => function($repository) use ($options) {
-                    $qb = $repository->createQueryBuilder('a');
-                    // Ne charger que les adresses du client actuel
-                    if (isset($options['data']) && $options['data'] instanceof Devis && $options['data']->getClient()) {
-                        $qb->andWhere('a.client = :client')
-                           ->setParameter('client', $options['data']->getClient());
-                    } else {
-                        // Si pas de client, ne retourner aucun résultat
-                        $qb->andWhere('1 = 0');
-                    }
-                    return $qb;
                 },
                 'placeholder' => 'Choisir une adresse de facturation',
                 'label' => 'Adresse de facturation',
@@ -257,21 +231,6 @@ class DevisType extends AbstractType
                     $label = trim(($contact->getCivilite() ?? '') . ' ' . ($contact->getPrenom() ?? '') . ' ' . ($contact->getNom() ?? ''));
                     return $label ?: 'Contact sans nom';
                 },
-                'query_builder' => function($repository) use ($options) {
-                    $qb = $repository->createQueryBuilder('c');
-                    // Ne charger que les contacts du client actuel
-                    if (isset($options['data']) && $options['data'] instanceof Devis && $options['data']->getClient()) {
-                        $qb->andWhere('c.client = :client')
-                           ->setParameter('client', $options['data']->getClient());
-                    } else {
-                        // Si pas de client, ne retourner aucun résultat
-                        $qb->andWhere('1 = 0');
-                    }
-                    return $qb;
-                },
-                'choice_attr' => function(Contact $contact) {
-                    return ['data-adresse-id' => $contact->getAdresse() ? $contact->getAdresse()->getId() : ''];
-                },
                 'placeholder' => 'Choisir un contact de livraison',
                 'label' => 'Contact livraison',
                 'required' => false,
@@ -281,18 +240,6 @@ class DevisType extends AbstractType
                 'class' => Adresse::class,
                 'choice_label' => function(Adresse $adresse) {
                     return ($adresse->getNom() ?? 'Adresse') . ' - ' . $adresse->getLigne1() . ' - ' . $adresse->getVille();
-                },
-                'query_builder' => function($repository) use ($options) {
-                    $qb = $repository->createQueryBuilder('a');
-                    // Ne charger que les adresses du client actuel
-                    if (isset($options['data']) && $options['data'] instanceof Devis && $options['data']->getClient()) {
-                        $qb->andWhere('a.client = :client')
-                           ->setParameter('client', $options['data']->getClient());
-                    } else {
-                        // Si pas de client, ne retourner aucun résultat
-                        $qb->andWhere('1 = 0');
-                    }
-                    return $qb;
                 },
                 'placeholder' => 'Choisir une adresse de livraison',
                 'label' => 'Adresse de livraison',
