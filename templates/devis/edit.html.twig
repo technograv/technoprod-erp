@@ -56,13 +56,19 @@
                 <div class="form-section-body">
                     <div class="row">
                         <div class="col-md-6">
-                            {{ form_row(form.client, {
-                                'label': 'Client / Prospect *',
-                                'attr': {
-                                    'class': 'form-select prospect-select',
-                                    'data-placeholder': 'Sélectionnez un client ou prospect'
-                                }
-                            }) }}
+                            <div class="mb-3">
+                                <label for="client_search" class="form-label">Client / Prospect *</label>
+                                <div class="position-relative">
+                                    <input type="text" 
+                                           id="client_search" 
+                                           class="form-control client-autocomplete" 
+                                           placeholder="Rechercher un client..." 
+                                           autocomplete="off"
+                                           value="{{ devis.client ? (devis.client.formeJuridique ? devis.client.formeJuridique.libelle ~ ' ' ~ devis.client.nomEntreprise : devis.client.nomEntreprise) : '' }}" />
+                                    <div id="client_suggestions" class="autocomplete-suggestions" style="display: none;"></div>
+                                </div>
+                                <input type="hidden" id="devis_client" name="devis[client]" value="{{ devis.client ? devis.client.id : '' }}" />
+                            </div>
                         </div>
                         <div class="col-md-6">
                             {{ form_row(form.commercial, {
@@ -225,6 +231,23 @@
     <div style="display: none;">
         {{ form_widget(form.devisItems) }}
         {{ form_widget(form.emailEnvoiAutomatique) }}
+        {{ form_widget(form.client) }}
+        
+        {# Masquer tous les champs indésirables après les conditions commerciales #}
+        {{ form_widget(form.tiersCivilite) }}
+        {{ form_widget(form.tiersNom) }}
+        {{ form_widget(form.tiersPrenom) }}
+        {{ form_widget(form.tiersAdresse) }}
+        {{ form_widget(form.tiersCodePostal) }}
+        {{ form_widget(form.tiersVille) }}
+        {{ form_widget(form.tiersModeReglement) }}
+        {{ form_widget(form.totalHt) }}
+        {{ form_widget(form.totalTva) }}
+        {{ form_widget(form.totalTtc) }}
+        {{ form_widget(form.modePaiement) }}
+        {{ form_widget(form.signatureNom) }}
+        {{ form_widget(form.signatureEmail) }}
+        {{ form_widget(form.notesInternes) }}
     </div>
     
     {{ form_rest(form) }}
@@ -698,6 +721,48 @@
             align-items: center;
             justify-content: center;
         }
+        
+        /* Autocomplétion client */
+        .autocomplete-suggestions {
+            position: absolute;
+            top: 100%;
+            left: 0;
+            right: 0;
+            background: white;
+            border: 1px solid #ddd;
+            border-top: none;
+            max-height: 200px;
+            overflow-y: auto;
+            z-index: 1000;
+            box-shadow: 0 2px 5px rgba(0,0,0,0.1);
+        }
+        
+        .client-suggestion {
+            padding: 10px 15px;
+            cursor: pointer;
+            border-bottom: 1px solid #f0f0f0;
+            font-size: 14px;
+        }
+        
+        .client-suggestion:hover,
+        .client-suggestion.active {
+            background-color: #f8f9fa;
+        }
+        
+        .client-suggestion:last-child {
+            border-bottom: none;
+        }
+        
+        .client-suggestion .client-name {
+            font-weight: 500;
+            color: #333;
+        }
+        
+        .client-suggestion .client-info {
+            font-size: 12px;
+            color: #666;
+            margin-top: 2px;
+        }
 
         /* Quill Editor dans les modales */
         #description-toolbar {
@@ -926,6 +991,8 @@ async function init() {
             initSortable();
             initEventListeners();
             initLayoutPanel();
+            initClientAutocomplete();
+            initContactAddressSynchronization();
         }
         calculateTotals();
     } catch (error) {
@@ -1610,9 +1677,6 @@ window.preventEnterSubmit = function(event) {
 
 function initEventListeners() {
     // Event listeners pour les éléments de l'interface
-
-    // Synchronisation contact/adresse
-    initContactAddressSynchronization();
     
     // Toggle panneau récapitulatif flottant
     const summaryToggle = document.getElementById('summary-toggle');
@@ -1770,16 +1834,32 @@ function initGlobalRemise() {
 // ==========================================
 
 function initContactAddressSynchronization() {
-    const clientSelect = document.getElementById('devis_client');
+    const clientHiddenField = document.getElementById('devis_client');
     const contactFacturationSelect = document.getElementById('devis_contactFacturation');
     const contactLivraisonSelect = document.getElementById('devis_contactLivraison');
     const adresseFacturationSelect = document.getElementById('devis_adresseFacturation');
     const adresseLivraisonSelect = document.getElementById('devis_adresseLivraison');
 
-    if (!clientSelect) return;
+    if (!clientHiddenField) return;
 
-    // Charger contacts et adresses quand client change
-    clientSelect.addEventListener('change', function() {
+    // Observer les changements du champ client caché
+    const observer = new MutationObserver(function(mutations) {
+        mutations.forEach(function(mutation) {
+            if (mutation.type === 'attributes' && mutation.attributeName === 'value') {
+                const clientId = clientHiddenField.value;
+                if (clientId) {
+                    loadClientContactsAndAddresses(clientId);
+                } else {
+                    clearContactsAndAddresses();
+                }
+            }
+        });
+    });
+    
+    observer.observe(clientHiddenField, { attributes: true });
+
+    // Écouter aussi les événements manuels
+    clientHiddenField.addEventListener('change', function() {
         const clientId = this.value;
         if (clientId) {
             loadClientContactsAndAddresses(clientId);
@@ -1811,8 +1891,8 @@ function initContactAddressSynchronization() {
     }
 
     // Charger les données initiales si un client est sélectionné
-    if (clientSelect.value) {
-        loadClientContactsAndAddresses(clientSelect.value);
+    if (clientHiddenField.value) {
+        loadClientContactsAndAddresses(clientHiddenField.value);
     }
 }
 
@@ -1851,23 +1931,66 @@ function populateContacts(contacts) {
     const contactFacturationSelect = document.getElementById('devis_contactFacturation');
     const contactLivraisonSelect = document.getElementById('devis_contactLivraison');
 
-    [contactFacturationSelect, contactLivraisonSelect].forEach(select => {
-        if (!select) return;
+    // Facturation
+    if (contactFacturationSelect) {
+        const currentValue = contactFacturationSelect.value;
+        contactFacturationSelect.innerHTML = '<option value="">Sélectionner un contact...</option>';
         
-        const currentValue = select.value;
-        select.innerHTML = '<option value="">Sélectionner un contact...</option>';
-        
+        let defaultFacturationContact = null;
         contacts.forEach(contact => {
             const option = document.createElement('option');
             option.value = contact.id;
-            // Utiliser le label fourni par l'API ou construire à partir des données
             option.textContent = contact.label || `${contact.civilite || ''} ${contact.prenom || ''} ${contact.nom || ''}`.trim();
+            
+            // Préserver la sélection existante ou sélectionner le contact par défaut
             if (contact.id == currentValue) {
                 option.selected = true;
+            } else if (!currentValue && contact.is_facturation_default) {
+                defaultFacturationContact = contact;
+                option.selected = true;
             }
-            select.appendChild(option);
+            
+            contactFacturationSelect.appendChild(option);
         });
-    });
+    }
+
+    // Livraison
+    if (contactLivraisonSelect) {
+        const currentValue = contactLivraisonSelect.value;
+        contactLivraisonSelect.innerHTML = '<option value="">Sélectionner un contact...</option>';
+        
+        let defaultLivraisonContact = null;
+        contacts.forEach(contact => {
+            const option = document.createElement('option');
+            option.value = contact.id;
+            option.textContent = contact.label || `${contact.civilite || ''} ${contact.prenom || ''} ${contact.nom || ''}`.trim();
+            
+            // Préserver la sélection existante ou sélectionner le contact par défaut
+            if (contact.id == currentValue) {
+                option.selected = true;
+            } else if (!currentValue && contact.is_livraison_default) {
+                defaultLivraisonContact = contact;
+                option.selected = true;
+            }
+            
+            contactLivraisonSelect.appendChild(option);
+        });
+        
+        // Synchroniser l'email et déclencher les événements si des contacts sont sélectionnés automatiquement
+        if (!currentValue && defaultLivraisonContact) {
+            setTimeout(() => {
+                syncContactEmail(defaultLivraisonContact.id);
+                contactLivraisonSelect.dispatchEvent(new Event('change'));
+            }, 100);
+        }
+    }
+    
+    // Déclencher l'événement change sur le contact de facturation si sélectionné automatiquement
+    if (contactFacturationSelect && !contactFacturationSelect.dataset.currentValue && contactFacturationSelect.value) {
+        setTimeout(() => {
+            contactFacturationSelect.dispatchEvent(new Event('change'));
+        }, 100);
+    }
 }
 
 function populateAddresses(addresses) {
@@ -1999,6 +2122,143 @@ function updateHiddenEmailField(value) {
     if (hiddenEmailField) {
         hiddenEmailField.value = value;
     }
+}
+
+// ==========================================
+// AUTOCOMPLÉTION CLIENT
+// ==========================================
+
+function initClientAutocomplete() {
+    const clientInput = document.getElementById('client_search');
+    const suggestionsDiv = document.getElementById('client_suggestions');
+    const hiddenClientField = document.getElementById('devis_client');
+    
+    if (!clientInput || !suggestionsDiv || !hiddenClientField) return;
+    
+    let currentIndex = -1;
+    let suggestions = [];
+    
+    clientInput.addEventListener('input', async function() {
+        const query = this.value.trim();
+        console.log('🔍 Recherche client:', query);
+        
+        if (query.length < 2) {
+            console.log('❌ Query trop courte');
+            hideSuggestions();
+            return;
+        }
+        
+        try {
+            const url = `/client/api/clients/search?q=${encodeURIComponent(query)}`;
+            console.log('📡 Appel API:', url);
+            const response = await fetch(url);
+            console.log('📥 Response status:', response.status);
+            
+            if (!response.ok) {
+                const text = await response.text();
+                console.error('❌ Erreur HTTP:', response.status, text.substring(0, 200));
+                throw new Error(`HTTP ${response.status}: ${text.substring(0, 100)}`);
+            }
+            
+            const clients = await response.json();
+            console.log('✅ Clients trouvés:', clients);
+            
+            suggestions = clients;
+            showSuggestions(clients);
+        } catch (error) {
+            console.error('❌ Erreur recherche clients:', error);
+            hideSuggestions();
+        }
+    });
+    
+    clientInput.addEventListener('keydown', function(e) {
+        if (suggestions.length === 0) return;
+        
+        if (e.key === 'ArrowDown') {
+            e.preventDefault();
+            currentIndex = Math.min(currentIndex + 1, suggestions.length - 1);
+            updateActiveSelection();
+        } else if (e.key === 'ArrowUp') {
+            e.preventDefault();
+            currentIndex = Math.max(currentIndex - 1, -1);
+            updateActiveSelection();
+        } else if (e.key === 'Enter') {
+            e.preventDefault();
+            if (currentIndex >= 0) {
+                selectClient(suggestions[currentIndex]);
+            }
+        } else if (e.key === 'Escape') {
+            hideSuggestions();
+        }
+    });
+    
+    document.addEventListener('click', function(e) {
+        if (!clientInput.contains(e.target) && !suggestionsDiv.contains(e.target)) {
+            hideSuggestions();
+        }
+    });
+    
+    function showSuggestions(clients) {
+        if (clients.length === 0) {
+            hideSuggestions();
+            return;
+        }
+        
+        suggestionsDiv.innerHTML = clients.map((client, index) => {
+            const formeJuridique = client.forme_juridique ? client.forme_juridique + ' ' : '';
+            const nomComplet = formeJuridique + (client.nom_entreprise || 'Client sans nom');
+            
+            return `
+                <div class="client-suggestion" data-index="${index}" data-client-id="${client.id}" data-client-nom="${nomComplet}" data-client-forme="${client.forme_juridique || ''}" data-client-code="${client.code_client || ''}">
+                    <div class="client-name">${nomComplet}</div>
+                    ${client.code_client ? `<div class="client-info">Code: ${client.code_client}</div>` : ''}
+                </div>
+            `;
+        }).join('');
+        
+        // Ajouter les event listeners aux suggestions
+        suggestionsDiv.querySelectorAll('.client-suggestion').forEach(suggestion => {
+            suggestion.addEventListener('click', function() {
+                const client = {
+                    id: this.dataset.clientId,
+                    nom_entreprise: this.dataset.clientNom,
+                    forme_juridique: this.dataset.clientForme,
+                    code_client: this.dataset.clientCode
+                };
+                selectClient(client);
+            });
+        });
+        
+        suggestionsDiv.style.display = 'block';
+        currentIndex = -1;
+    }
+    
+    function hideSuggestions() {
+        suggestionsDiv.style.display = 'none';
+        currentIndex = -1;
+    }
+    
+    function updateActiveSelection() {
+        const suggestionElements = suggestionsDiv.querySelectorAll('.client-suggestion');
+        suggestionElements.forEach((el, index) => {
+            el.classList.toggle('active', index === currentIndex);
+        });
+    }
+    
+    window.selectClient = function(client) {
+        const formeJuridique = client.forme_juridique ? client.forme_juridique + ' ' : '';
+        const nomComplet = formeJuridique + (client.nom_entreprise || 'Client sans nom');
+        
+        clientInput.value = nomComplet;
+        hiddenClientField.value = client.id;
+        hideSuggestions();
+        
+        // Déclencher l'événement change sur le champ caché
+        hiddenClientField.dispatchEvent(new Event('change'));
+        
+        // Déclencher le chargement des contacts et adresses
+        loadClientContactsAndAddresses(client.id);
+    };
 }
 
 // ==========================================

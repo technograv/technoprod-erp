@@ -354,7 +354,9 @@ final class ClientController extends AbstractController
                 'prenom' => $contact->getPrenom(),
                 'nom' => $contact->getNom(),
                 'fonction' => $contact->getFonction(),
-                'email' => $contact->getEmail()
+                'email' => $contact->getEmail(),
+                'is_facturation_default' => $contact->isFacturationDefault(),
+                'is_livraison_default' => $contact->isLivraisonDefault()
             ];
         }
 
@@ -559,6 +561,47 @@ final class ClientController extends AbstractController
         }
         
         return $this->redirectToRoute('app_client_index');
+    }
+
+    #[Route('/api/clients/search', name: 'app_api_clients_search', methods: ['GET'])]
+    public function searchClients(Request $request, EntityManagerInterface $entityManager): JsonResponse
+    {
+        $query = $request->query->get('q', '');
+        
+        if (strlen($query) < 2) {
+            return $this->json([]);
+        }
+        
+        try {
+            $clients = $entityManager->getRepository(Client::class)
+                ->createQueryBuilder('c')
+                ->where('LOWER(c.nom) LIKE LOWER(:query) OR LOWER(c.prenom) LIKE LOWER(:query) OR LOWER(c.code) LIKE LOWER(:query)')
+                ->setParameter('query', '%' . $query . '%')
+                ->setMaxResults(10)
+                ->orderBy('c.updatedAt', 'DESC')
+                ->getQuery()
+                ->getResult();
+            
+            $results = [];
+            foreach ($clients as $client) {
+                $nomEntreprise = $client->getNom() ?: 'Client sans nom';
+                
+                $results[] = [
+                    'id' => $client->getId(),
+                    'nom_entreprise' => $nomEntreprise,
+                    'forme_juridique' => '', // Temporairement vide pour éviter erreurs
+                    'code_client' => $client->getCode() ?: ''
+                ];
+            }
+            
+            return $this->json($results);
+        } catch (\Exception $e) {
+            return $this->json([
+                'error' => $e->getMessage(),
+                'file' => $e->getFile(),
+                'line' => $e->getLine()
+            ], 500);
+        }
     }
 
     #[Route('/api/communes/search', name: 'app_api_communes_search', methods: ['GET'])]
