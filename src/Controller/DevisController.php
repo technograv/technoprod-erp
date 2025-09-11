@@ -1430,11 +1430,20 @@ final class DevisController extends AbstractController
             $devis->setRemiseGlobaleMontant($data['remiseGlobaleMontant'] > 0 ? (string)$data['remiseGlobaleMontant'] : null);
         }
         
+        // Mettre à jour les acomptes si présents
+        if (isset($data['acomptePercent'])) {
+            $devis->setAcomptePercent($data['acomptePercent'] > 0 ? (string)$data['acomptePercent'] : null);
+        }
+        
+        if (isset($data['acompteMontant'])) {
+            $devis->setAcompteMontant($data['acompteMontant'] > 0 ? (string)$data['acompteMontant'] : null);
+        }
+        
         $entityManager->flush();
         
         return $this->json([
             'success' => true,
-            'message' => 'Totaux et remise mis à jour automatiquement'
+            'message' => 'Totaux, remise et acompte mis à jour automatiquement'
         ]);
     }
 }

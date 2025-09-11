@@ -575,6 +575,7 @@ final class ClientController extends AbstractController
         try {
             $clients = $entityManager->getRepository(Client::class)
                 ->createQueryBuilder('c')
+                ->leftJoin('c.formeJuridique', 'fj')
                 ->where('LOWER(c.nom) LIKE LOWER(:query) OR LOWER(c.prenom) LIKE LOWER(:query) OR LOWER(c.code) LIKE LOWER(:query)')
                 ->setParameter('query', '%' . $query . '%')
                 ->setMaxResults(10)
@@ -584,12 +585,13 @@ final class ClientController extends AbstractController
             
             $results = [];
             foreach ($clients as $client) {
-                $nomEntreprise = $client->getNom() ?: 'Client sans nom';
+                $nomEntreprise = $client->getNom() ?: ($client->getPrenom() . ' ' . $client->getCivilite());
+                $formeJuridique = $client->getFormeJuridique() ? $client->getFormeJuridique()->getNom() : '';
                 
                 $results[] = [
                     'id' => $client->getId(),
-                    'nom_entreprise' => $nomEntreprise,
-                    'forme_juridique' => '', // Temporairement vide pour éviter erreurs
+                    'nom_entreprise' => trim($nomEntreprise),
+                    'forme_juridique' => $formeJuridique,
                     'code_client' => $client->getCode() ?: ''
                 ];
             }

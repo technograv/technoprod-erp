@@ -180,21 +180,8 @@
                     <h5 class="mb-0"><i class="fas fa-handshake me-2"></i>Conditions commerciales</h5>
                 </div>
                 <div class="form-section-body">
-                    <div class="row">
-                        <div class="col-md-6">
-                            {{ form_row(form.acomptePercent, {
-                                'label': 'Acompte (%)',
-                                'attr': {'class': 'form-control', 'min': 0, 'max': 100, 'step': 0.01}
-                            }) }}
-                        </div>
-                        <div class="col-md-6">
-                            {{ form_row(form.acompteMontant, {
-                                'label': 'Acompte (montant fixe)',
-                                'attr': {'class': 'form-control', 'min': 0, 'step': 0.01}
-                            }) }}
-                        </div>
-                    </div>
-                    <div class="row">
+                    <!-- Ligne 1: Remises + Options -->
+                    <div class="row mb-3">
                         <div class="col-md-3">
                             {{ form_row(form.remiseGlobalePercent, {
                                 'label': 'Remise globale (%)',
@@ -207,19 +194,106 @@
                                 'attr': {'class': 'form-control', 'min': 0, 'step': 0.01, 'id': 'remise-montant-main'}
                             }) }}
                         </div>
-                        <div class="col-md-6">
+                        <div class="col-md-3">
+                            <div class="mb-3">
+                                <label class="form-label">&nbsp;</label> <!-- Label invisible pour aligner -->
+                                <div class="form-check">
+                                    <input class="form-check-input" type="checkbox" id="paiement_en_ligne" name="paiement_en_ligne" checked>
+                                    <label class="form-check-label" for="paiement_en_ligne">
+                                        <i class="fas fa-credit-card me-2 text-success"></i>Paiement en ligne
+                                    </label>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="col-md-3">
+                            <div class="mb-3">
+                                <label class="form-label">&nbsp;</label> <!-- Label invisible pour aligner -->
+                                <div class="form-check">
+                                    <input class="form-check-input" type="checkbox" id="signature_electronique" name="signature_electronique" checked>
+                                    <label class="form-check-label" for="signature_electronique">
+                                        <i class="fas fa-signature me-2 text-primary"></i>Signature électronique
+                                    </label>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <!-- Ligne 2: Acomptes + Livraison -->
+                    <div class="row mb-3">
+                        <div class="col-md-3">
+                            {{ form_row(form.acomptePercent, {
+                                'label': 'Acompte (%)',
+                                'attr': {'class': 'form-control', 'min': 0, 'max': 100, 'step': 0.01}
+                            }) }}
+                        </div>
+                        <div class="col-md-3">
+                            {{ form_row(form.acompteMontant, {
+                                'label': 'Acompte (€)',
+                                'attr': {'class': 'form-control', 'min': 0, 'step': 0.01}
+                            }) }}
+                        </div>
+                        <div class="col-md-3">
                             {{ form_row(form.delaiLivraison, {
                                 'label': 'Délai de livraison',
                                 'attr': {'class': 'form-control', 'placeholder': 'Ex: 2-3 semaines'}
                             }) }}
                         </div>
+                        <div class="col-md-3">
+                            <div>
+                                <label for="date_livraison">Date de livraison</label>
+                                <input type="date" id="date_livraison" name="date_livraison" class="form-control">
+                            </div>
+                        </div>
                     </div>
                     <div class="row">
                         <div class="col-md-12">
-                            {{ form_row(form.notesClient, {
-                                'label': 'Notes client',
-                                'attr': {'class': 'form-control', 'rows': 3, 'placeholder': 'Notes visibles par le client'}
-                            }) }}
+                            <div class="mb-3">
+                                <label for="notes_client_wysiwyg" class="form-label">Notes client</label>
+                                <!-- Toolbar pour l'éditeur (identique à celui des produits) -->
+                                <div id="notes-client-toolbar" style="border: 1px solid #ced4da; border-bottom: none; background: #f8f9fa;">
+                                    <select class="ql-font">
+                                        <option value="">Police par défaut</option>
+                                        <option value="arial">Arial</option>
+                                        <option value="helvetica">Helvetica</option>
+                                        <option value="times">Times New Roman</option>
+                                        <option value="georgia">Georgia</option>
+                                        <option value="verdana">Verdana</option>
+                                        <option value="courier">Courier New</option>
+                                    </select>
+                                    <select class="ql-size">
+                                        <option value="">Taille normale</option>
+                                        <option value="10px">10px</option>
+                                        <option value="12px">12px</option>
+                                        <option value="14px">14px</option>
+                                        <option value="16px">16px</option>
+                                        <option value="18px">18px</option>
+                                        <option value="20px">20px</option>
+                                        <option value="22px">22px</option>
+                                        <option value="24px">24px</option>
+                                    </select>
+                                    <button class="ql-bold"></button>
+                                    <button class="ql-italic"></button>
+                                    <button class="ql-underline"></button>
+                                    <button class="ql-strike"></button>
+                                    <button class="ql-header" value="1"></button>
+                                    <button class="ql-header" value="2"></button>
+                                    <button class="ql-list" value="ordered"></button>
+                                    <button class="ql-list" value="bullet"></button>
+                                    <button class="ql-indent" value="-1"></button>
+                                    <button class="ql-indent" value="+1"></button>
+                                    <select class="ql-color"></select>
+                                    <select class="ql-background"></select>
+                                    <select class="ql-align"></select>
+                                    <button class="ql-link"></button>
+                                    <button class="ql-image"></button>
+                                    <button class="ql-clean"></button>
+                                </div>
+                                <!-- Zone d'édition -->
+                                <div id="notes_client_wysiwyg" style="height: 150px; border: 1px solid #ced4da; border-top: none;">
+                                    {# Le contenu sera chargé par JavaScript #}
+                                </div>
+                                <!-- Le champ Symfony sera dans la section cachée -->
+                            </div>
                         </div>
                     </div>
                 </div>
@@ -232,6 +306,7 @@
         {{ form_widget(form.devisItems) }}
         {{ form_widget(form.emailEnvoiAutomatique) }}
         {{ form_widget(form.client) }}
+        {{ form_widget(form.notesClient) }}
         
         {# Masquer tous les champs indésirables après les conditions commerciales #}
         {{ form_widget(form.tiersCivilite) }}
@@ -993,6 +1068,7 @@ async function init() {
             initLayoutPanel();
             initClientAutocomplete();
             initContactAddressSynchronization();
+            initQuillNotesClientEditor(); // Initialiser l'éditeur WYSIWYG des notes client
         }
         calculateTotals();
     } catch (error) {
@@ -1158,9 +1234,9 @@ function renderProductElement(element) {
                                data-element-id="${element.id}"
                                onchange="updateElement(${element.id}, 'designation', this.value)"
                                onkeypress="preventEnterSubmit(event)" />
-                        <!-- Nom de fichier directement sous la désignation avec préview -->
-                        <small class="text-muted image-filename-${element.id} image-preview-trigger" 
-                               style="font-size: 0.7rem; margin-top: 2px; display: block; cursor: pointer; ${element.image_visible && element.product_image_filename ? '' : 'display: none !important;'}"
+                        <!-- Nom de fichier sous la désignation avec alignement vertical correct -->
+                        <small class="text-muted image-filename-${element.id} image-preview-trigger d-flex align-items-center" 
+                               style="font-size: 0.7rem; margin-top: 8px; line-height: 1.2; cursor: pointer; ${element.image_visible && element.product_image_filename ? '' : 'display: none !important;'}"
                                data-element-id="${element.id}"
                                onmouseenter="showImagePreview(${element.id}, event)"
                                onmouseleave="hideImagePreview()">
@@ -1704,9 +1780,11 @@ function saveDevisTotalsAutomatically(totalHt, totalTva, totalTtc) {
     
     window.saveDevisTotalsTimeout = setTimeout(async () => {
         try {
-            // Récupérer les valeurs de remise actuelles
+            // Récupérer les valeurs de remise et acompte actuelles
             let remisePercent = document.getElementById('remise-percent-main') || document.getElementById('devis_remiseGlobalePercent');
             let remiseMontant = document.getElementById('remise-montant-main') || document.getElementById('devis_remiseGlobaleMontant');
+            let acomptePercent = document.getElementById('devis_acomptePercent');
+            let acompteMontant = document.getElementById('devis_acompteMontant');
             
             const response = await fetch(`/devis/${DEVIS_ID}/update-totals`, {
                 method: 'POST',
@@ -1718,14 +1796,16 @@ function saveDevisTotalsAutomatically(totalHt, totalTva, totalTtc) {
                     totalTva: totalTva.toFixed(2),
                     totalTtc: totalTtc.toFixed(2),
                     remiseGlobalePercent: parseFloat(remisePercent?.value || 0),
-                    remiseGlobaleMontant: parseFloat(remiseMontant?.value || 0)
+                    remiseGlobaleMontant: parseFloat(remiseMontant?.value || 0),
+                    acomptePercent: parseFloat(acomptePercent?.value || 0),
+                    acompteMontant: parseFloat(acompteMontant?.value || 0)
                 })
             });
             
             if (!response.ok) {
                 console.warn('Erreur sauvegarde automatique totaux:', response.status);
             } else {
-                console.log('💾 Totaux + remise sauvés automatiquement - HT:', totalHt.toFixed(2), '€, TTC:', totalTtc.toFixed(2), '€, Remise:', remisePercent?.value || 0, '%');
+                console.log('💾 Totaux + remise + acompte sauvés automatiquement - HT:', totalHt.toFixed(2), '€, TTC:', totalTtc.toFixed(2), '€, Remise:', remisePercent?.value || 0, '%, Acompte:', acomptePercent?.value || 0, '%');
             }
         } catch (error) {
             console.warn('Erreur réseau sauvegarde totaux:', error);
@@ -1803,6 +1883,55 @@ function initGlobalRemise() {
             calculateTotals();
         }
     });
+    
+    // ===== GESTION ACOMPTE (même logique simple) =====
+    const acomptePercent = document.getElementById('devis_acomptePercent');
+    const acompteMontant = document.getElementById('devis_acompteMontant');
+    
+    if (acomptePercent && acompteMontant) {
+        console.log('🏦 Initialisation gestion acompte');
+        
+        // Synchroniser le montant quand on sort du champ pourcentage
+        acomptePercent.addEventListener('blur', function() {
+            if (this.value && totalHt > 0) {
+                const percent = parseFloat(this.value) || 0;
+                const montant = (totalHt * percent / 100);
+                acompteMontant.value = montant.toFixed(2);
+                console.log('💰 Acompte montant calculé:', montant.toFixed(2), '€');
+            }
+            calculateTotals();
+        });
+        
+        // Synchroniser le pourcentage quand on sort du champ montant
+        acompteMontant.addEventListener('blur', function() {
+            if (this.value && totalHt > 0) {
+                const montant = parseFloat(this.value) || 0;
+                const percent = (montant / totalHt * 100);
+                acomptePercent.value = percent.toFixed(1);
+                console.log('📊 Acompte pourcentage calculé:', percent.toFixed(1), '%');
+            }
+            calculateTotals();
+        });
+        
+        // Recalculer les totaux pendant la saisie (sans synchronisation)
+        acomptePercent.addEventListener('input', calculateTotals);
+        acompteMontant.addEventListener('input', calculateTotals);
+        
+        // Vider l'autre champ si on vide manuellement
+        acomptePercent.addEventListener('keyup', function() {
+            if (this.value === '' || this.value === '0') {
+                acompteMontant.value = '';
+                calculateTotals();
+            }
+        });
+
+        acompteMontant.addEventListener('keyup', function() {
+            if (this.value === '' || this.value === '0') {
+                acomptePercent.value = '';
+                calculateTotals();
+            }
+        });
+    }
 }
 
 // ==========================================
@@ -3079,6 +3208,118 @@ function makeModalResizable(modalElement) {
     }
 }
 
+// Variables globales pour l'éditeur des notes client intégré
+let quillNotesClientEditor = null;
+
+// Handler personnalisé pour l'upload d'images dans le WYSIWYG
+function imageHandler() {
+    showImageDimensionsModalForNotesClient();
+}
+
+// Fonction pour initialiser l'éditeur Quill des notes client directement dans le formulaire
+function initQuillNotesClientEditor() {
+    console.log('🎯 Initialisation éditeur WYSIWYG notes client...');
+    
+    // Vérifier que l'éditeur n'est pas déjà initialisé
+    if (quillNotesClientEditor) {
+        console.log('✅ Éditeur déjà initialisé');
+        return;
+    }
+    // Configuration des polices personnalisées (identique aux produits)
+    const Font = Quill.import('formats/font');
+    Font.whitelist = ['arial', 'helvetica', 'times', 'georgia', 'verdana', 'courier'];
+    Quill.register(Font, true);
+    
+    // Configuration des tailles personnalisées (identique aux produits)
+    const Size = Quill.import('formats/size');
+    Size.whitelist = ['10px', '12px', '14px', '16px', '18px', '20px', '22px', '24px'];
+    Quill.register(Size, true);
+    
+    // Initialiser Quill avec la toolbar existante
+    quillNotesClientEditor = new Quill('#notes_client_wysiwyg', {
+        theme: 'snow',
+        modules: {
+            toolbar: {
+                container: '#notes-client-toolbar',
+                handlers: {
+                    'image': imageHandler
+                }
+            }
+        },
+        placeholder: 'Notes visibles par le client...'
+    });
+    
+    // Charger le contenu existant depuis le champ caché (champ Symfony)
+    const hiddenField = document.querySelector('textarea[name="devis[notesClient]"]');
+    if (hiddenField && hiddenField.value) {
+        quillNotesClientEditor.root.innerHTML = hiddenField.value;
+    }
+    
+    // Synchroniser avec le champ caché à chaque modification
+    quillNotesClientEditor.on('text-change', function() {
+        const currentHiddenField = document.querySelector('textarea[name="devis[notesClient]"]');
+        if (currentHiddenField) {
+            currentHiddenField.value = quillNotesClientEditor.root.innerHTML;
+            console.log('🔄 Synchronisation WYSIWYG → Formulaire:', currentHiddenField.value.substring(0, 50) + '...');
+        }
+    });
+    
+    // Synchroniser avant soumission du formulaire
+    const form = document.getElementById('devis-form');
+    if (form) {
+        form.addEventListener('submit', function() {
+            // Forcer la synchronisation avant soumission
+            const currentHiddenField = document.querySelector('textarea[name="devis[notesClient]"]');
+            if (currentHiddenField && quillNotesClientEditor) {
+                currentHiddenField.value = quillNotesClientEditor.root.innerHTML;
+                console.log('🔄 Synchronisation notes client avant soumission:', currentHiddenField.value.substring(0, 100) + '...');
+            }
+        });
+    }
+    
+    // Forcer la largeur des menus après initialisation (identique aux produits)
+    setTimeout(() => {
+        console.log('🎨 Ajustement largeurs dropdowns notes client...');
+        
+        // Debug : voir tous les éléments dans la toolbar
+        const toolbar = document.querySelector('#notes-client-toolbar');
+        console.log('Toolbar trouvée:', toolbar);
+        if (toolbar) {
+            console.log('Contenu toolbar:', toolbar.innerHTML);
+            console.log('Éléments .ql-picker:', toolbar.querySelectorAll('.ql-picker'));
+            console.log('Éléments .ql-font:', toolbar.querySelectorAll('.ql-font'));
+            console.log('Éléments .ql-size:', toolbar.querySelectorAll('.ql-size'));
+        }
+        
+        // Cibler les bons éléments : les span.ql-picker-label qui sont visibles
+        let fontPicker = document.querySelector('#notes-client-toolbar .ql-font.ql-picker .ql-picker-label');
+        let sizePicker = document.querySelector('#notes-client-toolbar .ql-size.ql-picker .ql-picker-label');
+        
+        console.log('FontPicker trouvé:', fontPicker);
+        console.log('SizePicker trouvé:', sizePicker);
+        
+        if (fontPicker) {
+            fontPicker.style.width = '180px';
+            fontPicker.style.minWidth = '180px';
+            fontPicker.style.maxWidth = '180px';
+            console.log('✅ FontPicker largeur ajustée à 180px');
+        } else {
+            console.warn('❌ FontPicker non trouvé');
+        }
+        
+        if (sizePicker) {
+            sizePicker.style.width = '140px';
+            sizePicker.style.minWidth = '140px';
+            sizePicker.style.maxWidth = '140px';
+            console.log('✅ SizePicker largeur ajustée à 140px');
+        } else {
+            console.warn('❌ SizePicker non trouvé');
+        }
+        
+        console.log('✅ Éditeur WYSIWYG notes client complètement initialisé !');
+    }, 500); // Augmenter le timeout à 500ms
+}
+
 // Initialiser Quill Editor
 function initQuillEditor() {
     
@@ -3162,8 +3403,296 @@ function initQuillEditor() {
             sizePicker.style.minWidth = '140px';
             sizePicker.style.maxWidth = '140px';
         }
+        
     }, 200);
     
+}
+
+// Fonction pour afficher la modal de choix des dimensions d'image pour les notes client
+function showImageDimensionsModalForNotesClient() {
+    showImageDimensionsModal(quillNotesClientEditor);
+}
+
+// Fonction pour afficher la modal de choix des dimensions d'image
+function showImageDimensionsModal(targetEditor = null) {
+    const modalHtml = `
+        <div class="modal fade" id="imageDimensionsModal" tabindex="-1" aria-labelledby="imageDimensionsModalLabel" aria-hidden="true">
+            <div class="modal-dialog modal-lg">
+                <div class="modal-content">
+                    <div class="modal-header">
+                        <h5 class="modal-title" id="imageDimensionsModalLabel">
+                            <i class="fas fa-image me-2"></i>Insérer une image
+                        </h5>
+                        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                    </div>
+                    <div class="modal-body">
+                        <!-- Section upload d'image -->
+                        <div class="mb-4">
+                            <label for="imageFileInput" class="form-label">
+                                <i class="fas fa-upload me-2"></i>Sélectionner une image
+                            </label>
+                            <input type="file" class="form-control" id="imageFileInput" accept="image/*">
+                        </div>
+                        
+                        <!-- Prévisualisation de l'image -->
+                        <div id="imagePreviewContainer" class="text-center mb-4" style="display: none;">
+                            <img id="imagePreview" class="img-thumbnail" style="max-width: 300px; max-height: 200px;">
+                            <p id="imageInfo" class="mt-2 text-muted"></p>
+                        </div>
+                        
+                        <!-- Section dimensions -->
+                        <div id="dimensionsSection" style="display: none;">
+                            <h6><i class="fas fa-expand-arrows-alt me-2"></i>Dimensions de l'image</h6>
+                            
+                            <div class="row">
+                                <div class="col-md-6">
+                                    <label for="imageWidth" class="form-label">Largeur (px)</label>
+                                    <input type="number" class="form-control" id="imageWidth" value="300" min="50" max="800">
+                                </div>
+                                <div class="col-md-6">
+                                    <label for="imageHeight" class="form-label">Hauteur (px)</label>
+                                    <input type="number" class="form-control" id="imageHeight" value="200" min="50" max="600">
+                                </div>
+                            </div>
+                            
+                            <div class="row mt-3">
+                                <div class="col-12">
+                                    <div class="form-check">
+                                        <input class="form-check-input" type="checkbox" id="maintainAspectRatio" checked>
+                                        <label class="form-check-label" for="maintainAspectRatio">
+                                            Conserver les proportions originales
+                                        </label>
+                                    </div>
+                                </div>
+                            </div>
+                            
+                            <div class="row mt-3">
+                                <div class="col-12">
+                                    <label class="form-label">Dimensions prédéfinies :</label>
+                                    <div class="btn-group w-100" role="group">
+                                        <button type="button" class="btn btn-outline-secondary preset-size" data-width="150" data-height="100">Petite</button>
+                                        <button type="button" class="btn btn-outline-secondary preset-size" data-width="300" data-height="200">Moyenne</button>
+                                        <button type="button" class="btn btn-outline-secondary preset-size" data-width="450" data-height="300">Grande</button>
+                                        <button type="button" class="btn btn-outline-secondary preset-size" data-width="100%" data-height="auto">Pleine largeur</button>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="modal-footer">
+                        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">
+                            <i class="fas fa-times me-2"></i>Annuler
+                        </button>
+                        <button type="button" class="btn btn-primary" id="insertImageIntoEditorBtn" style="display: none;">
+                            <i class="fas fa-check me-2"></i>Insérer l'image
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    `;
+    
+    // Supprimer la modal existante si elle existe
+    const existingModal = document.getElementById('imageDimensionsModal');
+    if (existingModal) {
+        existingModal.remove();
+    }
+    
+    // Ajouter la modal au DOM
+    document.body.insertAdjacentHTML('beforeend', modalHtml);
+    
+    // Attacher les événements
+    const modal = new bootstrap.Modal(document.getElementById('imageDimensionsModal'));
+    const fileInput = document.getElementById('imageFileInput');
+    const preview = document.getElementById('imagePreview');
+    const previewContainer = document.getElementById('imagePreviewContainer');
+    const dimensionsSection = document.getElementById('dimensionsSection');
+    const widthInput = document.getElementById('imageWidth');
+    const heightInput = document.getElementById('imageHeight');
+    const aspectRatioCheck = document.getElementById('maintainAspectRatio');
+    const insertBtn = document.getElementById('insertImageIntoEditorBtn');
+    const imageInfo = document.getElementById('imageInfo');
+    
+    let originalRatio = 1;
+    let imageFile = null;
+    let imageDataUrl = null;
+    
+    // Gestion de la sélection de fichier
+    fileInput.addEventListener('change', function(e) {
+        const file = e.target.files[0];
+        if (!file) return;
+        
+        imageFile = file;
+        const reader = new FileReader();
+        
+        reader.onload = function(e) {
+            imageDataUrl = e.target.result;
+            preview.src = imageDataUrl;
+            
+            // Calculer le ratio réel de l'image
+            const tempImg = new Image();
+            tempImg.onload = function() {
+                originalRatio = this.naturalWidth / this.naturalHeight;
+                const naturalWidth = this.naturalWidth;
+                const naturalHeight = this.naturalHeight;
+                
+                // Définir une taille par défaut raisonnable
+                let defaultWidth = Math.min(300, naturalWidth);
+                if (defaultWidth < 150) defaultWidth = naturalWidth; // Petites images gardent leur taille
+                
+                widthInput.value = defaultWidth;
+                heightInput.value = Math.round(defaultWidth / originalRatio);
+                
+                // Afficher les informations de l'image
+                const sizeKB = Math.round(file.size / 1024);
+                imageInfo.textContent = file.name + ' - ' + naturalWidth + ' × ' + naturalHeight + 'px (' + sizeKB + ' KB)';
+                
+                // Afficher la prévisualisation et les options
+                previewContainer.style.display = 'block';
+                dimensionsSection.style.display = 'block';
+                insertBtn.style.display = 'inline-block';
+            };
+            tempImg.src = imageDataUrl;
+        };
+        
+        reader.readAsDataURL(file);
+    });
+    
+    // Gestion du maintien des proportions
+    widthInput.addEventListener('input', function() {
+        if (aspectRatioCheck.checked && originalRatio) {
+            heightInput.value = Math.round(this.value / originalRatio);
+        }
+    });
+    
+    heightInput.addEventListener('input', function() {
+        if (aspectRatioCheck.checked && originalRatio) {
+            widthInput.value = Math.round(this.value * originalRatio);
+        }
+    });
+    
+    // Gestion des tailles prédéfinies
+    document.querySelectorAll('.preset-size').forEach(btn => {
+        btn.addEventListener('click', function() {
+            const width = this.dataset.width;
+            const height = this.dataset.height;
+            
+            if (width === '100%') {
+                widthInput.value = '';
+                heightInput.value = '';
+                widthInput.placeholder = '100%';
+                heightInput.placeholder = 'auto';
+            } else {
+                const widthNum = parseInt(width);
+                widthInput.value = widthNum;
+                if (height === 'auto' || !height) {
+                    heightInput.value = Math.round(widthNum / originalRatio);
+                } else {
+                    heightInput.value = parseInt(height);
+                }
+                widthInput.placeholder = '';
+                heightInput.placeholder = '';
+            }
+            
+            // Marquer le bouton comme actif temporairement
+            document.querySelectorAll('.preset-size').forEach(b => b.classList.remove('active'));
+            this.classList.add('active');
+            setTimeout(() => this.classList.remove('active'), 1000);
+        });
+    });
+    
+    // Bouton d'insertion
+    insertBtn.addEventListener('click', function() {
+        const editorToUse = targetEditor || quillEditor;
+        if (!imageDataUrl || !editorToUse) return;
+        
+        const width = widthInput.value || widthInput.placeholder;
+        const height = heightInput.value || heightInput.placeholder;
+        
+        let styleAttr = '';
+        if (width === '100%' || width === '') {
+            styleAttr = 'max-width: 100%; height: auto;';
+        } else {
+            const widthStyle = width ? 'width: ' + width + 'px;' : '';
+            const heightStyle = (height && height !== 'auto') ? 'height: ' + height + 'px;' : 'height: auto;';
+            styleAttr = widthStyle + ' ' + heightStyle + ' max-width: 100%;';
+        }
+        
+        // Insérer l'image avec les dimensions choisies
+        const range = editorToUse.getSelection(true);
+        
+        // Créer l'élément image avec les bonnes dimensions
+        const img = document.createElement('img');
+        img.src = imageDataUrl;
+        img.alt = imageFile.name;
+        
+        // Appliquer les dimensions
+        if (width === '100%' || width === '') {
+            img.style.maxWidth = '100%';
+            img.style.height = 'auto';
+            img.style.width = '100%';
+        } else {
+            if (width) {
+                img.style.width = width + 'px';
+                img.style.maxWidth = width + 'px';
+            }
+            if (height && height !== 'auto') {
+                img.style.height = height + 'px';
+            } else {
+                img.style.height = 'auto';
+            }
+        }
+        
+        // Forcer l'affichage dans l'éditeur
+        img.style.display = 'inline-block';
+        img.style.verticalAlign = 'middle';
+        
+        // Insérer via l'API Quill avec les attributs appropriés
+        const imageBlot = editorToUse.insertEmbed(range.index, 'image', imageDataUrl);
+        
+        // Après insertion, modifier directement l'élément DOM dans l'éditeur
+        setTimeout(() => {
+            const insertedImages = editorToUse.root.querySelectorAll('img[src="' + imageDataUrl + '"]');
+            const lastInsertedImage = insertedImages[insertedImages.length - 1];
+            
+            if (lastInsertedImage) {
+                // Appliquer les styles directement sur l'image insérée
+                if (width === '100%' || width === '') {
+                    lastInsertedImage.style.maxWidth = '100%';
+                    lastInsertedImage.style.height = 'auto';
+                    lastInsertedImage.style.width = '100%';
+                } else {
+                    if (width) {
+                        lastInsertedImage.style.width = width + 'px';
+                        lastInsertedImage.style.maxWidth = width + 'px';
+                    }
+                    if (height && height !== 'auto') {
+                        lastInsertedImage.style.height = height + 'px';
+                    } else {
+                        lastInsertedImage.style.height = 'auto';
+                    }
+                }
+                
+                // Styles additionnels pour l'affichage dans l'éditeur
+                lastInsertedImage.style.display = 'inline-block';
+                lastInsertedImage.style.verticalAlign = 'middle';
+                lastInsertedImage.alt = imageFile.name;
+                
+                console.log('✅ Image redimensionnée dans l\'éditeur:', lastInsertedImage.style.cssText);
+            }
+        }, 100);
+        
+        // Fermer la modal
+        modal.hide();
+    });
+    
+    // Nettoyer la modal après fermeture
+    document.getElementById('imageDimensionsModal').addEventListener('hidden.bs.modal', function() {
+        this.remove();
+    });
+    
+    // Afficher la modal
+    modal.show();
 }
 
 // Gestionnaire de sauvegarde de la description
@@ -3427,6 +3956,43 @@ document.addEventListener('DOMContentLoaded', function() {
     color: #28a745;
     text-align: right;
 }
+
+/* Espacement toolbar WYSIWYG notes client - CSS renforcé */
+#notes-client-toolbar.ql-toolbar {
+    display: flex !important;
+    flex-wrap: wrap !important;
+    align-items: center !important;
+    padding: 8px 12px !important;
+    min-height: 50px !important;
+    gap: 6px !important;
+}
+
+#notes-client-toolbar .ql-font.ql-picker {
+    margin-right: 12px !important;
+    min-width: 180px !important;
+}
+
+#notes-client-toolbar .ql-size.ql-picker {
+    margin-right: 12px !important;
+    min-width: 140px !important;
+}
+
+#notes-client-toolbar .ql-picker {
+    margin-right: 8px !important;
+    flex-shrink: 0 !important;
+}
+
+#notes-client-toolbar button {
+    margin-right: 4px !important;
+    flex-shrink: 0 !important;
+}
+
+/* Éviter que les éléments se chevauchent */
+#notes-client-toolbar > * {
+    position: relative !important;
+    z-index: 1 !important;
+}
+
 </style>
 
 <script>
@@ -3839,5 +4405,6 @@ function hideImagePreview() {
 }
 
 </script>
+
 
 {% endblock %}
