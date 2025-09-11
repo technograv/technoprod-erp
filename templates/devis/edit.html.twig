@@ -1188,6 +1188,9 @@ function renderElements() {
     
     container.innerHTML = html;
     
+    // Réappliquer la visibilité des noms de fichier après le rendu
+    applyFilenameVisibility();
+    
     // Initialiser l'autocomplétion après le rendu
     if (IS_EDITABLE) {
         setTimeout(() => initProductAutocomplete(), 100);
@@ -4070,19 +4073,39 @@ function toggleImageVisibility(elementId, isVisible) {
         photoBtn.style.display = isVisible ? '' : 'none';
     }
     
-    // Afficher/cacher le nom de fichier
-    const filenameElement = document.querySelector(`.image-filename-${elementId}`);
-    if (filenameElement) {
-        const element = window.elements.find(e => e.id === elementId);
-        const hasImageSelected = element && element.product_image_id;
-        filenameElement.style.display = (isVisible && hasImageSelected) ? '' : 'none';
-    }
+    // Appliquer la visibilité du nom de fichier
+    applyFilenameVisibilityForElement(elementId);
     
     // Mettre à jour l'élément local pour éviter les incohérences
     const elementIndex = window.elements.findIndex(e => e.id === elementId);
     if (elementIndex !== -1) {
         window.elements[elementIndex].image_visible = isVisible;
     }
+}
+
+function applyFilenameVisibilityForElement(elementId) {
+    const filenameElement = document.querySelector(`.image-filename-${elementId}`);
+    if (filenameElement) {
+        const element = window.elements.find(e => e.id === elementId);
+        const hasImageSelected = element && (element.product_image_id || element.product_image_filename);
+        const isVisible = element && element.image_visible;
+        
+        // Masquer le nom de fichier si la photo n'est pas visible ou si aucune image n'est sélectionnée
+        if (isVisible && hasImageSelected) {
+            filenameElement.style.setProperty('display', '', 'important');
+        } else {
+            filenameElement.style.setProperty('display', 'none', 'important');
+        }
+    }
+}
+
+function applyFilenameVisibility() {
+    // Appliquer la logique de visibilité pour tous les éléments
+    window.elements.forEach(element => {
+        if (element.id) {
+            applyFilenameVisibilityForElement(element.id);
+        }
+    });
 }
 
 function selectProductImage(elementId) {
@@ -4388,12 +4411,13 @@ function selectImage(elementId, imageId) {
     }
     
     // Mettre à jour immédiatement l'affichage du nom de fichier
-    const filenameElement = document.querySelector(`.image-filename-${elementId}`);
     const filenameTextElement = document.querySelector(`.image-filename-${elementId} .filename-text`);
-    if (filenameElement && filenameTextElement) {
+    if (filenameTextElement) {
         filenameTextElement.textContent = imageName;
-        filenameElement.style.display = imageName ? '' : 'none';
     }
+    
+    // Appliquer la visibilité du nom de fichier
+    applyFilenameVisibilityForElement(elementId);
     
     // Fermer la modal
     const modal = bootstrap.Modal.getInstance(document.getElementById('imageSelectionModal'));

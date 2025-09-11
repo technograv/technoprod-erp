@@ -419,13 +419,13 @@
         </table>
     </div>
 
-    <!-- Notes client -->
-    {% if devis.notesClient %}
+    {# Notes client supprimées du PDF - utilisées dans l'email #}
+    {# {% if devis.notesClient %}
         <div class="notes-section">
             <h4>Notes</h4>
             <p>{{ devis.notesClient|nl2br }}</p>
         </div>
-    {% endif %}
+    {% endif %} #}
 
     <!-- Section signature -->
     {% if devis.statut in ['envoye', 'relance'] %}
