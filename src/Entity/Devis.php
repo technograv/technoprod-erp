@@ -99,6 +99,9 @@ class Devis
     #[ORM\Column(type: Types::DATE_MUTABLE, nullable: true)]
     private ?\DateTimeInterface $datePaiementAcompte = null;
 
+    #[ORM\Column(type: Types::DATE_MUTABLE, nullable: true)]
+    private ?\DateTimeInterface $dateLivraison = null;
+
     #[ORM\Column(length: 100, nullable: true)]
     private ?string $transactionId = null;
 
@@ -163,8 +166,8 @@ class Devis
         $this->elements = new ArrayCollection(); // NOUVELLE COLLECTION
         $this->createdAt = new \DateTimeImmutable();
         $this->updatedAt = new \DateTimeImmutable();
-        $this->dateCreation = new \DateTime();
-        $this->dateValidite = new \DateTime('+30 days');
+        // Ne pas initialiser dateCreation et dateValidite automatiquement
+        // Elles seront définies explicitement lors de la création
     }
 
     public function getId(): ?int
@@ -614,6 +617,17 @@ class Devis
     public function setDatePaiementAcompte(?\DateTimeInterface $datePaiementAcompte): static
     {
         $this->datePaiementAcompte = $datePaiementAcompte;
+        return $this;
+    }
+
+    public function getDateLivraison(): ?\DateTimeInterface
+    {
+        return $this->dateLivraison;
+    }
+
+    public function setDateLivraison(?\DateTimeInterface $dateLivraison): static
+    {
+        $this->dateLivraison = $dateLivraison;
         return $this;
     }
 

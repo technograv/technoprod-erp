@@ -73,14 +73,7 @@ final class DevisController extends AbstractController
     }
 
     #[Route('/new', name: 'app_devis_new', methods: ['GET', 'POST'])]
-    public function new(Request $request, EntityManagerInterface $entityManager, ClientRepository $clientRepository): Response
-    {
-        // Redirection vers la nouvelle interface améliorée
-        return $this->redirectToRoute('app_devis_new_improved');
-    }
-
-    #[Route('/new-improved', name: 'app_devis_new_improved', methods: ['GET', 'POST'])]
-    public function newImproved(Request $request, EntityManagerInterface $entityManager, ClientRepository $clientRepository, DocumentNumerotationService $numerotationService): Response
+    public function new(Request $request, EntityManagerInterface $entityManager, ClientRepository $clientRepository, DocumentNumerotationService $numerotationService): Response
     {
         $devis = new Devis();
         
@@ -169,23 +162,56 @@ final class DevisController extends AbstractController
             // Validation basique
             if (!$prospectId) {
                 $this->addFlash('error', 'Veuillez sélectionner un client/prospect.');
-                return $this->redirectToRoute('app_devis_new_improved');
+                return $this->redirectToRoute('app_devis_new');
             }
             
             // Trouver le prospect
             $prospect = $clientRepository->find($prospectId);
             if (!$prospect) {
                 $this->addFlash('error', 'Client/prospect introuvable.');
-                return $this->redirectToRoute('app_devis_new_improved');
+                return $this->redirectToRoute('app_devis_new');
             }
             
             // Configurer le devis avec le numéro généré par le service
             $devis->setClient($prospect);
             $numeroGenere = $numerotationService->genererProchainNumero('DE', 'Devis');
             $devis->setNumeroDevis($numeroGenere);
-            $devis->setDateCreation(new \DateTime($dateCreation ?: 'now'));
-            $devis->setDateValidite(new \DateTime($dateValidite ?: '+30 days'));
+            // Gestion des dates avec validation du format
+            if ($dateCreation && !empty($dateCreation)) {
+                try {
+                    $devis->setDateCreation(new \DateTime($dateCreation));
+                    // Debug: log de la date reçue
+                    error_log("Date création reçue: " . $dateCreation . " - Date parsée: " . $devis->getDateCreation()->format('Y-m-d'));
+                } catch (\Exception $e) {
+                    error_log("Erreur parsing date création: " . $e->getMessage());
+                    $devis->setDateCreation(new \DateTime('now'));
+                }
+            } else {
+                error_log("Date création vide ou null - utilisation de 'now'");
+                $devis->setDateCreation(new \DateTime('now'));
+            }
+            
+            if ($dateValidite && !empty($dateValidite)) {
+                try {
+                    $devis->setDateValidite(new \DateTime($dateValidite));
+                } catch (\Exception $e) {
+                    $devis->setDateValidite(new \DateTime('+30 days'));
+                }
+            } else {
+                $devis->setDateValidite(new \DateTime('+30 days'));
+            }
+            // Gestion du délai de livraison et de la date de livraison séparément
             $devis->setDelaiLivraison($delaiLivraison);
+            
+            // Gestion de la date de livraison dans son propre champ
+            if ($dateLivraison && !empty($dateLivraison)) {
+                try {
+                    $devis->setDateLivraison(new \DateTime($dateLivraison));
+                    error_log("Date livraison reçue: " . $dateLivraison . " - Date parsée: " . (new \DateTime($dateLivraison))->format('Y-m-d'));
+                } catch (\Exception $e) {
+                    error_log("Erreur parsing date livraison: " . $e->getMessage());
+                }
+            }
             $devis->setNotesClient($notePublique);
             $devis->setNotesInternes($notePrivee);
             
@@ -284,11 +310,13 @@ final class DevisController extends AbstractController
         
         // Récupérer tous les prospects pour le sélecteur avec leurs contacts, adresses et formes juridiques
         $prospects = $entityManager->createQuery('
-            SELECT c, contacts, adresse, fj
+            SELECT c, contacts, adresse, fj, contactFacturationDefault, contactLivraisonDefault
             FROM App\Entity\Client c
             LEFT JOIN c.contacts contacts
             LEFT JOIN contacts.adresse adresse
             LEFT JOIN c.formeJuridique fj
+            LEFT JOIN c.contactFacturationDefault contactFacturationDefault
+            LEFT JOIN c.contactLivraisonDefault contactLivraisonDefault
             ORDER BY c.nom ASC
         ')->getResult();
 
@@ -296,7 +324,7 @@ final class DevisController extends AbstractController
         $formesJuridiques = $entityManager->getRepository(\App\Entity\FormeJuridique::class)
             ->findBy(['actif' => true], ['ordre' => 'ASC']);
 
-        return $this->render('devis/new_improved.html.twig', [
+        return $this->render('devis/new.html.twig', [
             'devis' => $devis,
             'prospects' => $prospects,
             'next_devis_number' => $nextDevisNumber,
@@ -304,7 +332,14 @@ final class DevisController extends AbstractController
         ]);
     }
 
-    #[Route('/{id}', name: 'app_devis_show', methods: ['GET'])]
+    #[Route('/new-improved', name: 'app_devis_new_improved', methods: ['GET', 'POST'])]
+    public function newImprovedRedirect(): Response
+    {
+        // Redirection vers la nouvelle route standard
+        return $this->redirectToRoute('app_devis_new', [], 301);
+    }
+
+    #[Route('/{id}', name: 'app_devis_show', methods: ['GET'], requirements: ['id' => '\d+'])]
     public function show(Devis $devis): Response
     {
         return $this->render('devis/show.html.twig', [
@@ -312,7 +347,7 @@ final class DevisController extends AbstractController
         ]);
     }
 
-    #[Route('/{id}/edit', name: 'app_devis_edit', methods: ['GET', 'POST'])]
+    #[Route('/{id}/edit', name: 'app_devis_edit', methods: ['GET', 'POST'], requirements: ['id' => '\d+'])]
     public function edit(Request $request, Devis $devis, EntityManagerInterface $entityManager): Response
     {
         // Créer une version si le devis a été envoyé et sera modifié
@@ -563,7 +598,7 @@ final class DevisController extends AbstractController
         }
     }
 
-    #[Route('/{id}/delete', name: 'app_devis_delete', methods: ['POST'])]
+    #[Route('/{id}/delete', name: 'app_devis_delete', methods: ['POST'], requirements: ['id' => '\d+'])]
     public function delete(Request $request, Devis $devis, EntityManagerInterface $entityManager): Response
     {
         if ($this->isCsrfTokenValid('delete'.$devis->getId(), $request->getPayload()->getString('_token'))) {
@@ -575,7 +610,7 @@ final class DevisController extends AbstractController
         return $this->redirectToRoute('app_devis_index', [], Response::HTTP_SEE_OTHER);
     }
 
-    #[Route('/{id}/pdf', name: 'app_devis_pdf', methods: ['GET'])]
+    #[Route('/{id}/pdf', name: 'app_devis_pdf', methods: ['GET'], requirements: ['id' => '\d+'])]
     public function generatePdf(Devis $devis): Response
     {
         $options = new Options();

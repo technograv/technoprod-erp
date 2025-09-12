@@ -34,6 +34,11 @@
                 background-color: #007bff !important;
                 color: white !important;
             }
+            
+            /* Limitation automatique des champs date à 4 chiffres d'année */
+            input[type="date"] {
+                /* Les navigateurs respectent ces attributs même s'ils ne sont pas dans le HTML */
+            }
         </style>
     </head>
     <body>
@@ -406,6 +411,63 @@
                 newScript.src = scriptTag.src.split('?')[0] + '?t=' + new Date().getTime();
                 scriptTag.parentNode.replaceChild(newScript, scriptTag);
             }
+        }
+
+        // GLOBAL: Application automatique de la limitation d'année (2020-2030) à tous les champs date
+        document.addEventListener('DOMContentLoaded', function() {
+            applyDateConstraints();
+            
+            // Observer pour les éléments ajoutés dynamiquement (modales, AJAX, etc.)
+            const observer = new MutationObserver(function(mutations) {
+                mutations.forEach(function(mutation) {
+                    if (mutation.type === 'childList') {
+                        mutation.addedNodes.forEach(function(node) {
+                            if (node.nodeType === Node.ELEMENT_NODE) {
+                                if (node.matches('input[type="date"]')) {
+                                    applyDateConstraintsToElement(node);
+                                } else {
+                                    const dateInputs = node.querySelectorAll && node.querySelectorAll('input[type="date"]');
+                                    if (dateInputs) {
+                                        dateInputs.forEach(applyDateConstraintsToElement);
+                                    }
+                                }
+                            }
+                        });
+                    }
+                });
+            });
+            
+            observer.observe(document.body, {
+                childList: true,
+                subtree: true
+            });
+        });
+
+        function applyDateConstraints() {
+            const dateInputs = document.querySelectorAll('input[type="date"]');
+            dateInputs.forEach(applyDateConstraintsToElement);
+        }
+
+        function applyDateConstraintsToElement(input) {
+            if (!input.hasAttribute('min') || input.getAttribute('min') === '') {
+                input.setAttribute('min', '2020-01-01');
+            }
+            if (!input.hasAttribute('max') || input.getAttribute('max') === '') {
+                input.setAttribute('max', '2030-12-31');
+            }
+            
+            // Validation en temps réel
+            input.addEventListener('input', function() {
+                const value = this.value;
+                if (value) {
+                    const year = parseInt(value.substring(0, 4));
+                    if (year < 2020 || year > 2030) {
+                        this.setCustomValidity('L\'année doit être comprise entre 2020 et 2030');
+                    } else {
+                        this.setCustomValidity('');
+                    }
+                }
+            });
         }
         </script>
         

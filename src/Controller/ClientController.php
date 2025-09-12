@@ -474,10 +474,19 @@ final class ClientController extends AbstractController
             // Gestion de l'assignation des adresses aux contacts
             if (isset($data['contacts'])) {
                 foreach ($data['contacts'] as $contactId => $contactData) {
-                    if (strpos($contactId, 'new_') !== 0) { // Contact existant
-                        $contact = $entityManager->getRepository(Contact::class)->find($contactId);
-                        if ($contact && $contact->getClient() === $client && isset($contactData['adresse_id']) && !empty($contactData['adresse_id'])) {
-                            $adresse = $entityManager->getRepository(Adresse::class)->find($contactData['adresse_id']);
+                    $contact = null;
+                    
+                    // Récupérer le contact (nouveau ou existant)
+                    if (isset($contactIdMapping[$contactId])) {
+                        $contact = $contactIdMapping[$contactId];
+                    } elseif (is_numeric($contactId) && strpos($contactId, 'new_') === false) {
+                        $contact = $entityManager->getRepository(Contact::class)->find((int)$contactId);
+                    }
+                    
+                    if ($contact && $contact->getClient() === $client && isset($contactData['adresse_id']) && !empty($contactData['adresse_id'])) {
+                        $adresseId = $contactData['adresse_id'];
+                        if (is_numeric($adresseId) && strpos($adresseId, 'new_') === false) {
+                            $adresse = $entityManager->getRepository(Adresse::class)->find((int)$adresseId);
                             if ($adresse && $adresse->getClient() === $client) {
                                 $contact->setAdresse($adresse);
                             }
@@ -487,7 +496,7 @@ final class ClientController extends AbstractController
             }
             
             // Gestion des contacts par défaut - utiliser la correspondance d'IDs
-            if (isset($data['contact_facturation_default'])) {
+            if (isset($data['contact_facturation_default']) && !empty($data['contact_facturation_default'])) {
                 // Reset tous les contacts facturation par défaut
                 foreach ($client->getContacts() as $contact) {
                     $contact->setIsFacturationDefault(false);
@@ -499,9 +508,9 @@ final class ClientController extends AbstractController
                 // Vérifier d'abord dans la correspondance (nouveaux et existants)
                 if (isset($contactIdMapping[$facturationDefaultId])) {
                     $defaultContact = $contactIdMapping[$facturationDefaultId];
-                } else {
-                    // Fallback pour les contacts existants non modifiés
-                    $defaultContact = $entityManager->getRepository(Contact::class)->find($facturationDefaultId);
+                } elseif (is_numeric($facturationDefaultId) && strpos($facturationDefaultId, 'new_') === false) {
+                    // Fallback pour les contacts existants non modifiés - seulement si c'est numérique et pas temporaire
+                    $defaultContact = $entityManager->getRepository(Contact::class)->find((int)$facturationDefaultId);
                 }
                 
                 if ($defaultContact && $defaultContact->getClient() === $client) {
@@ -510,7 +519,7 @@ final class ClientController extends AbstractController
                 }
             }
             
-            if (isset($data['contact_livraison_default'])) {
+            if (isset($data['contact_livraison_default']) && !empty($data['contact_livraison_default'])) {
                 // Reset tous les contacts livraison par défaut
                 foreach ($client->getContacts() as $contact) {
                     $contact->setIsLivraisonDefault(false);
@@ -522,9 +531,9 @@ final class ClientController extends AbstractController
                 // Vérifier d'abord dans la correspondance (nouveaux et existants)
                 if (isset($contactIdMapping[$livraisonDefaultId])) {
                     $defaultContact = $contactIdMapping[$livraisonDefaultId];
-                } else {
-                    // Fallback pour les contacts existants non modifiés
-                    $defaultContact = $entityManager->getRepository(Contact::class)->find($livraisonDefaultId);
+                } elseif (is_numeric($livraisonDefaultId) && strpos($livraisonDefaultId, 'new_') === false) {
+                    // Fallback pour les contacts existants non modifiés - seulement si c'est numérique et pas temporaire
+                    $defaultContact = $entityManager->getRepository(Contact::class)->find((int)$livraisonDefaultId);
                 }
                 
                 if ($defaultContact && $defaultContact->getClient() === $client) {

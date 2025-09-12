@@ -56,10 +56,14 @@ ngrok*
 *.tgz
 *.zip
 
-# Documentation files de travail (optionnel - à vous de voir)
-# DEBUG_*.md
-# DIAGNOSTIC_*.md
-# test_*.php
+# Documentation files de travail et fichiers de debug
+DEBUG_*.md
+DIAGNOSTIC_*.md
+test_*.php
+debug_*.php
+diagnostic_*.php
+*_debug.php
+*_diagnostic.php
 
 # Crypto keys (IMPORTANT pour sécurité)
 /var/crypto/

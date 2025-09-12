@@ -34,12 +34,14 @@ class DevisType extends AbstractType
             ->add('dateCreation', DateType::class, [
                 'label' => 'Date de création',
                 'widget' => 'single_text',
-                'data' => new \DateTime()
+                'required' => false,
+                'attr' => ['min' => '2020-01-01', 'max' => '2030-12-31']
             ])
             ->add('dateValidite', DateType::class, [
                 'label' => 'Date de validité',
                 'widget' => 'single_text',
-                'required' => false
+                'required' => false,
+                'attr' => ['min' => '2020-01-01', 'max' => '2030-12-31']
             ])
             ->add('statut', ChoiceType::class, [
                 'label' => 'Statut',
@@ -253,6 +255,12 @@ class DevisType extends AbstractType
                     'class' => 'form-control',
                     'placeholder' => 'Ex: 2-3 semaines'
                 ]
+            ])
+            ->add('dateLivraison', DateType::class, [
+                'label' => 'Date de livraison',
+                'widget' => 'single_text',
+                'required' => false,
+                'attr' => ['class' => 'form-control', 'min' => '2020-01-01', 'max' => '2030-12-31']
             ])
             ->add('emailEnvoiAutomatique', EmailType::class, [
                 'label' => 'Email d\'envoi automatique',
