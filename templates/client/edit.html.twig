@@ -949,7 +949,17 @@ function addAddress() {
     // Incrémenter l'index et fermer le modal
     addressIndex++;
     const modal = bootstrap.Modal.getInstance(document.getElementById('addressModal'));
-    modal.hide();
+    if (modal) {
+        modal.hide();
+    } else {
+        // Fallback si l'instance n'existe pas
+        document.getElementById('addressModal').style.display = 'none';
+        document.body.classList.remove('modal-open');
+        const backdrop = document.querySelector('.modal-backdrop');
+        if (backdrop) {
+            backdrop.remove();
+        }
+    }
 }
 
 function createAddressesTable() {
@@ -1086,157 +1096,170 @@ function removeAddress(addressId) {
     }
 }
 
-// Fonction d'autocomplétion des communes françaises (version simplifiée sans Select2)
+// Fonction d'autocomplétion des communes françaises
 function setupCommuneAutocomplete() {
+    console.log('Initialisation autocomplétion communes');
+    
     // Supprimer les anciens événements
-    $('.commune-autocomplete').off('input focus');
+    document.querySelectorAll('.commune-autocomplete').forEach(function(input) {
+        // Cloner l'élément pour supprimer tous les event listeners
+        const newInput = input.cloneNode(true);
+        input.parentNode.replaceChild(newInput, input);
+    });
     
     // Pour chaque champ d'autocomplétion
-    $('.commune-autocomplete').each(function() {
-        const input = $(this);
-        const inputType = input.data('type');
+    document.querySelectorAll('.commune-autocomplete').forEach(function(input) {
+        console.log('Configuration autocomplete pour:', input);
+        const inputType = input.dataset.type;
         let timeout;
         
         // Créer la liste de suggestions si elle n'existe pas
-        let suggestionsList = input.next('.commune-suggestions');
-        if (suggestionsList.length === 0) {
+        let suggestionsList = input.parentNode.querySelector('.commune-suggestions');
+        if (!suggestionsList) {
+            suggestionsList = document.createElement('div');
+            suggestionsList.className = 'commune-suggestions';
+            
             // Déterminer si on est dans un modal
-            const isInModal = input.closest('.modal').length > 0;
+            const isInModal = input.closest('.modal') !== null;
             
             if (isInModal) {
-                // Dans un modal : utiliser le conteneur parent avec position relative
-                const parentContainer = input.parent('.position-relative');
-                if (parentContainer.length > 0) {
-                    suggestionsList = $('<div class="commune-suggestions"></div>').appendTo(parentContainer);
-                } else {
-                    suggestionsList = $('<div class="commune-suggestions"></div>').insertAfter(input);
-                }
-                
-                suggestionsList.css({
-                    'position': 'absolute',
-                    'z-index': '1070',
-                    'background': 'white',
-                    'border': '1px solid #ccc',
-                    'border-radius': '4px',
-                    'max-height': '200px',
-                    'overflow-y': 'auto',
-                    'width': '100%',
-                    'box-shadow': '0 2px 5px rgba(0,0,0,0.2)',
-                    'display': 'none',
-                    'top': '100%',
-                    'left': '0'
-                });
+                // Dans un modal : position absolue avec z-index élevé
+                suggestionsList.style.cssText = `
+                    position: absolute;
+                    z-index: 1070;
+                    background: white;
+                    border: 1px solid #ccc;
+                    border-radius: 4px;
+                    max-height: 200px;
+                    overflow-y: auto;
+                    width: 100%;
+                    box-shadow: 0 2px 5px rgba(0,0,0,0.2);
+                    display: none;
+                    top: 100%;
+                    left: 0;
+                `;
             } else {
                 // Hors modal : positionnement normal
-                suggestionsList = $('<div class="commune-suggestions"></div>').insertAfter(input);
-                suggestionsList.css({
-                    'position': 'absolute',
-                    'z-index': '1060',
-                    'background': 'white',
-                    'border': '1px solid #ccc',
-                    'border-radius': '4px',
-                    'max-height': '200px',
-                    'overflow-y': 'auto',
-                    'width': input.outerWidth() + 'px',
-                    'box-shadow': '0 2px 5px rgba(0,0,0,0.2)',
-                    'display': 'none'
-                });
+                suggestionsList.style.cssText = `
+                    position: absolute;
+                    z-index: 1060;
+                    background: white;
+                    border: 1px solid #ccc;
+                    border-radius: 4px;
+                    max-height: 200px;
+                    overflow-y: auto;
+                    width: ${input.offsetWidth}px;
+                    box-shadow: 0 2px 5px rgba(0,0,0,0.2);
+                    display: none;
+                `;
             }
+            
+            input.parentNode.insertBefore(suggestionsList, input.nextSibling);
         }
         
         // Événement de saisie
-        input.on('input', function() {
-            const query = $(this).val();
+        input.addEventListener('input', function() {
+            const query = this.value;
+            console.log('Recherche commune:', query);
             
             clearTimeout(timeout);
             
             if (query.length < 2) {
-                suggestionsList.hide();
+                suggestionsList.style.display = 'none';
                 return;
             }
             
             timeout = setTimeout(() => {
                 // Rechercher les communes
-                $.ajax({
-                    url: '{{ path("app_api_communes_search") }}',
-                    method: 'GET',
-                    data: { q: query },
-                    success: function(data) {
-                        suggestionsList.empty();
+                fetch('/client/api/communes/search?q=' + encodeURIComponent(query))
+                    .then(response => response.json())
+                    .then(data => {
+                        console.log('Résultats communes:', data);
+                        suggestionsList.innerHTML = '';
                         
                         if (data.length > 0) {
                             data.forEach(function(commune) {
-                                const suggestion = $('<div class="commune-suggestion"></div>');
-                                suggestion.css({
-                                    'padding': '8px 12px',
-                                    'cursor': 'pointer',
-                                    'border-bottom': '1px solid #eee'
-                                });
+                                const suggestion = document.createElement('div');
+                                suggestion.className = 'commune-suggestion';
+                                suggestion.style.cssText = `
+                                    padding: 8px 12px;
+                                    cursor: pointer;
+                                    border-bottom: 1px solid #eee;
+                                `;
                                 
-                                suggestion.html(
+                                suggestion.innerHTML = 
                                     '<strong>' + commune.codePostal + ' - ' + commune.nomCommune + '</strong>' +
-                                    (commune.departement ? '<br><small class="text-muted">' + commune.departement + '</small>' : '')
-                                );
+                                    (commune.nomDepartement ? '<br><small class="text-muted">' + commune.nomDepartement + '</small>' : '');
                                 
-                                suggestion.data('commune', commune);
-                                
-                                suggestion.hover(
-                                    function() { $(this).css('background-color', '#f8f9fa'); },
-                                    function() { $(this).css('background-color', 'white'); }
-                                );
-                                
-                                suggestion.click(function() {
-                                    const selectedCommune = $(this).data('commune');
-                                    selectCommune(input, selectedCommune);
-                                    suggestionsList.hide();
+                                suggestion.addEventListener('mouseenter', function() {
+                                    this.style.backgroundColor = '#f8f9fa';
                                 });
                                 
-                                suggestionsList.append(suggestion);
+                                suggestion.addEventListener('mouseleave', function() {
+                                    this.style.backgroundColor = 'white';
+                                });
+                                
+                                suggestion.addEventListener('click', function() {
+                                    selectCommune(input, commune);
+                                    suggestionsList.style.display = 'none';
+                                });
+                                
+                                suggestionsList.appendChild(suggestion);
                             });
                             
-                            suggestionsList.show();
+                            suggestionsList.style.display = 'block';
                         } else {
-                            suggestionsList.hide();
+                            suggestionsList.style.display = 'none';
                         }
-                    }
-                });
+                    })
+                    .catch(error => {
+                        console.error('Erreur autocomplétion:', error);
+                    });
             }, 300);
         });
         
         // Masquer les suggestions lors du clic à l'extérieur
-        $(document).on('click', function(e) {
-            if (!input.is(e.target) && !suggestionsList.is(e.target) && suggestionsList.has(e.target).length === 0) {
-                suggestionsList.hide();
+        document.addEventListener('click', function(e) {
+            if (!input.contains(e.target) && !suggestionsList.contains(e.target)) {
+                suggestionsList.style.display = 'none';
             }
         });
     });
 }
 
 function selectCommune(inputField, commune) {
-    const inputType = inputField.data('type');
-    const container = inputField.closest('tr').length > 0 ? inputField.closest('tr') : inputField.closest('.modal-body');
+    const inputType = inputField.dataset.type;
+    const container = inputField.closest('tr') || inputField.closest('.modal-body');
+    
+    console.log('Sélection commune:', commune, 'pour type:', inputType);
     
     if (inputType === 'postal') {
         // Mettre à jour le code postal
-        inputField.val(commune.codePostal);
+        inputField.value = commune.codePostal;
         
         // Remplir automatiquement la ville
-        const villeField = container.find('[data-type="city"]').first();
-        if (villeField.length > 0) {
-            villeField.val(commune.nomCommune);
+        const villeField = container.querySelector('[data-type="city"]');
+        if (villeField) {
+            villeField.value = commune.nomCommune;
             // Masquer ses suggestions aussi
-            villeField.next('.commune-suggestions').hide();
+            const villeSuggestions = villeField.parentNode.querySelector('.commune-suggestions');
+            if (villeSuggestions) {
+                villeSuggestions.style.display = 'none';
+            }
         }
     } else if (inputType === 'city') {
         // Mettre à jour la ville
-        inputField.val(commune.nomCommune);
+        inputField.value = commune.nomCommune;
         
         // Remplir automatiquement le code postal
-        const postalField = container.find('[data-type="postal"]').first();
-        if (postalField.length > 0) {
-            postalField.val(commune.codePostal);
+        const postalField = container.querySelector('[data-type="postal"]');
+        if (postalField) {
+            postalField.value = commune.codePostal;
             // Masquer ses suggestions aussi
-            postalField.next('.commune-suggestions').hide();
+            const postalSuggestions = postalField.parentNode.querySelector('.commune-suggestions');
+            if (postalSuggestions) {
+                postalSuggestions.style.display = 'none';
+            }
         }
     }
 }

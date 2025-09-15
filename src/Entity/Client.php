@@ -119,6 +119,9 @@ class Client
     #[ORM\OneToMany(mappedBy: 'client', targetEntity: Adresse::class, cascade: ['persist', 'remove'], orphanRemoval: true)]
     private Collection $adresses;
     
+    #[ORM\OneToMany(mappedBy: 'client', targetEntity: ClientLog::class, cascade: ['persist', 'remove'], orphanRemoval: true)]
+    private Collection $logs;
+    
     // Contacts par défaut pour facturation et livraison
     #[ORM\ManyToOne(targetEntity: Contact::class)]
     #[ORM\JoinColumn(nullable: true)]
@@ -133,6 +136,7 @@ class Client
         $this->devis = new ArrayCollection();
         $this->contacts = new ArrayCollection();
         $this->adresses = new ArrayCollection();
+        $this->logs = new ArrayCollection();
         $this->tags = new ArrayCollection();
         $this->createdAt = new \DateTimeImmutable();
         $this->updatedAt = new \DateTimeImmutable();
@@ -687,6 +691,33 @@ class Client
     public function removeTag(Tag $tag): static
     {
         $this->tags->removeElement($tag);
+        return $this;
+    }
+
+    /**
+     * @return Collection<int, ClientLog>
+     */
+    public function getLogs(): Collection
+    {
+        return $this->logs;
+    }
+
+    public function addLog(ClientLog $log): static
+    {
+        if (!$this->logs->contains($log)) {
+            $this->logs->add($log);
+            $log->setClient($this);
+        }
+        return $this;
+    }
+
+    public function removeLog(ClientLog $log): static
+    {
+        if ($this->logs->removeElement($log)) {
+            if ($log->getClient() === $this) {
+                $log->setClient(null);
+            }
+        }
         return $this;
     }
 

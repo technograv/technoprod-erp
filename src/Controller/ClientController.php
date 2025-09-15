@@ -7,6 +7,7 @@ use App\Entity\Adresse;
 use App\Entity\Contact;
 use App\Entity\CommuneFrancaise;
 use App\Form\ClientType;
+use App\Service\ClientLoggerService;
 use Doctrine\ORM\EntityManagerInterface;
 use Symfony\Bundle\FrameworkBundle\Controller\AbstractController;
 use Symfony\Component\HttpFoundation\JsonResponse;
@@ -95,7 +96,7 @@ final class ClientController extends AbstractController
     }
 
     #[Route('/new', name: 'app_client_new', methods: ['GET', 'POST'])]
-    public function new(Request $request, EntityManagerInterface $entityManager): Response
+    public function new(Request $request, EntityManagerInterface $entityManager, ClientLoggerService $clientLogger): Response
     {
         $client = new Client();
         
@@ -124,7 +125,7 @@ final class ClientController extends AbstractController
 
         if ($form->isSubmitted() && $form->isValid()) {
             // Traitement du formulaire personnalisé avec contact et adresse intégrés
-            $this->handleCustomFormSubmission($request, $client, $entityManager);
+            $this->handleCustomFormSubmission($request, $client, $entityManager, $clientLogger);
             
             return $this->redirectToRoute('app_client_show', ['id' => $client->getId()]);
         }
@@ -142,7 +143,7 @@ final class ClientController extends AbstractController
         ]);
     }
     
-    private function handleCustomFormSubmission(Request $request, Client $client, EntityManagerInterface $entityManager): void
+    private function handleCustomFormSubmission(Request $request, Client $client, EntityManagerInterface $entityManager, ClientLoggerService $clientLogger): void
     {
         // Générer le prochain code disponible
         $repository = $entityManager->getRepository(Client::class);
@@ -254,12 +255,25 @@ final class ClientController extends AbstractController
         // Persister le client
         $entityManager->persist($client);
         $entityManager->flush();
+        
+        // Logger la création du client
+        $clientLogger->logCreated($client);
+        
+        // Logger la création du contact si créé
+        if (isset($contact) && $contact) {
+            $clientLogger->logContactAdded($client, $contact);
+        }
+        
+        // Logger la création de l'adresse si créée
+        if (isset($adresse) && $adresse) {
+            $clientLogger->logAddressAdded($client, $adresse);
+        }
 
         $this->addFlash('success', 'Client créé avec succès !');
     }
 
     #[Route('/{id}', name: 'app_client_show', methods: ['GET'])]
-    public function show(Client $client, EntityManagerInterface $entityManager): Response
+    public function show(Client $client, EntityManagerInterface $entityManager, ClientLoggerService $clientLogger): Response
     {
         // Forcer le chargement des relations pour éviter les problèmes lazy loading
         $client = $entityManager->getRepository(Client::class)
@@ -272,8 +286,12 @@ final class ClientController extends AbstractController
             ->getQuery()
             ->getOneOrNullResult();
             
-        return $this->render('client/show_improved.html.twig', [
+        // Récupérer les logs du client
+        $logs = $clientLogger->getClientLogs($client);
+        
+        return $this->render('client/show.html.twig', [
             'client' => $client,
+            'logs' => $logs,
         ]);
     }
 
@@ -285,7 +303,7 @@ final class ClientController extends AbstractController
     }
 
     #[Route('/{id}/convert', name: 'app_client_convert_to_client', methods: ['POST'])]
-    public function convertToClient(Client $client, EntityManagerInterface $entityManager): Response
+    public function convertToClient(Client $client, EntityManagerInterface $entityManager, ClientLoggerService $clientLogger): Response
     {
         if ($client->isClient()) {
             $this->addFlash('error', 'Ce prospect est déjà un client !');
@@ -294,6 +312,9 @@ final class ClientController extends AbstractController
 
         $client->convertToClient();
         $entityManager->flush();
+        
+        // Logger la conversion
+        $clientLogger->logConvertedToClient($client);
 
         $this->addFlash('success', 'Prospect converti en client avec succès !');
 
@@ -387,7 +408,7 @@ final class ClientController extends AbstractController
     }
 
     #[Route('/{id}/edit-improved', name: 'app_client_edit_improved', methods: ['GET', 'POST'])]
-    public function editImproved(Request $request, Client $client, EntityManagerInterface $entityManager): Response
+    public function editImproved(Request $request, Client $client, EntityManagerInterface $entityManager, ClientLoggerService $clientLogger): Response
     {
         if ($request->isMethod('POST')) {
             // Traitement de la soumission du formulaire
@@ -410,6 +431,8 @@ final class ClientController extends AbstractController
             
             // Gestion des contacts - Créer une correspondance pour les nouveaux contacts
             $contactIdMapping = []; // Correspondance entre IDs temporaires et vrais IDs
+            $newContacts = []; // Pour tracker les nouveaux contacts à logger
+            $updatedContacts = []; // Pour tracker les contacts modifiés
             
             if (isset($data['contacts'])) {
                 foreach ($data['contacts'] as $contactId => $contactData) {
@@ -425,10 +448,36 @@ final class ClientController extends AbstractController
                         
                         // Sauvegarder temporairement la correspondance
                         $contactIdMapping[$contactId] = $contact;
+                        $newContacts[] = $contact; // Tracker pour logging
                     } else {
                         // Contact existant
                         $contact = $entityManager->getRepository(Contact::class)->find($contactId);
                         if ($contact && $contact->getClient() === $client) {
+                            // Vérifier s'il y a eu des changements
+                            $hasChanges = false;
+                            $changes = [];
+                            
+                            if ($contact->getNom() !== ($contactData['nom'] ?? '')) {
+                                $changes['nom'] = ['old' => $contact->getNom(), 'new' => $contactData['nom'] ?? ''];
+                                $hasChanges = true;
+                            }
+                            if ($contact->getPrenom() !== ($contactData['prenom'] ?? '')) {
+                                $changes['prenom'] = ['old' => $contact->getPrenom(), 'new' => $contactData['prenom'] ?? ''];
+                                $hasChanges = true;
+                            }
+                            if ($contact->getEmail() !== ($contactData['email'] ?? '')) {
+                                $changes['email'] = ['old' => $contact->getEmail(), 'new' => $contactData['email'] ?? ''];
+                                $hasChanges = true;
+                            }
+                            if ($contact->getTelephone() !== ($contactData['telephone'] ?? '')) {
+                                $changes['telephone'] = ['old' => $contact->getTelephone(), 'new' => $contactData['telephone'] ?? ''];
+                                $hasChanges = true;
+                            }
+                            
+                            if ($hasChanges) {
+                                $updatedContacts[] = ['contact' => $contact, 'changes' => $changes];
+                            }
+                            
                             $contact->setNom($contactData['nom'] ?? '');
                             $contact->setPrenom($contactData['prenom'] ?? '');
                             $contact->setEmail($contactData['email'] ?? '');
@@ -544,6 +593,10 @@ final class ClientController extends AbstractController
             
             try {
                 $entityManager->flush();
+                
+                // Logger la modification du client
+                $clientLogger->logUpdated($client);
+                
                 $this->addFlash('success', 'Client mis à jour avec succès !');
                 return $this->redirectToRoute('app_client_show', ['id' => $client->getId()]);
             } catch (\Exception $e) {
@@ -557,13 +610,17 @@ final class ClientController extends AbstractController
     }
 
     #[Route('/{id}/archive', name: 'app_client_archive', methods: ['POST'])]
-    public function archive(Client $client, EntityManagerInterface $entityManager): Response
+    public function archive(Client $client, EntityManagerInterface $entityManager, ClientLoggerService $clientLogger): Response
     {
         // Archiver le client (le marquer comme inactif)
         $client->setActif(false);
         
         try {
             $entityManager->flush();
+            
+            // Logger l'archivage
+            $clientLogger->logArchived($client);
+            
             $this->addFlash('success', 'Client archivé avec succès ! Il est maintenant inactif.');
         } catch (\Exception $e) {
             $this->addFlash('error', 'Erreur lors de l\'archivage : ' . $e->getMessage());
