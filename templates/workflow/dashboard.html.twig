@@ -627,8 +627,8 @@
 {% endblock %}
 
 {% block javascripts %}
-<!-- Chart.js -->
-<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+<!-- Chart.js local (version CSP-friendly) -->
+<script src="{{ asset('js/vendor/chart.min.js') }}"></script>
 <!-- Module Dashboard Commercial -->
 <script src="{{ asset('js/modules/commercialDashboard.js') }}"></script>
 

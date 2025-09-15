@@ -857,7 +857,8 @@
                     <div class="mb-3">
                         <label for="email" class="form-label">Adresse email *</label>
                         <input type="email" class="form-control" id="email" name="email" 
-                               value="{{ devis.contactFacturation ? devis.contactFacturation.email : '' }}" required>
+                               value="{{ devis.contactFacturation ? devis.contactFacturation.email : '' }}" 
+                               autocomplete="email" required>
                     </div>
                     <div class="mb-3">
                         <label for="message" class="form-label">Message personnalisé</label>
@@ -890,7 +891,7 @@
                     <div class="mb-3">
                         <label for="versionLabel" class="form-label">Label de la version (optionnel)</label>
                         <input type="text" class="form-control" id="versionLabel" name="label" 
-                               placeholder="Ex: Corrections après relecture client">
+                               placeholder="Ex: Corrections après relecture client" autocomplete="off">
                         <div class="form-text">Si vide, un label automatique sera généré</div>
                     </div>
                     <div class="mb-3">
@@ -935,7 +936,7 @@
                 <div class="mb-3">
                     <label for="versionNameInput" class="form-label">Nom de la version</label>
                     <input type="text" class="form-control" id="versionNameInput" 
-                           placeholder="Ex: Corrections après relecture">
+                           placeholder="Ex: Corrections après relecture" autocomplete="off">
                 </div>
             </div>
             <div class="modal-footer">
@@ -1112,7 +1113,7 @@ document.addEventListener('DOMContentLoaded', function() {
 });
 
 // Gestion de la création de version automatique pour modification avec délégation d'événements
-let isCreatingVersion = false; // Protection contre la double exécution
+window.isCreatingVersion = window.isCreatingVersion || false; // Protection contre la double exécution
 
 document.addEventListener('click', function(event) {
     if (event.target && event.target.id === 'createVersionAndEditBtn') {
@@ -1121,12 +1122,12 @@ document.addEventListener('click', function(event) {
         event.stopPropagation();
         
         // Vérifier si une création est déjà en cours
-        if (isCreatingVersion) {
+        if (window.isCreatingVersion) {
             console.log('Création déjà en cours, ignorer le clic');
             return;
         }
         
-        isCreatingVersion = true;
+        window.isCreatingVersion = true;
         const btn = event.target;
         // Afficher un indicateur de chargement
         const originalText = btn.innerHTML;
@@ -1176,7 +1177,7 @@ document.addEventListener('click', function(event) {
             alert('Erreur lors de la création de la version: ' + error.message);
             btn.disabled = false;
             btn.innerHTML = originalText;
-            isCreatingVersion = false; // Réinitialiser en cas d'erreur
+            window.isCreatingVersion = false; // Réinitialiser en cas d'erreur
         });
     }
 });

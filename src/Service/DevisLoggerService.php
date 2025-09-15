@@ -66,7 +66,7 @@ class DevisLoggerService
      */
     public function logUpdated(Devis $devis, ?array $changes = null, ?User $user = null): DevisLog
     {
-        $details = 'Devis modifié';
+        $details = null;
         
         if ($changes) {
             $changeDetails = [];
@@ -81,7 +81,7 @@ class DevisLoggerService
                 }
             }
             if (!empty($changeDetails)) {
-                $details .= ' - ' . implode(', ', $changeDetails);
+                $details = implode(', ', $changeDetails);
             }
         }
         
