@@ -834,6 +834,10 @@ class Devis
     #[ORM\OrderBy(['versionNumber' => 'DESC'])]
     private Collection $versions;
 
+    #[ORM\OneToMany(mappedBy: 'devis', targetEntity: DevisLog::class, cascade: ['persist', 'remove'], orphanRemoval: true)]
+    #[ORM\OrderBy(['createdAt' => 'DESC'])]
+    private Collection $logs;
+
     /**
      * @return Collection<int, DevisVersion>
      */

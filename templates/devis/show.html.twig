@@ -122,6 +122,43 @@
         .timeline-item.latest .card {
             box-shadow: 0 4px 8px rgba(0,0,0,0.1);
         }
+
+        /* Timeline marker styles for follow-up tab */
+        .timeline-marker {
+            position: absolute;
+            left: -10px;
+            top: 8px;
+            width: 30px;
+            height: 30px;
+            background: #007bff;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: white;
+            font-size: 12px;
+            z-index: 1;
+        }
+
+        .timeline-content {
+            padding-left: 40px;
+            position: relative;
+        }
+
+        .timeline-item {
+            position: relative;
+            padding-bottom: 20px;
+            border-left: 2px solid #dee2e6;
+            margin-left: 15px;
+        }
+
+        .timeline-item:last-child {
+            border-left: none;
+        }
+
+        .timeline-item.completed .timeline-marker {
+            background: #28a745;
+        }
     </style>
 {% endblock %}
 
@@ -158,19 +195,32 @@
             </div>
             <div class="col-md-4 text-end">
                 <div class="btn-group">
-                    <a href="{{ path('app_devis_edit', {'id': devis.id}) }}" class="btn btn-light">
-                        <i class="fas fa-edit"></i> Modifier
-                    </a>
+                    {% if devis.statut in ['envoye', 'signe', 'relance'] %}
+                        <button type="button" class="btn btn-light" data-bs-toggle="modal" data-bs-target="#versionModal">
+                            <i class="fas fa-edit"></i> Modifier
+                        </button>
+                    {% else %}
+                        <a href="{{ path('app_devis_edit', {'id': devis.id}) }}" class="btn btn-light">
+                            <i class="fas fa-edit"></i> Modifier
+                        </a>
+                    {% endif %}
                     <a href="{{ path('app_devis_pdf', {'id': devis.id}) }}" target="_blank" class="btn btn-outline-light">
                         <i class="fas fa-file-pdf"></i> PDF
                     </a>
+                    {% if devis.statut in ['brouillon', 'envoye', 'relance'] %}
                     <button type="button" class="btn btn-outline-light" data-bs-toggle="modal" data-bs-target="#envoyerModal">
                         <i class="fas fa-paper-plane"></i> 
-                        {% if devis.statut == 'envoye' %}Renvoyer{% else %}Envoyer{% endif %}
+                        {% if devis.statut == 'envoye' or devis.statut == 'relance' %}Renvoyer{% else %}Envoyer{% endif %}
                     </button>
-                    <button type="button" class="btn btn-outline-light">
+                    {% endif %}
+                    <button type="button" class="btn btn-outline-light" onclick="document.getElementById('versions-tab').click()">
                         <i class="fas fa-history"></i> Historique
                     </button>
+                    {% if devis.client %}
+                    <a href="{{ path('app_client_show', {'id': devis.client.id}) }}" class="btn btn-outline-light">
+                        <i class="fas fa-user"></i> Fiche client
+                    </a>
+                    {% endif %}
                 </div>
             </div>
         </div>
@@ -188,7 +238,17 @@
             </li>
             <li class="nav-item" role="presentation">
                 <button class="nav-link" id="lignes-tab" data-bs-toggle="tab" data-bs-target="#lignes" type="button" role="tab">
-                    <i class="fas fa-list me-2"></i>Lignes de devis
+                    <i class="fas fa-list me-2"></i>Lignes du devis
+                </button>
+            </li>
+            <li class="nav-item" role="presentation">
+                <button class="nav-link" id="livraison-tab" data-bs-toggle="tab" data-bs-target="#livraison" type="button" role="tab">
+                    <i class="fas fa-shipping-fast me-2"></i>Livraison
+                </button>
+            </li>
+            <li class="nav-item" role="presentation">
+                <button class="nav-link" id="notes-tab" data-bs-toggle="tab" data-bs-target="#notes" type="button" role="tab">
+                    <i class="fas fa-sticky-note me-2"></i>Notes
                 </button>
             </li>
             <li class="nav-item" role="presentation">
@@ -196,13 +256,11 @@
                     <i class="fas fa-tasks me-2"></i>Suivi
                 </button>
             </li>
-            {% if devis.hasVersions %}
             <li class="nav-item" role="presentation">
                 <button class="nav-link" id="versions-tab" data-bs-toggle="tab" data-bs-target="#versions" type="button" role="tab">
-                    <i class="fas fa-history me-2"></i>Historique <span class="badge bg-secondary ms-1">{{ devis.versionCount }}</span>
+                    <i class="fas fa-history me-2"></i>Historique{% if devis.hasVersions %} <span class="badge bg-secondary ms-1">{{ devis.versionCount }}</span>{% endif %}
                 </button>
             </li>
-            {% endif %}
             {% if devis.dateSignature %}
             <li class="nav-item" role="presentation">
                 <button class="nav-link" id="signature-tab" data-bs-toggle="tab" data-bs-target="#signature" type="button" role="tab">
@@ -239,15 +297,33 @@
                         {% if devis.contactFacturation %}
                             <p class="mb-1"><strong>{{ devis.contactFacturation.nomComplet }}</strong></p>
                             {% if devis.contactFacturation.fonction %}<p class="mb-1">{{ devis.contactFacturation.fonction }}</p>{% endif %}
-                            {% if devis.contactFacturation.email %}<p class="mb-1"><i class="fas fa-envelope me-1"></i> {{ devis.contactFacturation.email }}</p>{% endif %}
-                            {% if devis.contactFacturation.telephone %}<p class="mb-0"><i class="fas fa-phone me-1"></i> {{ devis.contactFacturation.telephone }}</p>{% endif %}
+                            {% if devis.contactFacturation.email %}<p class="mb-1"><i class="fas fa-envelope me-1"></i> <a href="mailto:{{ devis.contactFacturation.email }}">{{ devis.contactFacturation.email }}</a></p>{% endif %}
+                            {% if devis.contactFacturation.telephone %}<p class="mb-0"><i class="fas fa-phone me-1"></i> <a href="tel:{{ devis.contactFacturation.telephone }}">{{ devis.contactFacturation.telephone }}</a></p>{% endif %}
                         {% else %}
                             <p class="text-muted mb-0">Aucun contact de facturation</p>
                         {% endif %}
                     </div>
+
+                    {% if devis.contactLivraison %}
+                    <div class="info-group">
+                        <h6><i class="fas fa-truck me-2"></i>Contact livraison</h6>
+                        <p class="mb-1"><strong>{{ devis.contactLivraison.nomComplet }}</strong></p>
+                        {% if devis.contactLivraison.fonction %}<p class="mb-1">{{ devis.contactLivraison.fonction }}</p>{% endif %}
+                        {% if devis.contactLivraison.email %}<p class="mb-1"><i class="fas fa-envelope me-1"></i> <a href="mailto:{{ devis.contactLivraison.email }}">{{ devis.contactLivraison.email }}</a></p>{% endif %}
+                        {% if devis.contactLivraison.telephone %}<p class="mb-0"><i class="fas fa-phone me-1"></i> <a href="tel:{{ devis.contactLivraison.telephone }}">{{ devis.contactLivraison.telephone }}</a></p>{% endif %}
+                    </div>
+                    {% endif %}
                 </div>
 
                 <div class="col-md-6">
+                    {% if devis.commercial %}
+                    <div class="info-group">
+                        <h6><i class="fas fa-user-tie me-2"></i>Commercial</h6>
+                        <p class="mb-1"><strong>{{ devis.commercial.prenom }} {{ devis.commercial.nom }}</strong></p>
+                        {% if devis.commercial.email %}<p class="mb-0"><i class="fas fa-envelope me-1"></i> <a href="mailto:{{ devis.commercial.email }}">{{ devis.commercial.email }}</a></p>{% endif %}
+                    </div>
+                    {% endif %}
+
                     <div class="info-group">
                         <h6><i class="fas fa-calendar me-2"></i>Informations devis</h6>
                         <div class="row">
@@ -256,7 +332,16 @@
                                 <p class="mb-0"><strong>Validité :</strong><br>{{ devis.dateValidite|date('d/m/Y') }}</p>
                             </div>
                             <div class="col-6">
-                                {% if devis.dateEnvoi %}<p class="mb-2"><strong>Envoyé :</strong><br>{{ devis.dateEnvoi|date('d/m/Y') }}</p>{% endif %}
+                                {% if devis.dateEnvoi %}
+                                    <p class="mb-2"><strong>Envoyé :</strong><br>{{ devis.dateEnvoi|date('d/m/Y') }}</p>
+                                    {% if devis.urlAccesClient %}
+                                        <p class="mb-2"><strong>Lien client :</strong><br>
+                                            <a href="{{ devis.urlAccesClient }}" target="_blank" class="btn btn-sm btn-outline-primary">
+                                                <i class="fas fa-external-link-alt me-1"></i>Accès client
+                                            </a>
+                                        </p>
+                                    {% endif %}
+                                {% endif %}
                                 {% if devis.dateSignature %}<p class="mb-0"><strong>Signé :</strong><br>{{ devis.dateSignature|date('d/m/Y') }}</p>{% endif %}
                             </div>
                         </div>
@@ -278,70 +363,278 @@
                                 <small class="text-muted">Total TTC</small>
                             </div>
                         </div>
+
+                        {% if devis.remiseGlobalePercent or devis.remiseGlobaleMontant %}
+                            <hr>
+                            <div class="text-center">
+                                <p class="mb-0"><strong>Remise globale :</strong> 
+                                    {% if devis.remiseGlobalePercent %}{{ devis.remiseGlobalePercent }}%{% endif %}
+                                    {% if devis.remiseGlobaleMontant %} {{ devis.remiseGlobaleMontant }}€{% endif %}
+                                </p>
+                            </div>
+                        {% endif %}
+
                         {% if devis.acomptePercent or devis.acompteMontant %}
                             <hr>
-                            <p class="mb-0"><strong>Acompte :</strong> 
-                                {% if devis.acomptePercent %}{{ devis.acomptePercent }}%{% endif %}
-                                {% if devis.acompteMontant %}{{ devis.acompteMontant }}€{% endif %}
-                                = {{ devis.calculateAcompte }}€
-                            </p>
+                            <div class="text-center">
+                                <p class="mb-0"><strong>Acompte :</strong> 
+                                    {% if devis.acomptePercent %}{{ devis.acomptePercent }}%{% endif %}
+                                    {% if devis.acompteMontant %}{{ devis.acompteMontant }}€{% endif %}
+                                    = {{ devis.calculateAcompte }}€
+                                </p>
+                            </div>
                         {% endif %}
                     </div>
                 </div>
             </div>
         </div>
 
-        <!-- Onglet Lignes de devis -->
+        <!-- Onglet Lignes du devis -->
         <div class="tab-pane fade" id="lignes" role="tabpanel">
             <div class="p-4">
+                {% if devis.hasVersions %}
+                <div class="alert alert-info mb-4">
+                    <i class="fas fa-info-circle me-2"></i>
+                    <strong>Version actuelle :</strong> Cette page affiche toujours la dernière version du devis. 
+                    Les versions précédentes sont consultables dans l'onglet <strong>Historique</strong>.
+                </div>
+                {% endif %}
+                {% set productElements = devis.elements|filter(e => e.isProductElement) %}
+                
+                {% if productElements|length > 0 %}
                 <div class="table-responsive">
                     <table class="table table-hover devis-items-table">
                         <thead>
                             <tr>
+                                <th style="width: 100px;">Code</th>
                                 <th>Désignation</th>
                                 <th>Description</th>
-                                <th class="text-center">Qté</th>
-                                <th class="text-end">Prix unit. HT</th>
-                                <th class="text-center">TVA</th>
-                                <th class="text-end">Total HT</th>
+                                <th class="text-center" style="width: 80px;">Qté</th>
+                                <th class="text-end" style="width: 100px;">Prix unit. HT</th>
+                                <th class="text-center" style="width: 80px;">Remise</th>
+                                <th class="text-center" style="width: 70px;">TVA</th>
+                                <th class="text-end" style="width: 100px;">Total HT</th>
                             </tr>
                         </thead>
                         <tbody>
-                            {% for item in devis.devisItems %}
+                            {% for element in devis.elements|sort((a, b) => a.position <=> b.position) %}
+                                {% if element.isProductElement %}
                                 <tr>
-                                    <td>
-                                        <strong>{{ item.designation }}</strong>
-                                        {% if item.produit %}
-                                            <br><small class="text-muted">Réf: {{ item.produit.reference }}</small>
+                                    <td class="text-center">
+                                        <small class="text-muted d-block">{{ element.produit ? element.produit.reference : '-' }}</small>
+                                        {% if element.imageVisible and element.productImage and element.productImage.filename %}
+                                            <img src="/uploads/products/{{ element.productImage.filename }}" alt="Image produit" class="img-thumbnail mt-1" style="max-width: 40px; max-height: 40px;">
                                         {% endif %}
                                     </td>
-                                    <td>{{ item.description }}</td>
-                                    <td class="text-center">{{ item.quantite }}</td>
-                                    <td class="text-end">{{ item.prixUnitaireHt }}€</td>
-                                    <td class="text-center">{{ item.tvaPercent }}%</td>
-                                    <td class="text-end"><strong>{{ item.totalLigneHt }}€</strong></td>
+                                    <td>
+                                        <strong>{{ element.designation }}</strong>
+                                        {% if element.produit %}
+                                            <br><small class="text-muted">Réf: {{ element.produit.reference }}</small>
+                                        {% endif %}
+                                    </td>
+                                    <td>
+                                        {% if element.description %}
+                                            {{ element.description|raw }}
+                                        {% else %}
+                                            <span class="text-muted">-</span>
+                                        {% endif %}
+                                    </td>
+                                    <td class="text-center">{{ element.quantite }}</td>
+                                    <td class="text-end">{{ element.prixUnitaireHt }}€</td>
+                                    <td class="text-center">
+                                        {% if element.remisePercent > 0 %}
+                                            {{ element.remisePercent }}%
+                                        {% else %}
+                                            -
+                                        {% endif %}
+                                    </td>
+                                    <td class="text-center">{{ element.tvaPercent }}%</td>
+                                    <td class="text-end"><strong>{{ element.totalLigneHt }}€</strong></td>
                                 </tr>
-                            {% else %}
-                                <tr>
-                                    <td colspan="6" class="text-center text-muted">Aucune ligne de devis</td>
+                                {% endif %}
+                                
+                                {% if element.type == 'subtotal' %}
+                                <tr class="table-info">
+                                    <td colspan="7" class="text-end">
+                                        <strong>
+                                            {% if element.titre %}
+                                                {{ element.titre }}
+                                            {% else %}
+                                                Sous-total
+                                            {% endif %}
+                                        </strong>
+                                    </td>
+                                    <td class="text-end">
+                                        <strong>{{ devis.calculateSubtotalUpTo(element.position) }}€</strong>
+                                    </td>
                                 </tr>
+                                {% endif %}
+                                
+                                {% if element.type == 'text' or element.type == 'title' %}
+                                <tr class="table-light">
+                                    <td colspan="7">
+                                        {% if element.type == 'title' %}
+                                            <strong class="text-primary">{{ element.titre }}</strong>
+                                        {% else %}
+                                            {{ element.contenu|raw }}
+                                        {% endif %}
+                                    </td>
+                                    <td></td>
+                                </tr>
+                                {% endif %}
                             {% endfor %}
                         </tbody>
                         <tfoot>
                             <tr>
-                                <th colspan="5" class="text-end">Total HT :</th>
+                                <th colspan="7" class="text-end">Total HT :</th>
                                 <th class="text-end">{{ devis.totalHt }}€</th>
                             </tr>
+                            {% if devis.remiseGlobalePercent or devis.remiseGlobaleMontant %}
+                            <tr class="table-warning">
+                                <th colspan="7" class="text-end">
+                                    Remise globale
+                                    {% if devis.remiseGlobalePercent %}({{ devis.remiseGlobalePercent }}%){% endif %}
+                                    :
+                                </th>
+                                <th class="text-end">
+                                    -{% if devis.remiseGlobaleMontant %}{{ devis.remiseGlobaleMontant }}{% else %}{{ (devis.totalHt * devis.remiseGlobalePercent / 100)|number_format(2, '.', '') }}{% endif %}€
+                                </th>
+                            </tr>
                             <tr>
-                                <th colspan="5" class="text-end">TVA :</th>
+                                <th colspan="7" class="text-end">Total HT remisé :</th>
+                                <th class="text-end">
+                                    {% set totalHtRemise = devis.totalHt %}
+                                    {% if devis.remiseGlobaleMontant %}
+                                        {% set totalHtRemise = devis.totalHt - devis.remiseGlobaleMontant %}
+                                    {% elseif devis.remiseGlobalePercent %}
+                                        {% set totalHtRemise = devis.totalHt - (devis.totalHt * devis.remiseGlobalePercent / 100) %}
+                                    {% endif %}
+                                    {{ totalHtRemise|number_format(2, '.', '') }}€
+                                </th>
+                            </tr>
+                            {% endif %}
+                            <tr>
+                                <th colspan="7" class="text-end">TVA :</th>
                                 <th class="text-end">{{ devis.totalTva }}€</th>
                             </tr>
                             <tr class="table-success">
-                                <th colspan="5" class="text-end">Total TTC :</th>
+                                <th colspan="7" class="text-end">Total TTC :</th>
                                 <th class="text-end">{{ devis.totalTtc }}€</th>
                             </tr>
+                            {% if devis.acomptePercent or devis.acompteMontant %}
+                            <tr class="table-info">
+                                <th colspan="7" class="text-end">
+                                    Acompte
+                                    {% if devis.acomptePercent %}({{ devis.acomptePercent }}%){% endif %}
+                                    :
+                                </th>
+                                <th class="text-end">{{ devis.calculateAcompte }}€</th>
+                            </tr>
+                            <tr class="table-primary">
+                                <th colspan="7" class="text-end">Reste à payer :</th>
+                                <th class="text-end">{{ (devis.totalTtc - devis.calculateAcompte)|number_format(2, '.', '') }}€</th>
+                            </tr>
+                            {% endif %}
                         </tfoot>
                     </table>
+                </div>
+                {% else %}
+                <div class="text-center text-muted p-5">
+                    <i class="fas fa-inbox fa-3x mb-3"></i>
+                    <h5>Aucun élément dans ce devis</h5>
+                    <p>Ce devis ne contient pas encore de produits ou services.</p>
+                    {% if devis.statut in ['envoye', 'signe', 'relance'] %}
+                        <button type="button" class="btn btn-primary" data-bs-toggle="modal" data-bs-target="#versionModal">
+                            <i class="fas fa-edit me-2"></i>Modifier le devis
+                        </button>
+                    {% else %}
+                        <a href="{{ path('app_devis_edit', {'id': devis.id}) }}" class="btn btn-primary">
+                            <i class="fas fa-edit me-2"></i>Modifier le devis
+                        </a>
+                    {% endif %}
+                </div>
+                {% endif %}
+            </div>
+        </div>
+
+        <!-- Onglet Livraison -->
+        <div class="tab-pane fade" id="livraison" role="tabpanel">
+            <div class="row p-4">
+                <div class="col-md-6">
+                    {% if devis.adresseFacturation %}
+                    <div class="info-group">
+                        <h6><i class="fas fa-file-invoice me-2"></i>Adresse de facturation</h6>
+                        <p class="mb-1"><strong>{{ devis.adresseFacturation.nom }}</strong></p>
+                        <p class="mb-1">{{ devis.adresseFacturation.ligne1 }}</p>
+                        {% if devis.adresseFacturation.ligne2 %}<p class="mb-1">{{ devis.adresseFacturation.ligne2 }}</p>{% endif %}
+                        <p class="mb-0">{{ devis.adresseFacturation.codePostal }} {{ devis.adresseFacturation.ville }}</p>
+                        {% if devis.adresseFacturation.pays and devis.adresseFacturation.pays != 'France' %}
+                        <p class="mb-0"><strong>{{ devis.adresseFacturation.pays }}</strong></p>
+                        {% endif %}
+                    </div>
+                    {% endif %}
+                </div>
+                <div class="col-md-6">
+                    {% if devis.adresseLivraison %}
+                    <div class="info-group">
+                        <h6><i class="fas fa-shipping-fast me-2"></i>Adresse de livraison</h6>
+                        <p class="mb-1"><strong>{{ devis.adresseLivraison.nom }}</strong></p>
+                        <p class="mb-1">{{ devis.adresseLivraison.ligne1 }}</p>
+                        {% if devis.adresseLivraison.ligne2 %}<p class="mb-1">{{ devis.adresseLivraison.ligne2 }}</p>{% endif %}
+                        <p class="mb-0">{{ devis.adresseLivraison.codePostal }} {{ devis.adresseLivraison.ville }}</p>
+                        {% if devis.adresseLivraison.pays and devis.adresseLivraison.pays != 'France' %}
+                        <p class="mb-0"><strong>{{ devis.adresseLivraison.pays }}</strong></p>
+                        {% endif %}
+                    </div>
+                    {% endif %}
+
+                    {% if devis.delaiLivraison or devis.dateLivraison %}
+                    <div class="info-group">
+                        <h6><i class="fas fa-clock me-2"></i>Informations de livraison</h6>
+                        {% if devis.delaiLivraison %}
+                        <p class="mb-1"><strong>Délai :</strong> {{ devis.delaiLivraison }}</p>
+                        {% endif %}
+                        {% if devis.dateLivraison %}
+                        <p class="mb-0"><strong>Date prévue :</strong> {{ devis.dateLivraison|date('d/m/Y') }}</p>
+                        {% endif %}
+                    </div>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+
+        <!-- Onglet Notes -->
+        <div class="tab-pane fade" id="notes" role="tabpanel">
+            <div class="row p-4">
+                <div class="col-md-6">
+                    {% if devis.notesClient %}
+                    <div class="info-group">
+                        <h6><i class="fas fa-eye me-2"></i>Notes visibles par le client</h6>
+                        <div class="border rounded p-3 bg-light">
+                            {{ devis.notesClient|nl2br|raw }}
+                        </div>
+                    </div>
+                    {% else %}
+                    <div class="info-group">
+                        <h6><i class="fas fa-eye me-2"></i>Notes visibles par le client</h6>
+                        <p class="text-muted mb-0">Aucune note client</p>
+                    </div>
+                    {% endif %}
+                </div>
+                <div class="col-md-6">
+                    {% if devis.notesInternes %}
+                    <div class="info-group">
+                        <h6><i class="fas fa-eye-slash me-2"></i>Notes internes</h6>
+                        <div class="border rounded p-3 bg-warning-subtle">
+                            {{ devis.notesInternes|nl2br|raw }}
+                        </div>
+                    </div>
+                    {% else %}
+                    <div class="info-group">
+                        <h6><i class="fas fa-eye-slash me-2"></i>Notes internes</h6>
+                        <p class="text-muted mb-0">Aucune note interne</p>
+                    </div>
+                    {% endif %}
                 </div>
             </div>
         </div>
@@ -349,63 +642,123 @@
         <!-- Onglet Suivi -->
         <div class="tab-pane fade" id="suivi" role="tabpanel">
             <div class="p-4">
-                <div class="timeline">
-                    <div class="timeline-item completed">
-                        <div class="d-flex">
-                            <div>
-                                <h6 class="mb-1">Devis créé</h6>
-                                <p class="text-muted mb-0">{{ devis.dateCreation|date('d/m/Y à H:i') }}</p>
+                <h6 class="mb-4"><i class="fas fa-tasks me-2"></i>Suivi complet du devis</h6>
+                
+                {% if logs is defined and logs|length > 0 %}
+                    <div class="timeline">
+                        {% for log in logs %}
+                            <div class="timeline-item completed">
+                                <div class="timeline-marker">
+                                    <i class="fas fa-{{ log.action == 'created' ? 'plus' : (log.action == 'sent' or log.action == 'resent' ? 'paper-plane' : (log.action == 'signed' ? 'signature' : (log.action == 'version_created' ? 'copy' : (log.action == 'status_changed' ? 'exchange-alt' : (log.action == 'updated' ? 'edit' : 'check'))))) }}"></i>
+                                </div>
+                                <div class="timeline-content">
+                                    <div class="d-flex justify-content-between align-items-start">
+                                        <div>
+                                            <h6 class="mb-1">{{ log.formattedAction }}</h6>
+                                            {% if log.details %}
+                                                <p class="text-muted mb-2">{{ log.details }}</p>
+                                            {% endif %}
+                                            <small class="text-muted">
+                                                <i class="fas fa-user me-1"></i>par {{ log.userName }} 
+                                                le {{ log.createdAt|date('d/m/Y') }} à {{ log.createdAt|date('H:i') }}
+                                            </small>
+                                        </div>
+                                        {% if log.action in ['sent', 'resent', 'signed'] %}
+                                            <span class="badge bg-{{ log.action == 'signed' ? 'success' : 'info' }}">
+                                                <i class="fas fa-{{ log.action == 'signed' ? 'check-circle' : 'envelope' }} me-1"></i>
+                                                {{ log.action == 'signed' ? 'Signé' : 'Envoyé' }}
+                                            </span>
+                                        {% endif %}
+                                    </div>
+                                </div>
+                            </div>
+                        {% endfor %}
+                    </div>
+                {% else %}
+                    <div class="timeline">
+                        <div class="timeline-item completed">
+                            <div class="timeline-marker">
+                                <i class="fas fa-plus"></i>
+                            </div>
+                            <div class="timeline-content">
+                                <div>
+                                    <h6 class="mb-1">Devis créé</h6>
+                                    <small class="text-muted">
+                                        <i class="fas fa-user me-1"></i>par {{ devis.commercial.prenom }} {{ devis.commercial.nom }} 
+                                        le {{ devis.dateCreation|date('d/m/Y à H:i') }}
+                                    </small>
+                                </div>
                             </div>
                         </div>
-                    </div>
-                    
-                    {% if devis.dateEnvoi %}
-                    <div class="timeline-item completed">
-                        <div class="d-flex">
-                            <div>
-                                <h6 class="mb-1">Devis envoyé</h6>
-                                <p class="text-muted mb-0">{{ devis.dateEnvoi|date('d/m/Y à H:i') }}</p>
-                                {% if devis.urlAccesClient %}
-                                    <small><a href="{{ devis.urlAccesClient }}" target="_blank">Lien d'accès client</a></small>
-                                {% endif %}
+                        
+                        {% if devis.dateEnvoi %}
+                        <div class="timeline-item completed">
+                            <div class="timeline-marker">
+                                <i class="fas fa-paper-plane"></i>
+                            </div>
+                            <div class="timeline-content">
+                                <div class="d-flex justify-content-between align-items-start">
+                                    <div>
+                                        <h6 class="mb-1">Devis envoyé</h6>
+                                        <small class="text-muted">le {{ devis.dateEnvoi|date('d/m/Y à H:i') }}</small>
+                                    </div>
+                                    <span class="badge bg-info">
+                                        <i class="fas fa-envelope me-1"></i>Envoyé
+                                    </span>
+                                </div>
                             </div>
                         </div>
-                    </div>
-                    {% endif %}
-
-                    {% if devis.dateSignature %}
-                    <div class="timeline-item completed">
-                        <div class="d-flex">
-                            <div>
-                                <h6 class="mb-1">Devis signé</h6>
-                                <p class="text-muted mb-0">{{ devis.dateSignature|date('d/m/Y à H:i') }}</p>
-                                {% if devis.signatureNom %}
-                                    <small>Signé par : {{ devis.signatureNom }} ({{ devis.signatureEmail }})</small>
-                                {% endif %}
+                        {% endif %}
+                        
+                        {% if devis.dateSignature %}
+                        <div class="timeline-item completed">
+                            <div class="timeline-marker">
+                                <i class="fas fa-signature"></i>
+                            </div>
+                            <div class="timeline-content">
+                                <div class="d-flex justify-content-between align-items-start">
+                                    <div>
+                                        <h6 class="mb-1">Devis signé</h6>
+                                        {% if devis.signatureNom %}
+                                            <p class="text-muted mb-1">Signé par {{ devis.signatureNom }} ({{ devis.signatureEmail }})</p>
+                                        {% endif %}
+                                        <small class="text-muted">le {{ devis.dateSignature|date('d/m/Y à H:i') }}</small>
+                                    </div>
+                                    <span class="badge bg-success">
+                                        <i class="fas fa-check-circle me-1"></i>Signé
+                                    </span>
+                                </div>
                             </div>
                         </div>
-                    </div>
-                    {% endif %}
-
-                    {% if devis.datePaiementAcompte %}
-                    <div class="timeline-item completed">
-                        <div class="d-flex">
-                            <div>
-                                <h6 class="mb-1">Acompte réglé</h6>
-                                <p class="text-muted mb-0">{{ devis.datePaiementAcompte|date('d/m/Y à H:i') }}</p>
-                                {% if devis.modePaiement %}
-                                    <small>Mode : {{ devis.modePaiement }} - Transaction : {{ devis.transactionId }}</small>
-                                {% endif %}
+                        {% endif %}
+                        
+                        {% if devis.datePaiementAcompte %}
+                        <div class="timeline-item completed">
+                            <div class="timeline-marker">
+                                <i class="fas fa-euro-sign"></i>
+                            </div>
+                            <div class="timeline-content">
+                                <div class="d-flex justify-content-between align-items-start">
+                                    <div>
+                                        <h6 class="mb-1">Acompte réglé</h6>
+                                        {% if devis.modePaiement %}
+                                            <p class="text-muted mb-1">Mode : {{ devis.modePaiement }}{% if devis.transactionId %} - Transaction : {{ devis.transactionId }}{% endif %}</p>
+                                        {% endif %}
+                                        <small class="text-muted">le {{ devis.datePaiementAcompte|date('d/m/Y à H:i') }}</small>
+                                    </div>
+                                    <span class="badge bg-success">
+                                        <i class="fas fa-check-circle me-1"></i>Payé
+                                    </span>
+                                </div>
                             </div>
                         </div>
+                        {% endif %}
                     </div>
-                    {% endif %}
-                </div>
+                {% endif %}
             </div>
         </div>
 
         <!-- Onglet Historique des versions -->
-        {% if devis.hasVersions %}
         <div class="tab-pane fade" id="versions" role="tabpanel">
             <div class="p-4">
                 <div class="d-flex justify-content-between align-items-center mb-4">
@@ -419,16 +772,28 @@
 
                 <!-- Liste des versions -->
                 <div id="versions-list">
+                    {% if devis.hasVersions %}
                     <div class="text-center">
                         <div class="spinner-border" role="status">
                             <span class="visually-hidden">Chargement...</span>
                         </div>
                         <p class="mt-2">Chargement des versions...</p>
                     </div>
+                    {% else %}
+                    <div class="text-center text-muted">
+                        <i class="fas fa-history fa-3x mb-3"></i>
+                        <h5>Aucune version archivée</h5>
+                        <p>Ce devis n'a pas encore de versions sauvegardées. Une version sera créée automatiquement lors de modifications importantes.</p>
+                        {% if devis.canCreateVersion %}
+                        <button class="btn btn-outline-primary" data-bs-toggle="modal" data-bs-target="#createVersionModal">
+                            <i class="fas fa-plus me-2"></i>Créer une version maintenant
+                        </button>
+                        {% endif %}
+                    </div>
+                    {% endif %}
                 </div>
             </div>
         </div>
-        {% endif %}
 
         <!-- Onglet Signature -->
         {% if devis.dateSignature %}
@@ -531,7 +896,7 @@
                     <div class="mb-3">
                         <label for="versionReason" class="form-label">Motif de création *</label>
                         <textarea class="form-control" id="versionReason" name="reason" rows="3" required
-                                  placeholder="Expliquez pourquoi vous créez cette version...">Version créée manuellement</textarea>
+                                  placeholder="Expliquez pourquoi vous créez cette version...">Version créée manuellement par {{ app.user.prenom }} {{ app.user.nom }} le {{ 'now'|date('d/m/Y') }} à {{ 'now'|date('H:i') }}.</textarea>
                     </div>
                     <div class="alert alert-info">
                         <i class="fas fa-info-circle me-2"></i>
@@ -550,6 +915,41 @@
 </div>
 {% endif %}
 
+<!-- Modal de confirmation pour modification avec création de version -->
+<div class="modal fade" id="versionModal" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">
+                    <i class="fas fa-exclamation-triangle text-warning me-2"></i>Devis déjà envoyé
+                </h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <p class="mb-3">
+                    <strong>Ce devis a déjà été envoyé au client.</strong>
+                </p>
+                <p class="mb-3">
+                    Pour y apporter des modifications, vous devez créer une nouvelle version. Attention cette action annulera la validité du lien de signature électronique déjà envoyé au client.
+                </p>
+                <div class="mb-3">
+                    <label for="versionNameInput" class="form-label">Nom de la version</label>
+                    <input type="text" class="form-control" id="versionNameInput" 
+                           placeholder="Ex: Corrections après relecture">
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">
+                    <i class="fas fa-times me-2"></i>Annuler
+                </button>
+                <button type="button" class="btn btn-primary" id="createVersionAndEditBtn">
+                    <i class="fas fa-copy me-2"></i>Oui, créer une version et modifier
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+
 {% block javascripts %}
 <script>
 // Activer les tooltips Bootstrap
@@ -560,14 +960,14 @@ var tooltipList = tooltipTriggerList.map(function (tooltipTriggerEl) {
 
 // Charger les versions quand l'onglet est activé
 document.addEventListener('DOMContentLoaded', function() {
-    {% if devis.hasVersions %}
     const versionsTab = document.getElementById('versions-tab');
     if (versionsTab) {
         versionsTab.addEventListener('shown.bs.tab', function() {
+            {% if devis.hasVersions %}
             loadVersions();
+            {% endif %}
         });
     }
-    {% endif %}
 });
 
 {% if devis.hasVersions %}
@@ -604,16 +1004,24 @@ function loadVersions() {
                                     <div>
                                         <h6 class="mb-1">
                                             ${version.versionLabel}
-                                            ${isFirst ? '<span class="badge bg-primary ms-2">Actuelle</span>' : ''}
                                         </h6>
                                         <small class="text-muted">
-                                            <i class="fas fa-calendar me-1"></i>${version.createdAt}
-                                            <i class="fas fa-user ms-3 me-1"></i>${version.modifiedBy}
+                                            Version créée par ${version.modifiedBy} le ${version.createdAt}
                                         </small>
                                     </div>
-                                    <div>
-                                        <span class="badge ${badgeClass}">${getStatusLabel(version.statutAtTime)}</span>
-                                        <span class="badge bg-light text-dark ms-2">${version.totalTtcAtTime}€ TTC</span>
+                                    <div class="text-end">
+                                        <div class="mb-1">
+                                            <small class="text-muted">Total HT:</small>
+                                            <span class="fw-bold">${version.totalHtAtTime || '0.00'}€</span>
+                                        </div>
+                                        <div class="mb-1">
+                                            <small class="text-muted">TVA:</small>
+                                            <span class="fw-bold">${version.totalTvaAtTime || '0.00'}€</span>
+                                        </div>
+                                        <div>
+                                            <small class="text-muted">Total TTC:</small>
+                                            <span class="fw-bold text-primary">${version.totalTtcAtTime}€</span>
+                                        </div>
                                     </div>
                                 </div>
                                 <div class="card-body">
@@ -682,6 +1090,103 @@ function compareVersions(versionNumber) {
     // TODO: Implémenter la comparaison de versions
     alert('Fonctionnalité de comparaison à venir - Version ' + versionNumber);
 }
+
+{% endif %}
+
+// Debug: vérifier si le script s'exécute
+console.log('Script devis show chargé');
+
+// Debug: vérifier la présence des éléments
+document.addEventListener('DOMContentLoaded', function() {
+    console.log('DOM chargé');
+    const versionModal = document.getElementById('versionModal');
+    const createBtn = document.getElementById('createVersionAndEditBtn');
+    console.log('Modal versionModal trouvée:', versionModal);
+    console.log('Bouton createVersionAndEditBtn trouvé:', createBtn);
+    
+    if (versionModal && createBtn) {
+        console.log('Les deux éléments sont présents dans le DOM');
+    } else {
+        console.error('Éléments manquants - Modal:', !!versionModal, 'Bouton:', !!createBtn);
+    }
+});
+
+// Gestion de la création de version automatique pour modification avec délégation d'événements
+let isCreatingVersion = false; // Protection contre la double exécution
+
+document.addEventListener('click', function(event) {
+    if (event.target && event.target.id === 'createVersionAndEditBtn') {
+        console.log('Clic sur le bouton createVersionAndEditBtn détecté via délégation');
+        event.preventDefault();
+        event.stopPropagation();
+        
+        // Vérifier si une création est déjà en cours
+        if (isCreatingVersion) {
+            console.log('Création déjà en cours, ignorer le clic');
+            return;
+        }
+        
+        isCreatingVersion = true;
+        const btn = event.target;
+        // Afficher un indicateur de chargement
+        const originalText = btn.innerHTML;
+        btn.disabled = true;
+        btn.innerHTML = '<i class="fas fa-spinner fa-spin me-2"></i>Création en cours...';
+        
+        // Récupérer le nom de la version depuis le champ input
+        const versionNameInput = document.getElementById('versionNameInput');
+        const versionName = versionNameInput ? versionNameInput.value.trim() : '';
+        const labelToSend = versionName || 'Version automatique avant modification';
+        
+        // Créer la version puis rediriger vers l'édition
+        fetch('{{ path("app_devis_create_version", {"id": devis.id}) }}', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/x-www-form-urlencoded',
+                'Accept': 'application/json',
+                'X-Requested-With': 'XMLHttpRequest'
+            },
+            body: 'label=' + encodeURIComponent(labelToSend)
+        })
+        .then(response => {
+            console.log('Réponse reçue:', response.status, response.statusText);
+            if (response.ok) {
+                return response.json();
+            } else {
+                throw new Error('Erreur HTTP: ' + response.status);
+            }
+        })
+        .then(data => {
+            console.log('Données reçues:', data);
+            if (data.success) {
+                // Fermer la modal
+                const modal = bootstrap.Modal.getInstance(document.getElementById('versionModal'));
+                if (modal) {
+                    modal.hide();
+                }
+                // Version créée avec succès, rediriger vers l'édition
+                console.log('Redirection vers édition...');
+                window.location.href = '{{ path("app_devis_edit", {"id": devis.id}) }}';
+            } else {
+                throw new Error(data.message || 'Erreur lors de la création de la version');
+            }
+        })
+        .catch(error => {
+            console.error('Erreur complète:', error);
+            alert('Erreur lors de la création de la version: ' + error.message);
+            btn.disabled = false;
+            btn.innerHTML = originalText;
+            isCreatingVersion = false; // Réinitialiser en cas d'erreur
+        });
+    }
+});
+
+// Ouvrir automatiquement la modal d'envoi si demandé
+{% if app.request.query.get('open_send_modal') %}
+document.addEventListener('DOMContentLoaded', function() {
+    const envoyerModal = new bootstrap.Modal(document.getElementById('envoyerModal'));
+    envoyerModal.show();
+});
 {% endif %}
 </script>
 {% endblock %}

@@ -27,6 +27,7 @@ use Symfony\Component\Mailer\MailerInterface;
 use Symfony\Component\Mime\Email;
 use App\Service\GmailMailerService;
 use App\Service\DocumentNumerotationService;
+use App\Service\DevisLoggerService;
 use Dompdf\Dompdf;
 use Dompdf\Options;
 
@@ -73,7 +74,7 @@ final class DevisController extends AbstractController
     }
 
     #[Route('/new', name: 'app_devis_new', methods: ['GET', 'POST'])]
-    public function new(Request $request, EntityManagerInterface $entityManager, ClientRepository $clientRepository, DocumentNumerotationService $numerotationService): Response
+    public function new(Request $request, EntityManagerInterface $entityManager, ClientRepository $clientRepository, DocumentNumerotationService $numerotationService, DevisLoggerService $loggerService): Response
     {
         $devis = new Devis();
         
@@ -282,6 +283,9 @@ final class DevisController extends AbstractController
             $entityManager->persist($devis);
             $entityManager->flush(); // Flush pour obtenir l'ID du devis
             
+            // Log de la création du devis
+            $loggerService->logCreated($devis);
+            
             // Créer 3 lignes produits par défaut pour améliorer l'UX
             for ($i = 1; $i <= 3; $i++) {
                 $element = new \App\Entity\DevisElement();
@@ -340,21 +344,27 @@ final class DevisController extends AbstractController
     }
 
     #[Route('/{id}', name: 'app_devis_show', methods: ['GET'], requirements: ['id' => '\d+'])]
-    public function show(Devis $devis): Response
+    public function show(Devis $devis, DevisLoggerService $loggerService): Response
     {
+        $logs = $loggerService->getDevisLogs($devis);
+        
         return $this->render('devis/show.html.twig', [
             'devis' => $devis,
+            'logs' => $logs,
         ]);
     }
 
     #[Route('/{id}/edit', name: 'app_devis_edit', methods: ['GET', 'POST'], requirements: ['id' => '\d+'])]
-    public function edit(Request $request, Devis $devis, EntityManagerInterface $entityManager): Response
+    public function edit(Request $request, Devis $devis, EntityManagerInterface $entityManager, DevisLoggerService $loggerService): Response
     {
         // Créer une version si le devis a été envoyé et sera modifié
         $shouldCreateVersion = false;
-        if (in_array($devis->getStatut(), ['envoye', 'signe']) && $request->isMethod('POST')) {
+        $originalDevisData = null;
+        $originalStatut = $devis->getStatut(); // Capturer le statut original
+        if (in_array($originalStatut, ['envoye', 'signe']) && $request->isMethod('POST')) {
             $shouldCreateVersion = true;
-            $this->createDevisVersion($devis, $entityManager, 'Modification après envoi');
+            // Sauvegarder l'état actuel AVANT les modifications pour l'archiver
+            $originalDevisData = $this->captureDevisState($devis);
         }
 
         $form = $this->createForm(DevisType::class, $devis);
@@ -384,6 +394,34 @@ final class DevisController extends AbstractController
             $this->synchronizeGlobalOrder($devis, $entityManager);
             
             $entityManager->flush();
+            
+            // Log de la modification du devis
+            $loggerService->logUpdated($devis);
+
+            // Créer la version APRÈS les modifications avec l'état original
+            if ($shouldCreateVersion && $originalDevisData) {
+                $this->createDevisVersionFromState($devis, $entityManager, $originalDevisData, 'Modification après envoi');
+            }
+
+            // Vérifier si l'action est "save_and_send"
+            $action = $request->request->get('action');
+            if ($action === 'save_and_send') {
+                // Changer le statut en "envoyé" et rediriger vers la page show avec modal d'envoi
+                $devis->setStatut('envoye');
+                $entityManager->flush();
+                
+                if ($shouldCreateVersion) {
+                    $this->addFlash('success', 'Devis modifié et marqué comme envoyé avec succès ! Une version a été créée pour conserver l\'historique.');
+                } else {
+                    $this->addFlash('success', 'Devis modifié et marqué comme envoyé avec succès !');
+                }
+                
+                // Rediriger vers la page show avec un paramètre pour ouvrir la modal d'envoi
+                return $this->redirectToRoute('app_devis_show', [
+                    'id' => $devis->getId(),
+                    'open_send_modal' => '1'
+                ], Response::HTTP_SEE_OTHER);
+            }
 
             if ($shouldCreateVersion) {
                 $this->addFlash('success', 'Devis modifié avec succès ! Une version a été créée pour conserver l\'historique.');
@@ -639,7 +677,7 @@ final class DevisController extends AbstractController
     }
 
     #[Route('/{id}/envoyer', name: 'app_devis_envoyer', methods: ['POST'])]
-    public function envoyer(Request $request, Devis $devis, EntityManagerInterface $entityManager, GmailMailerService $gmailMailer): Response
+    public function envoyer(Request $request, Devis $devis, EntityManagerInterface $entityManager, GmailMailerService $gmailMailer, DevisLoggerService $loggerService): Response
     {
         $email = $request->request->get('email');
         $message = $request->request->get('message', '');
@@ -684,8 +722,11 @@ final class DevisController extends AbstractController
             $devis->setDateEnvoi(new \DateTime());
 
             $entityManager->flush();
+            
+            // Log de l'envoi du devis
+            $loggerService->logSent($devis, $email);
 
-            $this->addFlash('success', 'Devis envoyé avec succès à ' . $email);
+            $this->addFlash('success', '📧 Devis envoyé avec succès à ' . $email . ' (vérifiez les logs pour les détails en mode développement)');
         } catch (\Exception $e) {
             $this->addFlash('error', 'Erreur lors de l\'envoi : ' . $e->getMessage());
         }
@@ -1077,7 +1118,7 @@ final class DevisController extends AbstractController
     }
 
     /**
-     * Crée une version du devis pour conserver l'historique
+     * Crée une version du devis pour conserver l'historique (état précédent avant modifications)
      */
     private function createDevisVersion(Devis $devis, EntityManagerInterface $entityManager, string $reason = null): DevisVersion
     {
@@ -1166,6 +1207,107 @@ final class DevisController extends AbstractController
     }
 
     /**
+     * Capture l'état actuel du devis avant modifications
+     */
+    private function captureDevisState(Devis $devis): array
+    {
+        $devisData = [
+            'statut' => $devis->getStatut(),
+            'totalHt' => $devis->getTotalHt(),
+            'totalTva' => $devis->getTotalTva(),
+            'totalTtc' => $devis->getTotalTtc(),
+            'dateValidite' => $devis->getDateValidite() ? $devis->getDateValidite()->format('Y-m-d') : null,
+            'notesClient' => $devis->getNotesClient(),
+            'notesInternes' => $devis->getNotesInternes(),
+            'delaiLivraison' => $devis->getDelaiLivraison(),
+            'acomptePercent' => $devis->getAcomptePercent(),
+            'acompteMontant' => $devis->getAcompteMontant(),
+            'remiseGlobalePercent' => $devis->getRemiseGlobalePercent(),
+            'remiseGlobaleMontant' => $devis->getRemiseGlobaleMontant(),
+            // Client information for template compatibility
+            'client' => $devis->getClient() ? [
+                'id' => $devis->getClient()->getId(),
+                'nom' => $devis->getClient()->getNom(),
+                'prenom' => $devis->getClient()->getPrenom(),
+                'nomEntreprise' => $devis->getClient()->getNomEntreprise()
+            ] : null,
+            'contactFacturation' => $devis->getContactFacturation() ? [
+                'id' => $devis->getContactFacturation()->getId(),
+                'nom' => $devis->getContactFacturation()->getNom(),
+                'prenom' => $devis->getContactFacturation()->getPrenom(),
+                'email' => $devis->getContactFacturation()->getEmail()
+            ] : null,
+            'contactLivraison' => $devis->getContactLivraison() ? [
+                'id' => $devis->getContactLivraison()->getId(),
+                'nom' => $devis->getContactLivraison()->getNom(),
+                'prenom' => $devis->getContactLivraison()->getPrenom(),
+                'email' => $devis->getContactLivraison()->getEmail()
+            ] : null,
+        ];
+
+        $elements = [];
+        foreach ($devis->getElements() as $element) {
+            $elements[] = [
+                'type' => $element->getType(),
+                'position' => $element->getPosition(),
+                'designation' => $element->getDesignation(),
+                'description' => $element->getDescription(),
+                'quantite' => $element->getQuantite(),
+                'prixUnitaireHt' => $element->getPrixUnitaireHt(),
+                'tvaPercent' => $element->getTvaPercent(),
+                'totalLigneHt' => $element->getTotalLigneHt(),
+                'titre' => $element->getTitre(),
+                'imageVisible' => $element->getImageVisible(),
+                'produitId' => $element->getProduit() ? $element->getProduit()->getId() : null,
+                'produit' => $element->getProduit() ? [
+                    'id' => $element->getProduit()->getId(),
+                    'reference' => $element->getProduit()->getReference(),
+                    'designation' => $element->getProduit()->getDesignation()
+                ] : null,
+            ];
+        }
+
+        return [
+            'devis_data' => $devisData,
+            'elements' => $elements
+        ];
+    }
+
+    /**
+     * Crée une version à partir d'un état sauvegardé (pour archiver l'ancienne version)
+     */
+    private function createDevisVersionFromState(Devis $devis, EntityManagerInterface $entityManager, array $stateData, string $reason = null): DevisVersion
+    {
+        $version = new DevisVersion();
+        $version->setDevis($devis);
+        
+        $versionNumber = $devis->getNextVersionNumber();
+        $version->setVersionNumber($versionNumber);
+        $version->setModifiedBy($this->getUser());
+        $version->setModificationReason($reason);
+        $version->setTotalTtcAtTime($stateData['devis_data']['totalTtc'] ?? '0.00');
+        $version->setStatutAtTime($stateData['devis_data']['statut'] ?? 'brouillon');
+
+        // Définir automatiquement le label pour la première version
+        // Vérifier s'il s'agit vraiment de la première version créée pour ce devis
+        $existingVersionsCount = $entityManager->getRepository(\App\Entity\DevisVersion::class)
+            ->count(['devis' => $devis]);
+        
+        if ($existingVersionsCount === 0) {
+            // C'est vraiment la première version de ce devis
+            $version->setVersionLabel('Devis initial');
+        }
+
+        // Le snapshot contient l'état AVANT les modifications (= ancienne version)
+        $version->setSnapshotData($stateData);
+
+        $entityManager->persist($version);
+        $entityManager->flush();
+
+        return $version;
+    }
+
+    /**
      * Affiche l'historique des versions d'un devis
      */
     #[Route('/{id}/versions', name: 'app_devis_versions', methods: ['GET'])]
@@ -1194,9 +1336,14 @@ final class DevisController extends AbstractController
             throw $this->createNotFoundException('Version not found');
         }
 
+        // Déterminer si c'est la version la plus récente (la dernière créée)
+        $latestVersion = $versionRepository->findLatestVersion($devis);
+        $isLatestVersion = ($latestVersion && $latestVersion->getId() === $version->getId());
+
         return $this->render('devis/version_show.html.twig', [
             'devis' => $devis,
             'version' => $version,
+            'isLatestVersion' => $isLatestVersion,
         ]);
     }
 
@@ -1210,14 +1357,19 @@ final class DevisController extends AbstractController
         
         $result = [];
         foreach ($versions as $version) {
+            $devisData = $version->getDevisData();
+            
             $result[] = [
                 'id' => $version->getId(),
                 'versionNumber' => $version->getVersionNumber(),
                 'versionLabel' => $version->generateAutoLabel(),
-                'createdAt' => $version->getCreatedAt()->format('d/m/Y H:i'),
-                'modifiedBy' => $version->getModifiedBy() ? $version->getModifiedBy()->getNom() : 'Inconnu',
+                'createdAt' => $version->getCreatedAt()->format('d/m/Y à H:i'),
+                'modifiedBy' => $version->getModifiedBy() ? 
+                    $version->getModifiedBy()->getPrenom() . ' ' . $version->getModifiedBy()->getNom() : 'Inconnu',
                 'modificationReason' => $version->getModificationReason(),
                 'totalTtcAtTime' => $version->getTotalTtcAtTime(),
+                'totalHtAtTime' => $devisData['totalHt'] ?? '0.00',
+                'totalTvaAtTime' => $devisData['totalTva'] ?? '0.00',
                 'statutAtTime' => $version->getStatutAtTime(),
                 'isInitialVersion' => $version->isInitialVersion()
             ];
@@ -1230,7 +1382,7 @@ final class DevisController extends AbstractController
      * Crée manuellement une version avec un label personnalisé
      */
     #[Route('/{id}/create-version', name: 'app_devis_create_version', methods: ['POST'])]
-    public function createVersion(Request $request, Devis $devis, EntityManagerInterface $entityManager): Response
+    public function createVersion(Request $request, Devis $devis, EntityManagerInterface $entityManager, DevisLoggerService $loggerService): Response
     {
         if (!$devis->canCreateVersion()) {
             $this->addFlash('error', 'Impossible de créer une version pour ce devis.');
@@ -1240,14 +1392,34 @@ final class DevisController extends AbstractController
         $reason = $request->request->get('reason', 'Version créée manuellement');
         $label = $request->request->get('label');
 
-        $version = $this->createDevisVersion($devis, $entityManager, $reason);
+        // Capturer l'état actuel avant de permettre les modifications
+        $currentState = $this->captureDevisState($devis);
         
+        // Créer une version qui archive l'ANCIEN ÉTAT
+        $version = $this->createDevisVersionFromState($devis, $entityManager, $currentState, $reason);
+        
+        // Déterminer le label de la version
         if ($label) {
             $version->setVersionLabel($label);
-            $entityManager->flush();
+        } elseif ($version->getVersionNumber() === 1) {
+            // La première version est toujours le "Devis initial"
+            $version->setVersionLabel('Devis initial');
         }
+        
+        // Changer le statut du devis pour permettre l'édition (le contenu reste le même)
+        $devis->setStatut('brouillon');
+        $entityManager->flush();
+        
+        // Log de la création de version
+        $loggerService->logVersionCreated($devis, $version->getVersionNumber(), $version->getVersionLabel());
 
-        $this->addFlash('success', 'Version créée avec succès.');
+        $this->addFlash('success', 'Version créée avec succès. Vous pouvez maintenant modifier le devis.');
+        
+        // Rediriger vers l'édition si c'était une création automatique pour modification
+        if ($request->headers->get('Accept') === 'application/json' || $request->isXmlHttpRequest()) {
+            return new JsonResponse(['success' => true, 'message' => 'Version créée avec succès']);
+        }
+        
         return $this->redirectToRoute('app_devis_versions', ['id' => $devis->getId()]);
     }
 

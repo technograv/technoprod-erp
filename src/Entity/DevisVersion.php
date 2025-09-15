@@ -159,7 +159,8 @@ class DevisVersion
      */
     public function getDevisData(): array
     {
-        return $this->snapshotData['devis'] ?? [];
+        // Support both old and new data structures
+        return $this->snapshotData['devis_data'] ?? $this->snapshotData['devis'] ?? [];
     }
 
     /**
@@ -167,7 +168,8 @@ class DevisVersion
      */
     public function getDevisItems(): array
     {
-        return $this->snapshotData['items'] ?? [];
+        // Support both old and new data structures
+        return $this->snapshotData['elements'] ?? $this->snapshotData['items'] ?? [];
     }
 
     /**

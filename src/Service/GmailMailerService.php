@@ -61,10 +61,16 @@ class GmailMailerService
         try {
             $email->from($user->getEmail() ?: 'noreply@technoprod.fr');
             $this->defaultMailer->send($email);
-            $this->logger->info('Email envoyé via mailer par défaut');
+            $this->logger->info('✅ Email envoyé avec succès via mailer par défaut', [
+                'transport' => 'symfony_mailer',
+                'destination' => 'var/log/emails ou transport configuré'
+            ]);
         } catch (\Exception $e) {
-            $this->logger->warning('Impossible d\'envoyer via SMTP: ' . $e->getMessage());
-            $this->logger->info('Email simulé avec succès (mode développement)');
+            $this->logger->warning('❌ Impossible d\'envoyer via SMTP: ' . $e->getMessage());
+            $this->logger->info('📧 Email simulé avec succès (mode développement) - Contenu loggé', [
+                'status' => 'simulated',
+                'reason' => 'no_smtp_config_or_error'
+            ]);
         }
     }
 
