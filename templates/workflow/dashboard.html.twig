@@ -705,6 +705,22 @@ function chargerDonneesEtAfficherModal(url, titre, type) {
     
     // Afficher la modale
     const bootstrapModal = new bootstrap.Modal(modal);
+    
+    // Ajouter un event listener pour nettoyer quand la modal est fermée
+    modal.addEventListener('hidden.bs.modal', function () {
+        // Supprimer le backdrop s'il existe encore
+        const backdrop = document.querySelector('.modal-backdrop');
+        if (backdrop) {
+            backdrop.remove();
+        }
+        // Restaurer complètement les styles du body
+        document.body.classList.remove('modal-open');
+        document.body.style.removeProperty('padding-right');
+        document.body.style.removeProperty('overflow');
+        // Forcer le reflow pour éviter le décalage
+        document.body.offsetHeight;
+    });
+    
     bootstrapModal.show();
     
     // Réinitialiser le contenu
