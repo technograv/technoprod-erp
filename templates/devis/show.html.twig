@@ -6,12 +6,6 @@
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/css/bootstrap.min.css" rel="stylesheet">
     <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
     <style>
-        .devis-header {
-            background: linear-gradient(135deg, #6f42c1 0%, #e83e8c 100%);
-            color: white;
-            padding: 1.5rem 0;
-            margin-bottom: 0;
-        }
         .devis-tabs {
             background-color: #f8f9fa;
             border-bottom: 1px solid #dee2e6;
@@ -159,6 +153,37 @@
         .timeline-item.completed .timeline-marker {
             background: #28a745;
         }
+
+        /* Barre flotante d'actions */
+        .floating-action-bar {
+            position: fixed;
+            bottom: 0;
+            left: 0;
+            right: 0;
+            background: linear-gradient(135deg, #6f42c1 0%, #e83e8c 100%);
+            box-shadow: 0 -2px 10px rgba(0,0,0,0.1);
+            z-index: 1050;
+            padding: 12px 0;
+        }
+
+        /* Ajouter un padding en bas du body pour éviter que le contenu soit masqué */
+        body {
+            padding-bottom: 80px;
+        }
+
+        /* Responsive pour la barre flotante */
+        @media (max-width: 768px) {
+            .floating-action-bar .d-flex {
+                flex-direction: column;
+                gap: 8px;
+            }
+            .floating-action-bar {
+                padding: 8px 0;
+            }
+            body {
+                padding-bottom: 120px;
+            }
+        }
     </style>
 {% endblock %}
 
@@ -173,59 +198,6 @@
     {% endfor %}
 {% endfor %}
 
-<!-- En-tête devis -->
-<div class="devis-header">
-    <div class="container-fluid">
-        <div class="row align-items-center">
-            <div class="col-md-8">
-                <div class="d-flex align-items-center">
-                    <div class="me-3">
-                        <i class="fas fa-file-invoice fa-2x"></i>
-                    </div>
-                    <div>
-                        <h1 class="mb-1">{{ devis.numeroDevis }}</h1>
-                        <p class="mb-0">
-                            <span class="badge bg-{{ devis.statutCouleur }} status-badge">{{ devis.statutLibelle }}</span>
-                            {% if devis.client %}
-                                <span class="ms-2">{{ devis.client.nomComplet }}</span>
-                            {% endif %}
-                        </p>
-                    </div>
-                </div>
-            </div>
-            <div class="col-md-4 text-end">
-                <div class="btn-group">
-                    {% if devis.statut in ['envoye', 'signe', 'relance'] %}
-                        <button type="button" class="btn btn-light" data-bs-toggle="modal" data-bs-target="#versionModal">
-                            <i class="fas fa-edit"></i> Modifier
-                        </button>
-                    {% else %}
-                        <a href="{{ path('app_devis_edit', {'id': devis.id}) }}" class="btn btn-light">
-                            <i class="fas fa-edit"></i> Modifier
-                        </a>
-                    {% endif %}
-                    <a href="{{ path('app_devis_pdf', {'id': devis.id}) }}" target="_blank" class="btn btn-outline-light">
-                        <i class="fas fa-file-pdf"></i> PDF
-                    </a>
-                    {% if devis.statut in ['brouillon', 'envoye', 'relance'] %}
-                    <button type="button" class="btn btn-outline-light" data-bs-toggle="modal" data-bs-target="#envoyerModal">
-                        <i class="fas fa-paper-plane"></i> 
-                        {% if devis.statut == 'envoye' or devis.statut == 'relance' %}Renvoyer{% else %}Envoyer{% endif %}
-                    </button>
-                    {% endif %}
-                    <button type="button" class="btn btn-outline-light" onclick="document.getElementById('versions-tab').click()">
-                        <i class="fas fa-history"></i> Historique
-                    </button>
-                    {% if devis.client %}
-                    <a href="{{ path('app_client_show', {'id': devis.client.id}) }}" class="btn btn-outline-light">
-                        <i class="fas fa-user"></i> Fiche client
-                    </a>
-                    {% endif %}
-                </div>
-            </div>
-        </div>
-    </div>
-</div>
 
 <!-- Onglets -->
 <div class="devis-tabs">
@@ -282,10 +254,10 @@
                     <div class="info-group">
                         <h6><i class="fas fa-building me-2"></i>Informations client</h6>
                         {% if devis.client %}
-                            <p class="mb-1"><strong>{{ devis.client.nomComplet }}</strong></p>
-                            {% if devis.client.formeJuridique %}
-                                <p class="mb-1">{{ devis.client.formeJuridique.isPersonnePhysique() ? 'Particulier' : 'Entreprise' }}</p>
-                            {% endif %}
+                            <p class="mb-1"><strong><a href="{{ path('app_client_show', {'id': devis.client.id}) }}" class="text-decoration-none">
+                                {% if devis.client.formeJuridique and not devis.client.formeJuridique.isPersonnePhysique() %}{{ devis.client.formeJuridique.nom }} {% endif %}{{ devis.client.nomComplet }}
+                            </a></strong></p>
+                            <p class="mb-1"><small class="text-muted">Code : {{ devis.client.code }} • Créé le {{ devis.client.createdAt|date('d/m/Y') }}</small></p>
                             {% if devis.client.secteur %}
                                 <p class="mb-0">Secteur : {{ devis.client.secteur.nomSecteur }}</p>
                             {% endif %}
@@ -946,6 +918,47 @@
                 <button type="button" class="btn btn-primary" id="createVersionAndEditBtn">
                     <i class="fas fa-copy me-2"></i>Oui, créer une version et modifier
                 </button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Barre flottante d'actions -->
+<div class="floating-action-bar" id="floating-actions">
+    <div class="container-fluid">
+        <div class="d-flex justify-content-between align-items-center">
+            <div>
+                <span class="text-white me-3">
+                    <i class="fas fa-file-invoice me-2"></i>
+                    <strong>{{ devis.numeroDevis }}</strong>
+                    <span class="badge bg-{{ devis.statutCouleur }} ms-2">{{ devis.statutLibelle }}</span>
+                </span>
+            </div>
+            <div class="d-flex gap-2">
+                {% if devis.statut in ['envoye', 'signe', 'relance'] %}
+                    <button type="button" class="btn btn-light" data-bs-toggle="modal" data-bs-target="#versionModal">
+                        <i class="fas fa-edit me-1"></i>Modifier
+                    </button>
+                {% else %}
+                    <a href="{{ path('app_devis_edit', {'id': devis.id}) }}" class="btn btn-light">
+                        <i class="fas fa-edit me-1"></i>Modifier
+                    </a>
+                {% endif %}
+                
+                <a href="{{ path('app_devis_pdf', {'id': devis.id}) }}" target="_blank" class="btn btn-info">
+                    <i class="fas fa-file-pdf me-1"></i>PDF
+                </a>
+                
+                {% if devis.statut in ['brouillon', 'envoye', 'relance'] %}
+                    <button type="button" class="btn btn-success" data-bs-toggle="modal" data-bs-target="#envoyerModal">
+                        <i class="fas fa-paper-plane me-1"></i>
+                        {% if devis.statut == 'envoye' or devis.statut == 'relance' %}Renvoyer{% else %}Envoyer{% endif %}
+                    </button>
+                {% endif %}
+                
+                <a href="{{ path('app_devis_index') }}" class="btn btn-outline-light">
+                    <i class="fas fa-arrow-left me-1"></i>Retour
+                </a>
             </div>
         </div>
     </div>
