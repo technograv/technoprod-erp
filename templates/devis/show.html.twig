@@ -846,10 +846,11 @@
                 </div>
                 <div class="modal-body">
                     <div class="mb-3">
-                        <label for="versionLabel" class="form-label">Label de la version (optionnel)</label>
+                        <label for="versionLabel" class="form-label">Nom de la nouvelle version</label>
                         <input type="text" class="form-control" id="versionLabel" name="label" 
+                               value="{{ devis.nomProjet }}"
                                placeholder="Ex: Corrections après relecture client" autocomplete="off">
-                        <div class="form-text">Si vide, un label automatique sera généré</div>
+                        <div class="form-text">Prérempli avec le nom du projet actuel</div>
                     </div>
                     <div class="mb-3">
                         <label for="versionReason" class="form-label">Motif de création *</label>
@@ -891,8 +892,9 @@
                     Pour y apporter des modifications, vous devez créer une nouvelle version. Attention cette action annulera la validité du lien de signature électronique déjà envoyé au client.
                 </p>
                 <div class="mb-3">
-                    <label for="versionNameInput" class="form-label">Nom de la version</label>
+                    <label for="versionNameInput" class="form-label">Nom de la nouvelle version</label>
                     <input type="text" class="form-control" id="versionNameInput" 
+                           value="{{ devis.nomProjet }}"
                            placeholder="Ex: Corrections après relecture" autocomplete="off">
                 </div>
             </div>
@@ -918,6 +920,13 @@
                     <strong>{{ devis.numeroDevis }}</strong>
                     <span class="badge bg-{{ devis.statutCouleur }} ms-2">{{ devis.statutLibelle }}</span>
                 </span>
+            </div>
+            <div class="text-center flex-grow-1">
+                {% if devis.nomProjet %}
+                    <span class="text-white fw-bold fs-5">
+                        {{ devis.nomProjet }}
+                    </span>
+                {% endif %}
             </div>
             <div class="d-flex gap-2">
                 {% if devis.statut in ['envoye', 'signe', 'relance'] %}
@@ -1002,7 +1011,7 @@ function loadVersions() {
                                 <div class="card-header d-flex justify-content-between align-items-center">
                                     <div>
                                         <h6 class="mb-1">
-                                            ${version.versionLabel}
+                                            ${version.versionLabel || version.nomProjet || 'Version ' + version.versionNumber}
                                         </h6>
                                         <small class="text-muted">
                                             Version créée par ${version.modifiedBy} le ${version.createdAt}

@@ -178,6 +178,15 @@
                     <div class="d-flex justify-content-between align-items-center">
                         <div class="d-flex align-items-center">
                             <h5 class="mb-0 me-3"><i class="fas fa-list me-2"></i>Éléments du devis</h5>
+                            <div class="ms-3">
+                                {{ form_widget(form.nomProjet, {
+                                    'attr': {
+                                        'class': 'form-control d-inline-block',
+                                        'style': 'width: 300px;',
+                                        'placeholder': 'Nom du projet...'
+                                    }
+                                }) }}
+                            </div>
                         </div>
                     </div>
                 </div>
@@ -405,6 +414,11 @@
                     <i class="fas fa-file-invoice me-2"></i>
                     <strong>{{ devis.numeroDevis }}</strong>
                     <span class="badge bg-{{ devis.statutCouleur }} ms-2">{{ devis.statutLibelle }}</span>
+                </span>
+            </div>
+            <div class="text-center flex-grow-1">
+                <span class="text-white fw-bold fs-5" id="floating-project-name">
+                    {{ devis.nomProjet ?: 'Projet sans nom' }}
                 </span>
             </div>
             <div class="d-flex gap-2">
@@ -1971,6 +1985,26 @@ function initContactAddressSynchronization() {
     const adresseLivraisonSelect = document.getElementById('devis_adresseLivraison');
 
     if (!clientHiddenField) return;
+    
+    // Initialiser avec les valeurs existantes du devis au démarrage
+    if (contactFacturationSelect) {
+        contactFacturationSelect.setAttribute('data-initial-value', '{{ devis.contactFacturation ? devis.contactFacturation.id : "" }}');
+    }
+    if (contactLivraisonSelect) {
+        contactLivraisonSelect.setAttribute('data-initial-value', '{{ devis.contactLivraison ? devis.contactLivraison.id : "" }}');
+    }
+    if (adresseFacturationSelect) {
+        adresseFacturationSelect.setAttribute('data-initial-value', '{{ devis.adresseFacturation ? devis.adresseFacturation.id : "" }}');
+    }
+    if (adresseLivraisonSelect) {
+        adresseLivraisonSelect.setAttribute('data-initial-value', '{{ devis.adresseLivraison ? devis.adresseLivraison.id : "" }}');
+    }
+    
+    // Charger immédiatement les contacts pour le client actuel
+    const currentClientId = clientHiddenField.value;
+    if (currentClientId) {
+        loadClientContactsAndAddresses(currentClientId);
+    }
 
     // Observer les changements du champ client caché
     const observer = new MutationObserver(function(mutations) {
@@ -2095,6 +2129,9 @@ function populateContacts(contacts) {
     // Facturation
     if (contactFacturationSelect) {
         const currentValue = contactFacturationSelect.value;
+        const initialValue = contactFacturationSelect.getAttribute('data-initial-value');
+        const valueToUse = currentValue || initialValue;
+        
         contactFacturationSelect.innerHTML = '<option value="">Sélectionner un contact...</option>';
         
         let defaultFacturationContact = null;
@@ -2103,21 +2140,29 @@ function populateContacts(contacts) {
             option.value = contact.id;
             option.textContent = contact.label || `${contact.civilite || ''} ${contact.prenom || ''} ${contact.nom || ''}`.trim();
             
-            // Préserver la sélection existante ou sélectionner le contact par défaut
-            if (contact.id == currentValue) {
+            // Ordre de priorité: valeur existante > valeur initiale du devis > contact par défaut
+            if (contact.id == valueToUse) {
                 option.selected = true;
-            } else if (!currentValue && contact.is_facturation_default) {
+            } else if (!valueToUse && contact.is_facturation_default) {
                 defaultFacturationContact = contact;
                 option.selected = true;
             }
             
             contactFacturationSelect.appendChild(option);
         });
+        
+        // Mettre à jour la valeur si on a sélectionné un contact
+        if (contactFacturationSelect.value) {
+            contactFacturationSelect.value = contactFacturationSelect.value;
+        }
     }
 
     // Livraison
     if (contactLivraisonSelect) {
         const currentValue = contactLivraisonSelect.value;
+        const initialValue = contactLivraisonSelect.getAttribute('data-initial-value');
+        const valueToUse = currentValue || initialValue;
+        
         contactLivraisonSelect.innerHTML = '<option value="">Sélectionner un contact...</option>';
         
         let defaultLivraisonContact = null;
@@ -2126,10 +2171,10 @@ function populateContacts(contacts) {
             option.value = contact.id;
             option.textContent = contact.label || `${contact.civilite || ''} ${contact.prenom || ''} ${contact.nom || ''}`.trim();
             
-            // Préserver la sélection existante ou sélectionner le contact par défaut
-            if (contact.id == currentValue) {
+            // Ordre de priorité: valeur existante > valeur initiale du devis > contact par défaut
+            if (contact.id == valueToUse) {
                 option.selected = true;
-            } else if (!currentValue && contact.is_livraison_default) {
+            } else if (!valueToUse && contact.is_livraison_default) {
                 defaultLivraisonContact = contact;
                 option.selected = true;
             }
@@ -2137,11 +2182,18 @@ function populateContacts(contacts) {
             contactLivraisonSelect.appendChild(option);
         });
         
+        // Mettre à jour la valeur si on a sélectionné un contact
+        if (contactLivraisonSelect.value) {
+            contactLivraisonSelect.value = contactLivraisonSelect.value;
+        }
+        
         // Synchroniser l'email et déclencher les événements si des contacts sont sélectionnés automatiquement
-        if (!currentValue && defaultLivraisonContact) {
+        if ((!currentValue && !initialValue && defaultLivraisonContact) || (valueToUse && contactLivraisonSelect.value)) {
             setTimeout(() => {
-                syncContactEmail(defaultLivraisonContact.id);
-                contactLivraisonSelect.dispatchEvent(new Event('change'));
+                if (contactLivraisonSelect.value) {
+                    syncContactEmail(contactLivraisonSelect.value);
+                    contactLivraisonSelect.dispatchEvent(new Event('change'));
+                }
             }, 100);
         }
     }
@@ -2162,6 +2214,9 @@ function populateAddresses(addresses) {
         if (!select) return;
         
         const currentValue = select.value;
+        const initialValue = select.getAttribute('data-initial-value');
+        const valueToUse = currentValue || initialValue;
+        
         select.innerHTML = '<option value="">Sélectionner une adresse...</option>';
         
         addresses.forEach(address => {
@@ -2192,7 +2247,7 @@ function populateAddresses(addresses) {
                 option.textContent = displayText;
             }
             
-            if (address.id == currentValue) {
+            if (address.id == valueToUse) {
                 option.selected = true;
             }
             select.appendChild(option);
@@ -4488,6 +4543,19 @@ function hideImagePreview() {
         imagePreviewTooltip.style.display = 'none';
     }
 }
+
+// Mettre à jour le nom du projet dans la barre flottante en temps réel
+document.addEventListener('DOMContentLoaded', function() {
+    const nomProjetField = document.querySelector('input[name="devis[nomProjet]"]');
+    const floatingProjectName = document.getElementById('floating-project-name');
+    
+    if (nomProjetField && floatingProjectName) {
+        nomProjetField.addEventListener('input', function() {
+            const newName = this.value.trim();
+            floatingProjectName.textContent = newName || 'Projet sans nom';
+        });
+    }
+});
 
 </script>
 

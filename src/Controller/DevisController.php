@@ -213,6 +213,12 @@ final class DevisController extends AbstractController
                     error_log("Erreur parsing date livraison: " . $e->getMessage());
                 }
             }
+            
+            // Définir le nom du projet
+            if ($nomProjet) {
+                $devis->setNomProjet($nomProjet);
+            }
+            
             $devis->setNotesClient($notePublique);
             $devis->setNotesInternes($notePrivee);
             
@@ -1224,6 +1230,7 @@ final class DevisController extends AbstractController
             'acompteMontant' => $devis->getAcompteMontant(),
             'remiseGlobalePercent' => $devis->getRemiseGlobalePercent(),
             'remiseGlobaleMontant' => $devis->getRemiseGlobaleMontant(),
+            'nomProjet' => $devis->getNomProjet(),
             // Client information for template compatibility
             'client' => $devis->getClient() ? [
                 'id' => $devis->getClient()->getId(),
@@ -1398,12 +1405,18 @@ final class DevisController extends AbstractController
         // Créer une version qui archive l'ANCIEN ÉTAT
         $version = $this->createDevisVersionFromState($devis, $entityManager, $currentState, $reason);
         
-        // Déterminer le label de la version
-        if ($label) {
-            $version->setVersionLabel($label);
+        // Déterminer le label de la version (devrait utiliser l'ancien nom du projet)
+        if ($label && $label !== $devis->getNomProjet()) {
+            // Si l'utilisateur a fourni un nouveau nom, la version garde l'ancien nom du projet
+            $version->setVersionLabel($devis->getNomProjet() ?: 'Version ' . $version->getVersionNumber());
+            // Et on met à jour le devis avec le nouveau nom
+            $devis->setNomProjet($label);
         } elseif ($version->getVersionNumber() === 1) {
             // La première version est toujours le "Devis initial"
             $version->setVersionLabel('Devis initial');
+        } else {
+            // Utiliser l'ancien nom du projet pour cette version
+            $version->setVersionLabel($devis->getNomProjet() ?: 'Version ' . $version->getVersionNumber());
         }
         
         // Changer le statut du devis pour permettre l'édition (le contenu reste le même)

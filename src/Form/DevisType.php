@@ -31,6 +31,14 @@ class DevisType extends AbstractType
                 'attr' => ['placeholder' => 'Généré automatiquement', 'readonly' => true],
                 'required' => false
             ])
+            ->add('nomProjet', TextType::class, [
+                'label' => 'Nom du projet',
+                'required' => false,
+                'attr' => [
+                    'class' => 'form-control',
+                    'placeholder' => 'Ex: Refonte site web, Installation serveur...'
+                ]
+            ])
             ->add('dateCreation', DateType::class, [
                 'label' => 'Date de création',
                 'widget' => 'single_text',

@@ -117,6 +117,9 @@ class Devis
     #[ORM\Column(length: 255, nullable: true)]
     private ?string $emailEnvoiAutomatique = null;
 
+    #[ORM\Column(length: 255, nullable: true)]
+    private ?string $nomProjet = null;
+
     // Champs Tiers éditables pour ce devis spécifiquement
     #[ORM\Column(length: 10, nullable: true)]
     private ?string $tiersCivilite = null;
@@ -827,6 +830,17 @@ class Devis
     public function setTiersModeReglement(?string $tiersModeReglement): static
     {
         $this->tiersModeReglement = $tiersModeReglement;
+        return $this;
+    }
+
+    public function getNomProjet(): ?string
+    {
+        return $this->nomProjet;
+    }
+
+    public function setNomProjet(?string $nomProjet): static
+    {
+        $this->nomProjet = $nomProjet;
         return $this;
     }
 
