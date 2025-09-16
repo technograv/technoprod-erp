@@ -119,7 +119,7 @@ final class ProspectController extends AbstractController
 
             $this->addFlash('success', 'Prospect créé avec succès !');
 
-            return $this->redirectToRoute('app_prospect_show', ['id' => $prospect->getId()]);
+            return $this->redirectToRoute('app_client_show', ['id' => $prospect->getId()]);
         }
 
         return $this->render('prospect/new.html.twig', [
@@ -129,11 +129,10 @@ final class ProspectController extends AbstractController
     }
 
     #[Route('/{id}', name: 'app_prospect_show', methods: ['GET'])]
-    public function show(Prospect $prospect): Response
+    public function show(int $id): Response
     {
-        return $this->render('prospect/show.html.twig', [
-            'prospect' => $prospect,
-        ]);
+        // Redirection vers la page client unifiée
+        return $this->redirectToRoute('app_client_show', ['id' => $id]);
     }
 
     #[Route('/{id}/edit', name: 'app_prospect_edit', methods: ['GET', 'POST'])]
@@ -174,7 +173,7 @@ final class ProspectController extends AbstractController
 
                 $this->addFlash('success', 'Prospect modifié avec succès !');
 
-                return $this->redirectToRoute('app_prospect_show', ['id' => $prospect->getId()]);
+                return $this->redirectToRoute('app_client_show', ['id' => $prospect->getId()]);
             } else {
                 // Debug: afficher les erreurs du formulaire
                 $errors = [];
@@ -211,7 +210,7 @@ final class ProspectController extends AbstractController
     {
         if ($prospect->isClient()) {
             $this->addFlash('error', 'Ce prospect est déjà un client !');
-            return $this->redirectToRoute('app_prospect_show', ['id' => $prospect->getId()]);
+            return $this->redirectToRoute('app_client_show', ['id' => $prospect->getId()]);
         }
 
         $prospect->convertToClient();
@@ -219,7 +218,7 @@ final class ProspectController extends AbstractController
 
         $this->addFlash('success', 'Prospect converti en client avec succès !');
 
-        return $this->redirectToRoute('app_prospect_show', ['id' => $prospect->getId()]);
+        return $this->redirectToRoute('app_client_show', ['id' => $prospect->getId()]);
     }
 
     #[Route('/{id}', name: 'app_prospect_delete', methods: ['POST'])]

@@ -11,25 +11,22 @@
             border-bottom: 1px solid #dee2e6;
             margin-bottom: 0;
         }
-        .nav-pills .nav-link {
-            background: transparent;
+        .nav-tabs .nav-link {
+            border: none;
+            border-bottom: 3px solid transparent;
+            background: none;
             color: #6c757d;
-            border-radius: 8px;
-            margin-right: 0.5rem;
-            padding: 0.75rem 1.25rem;
-            transition: all 0.2s ease;
-            border: 1px solid transparent;
+            padding: 1rem 1.5rem;
         }
-        .nav-pills .nav-link:hover {
-            background: #f8f9fa;
+        .nav-tabs .nav-link:hover {
+            border-bottom-color: #dee2e6;
             color: #495057;
-            border-color: #dee2e6;
         }
-        .nav-pills .nav-link.active {
-            background: #6f42c1;
-            color: white;
+        .nav-tabs .nav-link.active {
+            background: white;
+            color: #495057;
+            border-bottom-color: #6f42c1;
             font-weight: 600;
-            border-color: #6f42c1;
         }
         .tab-content {
             background: white;
@@ -205,40 +202,40 @@
 <!-- Onglets -->
 <div class="devis-tabs">
     <div class="container-fluid">
-        <ul class="nav nav-pills" id="devisTabs" role="tablist">
+        <ul class="nav nav-tabs" id="devisTabs" role="tablist">
             <li class="nav-item" role="presentation">
-                <button class="nav-link active" id="details-tab" data-bs-toggle="pill" data-bs-target="#details" type="button" role="tab">
+                <button class="nav-link active" id="details-tab" data-bs-toggle="tab" data-bs-target="#details" type="button" role="tab">
                     <i class="fas fa-info-circle me-2"></i>Détails
                 </button>
             </li>
             <li class="nav-item" role="presentation">
-                <button class="nav-link" id="lignes-tab" data-bs-toggle="pill" data-bs-target="#lignes" type="button" role="tab">
+                <button class="nav-link" id="lignes-tab" data-bs-toggle="tab" data-bs-target="#lignes" type="button" role="tab">
                     <i class="fas fa-list me-2"></i>Lignes du devis
                 </button>
             </li>
             <li class="nav-item" role="presentation">
-                <button class="nav-link" id="livraison-tab" data-bs-toggle="pill" data-bs-target="#livraison" type="button" role="tab">
+                <button class="nav-link" id="livraison-tab" data-bs-toggle="tab" data-bs-target="#livraison" type="button" role="tab">
                     <i class="fas fa-shipping-fast me-2"></i>Livraison
                 </button>
             </li>
             <li class="nav-item" role="presentation">
-                <button class="nav-link" id="notes-tab" data-bs-toggle="pill" data-bs-target="#notes" type="button" role="tab">
+                <button class="nav-link" id="notes-tab" data-bs-toggle="tab" data-bs-target="#notes" type="button" role="tab">
                     <i class="fas fa-sticky-note me-2"></i>Notes
                 </button>
             </li>
             <li class="nav-item" role="presentation">
-                <button class="nav-link" id="suivi-tab" data-bs-toggle="pill" data-bs-target="#suivi" type="button" role="tab">
+                <button class="nav-link" id="suivi-tab" data-bs-toggle="tab" data-bs-target="#suivi" type="button" role="tab">
                     <i class="fas fa-tasks me-2"></i>Suivi
                 </button>
             </li>
             <li class="nav-item" role="presentation">
-                <button class="nav-link" id="versions-tab" data-bs-toggle="pill" data-bs-target="#versions" type="button" role="tab">
+                <button class="nav-link" id="versions-tab" data-bs-toggle="tab" data-bs-target="#versions" type="button" role="tab">
                     <i class="fas fa-history me-2"></i>Historique{% if devis.hasVersions %} <span class="badge bg-secondary ms-1">{{ devis.versionCount }}</span>{% endif %}
                 </button>
             </li>
             {% if devis.dateSignature %}
             <li class="nav-item" role="presentation">
-                <button class="nav-link" id="signature-tab" data-bs-toggle="pill" data-bs-target="#signature" type="button" role="tab">
+                <button class="nav-link" id="signature-tab" data-bs-toggle="tab" data-bs-target="#signature" type="button" role="tab">
                     <i class="fas fa-signature me-2"></i>Signature
                 </button>
             </li>
