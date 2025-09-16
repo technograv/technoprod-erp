@@ -18,9 +18,23 @@ class AdresseRepository extends ServiceEntityRepository
     }
 
     /**
-     * Trouve toutes les adresses d'un client
+     * Trouve toutes les adresses d'un client (non supprimées)
      */
     public function findByClient(Client $client): array
+    {
+        return $this->createQueryBuilder('a')
+            ->andWhere('a.client = :client')
+            ->andWhere('a.deletedAt IS NULL')
+            ->setParameter('client', $client)
+            ->orderBy('a.ville', 'ASC')
+            ->getQuery()
+            ->getResult();
+    }
+
+    /**
+     * Trouve toutes les adresses d'un client (incluant supprimées)
+     */
+    public function findAllByClient(Client $client): array
     {
         return $this->createQueryBuilder('a')
             ->andWhere('a.client = :client')
@@ -59,12 +73,13 @@ class AdresseRepository extends ServiceEntityRepository
     }
 
     /**
-     * Recherche d'adresses par ville
+     * Recherche d'adresses par ville (non supprimées)
      */
     public function searchByVille(string $search, Client $client = null): array
     {
         $qb = $this->createQueryBuilder('a')
             ->andWhere('a.ville LIKE :search OR a.ligne1 LIKE :search')
+            ->andWhere('a.deletedAt IS NULL')
             ->setParameter('search', '%' . $search . '%');
             
         if ($client) {
@@ -78,12 +93,13 @@ class AdresseRepository extends ServiceEntityRepository
     }
 
     /**
-     * Trouve les adresses navigables (avec coordonnées complètes)
+     * Trouve les adresses navigables (avec coordonnées complètes, non supprimées)
      */
     public function findNavigableByClient(Client $client): array
     {
         return $this->createQueryBuilder('a')
             ->andWhere('a.client = :client')
+            ->andWhere('a.deletedAt IS NULL')
             ->andWhere('a.ligne1 IS NOT NULL')
             ->andWhere('a.ville IS NOT NULL')
             ->andWhere('a.codePostal IS NOT NULL')

@@ -100,12 +100,11 @@ class ClientLoggerService
     public function logContactAdded(Client $client, Contact $contact, ?User $user = null): ClientLog
     {
         $details = sprintf(
-            'Contact ajouté: %s (%s)',
-            $contact->getNomComplet(),
-            $contact->getEmail() ?: 'sans email'
+            'Contact ajouté %s',
+            $contact->getNomComplet()
         );
         
-        return $this->log($client, 'contact_added', $details, $user);
+        return $this->log($client, 'Contact modifié', $details, $user);
     }
 
     /**
@@ -113,26 +112,12 @@ class ClientLoggerService
      */
     public function logContactUpdated(Client $client, Contact $contact, ?array $changes = null, ?User $user = null): ClientLog
     {
-        $details = sprintf('Contact modifié: %s', $contact->getNomComplet());
+        $details = sprintf(
+            'Contact modifié %s',
+            $contact->getNomComplet()
+        );
         
-        if ($changes) {
-            $changeDetails = [];
-            foreach ($changes as $field => $change) {
-                if (isset($change['old']) && isset($change['new'])) {
-                    $changeDetails[] = sprintf(
-                        '%s: %s → %s',
-                        $field,
-                        $change['old'],
-                        $change['new']
-                    );
-                }
-            }
-            if (!empty($changeDetails)) {
-                $details .= ' - ' . implode(', ', $changeDetails);
-            }
-        }
-        
-        return $this->log($client, 'contact_updated', $details, $user);
+        return $this->log($client, 'Contact modifié', $details, $user);
     }
 
     /**
@@ -140,9 +125,12 @@ class ClientLoggerService
      */
     public function logContactDeleted(Client $client, string $contactName, ?User $user = null): ClientLog
     {
-        $details = sprintf('Contact supprimé: %s', $contactName);
+        $details = sprintf(
+            'Contact supprimé %s',
+            $contactName
+        );
         
-        return $this->log($client, 'contact_deleted', $details, $user);
+        return $this->log($client, 'Contact modifié', $details, $user);
     }
 
     /**
@@ -166,14 +154,11 @@ class ClientLoggerService
     public function logAddressAdded(Client $client, Adresse $adresse, ?User $user = null): ClientLog
     {
         $details = sprintf(
-            'Adresse ajoutée: %s - %s, %s %s',
-            $adresse->getNom(),
-            $adresse->getLigne1(),
-            $adresse->getCodePostal(),
-            $adresse->getVille()
+            'Adresse ajoutée %s',
+            $adresse->getNom()
         );
         
-        return $this->log($client, 'address_added', $details, $user);
+        return $this->log($client, 'Adresse modifiée', $details, $user);
     }
 
     /**
@@ -181,26 +166,12 @@ class ClientLoggerService
      */
     public function logAddressUpdated(Client $client, Adresse $adresse, ?array $changes = null, ?User $user = null): ClientLog
     {
-        $details = sprintf('Adresse modifiée: %s', $adresse->getNom());
+        $details = sprintf(
+            'Adresse modifiée %s',
+            $adresse->getNom()
+        );
         
-        if ($changes) {
-            $changeDetails = [];
-            foreach ($changes as $field => $change) {
-                if (isset($change['old']) && isset($change['new'])) {
-                    $changeDetails[] = sprintf(
-                        '%s: %s → %s',
-                        $field,
-                        $change['old'],
-                        $change['new']
-                    );
-                }
-            }
-            if (!empty($changeDetails)) {
-                $details .= ' - ' . implode(', ', $changeDetails);
-            }
-        }
-        
-        return $this->log($client, 'address_updated', $details, $user);
+        return $this->log($client, 'Adresse modifiée', $details, $user);
     }
 
     /**
@@ -208,9 +179,12 @@ class ClientLoggerService
      */
     public function logAddressDeleted(Client $client, string $addressName, ?User $user = null): ClientLog
     {
-        $details = sprintf('Adresse supprimée: %s', $addressName);
+        $details = sprintf(
+            'Adresse supprimée %s',
+            $addressName
+        );
         
-        return $this->log($client, 'address_deleted', $details, $user);
+        return $this->log($client, 'Adresse modifiée', $details, $user);
     }
 
     /**
@@ -224,7 +198,7 @@ class ClientLoggerService
             $contact->getNomComplet()
         );
         
-        return $this->log($client, 'address_assigned', $details, $user);
+        return $this->log($client, 'Adresse modifiée', $details, $user);
     }
 
     /**
@@ -280,6 +254,137 @@ class ClientLoggerService
         );
         
         return $this->log($client, 'status_changed', $details, $user);
+    }
+
+    /**
+     * Log la modification de la forme juridique
+     */
+    public function logFormeJuridiqueChanged(Client $client, ?string $oldValue, ?string $newValue, ?User $user = null): ClientLog
+    {
+        $details = sprintf(
+            'Forme juridique modifiée %s → %s',
+            $oldValue ?: 'Aucune',
+            $newValue ?: 'Aucune'
+        );
+        
+        return $this->log($client, 'Informations générales modifiées', $details, $user);
+    }
+
+    /**
+     * Log la modification de la dénomination
+     */
+    public function logDenominationChanged(Client $client, ?string $oldValue, ?string $newValue, ?User $user = null): ClientLog
+    {
+        $details = sprintf(
+            'Dénomination modifiée "%s" → "%s"',
+            $oldValue ?: '',
+            $newValue ?: ''
+        );
+        
+        return $this->log($client, 'Informations générales modifiées', $details, $user);
+    }
+
+    /**
+     * Log la modification du délai de paiement
+     */
+    public function logDelaiPaiementChanged(Client $client, ?int $oldValue, ?int $newValue, ?User $user = null): ClientLog
+    {
+        $details = sprintf(
+            'Délai de paiement modifié %d → %d jours',
+            $oldValue ?: 30,
+            $newValue ?: 30
+        );
+        
+        return $this->log($client, 'Informations générales modifiées', $details, $user);
+    }
+
+    /**
+     * Log la modification du mode de paiement
+     */
+    public function logModePaiementChanged(Client $client, ?string $oldValue, ?string $newValue, ?User $user = null): ClientLog
+    {
+        $details = sprintf(
+            'Mode de paiement modifié %s → %s',
+            $oldValue ?: 'Non défini',
+            $newValue ?: 'Non défini'
+        );
+        
+        return $this->log($client, 'Informations générales modifiées', $details, $user);
+    }
+
+    /**
+     * Log la modification des conditions tarifaires
+     */
+    public function logConditionsTarifsChanged(Client $client, ?string $oldValue, ?string $newValue, ?User $user = null): ClientLog
+    {
+        $details = sprintf(
+            'Conditions tarifaires modifiées %s → %s',
+            $oldValue ?: 'Non définies',
+            $newValue ?: 'Non définies'
+        );
+        
+        return $this->log($client, 'Informations générales modifiées', $details, $user);
+    }
+
+    /**
+     * Log la modification de l'assujettissement TVA
+     */
+    public function logAssujettiTvaChanged(Client $client, ?bool $oldValue, ?bool $newValue, ?User $user = null): ClientLog
+    {
+        $oldLabel = $oldValue ? 'Assujetti TVA' : 'Non assujetti TVA';
+        $newLabel = $newValue ? 'Assujetti TVA' : 'Non assujetti TVA';
+        
+        $details = sprintf(
+            'Assujettissement TVA modifié %s → %s',
+            $oldLabel,
+            $newLabel
+        );
+        
+        return $this->log($client, 'Informations générales modifiées', $details, $user);
+    }
+
+    /**
+     * Log la modification des notes
+     */
+    public function logNotesChanged(Client $client, ?string $oldValue, ?string $newValue, ?User $user = null): ClientLog
+    {
+        $details = 'Notes modifiées';
+        
+        return $this->log($client, 'Notes modifiées', $details, $user);
+    }
+
+    /**
+     * Log la modification du contact de facturation par défaut
+     */
+    public function logContactFacturationDefaultChanged(Client $client, ?Contact $oldContact, ?Contact $newContact, ?User $user = null): ClientLog
+    {
+        $oldName = $oldContact ? $oldContact->getNomComplet() : 'Aucun';
+        $newName = $newContact ? $newContact->getNomComplet() : 'Aucun';
+        
+        $details = sprintf(
+            'Contact facturation par défaut modifié %s → %s',
+            $oldName,
+            $newName
+        );
+        
+        return $this->log($client, 'Contact modifié', $details, $user);
+    }
+
+    /**
+     * Log la modification du contact de livraison par défaut
+     */
+    public function logContactLivraisonDefaultChanged(Client $client, ?Contact $oldContact, ?Contact $newContact, ?User $user = null): ClientLog
+    {
+        $oldName = $oldContact ? $oldContact->getNomComplet() : 'Aucun';
+        $newName = $newContact ? $newContact->getNomComplet() : 'Aucun';
+        
+        $details = sprintf(
+            'Contact livraison par défaut modifié %s → %s',
+            $oldName,
+            $newName
+        );
+        
+        return $this->log($client, 'Contact modifié', $details, $user);
     }
 
     /**

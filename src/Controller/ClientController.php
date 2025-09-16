@@ -414,20 +414,81 @@ final class ClientController extends AbstractController
             // Traitement de la soumission du formulaire
             $data = $request->request->all();
             
-            // Mise à jour des informations générales
-            if (isset($data['nom'])) $client->setNom($data['nom']);
-            if (isset($data['forme_juridique']) && !empty($data['forme_juridique'])) {
-                $formeJuridique = $entityManager->getRepository(\App\Entity\FormeJuridique::class)->find($data['forme_juridique']);
-                if ($formeJuridique) {
-                    $client->setFormeJuridique($formeJuridique);
+            try {
+                // Tracker les changements sur les champs principaux du client
+                $clientChanges = [];
+                
+                // Dénomination
+                $oldNom = $client->getNom();
+                if (isset($data['nom']) && $oldNom !== $data['nom']) {
+                    $clientChanges['nom'] = ['old' => $oldNom, 'new' => $data['nom']];
+                    $client->setNom($data['nom']);
+                } elseif (isset($data['nom'])) {
+                    $client->setNom($data['nom']);
                 }
-            }
-            if (isset($data['famille'])) $client->setFamille($data['famille']);
-            if (isset($data['delai_paiement'])) $client->setDelaiPaiement((int)$data['delai_paiement']);
-            if (isset($data['mode_paiement'])) $client->setModePaiement($data['mode_paiement']);
-            if (isset($data['conditions_tarifs'])) $client->setConditionsTarifs($data['conditions_tarifs']);
-            if (isset($data['notes'])) $client->setNotes($data['notes']);
-            $client->setAssujettiTva(isset($data['assujetti_tva']));
+                
+                // Forme juridique
+                $oldFormeJuridique = $client->getFormeJuridique();
+                if (isset($data['forme_juridique']) && !empty($data['forme_juridique'])) {
+                    $formeJuridique = $entityManager->getRepository(\App\Entity\FormeJuridique::class)->find($data['forme_juridique']);
+                    if ($formeJuridique && $oldFormeJuridique !== $formeJuridique) {
+                        $clientChanges['forme_juridique'] = [
+                            'old' => $oldFormeJuridique ? $oldFormeJuridique->getNom() : null,
+                            'new' => $formeJuridique->getNom()
+                        ];
+                        $client->setFormeJuridique($formeJuridique);
+                    } elseif ($formeJuridique) {
+                        $client->setFormeJuridique($formeJuridique);
+                    }
+                }
+                
+                // Délai de paiement
+                $oldDelaiPaiement = $client->getDelaiPaiement();
+                if (isset($data['delai_paiement'])) {
+                    $newDelaiPaiement = (int)$data['delai_paiement'];
+                    if ($oldDelaiPaiement !== $newDelaiPaiement) {
+                        $clientChanges['delai_paiement'] = ['old' => $oldDelaiPaiement, 'new' => $newDelaiPaiement];
+                    }
+                    $client->setDelaiPaiement($newDelaiPaiement);
+                }
+                
+                // Mode de paiement
+                $oldModePaiement = $client->getModePaiement();
+                if (isset($data['mode_paiement']) && $oldModePaiement !== $data['mode_paiement']) {
+                    $clientChanges['mode_paiement'] = ['old' => $oldModePaiement, 'new' => $data['mode_paiement']];
+                    $client->setModePaiement($data['mode_paiement']);
+                } elseif (isset($data['mode_paiement'])) {
+                    $client->setModePaiement($data['mode_paiement']);
+                }
+                
+                // Conditions tarifaires
+                $oldConditionsTarifs = $client->getConditionsTarifs();
+                if (isset($data['conditions_tarifs']) && $oldConditionsTarifs !== $data['conditions_tarifs']) {
+                    $clientChanges['conditions_tarifs'] = ['old' => $oldConditionsTarifs, 'new' => $data['conditions_tarifs']];
+                    $client->setConditionsTarifs($data['conditions_tarifs']);
+                } elseif (isset($data['conditions_tarifs'])) {
+                    $client->setConditionsTarifs($data['conditions_tarifs']);
+                }
+                
+                // Notes
+                $oldNotes = $client->getNotes();
+                if (isset($data['notes']) && $oldNotes !== $data['notes']) {
+                    $clientChanges['notes'] = ['old' => $oldNotes, 'new' => $data['notes']];
+                    $client->setNotes($data['notes']);
+                } elseif (isset($data['notes'])) {
+                    $client->setNotes($data['notes']);
+                }
+                
+                // Assujetti TVA
+                $oldAssujettiTva = $client->isAssujettiTva();
+                $newAssujettiTva = isset($data['assujetti_tva']);
+                if ($oldAssujettiTva !== $newAssujettiTva) {
+                    $clientChanges['assujetti_tva'] = ['old' => $oldAssujettiTva, 'new' => $newAssujettiTva];
+                }
+                $client->setAssujettiTva($newAssujettiTva);
+                
+                // Famille (pas de log spécifique car champ technique)
+                if (isset($data['famille'])) $client->setFamille($data['famille']);
             
             // Gestion des contacts - Créer une correspondance pour les nouveaux contacts
             $contactIdMapping = []; // Correspondance entre IDs temporaires et vrais IDs
@@ -494,6 +555,9 @@ final class ClientController extends AbstractController
             $entityManager->flush();
             
             // Gestion des adresses (maintenant liées au client directement)
+            $newAddresses = []; // Pour tracker les nouvelles adresses à logger
+            $updatedAddresses = []; // Pour tracker les adresses modifiées
+            
             if (isset($data['adresses'])) {
                 foreach ($data['adresses'] as $adresseId => $adresseData) {
                     if (strpos($adresseId, 'new_') === 0) {
@@ -506,10 +570,40 @@ final class ClientController extends AbstractController
                         $adresse->setVille($adresseData['ville'] ?? '');
                         $adresse->setPays($adresseData['pays'] ?? 'France');
                         $entityManager->persist($adresse);
+                        $newAddresses[] = $adresse; // Tracker pour logging
                     } else {
                         // Adresse existante
                         $adresse = $entityManager->getRepository(Adresse::class)->find($adresseId);
                         if ($adresse && $adresse->getClient() === $client) {
+                            // Vérifier s'il y a eu des changements
+                            $hasChanges = false;
+                            $changes = [];
+                            
+                            if ($adresse->getNom() !== ($adresseData['nom'] ?? '')) {
+                                $changes['nom'] = ['old' => $adresse->getNom(), 'new' => $adresseData['nom'] ?? ''];
+                                $hasChanges = true;
+                            }
+                            if ($adresse->getLigne1() !== ($adresseData['ligne1'] ?? '')) {
+                                $changes['ligne1'] = ['old' => $adresse->getLigne1(), 'new' => $adresseData['ligne1'] ?? ''];
+                                $hasChanges = true;
+                            }
+                            if ($adresse->getCodePostal() !== ($adresseData['code_postal'] ?? '')) {
+                                $changes['code_postal'] = ['old' => $adresse->getCodePostal(), 'new' => $adresseData['code_postal'] ?? ''];
+                                $hasChanges = true;
+                            }
+                            if ($adresse->getVille() !== ($adresseData['ville'] ?? '')) {
+                                $changes['ville'] = ['old' => $adresse->getVille(), 'new' => $adresseData['ville'] ?? ''];
+                                $hasChanges = true;
+                            }
+                            if ($adresse->getPays() !== ($adresseData['pays'] ?? 'France')) {
+                                $changes['pays'] = ['old' => $adresse->getPays(), 'new' => $adresseData['pays'] ?? 'France'];
+                                $hasChanges = true;
+                            }
+                            
+                            if ($hasChanges) {
+                                $updatedAddresses[] = ['adresse' => $adresse, 'changes' => $changes];
+                            }
+                            
                             $adresse->setNom($adresseData['nom'] ?? '');
                             $adresse->setLigne1($adresseData['ligne1'] ?? '');
                             $adresse->setCodePostal($adresseData['code_postal'] ?? '');
@@ -521,6 +615,8 @@ final class ClientController extends AbstractController
             }
 
             // Gestion de l'assignation des adresses aux contacts
+            $addressAssignments = []; // Pour tracker les assignations d'adresses
+            
             if (isset($data['contacts'])) {
                 foreach ($data['contacts'] as $contactId => $contactData) {
                     $contact = null;
@@ -532,20 +628,39 @@ final class ClientController extends AbstractController
                         $contact = $entityManager->getRepository(Contact::class)->find((int)$contactId);
                     }
                     
-                    if ($contact && $contact->getClient() === $client && isset($contactData['adresse_id']) && !empty($contactData['adresse_id'])) {
-                        $adresseId = $contactData['adresse_id'];
-                        if (is_numeric($adresseId) && strpos($adresseId, 'new_') === false) {
-                            $adresse = $entityManager->getRepository(Adresse::class)->find((int)$adresseId);
-                            if ($adresse && $adresse->getClient() === $client) {
-                                $contact->setAdresse($adresse);
+                    if ($contact && $contact->getClient() === $client) {
+                        $oldAdresse = $contact->getAdresse();
+                        $newAdresseId = $contactData['adresse_id'] ?? null;
+                        
+                        if (!empty($newAdresseId)) {
+                            if (is_numeric($newAdresseId) && strpos($newAdresseId, 'new_') === false) {
+                                $newAdresse = $entityManager->getRepository(Adresse::class)->find((int)$newAdresseId);
+                                if ($newAdresse && $newAdresse->getClient() === $client) {
+                                    // Vérifier si c'est un changement d'adresse
+                                    if (!$oldAdresse || $oldAdresse->getId() !== $newAdresse->getId()) {
+                                        $addressAssignments[] = ['contact' => $contact, 'adresse' => $newAdresse];
+                                    }
+                                    $contact->setAdresse($newAdresse);
+                                }
+                            }
+                        } else {
+                            // Adresse supprimée du contact
+                            if ($oldAdresse) {
+                                $contact->setAdresse(null);
                             }
                         }
                     }
                 }
             }
             
+            // Tracker les changements de contacts par défaut
+            $contactFacturationChange = null;
+            $contactLivraisonChange = null;
+            
             // Gestion des contacts par défaut - utiliser la correspondance d'IDs
             if (isset($data['contact_facturation_default']) && !empty($data['contact_facturation_default'])) {
+                $oldContactFacturation = $client->getContactFacturationDefault();
+                
                 // Reset tous les contacts facturation par défaut
                 foreach ($client->getContacts() as $contact) {
                     $contact->setIsFacturationDefault(false);
@@ -565,10 +680,17 @@ final class ClientController extends AbstractController
                 if ($defaultContact && $defaultContact->getClient() === $client) {
                     $defaultContact->setIsFacturationDefault(true);
                     $client->setContactFacturationDefault($defaultContact);
+                    
+                    // Tracker le changement si différent
+                    if ($oldContactFacturation !== $defaultContact) {
+                        $contactFacturationChange = ['old' => $oldContactFacturation, 'new' => $defaultContact];
+                    }
                 }
             }
             
             if (isset($data['contact_livraison_default']) && !empty($data['contact_livraison_default'])) {
+                $oldContactLivraison = $client->getContactLivraisonDefault();
+                
                 // Reset tous les contacts livraison par défaut
                 foreach ($client->getContacts() as $contact) {
                     $contact->setIsLivraisonDefault(false);
@@ -588,19 +710,83 @@ final class ClientController extends AbstractController
                 if ($defaultContact && $defaultContact->getClient() === $client) {
                     $defaultContact->setIsLivraisonDefault(true);
                     $client->setContactLivraisonDefault($defaultContact);
+                    
+                    // Tracker le changement si différent
+                    if ($oldContactLivraison !== $defaultContact) {
+                        $contactLivraisonChange = ['old' => $oldContactLivraison, 'new' => $defaultContact];
+                    }
                 }
             }
             
             try {
                 $entityManager->flush();
                 
-                // Logger la modification du client
-                $clientLogger->logUpdated($client);
+                // Logger les actions spécifiques sur les champs principaux du client
+                foreach ($clientChanges as $field => $change) {
+                    switch ($field) {
+                        case 'forme_juridique':
+                            $clientLogger->logFormeJuridiqueChanged($client, $change['old'], $change['new']);
+                            break;
+                        case 'nom':
+                            $clientLogger->logDenominationChanged($client, $change['old'], $change['new']);
+                            break;
+                        case 'delai_paiement':
+                            $clientLogger->logDelaiPaiementChanged($client, $change['old'], $change['new']);
+                            break;
+                        case 'mode_paiement':
+                            $clientLogger->logModePaiementChanged($client, $change['old'], $change['new']);
+                            break;
+                        case 'conditions_tarifs':
+                            $clientLogger->logConditionsTarifsChanged($client, $change['old'], $change['new']);
+                            break;
+                        case 'notes':
+                            $clientLogger->logNotesChanged($client, $change['old'], $change['new']);
+                            break;
+                        case 'assujetti_tva':
+                            $clientLogger->logAssujettiTvaChanged($client, $change['old'], $change['new']);
+                            break;
+                    }
+                }
+                
+                // Logger les actions spécifiques sur les contacts
+                foreach ($newContacts as $contact) {
+                    $clientLogger->logContactAdded($client, $contact);
+                }
+                
+                foreach ($updatedContacts as $contactUpdate) {
+                    $clientLogger->logContactUpdated($client, $contactUpdate['contact'], $contactUpdate['changes']);
+                }
+                
+                // Logger les actions spécifiques sur les adresses
+                foreach ($newAddresses as $adresse) {
+                    $clientLogger->logAddressAdded($client, $adresse);
+                }
+                
+                foreach ($updatedAddresses as $adresseUpdate) {
+                    $clientLogger->logAddressUpdated($client, $adresseUpdate['adresse'], $adresseUpdate['changes']);
+                }
+                
+                // Logger les assignations d'adresses aux contacts
+                foreach ($addressAssignments as $assignment) {
+                    $clientLogger->logAddressAssigned($client, $assignment['contact'], $assignment['adresse']);
+                }
+                
+                // Logger les changements de contacts par défaut
+                if ($contactFacturationChange) {
+                    $clientLogger->logContactFacturationDefaultChanged($client, $contactFacturationChange['old'], $contactFacturationChange['new']);
+                }
+                
+                if ($contactLivraisonChange) {
+                    $clientLogger->logContactLivraisonDefaultChanged($client, $contactLivraisonChange['old'], $contactLivraisonChange['new']);
+                }
                 
                 $this->addFlash('success', 'Client mis à jour avec succès !');
                 return $this->redirectToRoute('app_client_show', ['id' => $client->getId()]);
             } catch (\Exception $e) {
                 $this->addFlash('error', 'Erreur lors de la mise à jour : ' . $e->getMessage());
+            }
+            } catch (\Exception $e) {
+                $this->addFlash('error', 'Erreur lors de la modification : ' . $e->getMessage());
             }
         }
 
@@ -696,5 +882,87 @@ final class ClientController extends AbstractController
         }
         
         return $this->json($results);
+    }
+
+    #[Route('/{id}/contact/{contactId}/delete', name: 'app_client_contact_delete', methods: ['POST'])]
+    public function deleteContact(Client $client, int $contactId, EntityManagerInterface $entityManager, ClientLoggerService $clientLogger): JsonResponse
+    {
+        try {
+            $contact = $entityManager->getRepository(Contact::class)->find($contactId);
+            
+            if (!$contact || $contact->getClient() !== $client) {
+                return $this->json(['success' => false, 'message' => 'Contact non trouvé']);
+            }
+            
+            // Vérifier si le contact peut être supprimé (pas le seul contact, pas contact par défaut)
+            if ($contact->isFacturationDefault() || $contact->isLivraisonDefault()) {
+                return $this->json(['success' => false, 'message' => 'Impossible de supprimer un contact par défaut']);
+            }
+            
+            if ($client->getContacts()->count() <= 1) {
+                return $this->json(['success' => false, 'message' => 'Impossible de supprimer le seul contact']);
+            }
+            
+            $contactName = $contact->getNomComplet();
+            
+            $entityManager->remove($contact);
+            $entityManager->flush();
+            
+            // Logger la suppression
+            $clientLogger->logContactDeleted($client, $contactName);
+            
+            return $this->json(['success' => true, 'message' => 'Contact supprimé avec succès']);
+            
+        } catch (\Exception $e) {
+            return $this->json(['success' => false, 'message' => 'Erreur lors de la suppression : ' . $e->getMessage()]);
+        }
+    }
+
+    #[Route('/{id}/address/{addressId}/delete', name: 'app_client_address_delete', methods: ['POST'])]
+    public function deleteAddress(Client $client, int $addressId, EntityManagerInterface $entityManager, ClientLoggerService $clientLogger): JsonResponse
+    {
+        try {
+            $adresse = $entityManager->getRepository(Adresse::class)->find($addressId);
+            
+            if (!$adresse || $adresse->getClient() !== $client) {
+                return $this->json(['success' => false, 'message' => 'Adresse non trouvée']);
+            }
+            
+            // Vérifier si l'adresse peut être supprimée (pas utilisée par un contact, pas la seule adresse)
+            $isUsed = false;
+            foreach ($client->getContacts() as $contact) {
+                if ($contact->getAdresse() && $contact->getAdresse()->getId() === $adresse->getId()) {
+                    $isUsed = true;
+                    break;
+                }
+            }
+            
+            if ($isUsed) {
+                return $this->json(['success' => false, 'message' => 'Impossible de supprimer une adresse utilisée par un contact']);
+            }
+            
+            // Compter seulement les adresses non supprimées
+            $activeAddresses = $client->getAdresses()->filter(function($addr) {
+                return !$addr->isDeleted();
+            });
+            
+            if ($activeAddresses->count() <= 1) {
+                return $this->json(['success' => false, 'message' => 'Impossible de supprimer la seule adresse']);
+            }
+            
+            $addressName = $adresse->getNom();
+            
+            // Soft delete au lieu de suppression réelle
+            $adresse->softDelete();
+            $entityManager->flush();
+            
+            // Logger la suppression
+            $clientLogger->logAddressDeleted($client, $addressName);
+            
+            return $this->json(['success' => true, 'message' => 'Adresse supprimée avec succès']);
+            
+        } catch (\Exception $e) {
+            return $this->json(['success' => false, 'message' => 'Erreur lors de la suppression : ' . $e->getMessage()]);
+        }
     }
 }

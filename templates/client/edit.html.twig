@@ -1009,50 +1009,82 @@ function removeContact(contactId) {
     }
     
     if (confirm('Êtes-vous sûr de vouloir supprimer ce contact ?')) {
-        document.querySelector(`tr[data-contact-id="${contactId}"]`).remove();
-        
-        // Vérifier l'état après suppression
-        const tbody = document.getElementById('contacts-table-body');
-        const remainingContacts = tbody.querySelectorAll('tr:not(.empty-row)');
-        
-        if (remainingContacts.length === 0) {
-            // Plus aucun contact : afficher la ligne vide
-            tbody.innerHTML = `
-                <tr class="empty-row">
-                    <td colspan="8" class="text-center py-4">
-                        <div class="empty-state">
-                            <i class="fas fa-user-plus"></i>
-                            <h5>Aucun contact ajouté</h5>
-                            <p class="mb-0">Cliquez sur "Ajouter un contact" pour commencer</p>
-                        </div>
-                    </td>
-                </tr>
-            `;
-        } else if (remainingContacts.length === 1) {
-            // Il ne reste qu'un contact : le définir automatiquement comme défaut
-            const lastContact = remainingContacts[0];
-            const factuCheckbox = lastContact.querySelector('.facturation-default');
-            const livrCheckbox = lastContact.querySelector('.livraison-default');
-            const deleteBtn = lastContact.querySelector('.btn-outline-danger');
-            
-            if (factuCheckbox) {
-                factuCheckbox.checked = true;
-                factuCheckbox.disabled = true;
-            }
-            if (livrCheckbox) {
-                livrCheckbox.checked = true;
-                livrCheckbox.disabled = true;
-            }
-            if (deleteBtn) {
-                deleteBtn.disabled = true;
-                deleteBtn.classList.add('disabled');
-            }
+        // Pour les nouveaux contacts (avec ID temporaire), supprimer directement du DOM
+        if (typeof contactId === 'string' && contactId.startsWith('new_')) {
+            document.querySelector(`tr[data-contact-id="${contactId}"]`).remove();
+            updateContactsAfterRemoval();
+            return;
         }
         
-        // Mettre à jour l'état de tous les boutons après suppression
-        updateDeleteButtonStates();
-        updateAddressDeleteButtonStates();
+        // Pour les contacts existants, appeler l'API de suppression
+        const clientId = getClientId();
+        fetch(`/client/${clientId}/contact/${contactId}/delete`, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'X-Requested-With': 'XMLHttpRequest'
+            }
+        })
+        .then(response => response.json())
+        .then(data => {
+            if (data.success) {
+                document.querySelector(`tr[data-contact-id="${contactId}"]`).remove();
+                updateContactsAfterRemoval();
+                // Afficher un message de succès si souhaité
+                console.log(data.message);
+            } else {
+                alert('Erreur: ' + data.message);
+            }
+        })
+        .catch(error => {
+            console.error('Erreur:', error);
+            alert('Erreur lors de la suppression du contact');
+        });
     }
+}
+
+function updateContactsAfterRemoval() {
+    // Vérifier l'état après suppression
+    const tbody = document.getElementById('contacts-table-body');
+    const remainingContacts = tbody.querySelectorAll('tr:not(.empty-row)');
+    
+    if (remainingContacts.length === 0) {
+        // Plus aucun contact : afficher la ligne vide
+        tbody.innerHTML = `
+            <tr class="empty-row">
+                <td colspan="8" class="text-center py-4">
+                    <div class="empty-state">
+                        <i class="fas fa-user-plus"></i>
+                        <h5>Aucun contact ajouté</h5>
+                        <p class="mb-0">Cliquez sur "Ajouter un contact" pour commencer</p>
+                    </div>
+                </td>
+            </tr>
+        `;
+    } else if (remainingContacts.length === 1) {
+        // Il ne reste qu'un contact : le définir automatiquement comme défaut
+        const lastContact = remainingContacts[0];
+        const factuCheckbox = lastContact.querySelector('.facturation-default');
+        const livrCheckbox = lastContact.querySelector('.livraison-default');
+        const deleteBtn = lastContact.querySelector('.btn-outline-danger');
+        
+        if (factuCheckbox) {
+            factuCheckbox.checked = true;
+            factuCheckbox.disabled = true;
+        }
+        if (livrCheckbox) {
+            livrCheckbox.checked = true;
+            livrCheckbox.disabled = true;
+        }
+        if (deleteBtn) {
+            deleteBtn.disabled = true;
+            deleteBtn.classList.add('disabled');
+        }
+    }
+    
+    // Mettre à jour l'état de tous les boutons après suppression
+    updateDeleteButtonStates();
+    updateAddressDeleteButtonStates();
 }
 
 function removeAddress(addressId) {
@@ -1063,37 +1095,68 @@ function removeAddress(addressId) {
     }
     
     if (confirm('Êtes-vous sûr de vouloir supprimer cette adresse ?')) {
-        document.querySelector(`tr[data-address-id="${addressId}"]`).remove();
-        
-        // Supprimer l'option des sélecteurs de contacts
-        document.querySelectorAll(`option[value="${addressId}"]`).forEach(option => {
-            option.remove();
-        });
-        
-        // Supprimer de la liste des adresses disponibles
-        if (window.availableAddresses) {
-            window.availableAddresses = window.availableAddresses.filter(adresse => adresse.id !== addressId);
+        // Pour les nouvelles adresses (avec ID temporaire), supprimer directement du DOM
+        if (typeof addressId === 'string' && addressId.startsWith('new_')) {
+            removeAddressFromDOM(addressId);
+            return;
         }
         
-        // Si c'était la dernière adresse, réafficher l'état vide
-        const tbody = document.getElementById('addresses-table');
-        if (tbody && tbody.children.length === 0) {
-            const addressesSection = document.getElementById('addresses-section');
-            const tableContainer = addressesSection.querySelector('.table-responsive');
-            if (tableContainer) {
-                tableContainer.outerHTML = `
-                    <div class="empty-state">
-                        <i class="fas fa-map-marker-alt"></i>
-                        <h5>Aucune adresse ajoutée</h5>
-                        <p class="mb-0">Cliquez sur "Ajouter une adresse" pour commencer</p>
-                    </div>
-                `;
+        // Pour les adresses existantes, appeler l'API de suppression
+        const clientId = getClientId();
+        fetch(`/client/${clientId}/address/${addressId}/delete`, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'X-Requested-With': 'XMLHttpRequest'
             }
-        }
-        
-        // Mettre à jour l'état des boutons de suppression d'adresses
-        updateAddressDeleteButtonStates();
+        })
+        .then(response => response.json())
+        .then(data => {
+            if (data.success) {
+                removeAddressFromDOM(addressId);
+                console.log(data.message);
+            } else {
+                alert('Erreur: ' + data.message);
+            }
+        })
+        .catch(error => {
+            console.error('Erreur:', error);
+            alert('Erreur lors de la suppression de l\'adresse');
+        });
     }
+}
+
+function removeAddressFromDOM(addressId) {
+    document.querySelector(`tr[data-address-id="${addressId}"]`).remove();
+    
+    // Supprimer l'option des sélecteurs de contacts
+    document.querySelectorAll(`option[value="${addressId}"]`).forEach(option => {
+        option.remove();
+    });
+    
+    // Supprimer de la liste des adresses disponibles
+    if (window.availableAddresses) {
+        window.availableAddresses = window.availableAddresses.filter(adresse => adresse.id !== addressId);
+    }
+    
+    // Si c'était la dernière adresse, réafficher l'état vide
+    const tbody = document.getElementById('addresses-table');
+    if (tbody && tbody.children.length === 0) {
+        const addressesSection = document.getElementById('addresses-section');
+        const tableContainer = addressesSection.querySelector('.table-responsive');
+        if (tableContainer) {
+            tableContainer.outerHTML = `
+                <div class="empty-state">
+                    <i class="fas fa-map-marker-alt"></i>
+                    <h5>Aucune adresse ajoutée</h5>
+                    <p class="mb-0">Cliquez sur "Ajouter une adresse" pour commencer</p>
+                </div>
+            `;
+        }
+    }
+    
+    // Mettre à jour l'état des boutons de suppression d'adresses
+    updateAddressDeleteButtonStates();
 }
 
 // Fonction d'autocomplétion des communes françaises
@@ -1499,6 +1562,13 @@ function setupFormeJuridiqueHandler() {
 document.addEventListener('DOMContentLoaded', function() {
     setupFormeJuridiqueHandler();
 });
+
+// Fonction helper pour récupérer l'ID du client depuis l'URL
+function getClientId() {
+    const path = window.location.pathname;
+    const matches = path.match(/\/client\/(\d+)\/edit/);
+    return matches ? matches[1] : null;
+}
 
 // Fonction d'archivage du client
 function archiverClient(clientId) {

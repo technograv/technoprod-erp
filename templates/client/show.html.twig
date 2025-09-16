@@ -572,16 +572,14 @@
                                             </div>
                                             <div class="timeline-content">
                                                 <div>
-                                                    <h6 class="mb-1">{{ log.formattedAction }}</h6>
+                                                    <h6 class="mb-1">
+                                                        {{ log.formattedAction }} 
+                                                        {% if log.user %}par {{ log.userName }}{% endif %} 
+                                                        le {{ log.createdAt|date('d/m/Y à H:i') }}
+                                                    </h6>
                                                     {% if log.details %}
                                                         <p class="mb-1 text-dark">{{ log.details }}</p>
                                                     {% endif %}
-                                                    <small class="text-muted">
-                                                        <i class="fas fa-calendar me-1"></i>{{ log.createdAt|date('d/m/Y à H:i') }}
-                                                        {% if log.user %}
-                                                            • <i class="fas fa-user me-1"></i>{{ log.userName }}
-                                                        {% endif %}
-                                                    </small>
                                                 </div>
                                             </div>
                                         </div>

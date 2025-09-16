@@ -52,7 +52,9 @@ class Adresse
     #[ORM\Column(length: 100, nullable: true)]
     #[Assert\Length(max: 100, maxMessage: 'Le pays ne peut pas dépasser {{ limit }} caractères')]
     private ?string $pays = 'France';
-
+    
+    #[ORM\Column(type: 'datetime_immutable', nullable: true)]
+    private ?\DateTimeImmutable $deletedAt = null;
 
     #[ORM\Column]
     private \DateTimeImmutable $createdAt;
@@ -256,5 +258,36 @@ class Adresse
     public function __toString(): string
     {
         return $this->getAdresseCourte();
+    }
+    
+    /**
+     * Soft delete methods
+     */
+    public function getDeletedAt(): ?\DateTimeImmutable
+    {
+        return $this->deletedAt;
+    }
+
+    public function setDeletedAt(?\DateTimeImmutable $deletedAt): static
+    {
+        $this->deletedAt = $deletedAt;
+        return $this;
+    }
+    
+    public function isDeleted(): bool
+    {
+        return $this->deletedAt !== null;
+    }
+    
+    public function softDelete(): static
+    {
+        $this->deletedAt = new \DateTimeImmutable();
+        return $this;
+    }
+    
+    public function restore(): static
+    {
+        $this->deletedAt = null;
+        return $this;
     }
 }
