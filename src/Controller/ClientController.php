@@ -137,7 +137,7 @@ final class ClientController extends AbstractController
             }
         }
 
-        return $this->render('client/new_improved.html.twig', [
+        return $this->render('client/new.html.twig', [
             'client' => $client,
             'form' => $form,
         ]);
@@ -295,12 +295,6 @@ final class ClientController extends AbstractController
         ]);
     }
 
-    #[Route('/{id}/edit', name: 'app_client_edit', methods: ['GET', 'POST'])]
-    public function edit(Request $request, Client $client, EntityManagerInterface $entityManager): Response
-    {
-        // Redirection vers la nouvelle interface améliorée
-        return $this->redirectToRoute('app_client_edit_improved', ['id' => $client->getId()]);
-    }
 
     #[Route('/{id}/convert', name: 'app_client_convert_to_client', methods: ['POST'])]
     public function convertToClient(Client $client, EntityManagerInterface $entityManager, ClientLoggerService $clientLogger): Response
@@ -407,8 +401,8 @@ final class ClientController extends AbstractController
         return $this->json($addresses);
     }
 
-    #[Route('/{id}/edit-improved', name: 'app_client_edit_improved', methods: ['GET', 'POST'])]
-    public function editImproved(Request $request, Client $client, EntityManagerInterface $entityManager, ClientLoggerService $clientLogger): Response
+    #[Route('/{id}/edit', name: 'app_client_edit', methods: ['GET', 'POST'])]
+    public function edit(Request $request, Client $client, EntityManagerInterface $entityManager, ClientLoggerService $clientLogger): Response
     {
         if ($request->isMethod('POST')) {
             // Traitement de la soumission du formulaire

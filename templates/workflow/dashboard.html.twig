@@ -6,11 +6,19 @@
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/css/bootstrap.min.css" rel="stylesheet">
     <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
     <style>
-        .dashboard-header {
+        .floating-action-bar {
+            position: fixed;
+            bottom: 0;
+            left: 0;
+            right: 0;
             background: linear-gradient(135deg, #6f42c1 0%, #007bff 100%);
-            color: white;
-            padding: 2rem 0;
-            margin-bottom: 2rem;
+            padding: 1rem 0;
+            z-index: 1000;
+            box-shadow: 0 -2px 10px rgba(0, 0, 0, 0.1);
+        }
+        
+        body {
+            padding-bottom: 80px;
         }
         .stats-card {
             transition: transform 0.2s;
@@ -186,29 +194,15 @@
 {% endblock %}
 
 {% block body %}
-<div class="dashboard-header">
-    <div class="container">
-        <div class="row align-items-center">
-            <div class="col-md-8">
-                <h1><i class="fas fa-tachometer-alt"></i> Dashboard Workflow Commercial</h1>
-                <p class="mb-0">Vue d'ensemble du processus commercial</p>
-            </div>
-            <div class="col-md-4 text-end">
-                <div class="btn-group">
-                    <a href="{{ path('app_devis_index') }}" class="btn btn-light">
-                        <i class="fas fa-file-invoice"></i> Devis
-                    </a>
-                    <a href="{{ path('app_commande_index') }}" class="btn btn-light">
-                        <i class="fas fa-shopping-cart"></i> Commandes
-                    </a>
-                    <a href="{{ path('app_facture_index') }}" class="btn btn-light">
-                        <i class="fas fa-file-invoice-dollar"></i> Factures
-                    </a>
-                </div>
-            </div>
+<div class="container-fluid mt-4">
+    <!-- Titre de la page -->
+    <div class="row">
+        <div class="col-12">
+            <h1 class="h3 mb-4">
+                <i class="fas fa-tachometer-alt me-3 text-primary"></i>Dashboard Workflow Commercial
+            </h1>
         </div>
     </div>
-</div>
 
 <div class="container">
     <!-- Debug Calendar -->
@@ -873,5 +867,34 @@ function preparerProspectionTerrain() {
     return calendarDashboard.preparerProspectionTerrain(); 
 }
 </script>
+
+<!-- Barre flottante d'actions -->
+<div class="floating-action-bar" id="floating-actions">
+    <div class="container-fluid">
+        <div class="d-flex justify-content-between align-items-center">
+            <div>
+                <span class="text-white">
+                    <i class="fas fa-tachometer-alt me-2"></i>
+                    <strong>Dashboard Commercial</strong>
+                    <span class="badge bg-light text-dark ms-2">{{ stats.devis_brouillons + stats.devis_relances }} Devis</span>
+                </span>
+            </div>
+            <div class="text-center flex-grow-1">
+                <span class="text-white fw-bold fs-5">Workflow Commercial TechnoProd</span>
+            </div>
+            <div class="d-flex gap-2">
+                <a href="{{ path('app_devis_index') }}" class="btn btn-light">
+                    <i class="fas fa-file-invoice me-1"></i>Devis
+                </a>
+                <a href="{{ path('app_client_index') }}" class="btn btn-outline-light">
+                    <i class="fas fa-users me-1"></i>Clients
+                </a>
+                <a href="{{ path('app_devis_new') }}" class="btn btn-outline-light">
+                    <i class="fas fa-plus me-1"></i>Nouveau Devis
+                </a>
+            </div>
+        </div>
+    </div>
+</div>
 {% endblock %}
 

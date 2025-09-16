@@ -342,12 +342,6 @@ final class DevisController extends AbstractController
         ]);
     }
 
-    #[Route('/new-improved', name: 'app_devis_new_improved', methods: ['GET', 'POST'])]
-    public function newImprovedRedirect(): Response
-    {
-        // Redirection vers la nouvelle route standard
-        return $this->redirectToRoute('app_devis_new', [], 301);
-    }
 
     #[Route('/{id}', name: 'app_devis_show', methods: ['GET'], requirements: ['id' => '\d+'])]
     public function show(Devis $devis, DevisLoggerService $loggerService): Response
