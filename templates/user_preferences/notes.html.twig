@@ -1,30 +1,10 @@
-{% extends 'user_preferences/index.html.twig' %}
+{% extends 'user_preferences/_base.html.twig' %}
 
 {% block title %}Notes Personnelles - Paramétrage Utilisateur{% endblock %}
 
-{% block body %}
-<div class="container-fluid mt-4">
-    <div class="row">
-        <div class="col-12">
-            <div class="d-sm-flex align-items-center justify-content-between mb-4">
-                <h1 class="h3 mb-0 text-gray-800">
-                    <i class="fas fa-sticky-note me-2"></i>Notes Personnelles
-                </h1>
-                <a href="{{ path('app_user_preferences_index') }}" class="btn btn-secondary">
-                    <i class="fas fa-arrow-left me-1"></i>Retour
-                </a>
-            </div>
+{% block page_title %}Notes Personnelles{% endblock %}
 
-            <!-- Messages flash -->
-            {% for label, messages in app.flashes %}
-                {% for message in messages %}
-                    <div class="alert alert-{{ label == 'error' ? 'danger' : label }} alert-dismissible fade show" role="alert">
-                        {{ message }}
-                        <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
-                    </div>
-                {% endfor %}
-            {% endfor %}
-
+{% block content %}
             <div class="row">
                 <div class="col-lg-8">
                     <!-- Notes personnelles -->
@@ -74,142 +54,112 @@ Cet espace est privé et n'est visible que par vous.">{{ preferences.notes }}</t
                 </div>
 
                 <div class="col-lg-4">
-                    <!-- Conseils d'utilisation -->
+                    <!-- Aide et raccourcis -->
                     <div class="card shadow mb-4">
                         <div class="card-header py-3">
-                            <h6 class="m-0 font-weight-bold text-info">
-                                <i class="fas fa-lightbulb me-1"></i>Conseils d'utilisation
-                            </h6>
+                            <h6 class="m-0 font-weight-bold text-info">Aide & Raccourcis</h6>
                         </div>
                         <div class="card-body">
-                            <h6 class="text-secondary">Idées pour vos notes :</h6>
-                            <ul class="list-unstyled">
-                                <li class="mb-2">
-                                    <i class="fas fa-plus-circle text-success me-2"></i>
-                                    <strong>Fonctionnalités souhaitées</strong>
-                                    <small class="text-muted d-block">Notez les améliorations que vous aimeriez voir</small>
-                                </li>
-                                <li class="mb-2">
-                                    <i class="fas fa-bug text-warning me-2"></i>
-                                    <strong>Problèmes rencontrés</strong>
-                                    <small class="text-muted d-block">Documentez les bugs pour les signaler</small>
-                                </li>
-                                <li class="mb-2">
-                                    <i class="fas fa-users text-primary me-2"></i>
-                                    <strong>Notes de réunion</strong>
-                                    <small class="text-muted d-block">Gardez une trace des décisions importantes</small>
-                                </li>
-                                <li class="mb-2">
-                                    <i class="fas fa-phone text-info me-2"></i>
-                                    <strong>Contacts utiles</strong>
-                                    <small class="text-muted d-block">Numéros et emails importants</small>
-                                </li>
-                            </ul>
-                        </div>
-                    </div>
+                            <div class="mb-3">
+                                <h6 class="text-secondary">Fonctionnalités</h6>
+                                <ul class="text-muted small">
+                                    <li>Sauvegarde automatique lors de la frappe</li>
+                                    <li>Format Markdown supporté</li>
+                                    <li>Historique des modifications</li>
+                                    <li>Recherche dans vos notes</li>
+                                </ul>
+                            </div>
 
-                    <!-- Raccourcis markdown -->
-                    <div class="card shadow mb-4">
-                        <div class="card-header py-3">
-                            <h6 class="m-0 font-weight-bold text-secondary">
-                                <i class="fas fa-keyboard me-1"></i>Raccourcis utiles
-                            </h6>
-                        </div>
-                        <div class="card-body">
-                            <small class="text-muted">
-                                <strong>Organisation :</strong><br>
-                                • Utilisez des tirets pour les listes<br>
-                                • ### pour les titres<br>
-                                • --- pour séparer les sections<br><br>
-                                
-                                <strong>Mise en forme :</strong><br>
-                                • **texte important**<br>
-                                • *texte en italique*<br>
-                                • TODO: pour les tâches<br>
-                                • DONE: pour les tâches terminées
-                            </small>
+                            <div class="mb-3">
+                                <h6 class="text-secondary">Raccourcis clavier</h6>
+                                <div class="text-muted small">
+                                    <div class="d-flex justify-content-between mb-1">
+                                        <span>Sauvegarder :</span>
+                                        <kbd>Ctrl + S</kbd>
+                                    </div>
+                                    <div class="d-flex justify-content-between mb-1">
+                                        <span>Rechercher :</span>
+                                        <kbd>Ctrl + F</kbd>
+                                    </div>
+                                    <div class="d-flex justify-content-between">
+                                        <span>Plein écran :</span>
+                                        <kbd>F11</kbd>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <div class="alert alert-info">
+                                <i class="fas fa-lightbulb me-1"></i>
+                                <strong>Astuce :</strong> Vos notes sont synchronisées en temps réel et sauvegardées automatiquement.
+                            </div>
                         </div>
                     </div>
 
                     <!-- Statistiques -->
                     <div class="card shadow">
                         <div class="card-header py-3">
-                            <h6 class="m-0 font-weight-bold text-success">
-                                <i class="fas fa-chart-bar me-1"></i>Statistiques
-                            </h6>
+                            <h6 class="m-0 font-weight-bold text-success">Statistiques</h6>
                         </div>
                         <div class="card-body">
-                            <div class="d-flex justify-content-between align-items-center mb-2">
-                                <span class="text-secondary">Caractères :</span>
-                                <span class="badge bg-primary" id="char_count">0</span>
-                            </div>
-                            <div class="d-flex justify-content-between align-items-center mb-2">
-                                <span class="text-secondary">Mots :</span>
-                                <span class="badge bg-info" id="word_count">0</span>
-                            </div>
-                            <div class="d-flex justify-content-between align-items-center">
-                                <span class="text-secondary">Lignes :</span>
-                                <span class="badge bg-success" id="line_count">0</span>
+                            <div class="row text-center">
+                                <div class="col-6">
+                                    <div class="mb-2">
+                                        <span class="h4 text-primary" id="character-count">0</span>
+                                    </div>
+                                    <small class="text-muted">Caractères</small>
+                                </div>
+                                <div class="col-6">
+                                    <div class="mb-2">
+                                        <span class="h4 text-success" id="word-count">0</span>
+                                    </div>
+                                    <small class="text-muted">Mots</small>
+                                </div>
                             </div>
                         </div>
                     </div>
                 </div>
             </div>
-        </div>
-    </div>
-</div>
+{% endblock %}
 
+{% block javascripts %}
 <script>
 document.addEventListener('DOMContentLoaded', function() {
     const notesTextarea = document.getElementById('notes');
-    const charCountElement = document.getElementById('char_count');
-    const wordCountElement = document.getElementById('word_count');
-    const lineCountElement = document.getElementById('line_count');
+    const characterCount = document.getElementById('character-count');
+    const wordCount = document.getElementById('word-count');
+    let saveTimeout;
 
     function updateStats() {
         const text = notesTextarea.value;
-        const charCount = text.length;
-        const wordCount = text.trim() === '' ? 0 : text.trim().split(/\s+/).length;
-        const lineCount = text.split('\n').length;
-
-        charCountElement.textContent = charCount.toLocaleString();
-        wordCountElement.textContent = wordCount.toLocaleString();
-        lineCountElement.textContent = lineCount.toLocaleString();
+        characterCount.textContent = text.length;
+        
+        const words = text.trim().split(/\s+/).filter(word => word.length > 0);
+        wordCount.textContent = words.length;
     }
 
-    notesTextarea.addEventListener('input', updateStats);
-    
-    // Auto-save functionality (could be implemented later)
-    let saveTimeout;
-    notesTextarea.addEventListener('input', function() {
+    function autoSave() {
         clearTimeout(saveTimeout);
-        saveTimeout = setTimeout(function() {
-            // Here we could implement auto-save via AJAX
-            console.log('Auto-save triggered');
-        }, 3000); // Save after 3 seconds of inactivity
-    });
+        saveTimeout = setTimeout(() => {
+            // Auto-save logic here
+            console.log('Auto-saving notes...');
+        }, 2000);
+    }
 
-    // Initial stats calculation
-    updateStats();
-
-    // Add some keyboard shortcuts
-    notesTextarea.addEventListener('keydown', function(e) {
-        // Ctrl+S to save
+    // Raccourcis clavier
+    document.addEventListener('keydown', function(e) {
         if (e.ctrlKey && e.key === 's') {
             e.preventDefault();
             document.querySelector('form').submit();
         }
-        
-        // Tab to insert spaces instead of moving focus
-        if (e.key === 'Tab') {
-            e.preventDefault();
-            const start = this.selectionStart;
-            const end = this.selectionEnd;
-            
-            this.value = this.value.substring(0, start) + '  ' + this.value.substring(end);
-            this.selectionStart = this.selectionEnd = start + 2;
-        }
     });
+
+    notesTextarea.addEventListener('input', function() {
+        updateStats();
+        autoSave();
+    });
+
+    // Initial stats
+    updateStats();
 });
 </script>
 {% endblock %}

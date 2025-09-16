@@ -1,0 +1,262 @@
+/*
+ * TechnoProd - Système de navigation uniforme
+ * Fichier CSS global pour uniformiser tous les éléments de navigation
+ */
+
+/* ========================================
+   VARIABLES CSS POUR COHÉRENCE GLOBALE
+   ======================================== */
+:root {
+    --nav-primary-color: #28a745;
+    --nav-primary-hover: #218838;
+    --nav-secondary-color: #6f42c1;
+    --nav-secondary-hover: #5a32a3;
+    --nav-admin-color: #dc3545;
+    --nav-admin-hover: #c82333;
+    
+    --nav-border-color: #dee2e6;
+    --nav-border-radius: 6px;
+    --nav-padding: 0.75rem 1.25rem;
+    --nav-margin: 0.5rem;
+    --nav-transition: all 0.2s ease;
+    
+    --nav-background-hover: #f8f9fa;
+    --nav-text-color: #495057;
+    --nav-text-muted: #6c757d;
+}
+
+/* ========================================
+   STYLE GLOBAL POUR TOUS LES NAV-PILLS
+   ======================================== */
+
+/* Structure et espacement uniforme */
+.nav-pills {
+    margin-bottom: 1.5rem;
+}
+
+.nav-pills .nav-item {
+    margin-right: var(--nav-margin);
+}
+
+.nav-pills .nav-link {
+    color: var(--nav-text-color);
+    border: 1px solid var(--nav-border-color);
+    border-radius: var(--nav-border-radius);
+    background: transparent;
+    padding: var(--nav-padding);
+    transition: var(--nav-transition);
+    font-weight: 500;
+    position: relative;
+    overflow: hidden;
+}
+
+.nav-pills .nav-link:hover {
+    background-color: var(--nav-background-hover);
+    border-color: var(--nav-primary-color);
+    color: var(--nav-text-color);
+    transform: translateY(-1px);
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+}
+
+.nav-pills .nav-link.active {
+    background-color: var(--nav-primary-color);
+    border-color: var(--nav-primary-color);
+    color: white;
+    font-weight: 600;
+    box-shadow: 0 3px 6px rgba(40, 167, 69, 0.3);
+}
+
+.nav-pills .nav-link i {
+    margin-right: 0.5rem;
+    transition: var(--nav-transition);
+}
+
+.nav-pills .nav-link:hover i {
+    transform: scale(1.1);
+}
+
+/* ========================================
+   VARIANTES COLORÉES POUR CONTEXTES
+   ======================================== */
+
+/* Pills secondaires (violet) pour devis */
+.nav-pills.nav-pills-secondary .nav-link.active {
+    background-color: var(--nav-secondary-color);
+    border-color: var(--nav-secondary-color);
+    box-shadow: 0 3px 6px rgba(111, 66, 193, 0.3);
+}
+
+.nav-pills.nav-pills-secondary .nav-link:hover {
+    border-color: var(--nav-secondary-color);
+    background-color: #f3e8ff;
+}
+
+/* Pills admin (rouge) */
+.nav-pills.nav-pills-admin .nav-link.active {
+    background-color: var(--nav-admin-color);
+    border-color: var(--nav-admin-color);
+    box-shadow: 0 3px 6px rgba(220, 53, 69, 0.3);
+}
+
+.nav-pills.nav-pills-admin .nav-link:hover {
+    border-color: var(--nav-admin-color);
+    background-color: #fdeaea;
+}
+
+/* ========================================
+   AMÉLIORATION DES NAV-TABS EXISTANTES
+   ======================================== */
+
+/* Style uniforme pour les tabs (sans les changer en pills) */
+.nav-tabs {
+    border-bottom: 2px solid var(--nav-border-color);
+    margin-bottom: 1.5rem;
+}
+
+.nav-tabs .nav-link {
+    border: none;
+    border-bottom: 3px solid transparent;
+    background: none;
+    color: var(--nav-text-muted);
+    padding: 1rem 1.5rem;
+    transition: var(--nav-transition);
+    font-weight: 500;
+    position: relative;
+}
+
+.nav-tabs .nav-link:hover {
+    border-bottom-color: var(--nav-border-color);
+    color: var(--nav-text-color);
+    background-color: var(--nav-background-hover);
+}
+
+.nav-tabs .nav-link.active {
+    background: white;
+    color: var(--nav-text-color);
+    border-bottom-color: var(--nav-primary-color);
+    font-weight: 600;
+    box-shadow: 0 -2px 4px rgba(0, 0, 0, 0.05);
+}
+
+/* Tabs admin avec couleur spécifique */
+.nav-tabs.nav-tabs-admin .nav-link.active {
+    border-bottom-color: var(--nav-admin-color);
+}
+
+.nav-tabs.nav-tabs-admin .nav-link:hover {
+    border-bottom-color: var(--nav-admin-color);
+}
+
+/* ========================================
+   NAVIGATION LATÉRALE (LIST-GROUP)
+   ======================================== */
+
+.list-group-item-action {
+    transition: var(--nav-transition);
+    border-left: 3px solid transparent;
+}
+
+.list-group-item-action:hover {
+    background-color: var(--nav-background-hover);
+    border-left-color: var(--nav-primary-color);
+    transform: translateX(2px);
+}
+
+.list-group-item-action.active {
+    background-color: var(--nav-primary-color);
+    border-color: var(--nav-primary-color);
+    border-left-color: var(--nav-primary-hover);
+    color: white;
+    font-weight: 600;
+}
+
+/* ========================================
+   CONTENEURS ET MISE EN PAGE
+   ======================================== */
+
+/* Espacement uniforme pour tous les conteneurs de navigation */
+.navigation-container {
+    margin-top: 1.5rem;
+    margin-bottom: 1.5rem;
+}
+
+.navigation-wrapper {
+    background: white;
+    border-radius: 8px;
+    padding: 0;
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.05);
+    border: 1px solid var(--nav-border-color);
+}
+
+/* ========================================
+   RESPONSIVE DESIGN
+   ======================================== */
+
+@media (max-width: 768px) {
+    .nav-pills .nav-link,
+    .nav-tabs .nav-link {
+        padding: 0.5rem 1rem;
+        font-size: 0.9rem;
+    }
+    
+    .nav-pills .nav-item {
+        margin-right: 0.25rem;
+        margin-bottom: 0.5rem;
+    }
+    
+    /* Stack navigation sur mobile si nécessaire */
+    .nav-pills.nav-stack-mobile {
+        flex-direction: column;
+    }
+    
+    .nav-pills.nav-stack-mobile .nav-item {
+        margin-right: 0;
+        margin-bottom: 0.5rem;
+    }
+}
+
+/* ========================================
+   BADGES ET INDICATEURS
+   ======================================== */
+
+.nav-link .badge {
+    margin-left: 0.5rem;
+    transition: var(--nav-transition);
+}
+
+.nav-link:hover .badge {
+    transform: scale(1.1);
+}
+
+/* ========================================
+   ANIMATIONS ET MICRO-INTERACTIONS
+   ======================================== */
+
+@keyframes navSlideIn {
+    from {
+        opacity: 0;
+        transform: translateY(-10px);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+.nav-pills, .nav-tabs {
+    animation: navSlideIn 0.3s ease-out;
+}
+
+/* Effet de focus amélioré */
+.nav-link:focus {
+    outline: none;
+    box-shadow: 0 0 0 3px rgba(40, 167, 69, 0.25);
+}
+
+.nav-pills.nav-pills-secondary .nav-link:focus {
+    box-shadow: 0 0 0 3px rgba(111, 66, 193, 0.25);
+}
+
+.nav-pills.nav-pills-admin .nav-link:focus {
+    box-shadow: 0 0 0 3px rgba(220, 53, 69, 0.25);
+}

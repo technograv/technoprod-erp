@@ -11,26 +11,7 @@
             border-bottom: 1px solid #dee2e6;
             margin-bottom: 0;
         }
-        .nav-pills .nav-link {
-            background: transparent;
-            color: #6c757d;
-            border-radius: 8px;
-            margin-right: 0.5rem;
-            padding: 0.75rem 1.25rem;
-            transition: all 0.2s ease;
-            border: 1px solid transparent;
-        }
-        .nav-pills .nav-link:hover {
-            background: #f8f9fa;
-            color: #495057;
-            border-color: #dee2e6;
-        }
-        .nav-pills .nav-link.active {
-            background: #6f42c1;
-            color: white;
-            font-weight: 600;
-            border-color: #6f42c1;
-        }
+        /* Styles spécifiques aux devis supprimés - utilisation du CSS global */
         .tab-content {
             background: white;
             min-height: 400px;
@@ -203,9 +184,10 @@
 
 
 <!-- Onglets -->
-<div class="devis-tabs">
-    <div class="container-fluid">
-        <ul class="nav nav-pills" id="devisTabs" role="tablist">
+<div class="container-fluid mt-4">
+    <div class="row">
+        <div class="col-12">
+            <ul class="nav nav-pills nav-pills-secondary" id="devisTabs" role="tablist">
             <li class="nav-item" role="presentation">
                 <button class="nav-link active" id="details-tab" data-bs-toggle="pill" data-bs-target="#details" type="button" role="tab">
                     <i class="fas fa-info-circle me-2"></i>Détails

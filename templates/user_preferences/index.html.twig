@@ -1,60 +1,8 @@
-{% extends 'base.html.twig' %}
+{% extends 'user_preferences/_base.html.twig' %}
 
-{% block title %}Paramétrage Utilisateur{% endblock %}
+{% block page_title %}Aperçu général{% endblock %}
 
-{% block body %}
-<div class="container-fluid mt-4">
-    <div class="row">
-        <div class="col-12">
-            <div class="d-sm-flex align-items-center justify-content-between mb-4">
-                <h1 class="h3 mb-0 text-gray-800">
-                    <i class="fas fa-user-cog me-2"></i>Paramétrage Utilisateur
-                </h1>
-            </div>
-
-            <!-- Messages flash -->
-            {% for label, messages in app.flashes %}
-                {% for message in messages %}
-                    <div class="alert alert-{{ label == 'error' ? 'danger' : label }} alert-dismissible fade show" role="alert">
-                        {{ message }}
-                        <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
-                    </div>
-                {% endfor %}
-            {% endfor %}
-
-            <div class="row">
-                <div class="col-lg-3">
-                    <!-- Menu de navigation -->
-                    <div class="card shadow mb-4">
-                        <div class="card-header py-3">
-                            <h6 class="m-0 font-weight-bold text-primary">Navigation</h6>
-                        </div>
-                        <div class="list-group list-group-flush">
-                            <a href="{{ path('app_user_preferences_index') }}" 
-                               class="list-group-item list-group-item-action {{ app.request.get('_route') == 'app_user_preferences_index' ? 'active' : '' }}">
-                                <i class="fas fa-home me-2"></i>Aperçu général
-                            </a>
-                            <a href="{{ path('app_user_preferences_email') }}" 
-                               class="list-group-item list-group-item-action {{ app.request.get('_route') == 'app_user_preferences_email' ? 'active' : '' }}">
-                                <i class="fas fa-envelope me-2"></i>Email & signatures
-                            </a>
-                            <a href="{{ path('app_user_preferences_general') }}" 
-                               class="list-group-item list-group-item-action {{ app.request.get('_route') == 'app_user_preferences_general' ? 'active' : '' }}">
-                                <i class="fas fa-cog me-2"></i>Préférences générales
-                            </a>
-                            <a href="{{ path('app_user_preferences_calendar') }}" 
-                               class="list-group-item list-group-item-action {{ app.request.get('_route') == 'app_user_preferences_calendar' ? 'active' : '' }}">
-                                <i class="fas fa-calendar-alt me-2"></i>Calendriers Google
-                            </a>
-                            <a href="{{ path('app_user_preferences_notes') }}" 
-                               class="list-group-item list-group-item-action {{ app.request.get('_route') == 'app_user_preferences_notes' ? 'active' : '' }}">
-                                <i class="fas fa-sticky-note me-2"></i>Notes personnelles
-                            </a>
-                        </div>
-                    </div>
-                </div>
-
-                <div class="col-lg-9">
+{% block content %}
                     <!-- Aperçu général -->
                     <div class="card shadow mb-4">
                         <div class="card-header py-3">
@@ -207,8 +155,4 @@
                         </div>
                     </div>
                 </div>
-            </div>
-        </div>
-    </div>
-</div>
 {% endblock %}

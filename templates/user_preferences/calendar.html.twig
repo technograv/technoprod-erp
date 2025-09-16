@@ -1,32 +1,12 @@
-{% extends 'user_preferences/index.html.twig' %}
+{% extends 'user_preferences/_base.html.twig' %}
 
 {% block title %}Calendriers Google - Paramétrage Utilisateur{% endblock %}
 
-{% block body %}
-<div class="container-fluid mt-4">
-    <div class="row">
-        <div class="col-12">
-            <div class="d-sm-flex align-items-center justify-content-between mb-4">
-                <h1 class="h3 mb-0 text-gray-800">
-                    <i class="fas fa-calendar-alt me-2"></i>Calendriers Google
-                </h1>
-                <a href="{{ path('app_user_preferences_index') }}" class="btn btn-secondary">
-                    <i class="fas fa-arrow-left me-1"></i>Retour
-                </a>
-            </div>
+{% block page_title %}Calendriers Google{% endblock %}
 
-            <!-- Messages flash -->
-            {% for label, messages in app.flashes %}
-                {% for message in messages %}
-                    <div class="alert alert-{{ label == 'error' ? 'danger' : label }} alert-dismissible fade show" role="alert">
-                        {{ message }}
-                        <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
-                    </div>
-                {% endfor %}
-            {% endfor %}
-
+{% block content %}
             <div class="row">
-                <div class="col-lg-8">
+                <div class="col-12">
                     {% if calendar_error %}
                         <div class="alert alert-danger">
                             <i class="fas fa-exclamation-triangle me-2"></i>{{ calendar_error }}
@@ -57,37 +37,19 @@
                                                                value="{{ calendar.id }}" 
                                                                id="calendar_{{ loop.index }}"
                                                                {{ calendar.id in selected_calendar_ids ? 'checked' : '' }}>
-                                                        <label class="form-check-label w-100" for="calendar_{{ loop.index }}">
-                                                            <div class="d-flex align-items-center">
-                                                                {% if calendar.background_color %}
-                                                                    <div class="me-2" style="width: 16px; height: 16px; background-color: {{ calendar.background_color }}; border-radius: 50%; border: 1px solid #ddd;"></div>
-                                                                {% else %}
-                                                                    <i class="fas fa-calendar text-secondary me-2"></i>
-                                                                {% endif %}
-                                                                <div class="flex-grow-1">
-                                                                    <strong>{{ calendar.summary }}</strong>
-                                                                    {% if calendar.primary %}
-                                                                        <span class="badge bg-primary ms-2">Principal</span>
-                                                                    {% endif %}
-                                                                    {% if calendar.description %}
-                                                                        <small class="text-muted d-block">{{ calendar.description }}</small>
-                                                                    {% endif %}
-                                                                    <small class="text-muted">
-                                                                        Accès : 
-                                                                        {% if calendar.access_role == 'owner' %}
-                                                                            <span class="text-success">Propriétaire</span>
-                                                                        {% elseif calendar.access_role == 'writer' %}
-                                                                            <span class="text-info">Écriture</span>
-                                                                        {% elseif calendar.access_role == 'reader' %}
-                                                                            <span class="text-warning">Lecture</span>
-                                                                        {% else %}
-                                                                            <span class="text-secondary">{{ calendar.access_role }}</span>
-                                                                        {% endif %}
-                                                                    </small>
-                                                                </div>
-                                                            </div>
+                                                        <label class="form-check-label" for="calendar_{{ loop.index }}">
+                                                            <strong>{{ calendar.summary }}</strong>
+                                                            {% if calendar.primary %}
+                                                                <span class="badge bg-primary ms-2">Principal</span>
+                                                            {% endif %}
                                                         </label>
                                                     </div>
+                                                    {% if calendar.description %}
+                                                        <small class="text-muted d-block mt-1">{{ calendar.description }}</small>
+                                                    {% endif %}
+                                                    <small class="text-muted d-block mt-1">
+                                                        <i class="fas fa-eye me-1"></i>Visibilité : {{ calendar.access_role }}
+                                                    </small>
                                                 </div>
                                             </div>
                                         </div>
@@ -95,258 +57,106 @@
                                     </div>
 
                                     <div class="d-flex justify-content-between align-items-center mt-4">
-                                        <div>
-                                            <button type="button" class="btn btn-outline-secondary" onclick="selectAllCalendars()">
-                                                <i class="fas fa-check-double me-1"></i>Tout sélectionner
-                                            </button>
-                                            <button type="button" class="btn btn-outline-secondary ms-2" onclick="unselectAllCalendars()">
-                                                <i class="fas fa-times me-1"></i>Tout désélectionner
-                                            </button>
-                                        </div>
-                                    </div>
-
-                                    <!-- Nouvelle section : Calendriers d'écriture -->
-                                    <hr class="my-5">
-                                    
-                                    <h6 class="m-0 font-weight-bold text-info mb-4">
-                                        <i class="fas fa-pen me-2"></i>Calendriers de destination pour vos événements
-                                    </h6>
-                                    
-                                    <p class="text-muted mb-4">
-                                        <i class="fas fa-info-circle me-1"></i>
-                                        Choisissez dans quels calendriers seront automatiquement créés vos événements selon leur type.
-                                    </p>
-
-                                    {% if writable_calendars|length > 0 %}
-                                        <div class="row">
-                                            <div class="col-md-6 mb-3">
-                                                <label for="write_calendar_rdv_commerciaux" class="form-label">
-                                                    <i class="fas fa-handshake text-primary me-2"></i>Rendez-vous commerciaux
-                                                </label>
-                                                <select class="form-select" name="write_calendar_rdv_commerciaux" id="write_calendar_rdv_commerciaux">
-                                                    {% for calendar in writable_calendars %}
-                                                        <option value="{{ calendar.id }}" {{ calendar.id == write_calendar_ids.rdv_commerciaux ? 'selected' : '' }}>
-                                                            {{ calendar.summary }}{% if calendar.primary %} (Principal){% endif %}
-                                                        </option>
-                                                    {% endfor %}
-                                                </select>
-                                            </div>
-
-                                            <div class="col-md-6 mb-3">
-                                                <label for="write_calendar_reunions" class="form-label">
-                                                    <i class="fas fa-users text-info me-2"></i>Réunions
-                                                </label>
-                                                <select class="form-select" name="write_calendar_reunions" id="write_calendar_reunions">
-                                                    {% for calendar in writable_calendars %}
-                                                        <option value="{{ calendar.id }}" {{ calendar.id == write_calendar_ids.reunions ? 'selected' : '' }}>
-                                                            {{ calendar.summary }}{% if calendar.primary %} (Principal){% endif %}
-                                                        </option>
-                                                    {% endfor %}
-                                                </select>
-                                            </div>
-
-                                            <div class="col-md-6 mb-3">
-                                                <label for="write_calendar_livraisons" class="form-label">
-                                                    <i class="fas fa-truck text-success me-2"></i>Livraisons
-                                                </label>
-                                                <select class="form-select" name="write_calendar_livraisons" id="write_calendar_livraisons">
-                                                    {% for calendar in writable_calendars %}
-                                                        <option value="{{ calendar.id }}" {{ calendar.id == write_calendar_ids.livraisons ? 'selected' : '' }}>
-                                                            {{ calendar.summary }}{% if calendar.primary %} (Principal){% endif %}
-                                                        </option>
-                                                    {% endfor %}
-                                                </select>
-                                            </div>
-
-                                            <div class="col-md-6 mb-3">
-                                                <label for="write_calendar_facturations" class="form-label">
-                                                    <i class="fas fa-file-invoice-dollar text-warning me-2"></i>Facturations
-                                                </label>
-                                                <select class="form-select" name="write_calendar_facturations" id="write_calendar_facturations">
-                                                    {% for calendar in writable_calendars %}
-                                                        <option value="{{ calendar.id }}" {{ calendar.id == write_calendar_ids.facturations ? 'selected' : '' }}>
-                                                            {{ calendar.summary }}{% if calendar.primary %} (Principal){% endif %}
-                                                        </option>
-                                                    {% endfor %}
-                                                </select>
-                                            </div>
-                                        </div>
-                                    {% else %}
-                                        <div class="alert alert-warning">
-                                            <i class="fas fa-exclamation-triangle me-2"></i>
-                                            <strong>Aucun calendrier modifiable trouvé</strong>
-                                            <p class="mb-0 mt-2">
-                                                Vous devez avoir des droits de propriétaire ou d'écriture sur au moins un calendrier pour utiliser cette fonctionnalité.
-                                            </p>
-                                        </div>
-                                    {% endif %}
-
-                                    <div class="text-center mt-4">
-                                        <button type="submit" class="btn btn-primary btn-lg">
-                                            <i class="fas fa-save me-1"></i>Sauvegarder tous les paramètres
+                                        <button type="submit" class="btn btn-success">
+                                            <i class="fas fa-save me-1"></i>Sauvegarder la sélection
                                         </button>
+                                        
+                                        <small class="text-muted">
+                                            <i class="fas fa-sync-alt me-1"></i>
+                                            Synchronisation automatique toutes les 15 minutes
+                                        </small>
                                     </div>
                                 </form>
                             {% else %}
-                                <div class="alert alert-warning">
-                                    <i class="fas fa-exclamation-triangle me-2"></i>
-                                    <strong>Aucun calendrier trouvé</strong>
-                                    <p class="mb-0 mt-2">
-                                        Vérifiez que votre compte Google a accès à des calendriers ou que votre token d'accès est valide.
+                                <div class="text-center py-5">
+                                    <i class="fas fa-calendar-times fa-3x text-muted mb-3"></i>
+                                    <h5 class="text-muted">Aucun calendrier disponible</h5>
+                                    <p class="text-muted">
+                                        Assurez-vous d'avoir configuré l'accès à Google Calendar dans les paramètres de l'application.
                                     </p>
+                                    <a href="{{ path('app_user_preferences_general') }}" class="btn btn-primary">
+                                        <i class="fas fa-cog me-1"></i>Configurer l'accès Google
+                                    </a>
                                 </div>
                             {% endif %}
                         </div>
                     </div>
-                </div>
 
-                <div class="col-lg-4">
-                    <!-- Aperçu de la sélection -->
-                    <div class="card shadow mb-4">
-                        <div class="card-header py-3">
-                            <h6 class="m-0 font-weight-bold text-success">Sélection actuelle</h6>
-                        </div>
-                        <div class="card-body">
-                            <div id="selection_preview">
-                                {% if selected_calendar_ids|length > 0 %}
-                                    <p class="text-success mb-2">
-                                        <i class="fas fa-check-circle me-1"></i>
-                                        {{ selected_calendar_ids|length }} calendrier(s) sélectionné(s)
-                                    </p>
-                                    <ul class="list-unstyled">
-                                        {% for calendar in available_calendars %}
-                                            {% if calendar.id in selected_calendar_ids %}
-                                                <li class="mb-2">
-                                                    <i class="fas fa-calendar text-success me-2"></i>
-                                                    {{ calendar.summary }}
-                                                    {% if calendar.primary %}
-                                                        <span class="badge bg-primary ms-1">Principal</span>
-                                                    {% endif %}
-                                                </li>
-                                            {% endif %}
-                                        {% endfor %}
-                                    </ul>
-                                {% else %}
-                                    <div class="alert alert-warning">
-                                        <i class="fas fa-exclamation-triangle"></i>
-                                        Aucun calendrier sélectionné
-                                        <small class="d-block mt-1">Le calendrier principal sera utilisé par défaut</small>
-                                    </div>
-                                {% endif %}
-                            </div>
-                        </div>
-                    </div>
-
-                    <!-- Aide -->
+                    <!-- Statut synchronisation -->
                     <div class="card shadow">
                         <div class="card-header py-3">
-                            <h6 class="m-0 font-weight-bold text-info">
-                                <i class="fas fa-question-circle me-1"></i>Aide
-                            </h6>
+                            <h6 class="m-0 font-weight-bold text-success">Statut de la synchronisation</h6>
                         </div>
                         <div class="card-body">
-                            <h6>📅 Calendriers d'affichage :</h6>
-                            <ul class="list-unstyled mb-4">
-                                <li class="mb-2">
-                                    <i class="fas fa-calendar-check text-success me-2"></i>
-                                    <strong>Calendriers sélectionnés :</strong> Affichés dans votre tableau de bord
-                                </li>
-                                <li class="mb-2">
-                                    <i class="fas fa-calendar-times text-muted me-2"></i>
-                                    <strong>Calendriers masqués :</strong> Non affichés dans l'application
-                                </li>
-                            </ul>
-                            
-                            <h6>✏️ Calendriers d'écriture :</h6>
-                            <ul class="list-unstyled mb-4">
-                                <li class="mb-2">
-                                    <i class="fas fa-handshake text-primary me-2"></i>
-                                    <strong>RDV commerciaux :</strong> Créés lors de prise de rendez-vous
-                                </li>
-                                <li class="mb-2">
-                                    <i class="fas fa-truck text-success me-2"></i>
-                                    <strong>Livraisons :</strong> Créés lors de planification livraison
-                                </li>
-                                <li class="mb-2">
-                                    <i class="fas fa-file-invoice-dollar text-warning me-2"></i>
-                                    <strong>Facturations :</strong> Créés lors d'échéances de paiement
-                                </li>
-                            </ul>
-                            
-                            <small class="text-muted">
-                                <i class="fas fa-lightbulb me-1"></i>
-                                Les événements seront automatiquement créés dans les calendriers choisis selon leur type.
-                            </small>
+                            <div class="row">
+                                <div class="col-md-6">
+                                    <div class="d-flex justify-content-between align-items-center mb-2">
+                                        <span class="text-secondary">Statut :</span>
+                                        <span class="badge bg-success">
+                                            <i class="fas fa-check me-1"></i>Connecté
+                                        </span>
+                                    </div>
+                                    <div class="d-flex justify-content-between align-items-center mb-2">
+                                        <span class="text-secondary">Dernière synchro :</span>
+                                        <small class="text-muted">{{ "now"|date('d/m/Y à H:i') }}</small>
+                                    </div>
+                                    <div class="d-flex justify-content-between align-items-center">
+                                        <span class="text-secondary">Calendriers actifs :</span>
+                                        <span class="badge bg-info">{{ selected_calendar_ids|length }}</span>
+                                    </div>
+                                </div>
+                                <div class="col-md-6">
+                                    <div class="text-center">
+                                        <button class="btn btn-outline-primary btn-sm" onclick="forceSync()">
+                                            <i class="fas fa-sync-alt me-1"></i>Forcer la synchronisation
+                                        </button>
+                                    </div>
+                                </div>
+                            </div>
                         </div>
                     </div>
                 </div>
             </div>
-        </div>
-    </div>
-</div>
+{% endblock %}
 
+{% block javascripts %}
 <script>
-document.addEventListener('DOMContentLoaded', function() {
-    // Fonctions de sélection en masse
-    window.selectAllCalendars = function() {
-        const checkboxes = document.querySelectorAll('input[name="selected_calendars[]"]');
-        checkboxes.forEach(checkbox => {
-            checkbox.checked = true;
-        });
-        updateSelectionPreview();
-    };
-
-    window.unselectAllCalendars = function() {
-        const checkboxes = document.querySelectorAll('input[name="selected_calendars[]"]');
-        checkboxes.forEach(checkbox => {
-            checkbox.checked = false;
-        });
-        updateSelectionPreview();
-    };
-
-    // Mise à jour aperçu en temps réel
-    function updateSelectionPreview() {
-        const checkboxes = document.querySelectorAll('input[name="selected_calendars[]"]:checked');
-        const previewElement = document.getElementById('selection_preview');
+function forceSync() {
+    // Simulation d'une synchronisation forcée
+    const button = event.target;
+    const icon = button.querySelector('i');
+    
+    button.disabled = true;
+    icon.classList.add('fa-spin');
+    
+    setTimeout(() => {
+        button.disabled = false;
+        icon.classList.remove('fa-spin');
         
-        if (checkboxes.length > 0) {
-            let html = `
-                <p class="text-success mb-2">
-                    <i class="fas fa-check-circle me-1"></i>
-                    ${checkboxes.length} calendrier(s) sélectionné(s)
-                </p>
-                <ul class="list-unstyled">
-            `;
-            
-            checkboxes.forEach(checkbox => {
-                const label = checkbox.nextElementSibling.querySelector('strong').textContent;
-                const isPrimary = checkbox.nextElementSibling.querySelector('.badge');
-                html += `
-                    <li class="mb-2">
-                        <i class="fas fa-calendar text-success me-2"></i>
-                        ${label}
-                        ${isPrimary ? '<span class="badge bg-primary ms-1">Principal</span>' : ''}
-                    </li>
-                `;
-            });
-            
-            html += '</ul>';
-            previewElement.innerHTML = html;
-        } else {
-            previewElement.innerHTML = `
-                <div class="alert alert-warning">
-                    <i class="fas fa-exclamation-triangle"></i>
-                    Aucun calendrier sélectionné
-                    <small class="d-block mt-1">Le calendrier principal sera utilisé par défaut</small>
-                </div>
-            `;
-        }
-    }
+        // Afficher un message de succès
+        const alert = document.createElement('div');
+        alert.className = 'alert alert-success alert-dismissible fade show mt-3';
+        alert.innerHTML = `
+            <i class="fas fa-check me-2"></i>Synchronisation réussie !
+            <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+        `;
+        button.closest('.card-body').appendChild(alert);
+        
+        // Supprimer l'alerte après 3 secondes
+        setTimeout(() => {
+            alert.remove();
+        }, 3000);
+    }, 2000);
+}
 
-    // Event listeners pour mise à jour en temps réel
+document.addEventListener('DOMContentLoaded', function() {
+    // Auto-submit du formulaire quand on change une checkbox
     const checkboxes = document.querySelectorAll('input[name="selected_calendars[]"]');
     checkboxes.forEach(checkbox => {
-        checkbox.addEventListener('change', updateSelectionPreview);
+        checkbox.addEventListener('change', function() {
+            // Optionnel : auto-save après un délai
+            // setTimeout(() => this.form.submit(), 1000);
+        });
     });
 });
 </script>

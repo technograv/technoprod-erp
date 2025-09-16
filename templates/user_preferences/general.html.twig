@@ -1,30 +1,10 @@
-{% extends 'user_preferences/index.html.twig' %}
+{% extends 'user_preferences/_base.html.twig' %}
 
 {% block title %}Préférences Générales - Paramétrage Utilisateur{% endblock %}
 
-{% block body %}
-<div class="container-fluid mt-4">
-    <div class="row">
-        <div class="col-12">
-            <div class="d-sm-flex align-items-center justify-content-between mb-4">
-                <h1 class="h3 mb-0 text-gray-800">
-                    <i class="fas fa-cog me-2"></i>Préférences Générales
-                </h1>
-                <a href="{{ path('app_user_preferences_index') }}" class="btn btn-secondary">
-                    <i class="fas fa-arrow-left me-1"></i>Retour
-                </a>
-            </div>
+{% block page_title %}Préférences Générales{% endblock %}
 
-            <!-- Messages flash -->
-            {% for label, messages in app.flashes %}
-                {% for message in messages %}
-                    <div class="alert alert-{{ label == 'error' ? 'danger' : label }} alert-dismissible fade show" role="alert">
-                        {{ message }}
-                        <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
-                    </div>
-                {% endfor %}
-            {% endfor %}
-
+{% block content %}
             <div class="row">
                 <div class="col-lg-8">
                     <!-- Préférences générales -->
