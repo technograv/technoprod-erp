@@ -1,5 +1,6 @@
 {#
-    Template réutilisable pour la gestion Client/Prospect en mode édition
+    Template réutilisable pour la gestion Client/Prospect en mode édition v2
+    Utilise le service JavaScript ClientProspectService unifié
     
     Variables attendues :
     - form : Le formulaire Symfony
@@ -20,7 +21,7 @@
             <div class="col-md-6">
                 <div class="d-flex align-items-end gap-2">
                     {{ form_widget(form.client, {
-                        'attr': {'class': 'form-select client-select', 'data-populate-tiers': 'true', 'style': 'flex-grow: 1;'}
+                        'attr': {'class': 'form-select client-select', 'id': 'prospect', 'style': 'flex-grow: 1;'}
                     }) }}
                     
                     <!-- Boutons d'action client -->
@@ -47,8 +48,8 @@
     </div>
 </div>
 
-<!-- Section Adresses et contacts améliorée -->
-<div class="form-section">
+<!-- Section Adresses et contacts unifiée -->
+<div class="form-section" id="contact-selection">
     <div class="form-section-header">
         <h5 class="mb-0"><i class="fas fa-address-card me-2"></i>Adresses et contacts</h5>
     </div>
@@ -57,14 +58,14 @@
             <!-- Contact et adresse de livraison -->
             <div class="col-md-6">
                 <div class="mb-3">
-                    <label class="form-label">Contact livraison</label>
+                    <label class="form-label">Contact en charge du projet</label>
                     <div class="d-flex align-items-center gap-2">
                         {{ form_widget(form.contactLivraison, {
-                            'attr': {'class': 'form-select contact-select', 'style': 'flex-grow: 1;'}
+                            'attr': {'class': 'form-select contact-select', 'id': 'contact_defaut', 'style': 'flex-grow: 1;'}
                         }) }}
                         
                         <!-- Boutons d'action contact livraison -->
-                        <button type="button" class="btn btn-success btn-sm" id="add-contact-livraison-btn" 
+                        <button type="button" class="btn btn-success btn-sm" id="add-contact-btn" 
                                 title="Ajouter un nouveau contact">
                             <i class="fas fa-plus"></i>
                         </button>
@@ -82,7 +83,7 @@
                     <label class="form-label">Adresse de livraison</label>
                     <div class="d-flex align-items-center gap-2 mb-2">
                         <select class="form-select" id="adresse_livraison_select" name="adresse_livraison_select" style="flex-grow: 1;">
-                            <option value="">Choisir une adresse existante...</option>
+                            <option value="">Choisir une adresse...</option>
                         </select>
                         
                         <!-- Boutons d'action adresse livraison -->
@@ -135,10 +136,10 @@
             <!-- Contact et adresse de facturation -->
             <div class="col-md-6">
                 <div class="mb-3">
-                    <label class="form-label">Contact facturation</label>
+                    <label class="form-label">Contact de facturation</label>
                     <div class="d-flex align-items-center gap-2">
                         {{ form_widget(form.contactFacturation, {
-                            'attr': {'class': 'form-select contact-select', 'style': 'flex-grow: 1;'}
+                            'attr': {'class': 'form-select contact-select', 'id': 'contact_facturation', 'style': 'flex-grow: 1;'}
                         }) }}
                         
                         <!-- Boutons d'action contact facturation -->
@@ -160,7 +161,7 @@
                     <label class="form-label">Adresse de facturation</label>
                     <div class="d-flex align-items-center gap-2 mb-2">
                         <select class="form-select" id="adresse_facturation_select" name="adresse_facturation_select" style="flex-grow: 1;">
-                            <option value="">Choisir une adresse existante...</option>
+                            <option value="">Choisir une adresse...</option>
                         </select>
                         
                         <!-- Boutons d'action adresse facturation -->
@@ -213,141 +214,98 @@
     </div>
 </div>
 
+<!-- Inclusion du service JavaScript unifié -->
+<script src="/js/services/ClientProspectService.js"></script>
+
 <script>
-// Script JavaScript pour gérer les interactions du bloc Client/Prospect en mode édition
+// Initialisation du service ClientProspectService pour l'édition
 (function() {
     'use strict';
     
-    let currentClientId = {{ devis.client ? devis.client.id : 'null' }};
-    let currentAddresses = [];
+    let clientService = null;
     
-    function initClientEditSelector() {
-        // Boutons d'action client
-        setupClientButtons();
+    function initClientProspectServiceEdit() {
+        // Configuration du service pour le mode édition
+        const config = {
+            debug: true,
+            mode: 'edit',
+            selectors: {
+                clientSelect: '#prospect',
+                contactLivraisonSelect: '#contact_defaut',
+                contactFacturationSelect: '#contact_facturation',
+                adresseLivraisonSelect: '#adresse_livraison_select',
+                adresseFacturationSelect: '#adresse_facturation_select',
+                contactSelection: '#contact-selection',
+                editClientBtn: '#edit-client-btn',
+                editContactLivraisonBtn: '#edit-contact-livraison-btn',
+                editContactFacturationBtn: '#edit-contact-facturation-btn',
+                editAddressLivraisonBtn: '#edit-address-livraison-btn',
+                editAddressFacturationBtn: '#edit-address-facturation-btn'
+            }
+        };
         
-        // Boutons d'action contacts
-        setupContactButtons();
+        // Créer et initialiser le service
+        clientService = new ClientProspectService(config);
         
-        // Boutons d'action adresses
-        setupAddressButtons();
-        
-        // Gestion changement de client
-        setupClientChangeHandler();
-        
-        // Charger les adresses du client actuel
-        if (currentClientId) {
-            loadClientAddresses(currentClientId);
+        if (clientService.init()) {
+            console.log('✅ ClientProspectService initialisé pour l\'édition');
+            
+            // Ajouter les gestionnaires pour les boutons d'ajout
+            setupAddButtons();
+            
+            // Initialiser avec le client sélectionné si il y en a un
+            const clientSelect = document.querySelector('#prospect');
+            if (clientSelect?.value) {
+                console.log('🔄 Initialisation avec client:', clientSelect.value);
+                clientService.handleClientChange(clientSelect.value);
+            }
+        } else {
+            console.error('❌ Échec de l\'initialisation du ClientProspectService');
         }
     }
     
-    function setupClientButtons() {
-        const addClientBtn = document.getElementById('add-client-btn');
-        const editClientBtn = document.getElementById('edit-client-btn');
-        
-        addClientBtn?.addEventListener('click', function() {
+    function setupAddButtons() {
+        // Boutons d'ajout (pas gérés par le service)
+        document.getElementById('add-client-btn')?.addEventListener('click', function() {
             window.open('/client/new', '_blank');
         });
         
-        editClientBtn?.addEventListener('click', function() {
-            if (currentClientId) {
-                window.open(`/client/${currentClientId}/edit`, '_blank');
-            }
-        });
-    }
-    
-    function setupContactButtons() {
-        // Boutons contact livraison
-        document.getElementById('add-contact-livraison-btn')?.addEventListener('click', function() {
-            if (currentClientId) {
-                window.open(`/client/${currentClientId}/edit#add-contact`, '_blank');
+        document.getElementById('add-contact-btn')?.addEventListener('click', function() {
+            if (clientService?.currentClient) {
+                window.open(`/client/${clientService.currentClient.id}/edit#add-contact`, '_blank');
             }
         });
         
-        document.getElementById('edit-contact-livraison-btn')?.addEventListener('click', function() {
-            const contactSelect = document.getElementById('devis_contactLivraison');
-            const contactId = contactSelect?.value;
-            if (contactId && currentClientId) {
-                window.open(`/client/${currentClientId}/edit#contact-${contactId}`, '_blank');
-            }
-        });
-        
-        // Boutons contact facturation
         document.getElementById('add-contact-facturation-btn')?.addEventListener('click', function() {
-            if (currentClientId) {
-                window.open(`/client/${currentClientId}/edit#add-contact`, '_blank');
+            if (clientService?.currentClient) {
+                window.open(`/client/${clientService.currentClient.id}/edit#add-contact`, '_blank');
             }
         });
         
-        document.getElementById('edit-contact-facturation-btn')?.addEventListener('click', function() {
-            const contactSelect = document.getElementById('devis_contactFacturation');
-            const contactId = contactSelect?.value;
-            if (contactId && currentClientId) {
-                window.open(`/client/${currentClientId}/edit#contact-${contactId}`, '_blank');
-            }
-        });
-        
-        // Gestion changement contacts pour affichage boutons
-        const contactLivraisonSelect = document.getElementById('devis_contactLivraison');
-        const contactFacturationSelect = document.getElementById('devis_contactFacturation');
-        const editContactLivraisonBtn = document.getElementById('edit-contact-livraison-btn');
-        const editContactFacturationBtn = document.getElementById('edit-contact-facturation-btn');
-        
-        contactLivraisonSelect?.addEventListener('change', function() {
-            editContactLivraisonBtn.style.display = this.value ? 'inline-block' : 'none';
-        });
-        
-        contactFacturationSelect?.addEventListener('change', function() {
-            editContactFacturationBtn.style.display = this.value ? 'inline-block' : 'none';
-        });
-    }
-    
-    function setupAddressButtons() {
-        // Boutons adresse livraison
         document.getElementById('add-address-livraison-btn')?.addEventListener('click', function() {
-            if (currentClientId) {
-                window.open(`/client/${currentClientId}/edit#add-address`, '_blank');
+            if (clientService?.currentClient) {
+                window.open(`/client/${clientService.currentClient.id}/edit#add-address`, '_blank');
             }
         });
         
-        document.getElementById('edit-address-livraison-btn')?.addEventListener('click', function() {
-            const addressSelect = document.getElementById('adresse_livraison_select');
-            const addressId = addressSelect?.value;
-            if (addressId && currentClientId) {
-                window.open(`/client/${currentClientId}/edit#address-${addressId}`, '_blank');
-            }
-        });
-        
-        // Boutons adresse facturation
         document.getElementById('add-address-facturation-btn')?.addEventListener('click', function() {
-            if (currentClientId) {
-                window.open(`/client/${currentClientId}/edit#add-address`, '_blank');
+            if (clientService?.currentClient) {
+                window.open(`/client/${clientService.currentClient.id}/edit#add-address`, '_blank');
             }
         });
         
-        document.getElementById('edit-address-facturation-btn')?.addEventListener('click', function() {
-            const addressSelect = document.getElementById('adresse_facturation_select');
-            const addressId = addressSelect?.value;
-            if (addressId && currentClientId) {
-                window.open(`/client/${currentClientId}/edit#address-${addressId}`, '_blank');
-            }
-        });
-        
-        // Gestion changement adresses pour remplir les champs et afficher boutons
-        setupAddressChangeHandlers();
+        // Gestionnaire spécial pour les changements d'adresses afin de remplir les champs du formulaire
+        setupAddressToFormSync();
     }
     
-    function setupAddressChangeHandlers() {
+    function setupAddressToFormSync() {
         const adresseLivraisonSelect = document.getElementById('adresse_livraison_select');
         const adresseFacturationSelect = document.getElementById('adresse_facturation_select');
-        const editAddressLivraisonBtn = document.getElementById('edit-address-livraison-btn');
-        const editAddressFacturationBtn = document.getElementById('edit-address-facturation-btn');
         
         adresseLivraisonSelect?.addEventListener('change', function() {
             const addressId = this.value;
-            editAddressLivraisonBtn.style.display = addressId ? 'inline-block' : 'none';
-            
-            if (addressId) {
-                const address = currentAddresses.find(addr => addr.id == addressId);
+            if (addressId && clientService?.currentAddresses) {
+                const address = clientService.currentAddresses.find(addr => addr.id == addressId);
                 if (address) {
                     populateAddressFields('livraison', address);
                 }
@@ -356,62 +314,12 @@
         
         adresseFacturationSelect?.addEventListener('change', function() {
             const addressId = this.value;
-            editAddressFacturationBtn.style.display = addressId ? 'inline-block' : 'none';
-            
-            if (addressId) {
-                const address = currentAddresses.find(addr => addr.id == addressId);
+            if (addressId && clientService?.currentAddresses) {
+                const address = clientService.currentAddresses.find(addr => addr.id == addressId);
                 if (address) {
                     populateAddressFields('facturation', address);
                 }
             }
-        });
-    }
-    
-    function setupClientChangeHandler() {
-        const clientSelect = document.getElementById('devis_client');
-        const editClientBtn = document.getElementById('edit-client-btn');
-        
-        clientSelect?.addEventListener('change', function() {
-            currentClientId = this.value;
-            editClientBtn.style.display = currentClientId ? 'inline-block' : 'none';
-            
-            if (currentClientId) {
-                loadClientAddresses(currentClientId);
-            } else {
-                clearAddressSelectors();
-            }
-        });
-    }
-    
-    function loadClientAddresses(clientId) {
-        fetch(`/client/${clientId}/addresses`)
-            .then(response => response.json())
-            .then(addresses => {
-                currentAddresses = addresses;
-                populateAddressSelectors(addresses);
-            })
-            .catch(error => {
-                console.error('Erreur lors du chargement des adresses:', error);
-                currentAddresses = [];
-                clearAddressSelectors();
-            });
-    }
-    
-    function populateAddressSelectors(addresses) {
-        const adresseLivraisonSelect = document.getElementById('adresse_livraison_select');
-        const adresseFacturationSelect = document.getElementById('adresse_facturation_select');
-        
-        // Vider les sélecteurs
-        adresseLivraisonSelect.innerHTML = '<option value="">Choisir une adresse existante...</option>';
-        adresseFacturationSelect.innerHTML = '<option value="">Choisir une adresse existante...</option>';
-        
-        // Ajouter les adresses
-        addresses.forEach(address => {
-            const optionLivraison = new Option(address.label, address.id);
-            const optionFacturation = new Option(address.label, address.id);
-            
-            adresseLivraisonSelect.appendChild(optionLivraison);
-            adresseFacturationSelect.appendChild(optionFacturation);
         });
     }
     
@@ -428,26 +336,22 @@
         if (addressField) addressField.value = address.ligne1 || '';
         if (postalField) postalField.value = address.codePostal || '';
         if (villeField) villeField.value = address.ville || '';
-    }
-    
-    function clearAddressSelectors() {
-        const adresseLivraisonSelect = document.getElementById('adresse_livraison_select');
-        const adresseFacturationSelect = document.getElementById('adresse_facturation_select');
         
-        adresseLivraisonSelect.innerHTML = '<option value="">Choisir une adresse existante...</option>';
-        adresseFacturationSelect.innerHTML = '<option value="">Choisir une adresse existante...</option>';
-        
-        document.getElementById('edit-address-livraison-btn').style.display = 'none';
-        document.getElementById('edit-address-facturation-btn').style.display = 'none';
-        
-        currentAddresses = [];
+        console.log(`📍 Champs ${type} remplis avec l'adresse:`, address.label);
     }
     
     // Initialiser quand le DOM est prêt
     if (document.readyState === 'loading') {
-        document.addEventListener('DOMContentLoaded', initClientEditSelector);
+        document.addEventListener('DOMContentLoaded', initClientProspectServiceEdit);
     } else {
-        initClientEditSelector();
+        initClientProspectServiceEdit();
     }
+    
+    // Nettoyer avant déchargement de la page
+    window.addEventListener('beforeunload', function() {
+        if (clientService) {
+            clientService.destroy();
+        }
+    });
 })();
 </script>

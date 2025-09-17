@@ -92,8 +92,21 @@ class ClientProspectService {
      */
     attachEvents() {
         const clientSelect = document.querySelector(this.config.selectors.clientSelect);
-        const contactLivraisonSelect = document.querySelector(this.config.selectors.contactLivraisonSelect);
-        const contactFacturationSelect = document.querySelector(this.config.selectors.contactFacturationSelect);
+        
+        // Support pour les deux types de sélecteurs (création et édition)
+        let contactLivraisonSelect = document.querySelector(this.config.selectors.contactLivraisonSelect);
+        let contactFacturationSelect = document.querySelector(this.config.selectors.contactFacturationSelect);
+        
+        // Si on ne trouve pas les sélecteurs par défaut, essayer les sélecteurs Symfony
+        if (!contactLivraisonSelect && this.config.mode === 'edit') {
+            contactLivraisonSelect = document.querySelector('#devis_contactLivraison');
+            this.log('🔧 Utilisation sélecteur Symfony pour contact livraison');
+        }
+        if (!contactFacturationSelect && this.config.mode === 'edit') {
+            contactFacturationSelect = document.querySelector('#devis_contactFacturation');
+            this.log('🔧 Utilisation sélecteur Symfony pour contact facturation');
+        }
+        
         const adresseLivraisonSelect = document.querySelector(this.config.selectors.adresseLivraisonSelect);
         const adresseFacturationSelect = document.querySelector(this.config.selectors.adresseFacturationSelect);
         
@@ -141,14 +154,22 @@ class ClientProspectService {
         });
         
         editContactLivraisonBtn?.addEventListener('click', () => {
-            const contactSelect = document.querySelector(this.config.selectors.contactLivraisonSelect);
+            let contactSelect = document.querySelector(this.config.selectors.contactLivraisonSelect);
+            // Support pour les sélecteurs Symfony en mode édition
+            if (!contactSelect && this.config.mode === 'edit') {
+                contactSelect = document.querySelector('#devis_contactLivraison');
+            }
             if (contactSelect?.value) {
                 this.openContactModal(contactSelect.value);
             }
         });
         
         editContactFacturationBtn?.addEventListener('click', () => {
-            const contactSelect = document.querySelector(this.config.selectors.contactFacturationSelect);
+            let contactSelect = document.querySelector(this.config.selectors.contactFacturationSelect);
+            // Support pour les sélecteurs Symfony en mode édition
+            if (!contactSelect && this.config.mode === 'edit') {
+                contactSelect = document.querySelector('#devis_contactFacturation');
+            }
             if (contactSelect?.value) {
                 this.openContactModal(contactSelect.value);
             }
@@ -187,6 +208,14 @@ class ClientProspectService {
         try {
             // Mettre à jour le client actuel
             this.currentClient = { id: clientId };
+            
+            // Synchroniser avec le champ caché si en mode création
+            if (this.config.mode === 'create') {
+                const clientField = document.querySelector(this.config.selectors.clientField);
+                if (clientField) {
+                    clientField.value = clientId;
+                }
+            }
             
             // Charger les données du client
             await Promise.all([
@@ -250,10 +279,22 @@ class ClientProspectService {
      * Popule les sélecteurs de contacts
      */
     populateContacts() {
-        const contactLivraisonSelect = document.querySelector(this.config.selectors.contactLivraisonSelect);
-        const contactFacturationSelect = document.querySelector(this.config.selectors.contactFacturationSelect);
+        // Support pour les deux types de sélecteurs (création et édition)
+        let contactLivraisonSelect = document.querySelector(this.config.selectors.contactLivraisonSelect);
+        let contactFacturationSelect = document.querySelector(this.config.selectors.contactFacturationSelect);
         
-        if (!contactLivraisonSelect || !contactFacturationSelect) return;
+        // Si on ne trouve pas les sélecteurs par défaut, essayer les sélecteurs Symfony
+        if (!contactLivraisonSelect && this.config.mode === 'edit') {
+            contactLivraisonSelect = document.querySelector('#devis_contactLivraison');
+        }
+        if (!contactFacturationSelect && this.config.mode === 'edit') {
+            contactFacturationSelect = document.querySelector('#devis_contactFacturation');
+        }
+        
+        if (!contactLivraisonSelect || !contactFacturationSelect) {
+            this.log('⚠️ Sélecteurs de contacts non trouvés');
+            return;
+        }
         
         // Vider les sélecteurs
         contactLivraisonSelect.innerHTML = '<option value="">Choisir un contact...</option>';
@@ -359,8 +400,18 @@ class ClientProspectService {
         const editAddressLivraisonBtn = document.querySelector(this.config.selectors.editAddressLivraisonBtn);
         const editAddressFacturationBtn = document.querySelector(this.config.selectors.editAddressFacturationBtn);
         
-        const contactLivraisonSelect = document.querySelector(this.config.selectors.contactLivraisonSelect);
-        const contactFacturationSelect = document.querySelector(this.config.selectors.contactFacturationSelect);
+        // Support pour les deux types de sélecteurs (création et édition)
+        let contactLivraisonSelect = document.querySelector(this.config.selectors.contactLivraisonSelect);
+        let contactFacturationSelect = document.querySelector(this.config.selectors.contactFacturationSelect);
+        
+        // Si on ne trouve pas les sélecteurs par défaut, essayer les sélecteurs Symfony
+        if (!contactLivraisonSelect && this.config.mode === 'edit') {
+            contactLivraisonSelect = document.querySelector('#devis_contactLivraison');
+        }
+        if (!contactFacturationSelect && this.config.mode === 'edit') {
+            contactFacturationSelect = document.querySelector('#devis_contactFacturation');
+        }
+        
         const adresseLivraisonSelect = document.querySelector(this.config.selectors.adresseLivraisonSelect);
         const adresseFacturationSelect = document.querySelector(this.config.selectors.adresseFacturationSelect);
         
