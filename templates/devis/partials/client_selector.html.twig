@@ -235,8 +235,8 @@
                 // Populer les contacts
                 populateContacts(currentContacts, selectedOption);
                 
-                // Populer les adresses
-                populateAddresses(currentAddresses);
+                // Charger les adresses via API
+                loadClientAddresses(this.value);
                 
                 // Afficher la section contacts
                 contactSelection.style.display = 'block';
@@ -319,17 +319,51 @@
         }, 100);
     }
     
+    function loadClientAddresses(clientId) {
+        console.log('📍 [DEBUG] Chargement adresses pour client:', clientId);
+        
+        if (!clientId) {
+            currentAddresses = [];
+            resetAddressSelectors();
+            return;
+        }
+        
+        fetch(`/client/${clientId}/addresses`)
+            .then(response => {
+                console.log('📍 [DEBUG] Réponse API adresses:', response.status);
+                return response.json();
+            })
+            .then(addresses => {
+                console.log('📍 [DEBUG] Adresses reçues:', addresses);
+                currentAddresses = addresses;
+                populateAddresses(addresses);
+            })
+            .catch(error => {
+                console.error('📍 [DEBUG] Erreur chargement adresses:', error);
+                currentAddresses = [];
+                resetAddressSelectors();
+            });
+    }
+    
     function populateAddresses(addresses) {
         const adresseLivraisonSelect = document.getElementById('adresse_livraison_select');
         const adresseFacturationSelect = document.getElementById('adresse_facturation_select');
+        
+        if (!adresseLivraisonSelect || !adresseFacturationSelect) {
+            console.warn('📍 [DEBUG] Sélecteurs d\'adresses non trouvés');
+            return;
+        }
         
         // Vider les sélecteurs
         adresseLivraisonSelect.innerHTML = '<option value="">Choisir une adresse...</option>';
         adresseFacturationSelect.innerHTML = '<option value="">Choisir une adresse...</option>';
         
+        console.log('📍 [DEBUG] Population des adresses:', addresses.length);
+        
         // Ajouter les adresses
-        addresses.forEach(address => {
-            const label = `${address.nom || 'Adresse'} - ${address.ligne1} - ${address.codePostal} ${address.ville}`;
+        addresses.forEach((address, index) => {
+            const label = address.label || `${address.nom || 'Adresse'} - ${address.ligne1} - ${address.codePostal} ${address.ville}`;
+            console.log(`📍 [DEBUG] Adresse ${index + 1}:`, label);
             
             const optionLivraison = new Option(label, address.id);
             const optionFacturation = new Option(label, address.id);
@@ -499,10 +533,25 @@
     }
     
     function resetAddressSelectors() {
-        document.getElementById('adresse_livraison_select').innerHTML = '<option value="">Choisir une adresse...</option>';
-        document.getElementById('adresse_facturation_select').innerHTML = '<option value="">Choisir une adresse...</option>';
-        document.getElementById('edit-address-livraison-btn').style.display = 'none';
-        document.getElementById('edit-address-facturation-btn').style.display = 'none';
+        const adresseLivraisonSelect = document.getElementById('adresse_livraison_select');
+        const adresseFacturationSelect = document.getElementById('adresse_facturation_select');
+        const editAddressLivraisonBtn = document.getElementById('edit-address-livraison-btn');
+        const editAddressFacturationBtn = document.getElementById('edit-address-facturation-btn');
+        
+        if (adresseLivraisonSelect) {
+            adresseLivraisonSelect.innerHTML = '<option value="">Choisir une adresse...</option>';
+        }
+        if (adresseFacturationSelect) {
+            adresseFacturationSelect.innerHTML = '<option value="">Choisir une adresse...</option>';
+        }
+        if (editAddressLivraisonBtn) {
+            editAddressLivraisonBtn.style.display = 'none';
+        }
+        if (editAddressFacturationBtn) {
+            editAddressFacturationBtn.style.display = 'none';
+        }
+        
+        currentAddresses = [];
     }
     
     // Initialiser quand le DOM est prêt
