@@ -17,7 +17,7 @@
     
     <div class="debug-section">
         <div class="debug-title">📊 Test API Secteurs</div>
-        <button onclick="testerAPI()">🧪 Tester l'API /admin/secteurs/all-geo-data</button>
+        <button onclick="testerAPI()">🧪 Tester l'API /admin/debug/secteurs-geo</button>
         <div id="api-result"></div>
     </div>
 
@@ -40,7 +40,7 @@
             result.innerHTML = '<p>⏳ Chargement...</p>';
             
             try {
-                const response = await fetch('/admin/secteurs/all-geo-data');
+                const response = await fetch('/admin/debug/secteurs-geo');
                 const data = await response.json();
                 
                 let html = '<h3 class="success">✅ API Réussie</h3>';

@@ -30,6 +30,13 @@ services:
     App\Service\DashboardService:
         public: true
 
+    # Configuration des services Admin avec interfaces
+    App\Service\Admin\GroupeUtilisateurServiceInterface:
+        class: App\Service\Admin\GroupeUtilisateurService
+        
+    App\Service\Admin\Interfaces\AdminDashboardServiceInterface:
+        class: App\Service\Admin\AdminDashboardService
+
     # add more service definitions when explicit configuration is needed
     # please note that last definitions always *replace* previous ones
     

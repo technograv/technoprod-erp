@@ -856,7 +856,60 @@ final class ClientController extends AbstractController
     public function searchCommunes(Request $request, EntityManagerInterface $entityManager): JsonResponse
     {
         $query = $request->query->get('q', '');
+        $postal = $request->query->get('postal', '');
+        $ville = $request->query->get('ville', '');
         
+        // Si on a un paramètre postal ou ville spécifique
+        if ($postal) {
+            if (strlen($postal) < 2) {
+                return $this->json(['communes' => []]);
+            }
+            
+            $communes = $entityManager->getRepository(CommuneFrancaise::class)
+                ->findBy(['codePostal' => $postal], null, 10);
+            
+            $results = [];
+            foreach ($communes as $commune) {
+                $results[] = [
+                    'id' => $commune->getId(),
+                    'nom' => $commune->getNomCommune(),
+                    'codePostal' => $commune->getCodePostal(),
+                    'nomCommune' => $commune->getNomCommune(),
+                    'nomDepartement' => $commune->getNomDepartement()
+                ];
+            }
+            
+            return $this->json(['communes' => $results]);
+        }
+        
+        if ($ville) {
+            if (strlen($ville) < 3) {
+                return $this->json(['communes' => []]);
+            }
+            
+            $communes = $entityManager->getRepository(CommuneFrancaise::class)
+                ->createQueryBuilder('c')
+                ->where('LOWER(c.nomCommune) LIKE LOWER(:ville)')
+                ->setParameter('ville', '%' . $ville . '%')
+                ->setMaxResults(10)
+                ->getQuery()
+                ->getResult();
+            
+            $results = [];
+            foreach ($communes as $commune) {
+                $results[] = [
+                    'id' => $commune->getId(),
+                    'nom' => $commune->getNomCommune(),
+                    'codePostal' => $commune->getCodePostal(),
+                    'nomCommune' => $commune->getNomCommune(),
+                    'nomDepartement' => $commune->getNomDepartement()
+                ];
+            }
+            
+            return $this->json(['communes' => $results]);
+        }
+        
+        // Recherche générale avec paramètre q (pour compatibilité)
         if (strlen($query) < 2) {
             return $this->json([]);
         }

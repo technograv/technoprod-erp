@@ -1,0 +1,38 @@
+{% for day in week_days %}
+<div class="col day-column">
+    <div class="day-header {{ day.is_today ? 'today' : '' }}">
+        <div>{{ day.day_short_fr }}</div>
+        <div class="day-number">{{ day.day_number }}</div>
+    </div>
+    <div class="p-2">
+        {% set dayEvents = [] %}
+        {% for event in week_events %}
+            {% if event.start|date('Y-m-d') == day.date|date('Y-m-d') %}
+                {% set dayEvents = dayEvents|merge([event]) %}
+            {% endif %}
+        {% endfor %}
+        
+        {% if dayEvents|length > 0 %}
+            {% for event in dayEvents %}
+            <div class="event-item" 
+                 style="--event-color: {{ event.background_color }}; --calendar-color: {{ event.background_color }}; color: {{ event.foreground_color ?: '#333' }};"
+                 title="{{ event.title }}{% if event.location %} - {{ event.location }}{% endif %}{% if event.calendar_name %} ({{ event.calendar_name }}){% endif %}">
+                <div class="calendar-indicator"></div>
+                <div class="event-time">{{ event.start_formatted }}</div>
+                <div class="event-title">{{ event.title|length > 20 ? event.title|slice(0, 20) ~ '...' : event.title }}</div>
+                {% if event.location and event.location|length < 15 %}
+                <div class="event-location"><i class="fas fa-map-marker-alt me-1"></i>{{ event.location }}</div>
+                {% endif %}
+                {% if event.calendar_name and event.calendar_name != 'primary' %}
+                <div class="event-calendar"><i class="fas fa-calendar me-1"></i>{{ event.calendar_name|length > 15 ? event.calendar_name|slice(0, 15) ~ '...' : event.calendar_name }}</div>
+                {% endif %}
+            </div>
+            {% endfor %}
+        {% else %}
+            <div class="no-events">
+                <small class="text-muted">Aucun événement</small>
+            </div>
+        {% endif %}
+    </div>
+</div>
+{% endfor %}

@@ -217,7 +217,10 @@
                     <button class="week-nav-btn" onclick="changeWeekAjax({{ current_week_offset - 1 }})" title="Semaine précédente" id="btn-prev-week">
                         <i class="fas fa-chevron-left"></i>
                     </button>
-                    <span class="mx-3" id="week-indicator">Semaine {{ current_week_offset == 0 ? 'en cours' : (current_week_offset > 0 ? '+' ~ current_week_offset : current_week_offset) }}</span>
+                    <span class="mx-2" id="week-indicator">Semaine {{ current_week_offset == 0 ? 'en cours' : (current_week_offset > 0 ? '+' ~ current_week_offset : current_week_offset) }}</span>
+                    <button class="btn btn-sm btn-outline-light mx-2" onclick="goToCurrentWeek()" title="Retour à cette semaine" id="btn-current-week">
+                        <i class="fas fa-calendar-day me-1"></i>Cette semaine
+                    </button>
                     <button class="week-nav-btn" onclick="changeWeekAjax({{ current_week_offset + 1 }})" title="Semaine suivante" id="btn-next-week">
                         <i class="fas fa-chevron-right"></i>
                     </button>
@@ -859,7 +862,9 @@ window.calendarDashboard = calendarDashboard;
 function changeWeekAjax(offset) {
     return calendarDashboard.changeWeekAjax(offset);
 }
-
+function goToCurrentWeek() {
+    return calendarDashboard.goToCurrentWeek();
+}
 function lancerProspectionTelephonique() { 
     return calendarDashboard.lancerProspectionTelephonique(); 
 }

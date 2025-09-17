@@ -67,19 +67,10 @@
                 <div class="form-section-body">
                     <div class="row">
                         <div class="col-md-6">
-                            <div class="mb-3">
-                                <label for="client_search" class="form-label">Client / Prospect *</label>
-                                <div class="position-relative">
-                                    <input type="text" 
-                                           id="client_search" 
-                                           class="form-control client-autocomplete" 
-                                           placeholder="Rechercher un client..." 
-                                           autocomplete="off"
-                                           value="{{ devis.client ? devis.client.nomComplet : '' }}" />
-                                    <div id="client_suggestions" class="autocomplete-suggestions" style="display: none;"></div>
-                                </div>
-                                <input type="hidden" id="devis_client" name="devis[client]" value="{{ devis.client ? devis.client.id : '' }}" />
-                            </div>
+                            {{ form_row(form.client, {
+                                'label': 'Client / Prospect',
+                                'attr': {'class': 'form-select client-select', 'data-populate-tiers': 'true'}
+                            }) }}
                         </div>
                         <div class="col-md-6">
                             {{ form_row(form.commercial, {
@@ -126,47 +117,111 @@
                     <div class="row">
                         <div class="col-md-6">
                             <div class="mb-3">
-                                <label for="devis_contactFacturation" class="form-label">Contact facturation</label>
-                                <select id="devis_contactFacturation" name="contact_facturation" class="form-select">
-                                    <option value="">Sélectionner un contact...</option>
-                                </select>
+                                {{ form_row(form.contactLivraison, {
+                                    'label': 'Contact livraison',
+                                    'attr': {'class': 'form-select'}
+                                }) }}
                             </div>
                             <div class="mb-3">
-                                <label for="devis_adresseFacturation" class="form-label">Adresse facturation</label>
-                                <select id="devis_adresseFacturation" name="adresse_facturation" class="form-select">
-                                    <option value="">Sélectionner une adresse...</option>
-                                </select>
-                            </div>
-                            <!-- Libellé email aligné à droite -->
-                            <div class="mt-2 text-end d-flex align-items-center justify-content-end" style="height: 38px;">
-                                <label class="form-label mb-0" for="email_envoi_automatique_display">
-                                    <i class="fas fa-paper-plane me-2 text-primary"></i>Ce devis sera envoyé automatiquement à l'adresse :
-                                </label>
+                                <label class="form-label">Adresse de livraison</label>
+                                <div class="border rounded p-3 bg-light">
+                                    <div class="row">
+                                        <div class="col-md-12">
+                                            {{ form_row(form.tiersAdresseLivraison, {
+                                                'label': 'Adresse',
+                                                'attr': {'class': 'form-control'}
+                                            }) }}
+                                        </div>
+                                    </div>
+                                    <div class="row">
+                                        <div class="col-md-4">
+                                            {{ form_row(form.tiersCodePostalLivraison, {
+                                                'label': 'Code postal',
+                                                'attr': {
+                                                    'class': 'form-control postal-autocomplete', 
+                                                    'maxlength': '5',
+                                                    'data-target-ville': 'devis_tiersVilleLivraison'
+                                                }
+                                            }) }}
+                                        </div>
+                                        <div class="col-md-8">
+                                            {{ form_row(form.tiersVilleLivraison, {
+                                                'label': 'Ville',
+                                                'attr': {
+                                                    'class': 'form-control ville-autocomplete',
+                                                    'data-target-postal': 'devis_tiersCodePostalLivraison'
+                                                }
+                                            }) }}
+                                        </div>
+                                    </div>
+                                </div>
                             </div>
                         </div>
                         <div class="col-md-6">
                             <div class="mb-3">
-                                <label for="devis_contactLivraison" class="form-label">Contact livraison</label>
-                                <select id="devis_contactLivraison" name="contact_livraison" class="form-select">
-                                    <option value="">Sélectionner un contact...</option>
-                                </select>
+                                {{ form_row(form.contactFacturation, {
+                                    'label': 'Contact facturation',
+                                    'attr': {'class': 'form-select'}
+                                }) }}
                             </div>
                             <div class="mb-3">
-                                <label for="devis_adresseLivraison" class="form-label">Adresse livraison</label>
-                                <select id="devis_adresseLivraison" name="adresse_livraison" class="form-select">
-                                    <option value="">Sélectionner une adresse...</option>
-                                </select>
+                                <label class="form-label">Adresse de facturation</label>
+                                <div class="border rounded p-3 bg-light">
+                                    <div class="row">
+                                        <div class="col-md-12">
+                                            {{ form_row(form.tiersAdresse, {
+                                                'label': 'Adresse',
+                                                'attr': {'class': 'form-control'}
+                                            }) }}
+                                        </div>
+                                    </div>
+                                    <div class="row">
+                                        <div class="col-md-4">
+                                            {{ form_row(form.tiersCodePostal, {
+                                                'label': 'Code postal',
+                                                'attr': {
+                                                    'class': 'form-control postal-autocomplete', 
+                                                    'maxlength': '5',
+                                                    'data-target-ville': 'devis_tiersVille'
+                                                }
+                                            }) }}
+                                        </div>
+                                        <div class="col-md-8">
+                                            {{ form_row(form.tiersVille, {
+                                                'label': 'Ville',
+                                                'attr': {
+                                                    'class': 'form-control ville-autocomplete',
+                                                    'data-target-postal': 'devis_tiersCodePostal'
+                                                }
+                                            }) }}
+                                        </div>
+                                    </div>
+                                </div>
                             </div>
-                            <!-- Champ email aligné à gauche -->
-                            <div class="mt-2 d-flex align-items-center" style="height: 38px;">
-                                <input type="email" 
-                                       class="form-control" 
-                                       id="email_envoi_automatique_display"
-                                       placeholder="Email du contact de livraison"
-                                       value="{{ devis.emailEnvoiAutomatique ?? '' }}"
-                                       onchange="updateHiddenEmailField(this.value)" 
-                                       style="max-width: 350px;" />
+                        </div>
+                    </div>
+                    
+                    <!-- Dernière ligne: Email automatique + Modèle de document -->
+                    <div class="row">
+                        <div class="col-md-6">
+                            <div class="d-flex align-items-center">
+                                <label class="form-label mb-0 me-3" for="email_envoi_automatique_display">
+                                    <i class="fas fa-paper-plane me-2 text-primary"></i>Ce devis sera envoyé automatiquement à l'adresse :
+                                </label>
+                                {{ form_row(form.emailEnvoiAutomatique, {
+                                    'label': false,
+                                    'attr': {'class': 'form-control', 'placeholder': 'Email du contact'}
+                                }) }}
                             </div>
+                        </div>
+                        <div class="col-md-6">
+                            {{ form_row(form.modeleDocument, {
+                                'label': 'Modèle de document',
+                                'attr': {'class': 'form-select'}
+                            }) }}
+                            <small class="text-muted">
+                                <i class="fas fa-info-circle me-1"></i>Le modèle sélectionné sera utilisé lors de la génération PDF du devis.
+                            </small>
                         </div>
                     </div>
                 </div>
@@ -332,11 +387,7 @@
     {# Render devisItems field as hidden to prevent form_rest from creating duplicate buttons #}
     <div style="display: none;">
         {{ form_widget(form.devisItems) }}
-        {{ form_widget(form.emailEnvoiAutomatique) }}
-        {{ form_widget(form.client, {'value': devis.client ? devis.client.id : '', 'attr': {'data-custom-client': 'true'}}) }}
-        {{ form_widget(form.contactFacturation, {'value': devis.contactFacturation ? devis.contactFacturation.id : ''}) }}
         {{ form_widget(form.adresseFacturation, {'value': devis.adresseFacturation ? devis.adresseFacturation.id : ''}) }}
-        {{ form_widget(form.contactLivraison, {'value': devis.contactLivraison ? devis.contactLivraison.id : ''}) }}
         {{ form_widget(form.adresseLivraison, {'value': devis.adresseLivraison ? devis.adresseLivraison.id : ''}) }}
         {{ form_widget(form.notesClient) }}
         
@@ -344,9 +395,6 @@
         {{ form_widget(form.tiersCivilite) }}
         {{ form_widget(form.tiersNom) }}
         {{ form_widget(form.tiersPrenom) }}
-        {{ form_widget(form.tiersAdresse) }}
-        {{ form_widget(form.tiersCodePostal) }}
-        {{ form_widget(form.tiersVille) }}
         {{ form_widget(form.tiersModeReglement) }}
         {{ form_widget(form.totalHt) }}
         {{ form_widget(form.totalTva) }}
@@ -833,8 +881,8 @@
             justify-content: center;
         }
         
-        /* Autocomplétion client */
-        .autocomplete-suggestions {
+        /* Autocomplétion communes */
+        .commune-suggestions {
             position: absolute;
             top: 100%;
             left: 0;
@@ -846,30 +894,31 @@
             overflow-y: auto;
             z-index: 1000;
             box-shadow: 0 2px 5px rgba(0,0,0,0.1);
+            border-radius: 0 0 4px 4px;
         }
         
-        .client-suggestion {
+        .commune-suggestion-item {
             padding: 10px 15px;
             cursor: pointer;
             border-bottom: 1px solid #f0f0f0;
-            font-size: 14px;
+            transition: background-color 0.2s;
         }
         
-        .client-suggestion:hover,
-        .client-suggestion.active {
+        .commune-suggestion-item:hover {
             background-color: #f8f9fa;
         }
         
-        .client-suggestion:last-child {
+        .commune-suggestion-item:last-child {
             border-bottom: none;
         }
         
-        .client-suggestion .client-name {
+        .commune-suggestion-item .commune-name {
             font-weight: 500;
             color: #333;
+            font-size: 14px;
         }
         
-        .client-suggestion .client-info {
+        .commune-suggestion-item .commune-info {
             font-size: 12px;
             color: #666;
             margin-top: 2px;
@@ -1923,6 +1972,47 @@ function initGlobalRemise() {
         }
     });
     
+    // ===== FONCTION CALCUL TOTAL TTC FINAL (pour acompte) =====
+    function calculateFinalTotalTtc() {
+        const productElements = elements.filter(e => e.is_product);
+        
+        let totalHt = 0;
+        let totalTva = 0;
+        
+        // Calculer le total HT et TVA de base
+        productElements.forEach(element => {
+            const quantite = parseFloat(element.quantite || 1);
+            const prixUnitaire = parseFloat(element.prix_unitaire_ht || 0);
+            const remisePercent = parseFloat(element.remise_percent || 0);
+            const tvaPercent = parseFloat(element.tva_percent || 0);
+            
+            const lineHt = quantite * prixUnitaire * (1 - remisePercent / 100);
+            
+            totalHt += lineHt;
+            totalTva += lineHt * (tvaPercent / 100);
+        });
+        
+        // Appliquer la remise globale
+        let remisePercentEl = document.getElementById('remise-percent-main') || document.getElementById('devis_remiseGlobalePercent');
+        let remiseMontantEl = document.getElementById('remise-montant-main') || document.getElementById('devis_remiseGlobaleMontant');
+        
+        const remisePercent = parseFloat(remisePercentEl?.value || 0);
+        const remiseMontantSaisie = parseFloat(remiseMontantEl?.value || 0);
+        
+        let remiseMontant = 0;
+        if (remisePercent > 0) {
+            remiseMontant = totalHt * (remisePercent / 100);
+        } else if (remiseMontantSaisie > 0) {
+            remiseMontant = remiseMontantSaisie;
+        }
+        
+        const totalHtRemise = totalHt - remiseMontant;
+        const totalTvaRemise = totalHtRemise * (totalTva / totalHt || 0); // Proportionnelle
+        const totalTtc = totalHtRemise + totalTvaRemise;
+        
+        return totalTtc;
+    }
+    
     // ===== GESTION ACOMPTE (même logique simple) =====
     const acomptePercent = document.getElementById('devis_acomptePercent');
     const acompteMontant = document.getElementById('devis_acompteMontant');
@@ -1932,22 +2022,26 @@ function initGlobalRemise() {
         
         // Synchroniser le montant quand on sort du champ pourcentage
         acomptePercent.addEventListener('blur', function() {
-            if (this.value && totalHt > 0) {
+            // Calculer le total TTC après remise pour l'acompte
+            const totalTtcApresRemise = calculateFinalTotalTtc();
+            if (this.value && totalTtcApresRemise > 0) {
                 const percent = parseFloat(this.value) || 0;
-                const montant = (totalHt * percent / 100);
+                const montant = (totalTtcApresRemise * percent / 100);
                 acompteMontant.value = montant.toFixed(2);
-                console.log('💰 Acompte montant calculé:', montant.toFixed(2), '€');
+                console.log('💰 Acompte montant calculé sur TTC après remise:', montant.toFixed(2), '€ (', percent, '% de', totalTtcApresRemise.toFixed(2), '€)');
             }
             calculateTotals();
         });
         
         // Synchroniser le pourcentage quand on sort du champ montant
         acompteMontant.addEventListener('blur', function() {
-            if (this.value && totalHt > 0) {
+            // Calculer le total TTC après remise pour l'acompte
+            const totalTtcApresRemise = calculateFinalTotalTtc();
+            if (this.value && totalTtcApresRemise > 0) {
                 const montant = parseFloat(this.value) || 0;
-                const percent = (montant / totalHt * 100);
+                const percent = (montant / totalTtcApresRemise * 100);
                 acomptePercent.value = percent.toFixed(1);
-                console.log('📊 Acompte pourcentage calculé:', percent.toFixed(1), '%');
+                console.log('📊 Acompte pourcentage calculé sur TTC après remise:', percent.toFixed(1), '% (', montant.toFixed(2), '€ sur', totalTtcApresRemise.toFixed(2), '€)');
             }
             calculateTotals();
         });
@@ -2022,7 +2116,7 @@ function initContactAddressSynchronization() {
     
     observer.observe(clientHiddenField, { attributes: true });
 
-    // Écouter aussi les événements manuels
+    // Écouter aussi les événements manuels sur le select client
     clientHiddenField.addEventListener('change', function() {
         const clientId = this.value;
         if (clientId) {
@@ -2341,147 +2435,12 @@ function updateHiddenEmailField(value) {
 }
 
 // ==========================================
-// AUTOCOMPLÉTION CLIENT
+// GESTION CLIENT SELECT
 // ==========================================
 
 function initClientAutocomplete() {
-    const clientInput = document.getElementById('client_search');
-    const suggestionsDiv = document.getElementById('client_suggestions');
-    const hiddenClientField = document.getElementById('devis_client');
-    
-    if (!clientInput || !suggestionsDiv || !hiddenClientField) return;
-    
-    let currentIndex = -1;
-    let suggestions = [];
-    
-    clientInput.addEventListener('input', async function() {
-        const query = this.value.trim();
-        console.log('🔍 Recherche client:', query);
-        
-        if (query.length < 2) {
-            console.log('❌ Query trop courte');
-            hideSuggestions();
-            return;
-        }
-        
-        try {
-            const url = `/client/api/clients/search?q=${encodeURIComponent(query)}`;
-            console.log('📡 Appel API:', url);
-            const response = await fetch(url);
-            console.log('📥 Response status:', response.status);
-            
-            if (!response.ok) {
-                const text = await response.text();
-                console.error('❌ Erreur HTTP:', response.status, text.substring(0, 200));
-                throw new Error(`HTTP ${response.status}: ${text.substring(0, 100)}`);
-            }
-            
-            const clients = await response.json();
-            console.log('✅ Clients trouvés:', clients);
-            
-            suggestions = clients;
-            showSuggestions(clients);
-        } catch (error) {
-            console.error('❌ Erreur recherche clients:', error);
-            hideSuggestions();
-        }
-    });
-    
-    clientInput.addEventListener('keydown', function(e) {
-        if (suggestions.length === 0) return;
-        
-        if (e.key === 'ArrowDown') {
-            e.preventDefault();
-            currentIndex = Math.min(currentIndex + 1, suggestions.length - 1);
-            updateActiveSelection();
-        } else if (e.key === 'ArrowUp') {
-            e.preventDefault();
-            currentIndex = Math.max(currentIndex - 1, -1);
-            updateActiveSelection();
-        } else if (e.key === 'Enter') {
-            e.preventDefault();
-            if (currentIndex >= 0) {
-                selectClient(suggestions[currentIndex]);
-            }
-        } else if (e.key === 'Escape') {
-            hideSuggestions();
-        }
-    });
-    
-    document.addEventListener('click', function(e) {
-        if (!clientInput.contains(e.target) && !suggestionsDiv.contains(e.target)) {
-            hideSuggestions();
-        }
-    });
-    
-    function showSuggestions(clients) {
-        if (clients.length === 0) {
-            hideSuggestions();
-            return;
-        }
-        
-        suggestionsDiv.innerHTML = clients.map((client, index) => {
-            const formeJuridique = client.forme_juridique ? client.forme_juridique + ' ' : '';
-            const nomComplet = formeJuridique + (client.nom_entreprise || 'Client sans nom');
-            
-            return `
-                <div class="client-suggestion" data-index="${index}" data-client-id="${client.id}" data-client-nom="${nomComplet}" data-client-forme="${client.forme_juridique || ''}" data-client-code="${client.code_client || ''}">
-                    <div class="client-name">${nomComplet}</div>
-                    ${client.code_client ? `<div class="client-info">Code: ${client.code_client}</div>` : ''}
-                </div>
-            `;
-        }).join('');
-        
-        // Ajouter les event listeners aux suggestions
-        suggestionsDiv.querySelectorAll('.client-suggestion').forEach(suggestion => {
-            suggestion.addEventListener('click', function() {
-                const client = {
-                    id: this.dataset.clientId,
-                    nom_entreprise: this.dataset.clientNom,
-                    forme_juridique: this.dataset.clientForme,
-                    code_client: this.dataset.clientCode
-                };
-                selectClient(client);
-            });
-        });
-        
-        suggestionsDiv.style.display = 'block';
-        currentIndex = -1;
-    }
-    
-    function hideSuggestions() {
-        suggestionsDiv.style.display = 'none';
-        currentIndex = -1;
-    }
-    
-    function updateActiveSelection() {
-        const suggestionElements = suggestionsDiv.querySelectorAll('.client-suggestion');
-        suggestionElements.forEach((el, index) => {
-            el.classList.toggle('active', index === currentIndex);
-        });
-    }
-    
-    window.selectClient = function(client) {
-        const formeJuridique = client.forme_juridique ? client.forme_juridique + ' ' : '';
-        const nomComplet = formeJuridique + (client.nom_entreprise || 'Client sans nom');
-        
-        clientInput.value = nomComplet;
-        hiddenClientField.value = client.id;
-        
-        // Mettre à jour aussi le champ Symfony caché
-        const symfonyClientField = document.querySelector('select[name="devis[client]"][data-custom-client]');
-        if (symfonyClientField) {
-            symfonyClientField.value = client.id;
-        }
-        
-        hideSuggestions();
-        
-        // Déclencher l'événement change sur le champ caché
-        hiddenClientField.dispatchEvent(new Event('change'));
-        
-        // Déclencher le chargement des contacts et adresses
-        loadClientContactsAndAddresses(client.id);
-    };
+    // Pas d'autocomplétion spéciale nécessaire - utilise le select Symfony standard
+    // La fonction est conservée pour compatibilité avec les autres scripts
 }
 
 // ==========================================
@@ -4555,6 +4514,197 @@ document.addEventListener('DOMContentLoaded', function() {
             floatingProjectName.textContent = newName || 'Projet sans nom';
         });
     }
+    
+    // ==========================================
+    // AUTOCOMPLÉTION CODE POSTAL / VILLE
+    // ==========================================
+    
+    // Initialiser l'autocomplétion pour tous les champs postal et ville
+    function initCommuneAutocomplete() {
+        console.log('🔍 [DEBUG] Initialisation autocomplétion commune');
+        
+        // Autocomplétion code postal -> ville
+        const postalInputs = document.querySelectorAll('.postal-autocomplete');
+        console.log('📍 [DEBUG] Champs postal trouvés:', postalInputs.length);
+        
+        postalInputs.forEach((input, index) => {
+            console.log(`📍 [DEBUG] Champ postal ${index + 1}:`, input.id, input.getAttribute('data-target-ville'));
+            
+            if (input.hasAttribute('data-autocomplete-initialized')) return;
+            input.setAttribute('data-autocomplete-initialized', 'true');
+            
+            input.addEventListener('input', function() {
+                const postal = this.value.trim();
+                const targetVilleId = this.getAttribute('data-target-ville');
+                const targetVille = document.getElementById(targetVilleId);
+                
+                console.log(`📍 [DEBUG] Saisie postal: "${postal}", target: "${targetVilleId}"`);
+                
+                if (postal.length >= 2 && targetVille) {
+                    console.log(`🔄 [DEBUG] Recherche commune pour postal: ${postal}`);
+                    searchCommunesByPostal(postal, targetVille);
+                }
+            });
+        });
+        
+        // Autocomplétion ville -> code postal
+        document.querySelectorAll('.ville-autocomplete').forEach(input => {
+            if (input.hasAttribute('data-autocomplete-initialized')) return;
+            input.setAttribute('data-autocomplete-initialized', 'true');
+            
+            input.addEventListener('input', function() {
+                const ville = this.value.trim();
+                const targetPostalId = this.getAttribute('data-target-postal');
+                const targetPostal = document.getElementById(targetPostalId);
+                
+                if (ville.length >= 3 && targetPostal) {
+                    searchCommunesByVille(ville, targetPostal);
+                }
+            });
+        });
+    }
+    
+    function searchCommunesByPostal(postal, targetVille) {
+        console.log(`📡 [DEBUG] Appel API postal: /public/api/communes/search?postal=${postal}`);
+        
+        fetch(`/public/api/communes/search?postal=${encodeURIComponent(postal)}`)
+            .then(response => {
+                console.log(`📡 [DEBUG] Réponse API postal:`, response.status, response.statusText);
+                return response.json();
+            })
+            .then(data => {
+                console.log(`📊 [DEBUG] Données reçues postal:`, data);
+                if (data.communes && data.communes.length > 0) {
+                    console.log(`✅ [DEBUG] ${data.communes.length} commune(s) trouvée(s)`);
+                    
+                    if (data.communes.length === 1) {
+                        // Une seule commune : remplir automatiquement
+                        const commune = data.communes[0];
+                        console.log(`🎯 [DEBUG] Remplissage automatique:`, commune.nom);
+                        targetVille.value = commune.nom;
+                        targetVille.dispatchEvent(new Event('change'));
+                        targetVille.dispatchEvent(new Event('input'));
+                    } else {
+                        // Plusieurs communes : afficher la liste de suggestions
+                        console.log(`📋 [DEBUG] Affichage liste de suggestions`);
+                        showVilleSuggestions(data.communes, targetVille, postal);
+                    }
+                } else {
+                    console.log(`❌ [DEBUG] Aucune commune trouvée pour postal: ${postal}`);
+                }
+            })
+            .catch(error => {
+                console.error('❌ [DEBUG] Erreur autocomplétion postal:', error);
+            });
+    }
+    
+    function searchCommunesByVille(ville, targetPostal) {
+        fetch(`/public/api/communes/search?ville=${encodeURIComponent(ville)}`)
+            .then(response => response.json())
+            .then(data => {
+                if (data.communes && data.communes.length > 0) {
+                    if (data.communes.length === 1) {
+                        // Une seule commune : remplir automatiquement
+                        const commune = data.communes[0];
+                        targetPostal.value = commune.codePostal;
+                        targetPostal.dispatchEvent(new Event('change'));
+                        targetPostal.dispatchEvent(new Event('input'));
+                    } else {
+                        // Plusieurs communes : afficher la liste de suggestions
+                        showPostalSuggestions(data.communes, targetPostal, ville);
+                    }
+                }
+            })
+            .catch(error => console.warn('Erreur autocomplétion ville:', error));
+    }
+    
+    function showVilleSuggestions(communes, targetVille, postal) {
+        // Supprimer toute suggestion existante
+        hideAllSuggestions();
+        
+        // Créer le conteneur de suggestions
+        const suggestionsDiv = document.createElement('div');
+        suggestionsDiv.className = 'commune-suggestions';
+        suggestionsDiv.id = 'suggestions-' + targetVille.id;
+        
+        // Ajouter les suggestions
+        communes.forEach(commune => {
+            const suggestion = document.createElement('div');
+            suggestion.className = 'commune-suggestion-item';
+            suggestion.innerHTML = `
+                <div class="commune-name">${commune.nom}</div>
+                <div class="commune-info">${commune.codePostal} - ${commune.nomDepartement}</div>
+            `;
+            
+            suggestion.addEventListener('click', function() {
+                targetVille.value = commune.nom;
+                targetVille.dispatchEvent(new Event('change'));
+                targetVille.dispatchEvent(new Event('input'));
+                hideAllSuggestions();
+                console.log(`✅ [DEBUG] Ville sélectionnée:`, commune.nom);
+            });
+            
+            suggestionsDiv.appendChild(suggestion);
+        });
+        
+        // Positionner et afficher
+        const parent = targetVille.parentElement;
+        parent.style.position = 'relative';
+        parent.appendChild(suggestionsDiv);
+        
+        console.log(`📋 [DEBUG] ${communes.length} suggestions affichées pour postal ${postal}`);
+    }
+    
+    function showPostalSuggestions(communes, targetPostal, ville) {
+        // Supprimer toute suggestion existante
+        hideAllSuggestions();
+        
+        // Créer le conteneur de suggestions
+        const suggestionsDiv = document.createElement('div');
+        suggestionsDiv.className = 'commune-suggestions';
+        suggestionsDiv.id = 'suggestions-' + targetPostal.id;
+        
+        // Ajouter les suggestions
+        communes.forEach(commune => {
+            const suggestion = document.createElement('div');
+            suggestion.className = 'commune-suggestion-item';
+            suggestion.innerHTML = `
+                <div class="commune-name">${commune.codePostal} - ${commune.nom}</div>
+                <div class="commune-info">${commune.nomDepartement}</div>
+            `;
+            
+            suggestion.addEventListener('click', function() {
+                targetPostal.value = commune.codePostal;
+                targetPostal.dispatchEvent(new Event('change'));
+                targetPostal.dispatchEvent(new Event('input'));
+                hideAllSuggestions();
+                console.log(`✅ [DEBUG] Code postal sélectionné:`, commune.codePostal);
+            });
+            
+            suggestionsDiv.appendChild(suggestion);
+        });
+        
+        // Positionner et afficher
+        const parent = targetPostal.parentElement;
+        parent.style.position = 'relative';
+        parent.appendChild(suggestionsDiv);
+        
+        console.log(`📋 [DEBUG] ${communes.length} suggestions affichées pour ville ${ville}`);
+    }
+    
+    function hideAllSuggestions() {
+        document.querySelectorAll('.commune-suggestions').forEach(el => el.remove());
+    }
+    
+    // Fermer les suggestions en cliquant ailleurs
+    document.addEventListener('click', function(e) {
+        if (!e.target.closest('.commune-suggestions') && !e.target.closest('.postal-autocomplete') && !e.target.closest('.ville-autocomplete')) {
+            hideAllSuggestions();
+        }
+    });
+    
+    // Initialiser l'autocomplétion au chargement
+    initCommuneAutocomplete();
 });
 
 </script>

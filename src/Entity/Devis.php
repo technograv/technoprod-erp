@@ -142,6 +142,19 @@ class Devis
     #[ORM\Column(length: 50, nullable: true)]
     private ?string $tiersModeReglement = null;
 
+    // Champs tiers pour l'adresse de livraison
+    #[ORM\Column(length: 200, nullable: true)]
+    private ?string $tiersAdresseLivraison = null;
+    
+    #[ORM\Column(length: 10, nullable: true)]
+    private ?string $tiersCodePostalLivraison = null;
+    
+    #[ORM\Column(length: 100, nullable: true)]
+    private ?string $tiersVilleLivraison = null;
+
+    #[ORM\Column(length: 50, nullable: true)]
+    private ?string $modeleDocument = 'standard';
+
     #[ORM\Column]
     private ?\DateTimeImmutable $createdAt = null;
 
@@ -830,6 +843,50 @@ class Devis
     public function setTiersModeReglement(?string $tiersModeReglement): static
     {
         $this->tiersModeReglement = $tiersModeReglement;
+        return $this;
+    }
+
+    public function getTiersAdresseLivraison(): ?string
+    {
+        return $this->tiersAdresseLivraison;
+    }
+
+    public function setTiersAdresseLivraison(?string $tiersAdresseLivraison): static
+    {
+        $this->tiersAdresseLivraison = $tiersAdresseLivraison;
+        return $this;
+    }
+
+    public function getTiersCodePostalLivraison(): ?string
+    {
+        return $this->tiersCodePostalLivraison;
+    }
+
+    public function setTiersCodePostalLivraison(?string $tiersCodePostalLivraison): static
+    {
+        $this->tiersCodePostalLivraison = $tiersCodePostalLivraison;
+        return $this;
+    }
+
+    public function getTiersVilleLivraison(): ?string
+    {
+        return $this->tiersVilleLivraison;
+    }
+
+    public function setTiersVilleLivraison(?string $tiersVilleLivraison): static
+    {
+        $this->tiersVilleLivraison = $tiersVilleLivraison;
+        return $this;
+    }
+
+    public function getModeleDocument(): ?string
+    {
+        return $this->modeleDocument;
+    }
+
+    public function setModeleDocument(?string $modeleDocument): static
+    {
+        $this->modeleDocument = $modeleDocument;
         return $this;
     }
 
