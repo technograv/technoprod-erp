@@ -270,6 +270,15 @@
         if (prospectSelect.value) {
             prospectSelect.dispatchEvent(new Event('change'));
         }
+        
+        // Debug: Vérifier les éléments
+        console.log('🔍 [DEBUG] Éléments trouvés:', {
+            editClientBtn: !!document.getElementById('edit-client-btn'),
+            editContactLivraisonBtn: !!document.getElementById('edit-contact-livraison-btn'),
+            editContactFacturationBtn: !!document.getElementById('edit-contact-facturation-btn'),
+            adresseLivraisonSelect: !!document.getElementById('adresse_livraison_select'),
+            adresseFacturationSelect: !!document.getElementById('adresse_facturation_select')
+        });
     }
     
     function populateContacts(contacts, selectedOption) {
@@ -303,8 +312,11 @@
         });
         
         // Déclencher les événements de changement pour mettre à jour les adresses
-        contactDefautSelect.dispatchEvent(new Event('change'));
-        contactFacturationSelect.dispatchEvent(new Event('change'));
+        console.log('🔄 [DEBUG] Déclenchement événements changement contacts');
+        setTimeout(() => {
+            contactDefautSelect.dispatchEvent(new Event('change'));
+            contactFacturationSelect.dispatchEvent(new Event('change'));
+        }, 100);
     }
     
     function populateAddresses(addresses) {
@@ -334,33 +346,51 @@
         const editContactFacturationBtn = document.getElementById('edit-contact-facturation-btn');
         
         // Contact livraison
-        contactDefautSelect.addEventListener('change', function() {
+        contactDefautSelect?.addEventListener('change', function() {
             const selectedContactId = this.value;
-            editContactLivraisonBtn.style.display = selectedContactId ? 'inline-block' : 'none';
+            console.log('📞 [DEBUG] Contact livraison changé:', selectedContactId);
+            
+            if (editContactLivraisonBtn) {
+                editContactLivraisonBtn.style.display = selectedContactId ? 'inline-block' : 'none';
+                console.log('📞 [DEBUG] Bouton edit livraison:', selectedContactId ? 'affiché' : 'caché');
+            }
             
             // Sélectionner automatiquement l'adresse du contact
             if (selectedContactId) {
                 const contact = currentContacts.find(c => c.id == selectedContactId);
+                console.log('📞 [DEBUG] Contact trouvé:', contact);
                 if (contact && contact.adresse) {
                     const adresseLivraisonSelect = document.getElementById('adresse_livraison_select');
-                    adresseLivraisonSelect.value = contact.adresse.id;
-                    adresseLivraisonSelect.dispatchEvent(new Event('change'));
+                    if (adresseLivraisonSelect) {
+                        adresseLivraisonSelect.value = contact.adresse.id;
+                        adresseLivraisonSelect.dispatchEvent(new Event('change'));
+                        console.log('📍 [DEBUG] Adresse livraison sélectionnée:', contact.adresse.id);
+                    }
                 }
             }
         });
         
         // Contact facturation
-        contactFacturationSelect.addEventListener('change', function() {
+        contactFacturationSelect?.addEventListener('change', function() {
             const selectedContactId = this.value;
-            editContactFacturationBtn.style.display = selectedContactId ? 'inline-block' : 'none';
+            console.log('💼 [DEBUG] Contact facturation changé:', selectedContactId);
+            
+            if (editContactFacturationBtn) {
+                editContactFacturationBtn.style.display = selectedContactId ? 'inline-block' : 'none';
+                console.log('💼 [DEBUG] Bouton edit facturation:', selectedContactId ? 'affiché' : 'caché');
+            }
             
             // Sélectionner automatiquement l'adresse du contact
             if (selectedContactId) {
                 const contact = currentContacts.find(c => c.id == selectedContactId);
+                console.log('💼 [DEBUG] Contact trouvé:', contact);
                 if (contact && contact.adresse) {
                     const adresseFacturationSelect = document.getElementById('adresse_facturation_select');
-                    adresseFacturationSelect.value = contact.adresse.id;
-                    adresseFacturationSelect.dispatchEvent(new Event('change'));
+                    if (adresseFacturationSelect) {
+                        adresseFacturationSelect.value = contact.adresse.id;
+                        adresseFacturationSelect.dispatchEvent(new Event('change'));
+                        console.log('📍 [DEBUG] Adresse facturation sélectionnée:', contact.adresse.id);
+                    }
                 }
             }
         });
@@ -423,12 +453,27 @@
         const editAddressLivraisonBtn = document.getElementById('edit-address-livraison-btn');
         const editAddressFacturationBtn = document.getElementById('edit-address-facturation-btn');
         
-        adresseLivraisonSelect.addEventListener('change', function() {
-            editAddressLivraisonBtn.style.display = this.value ? 'inline-block' : 'none';
+        console.log('📍 [DEBUG] Éléments adresses:', {
+            adresseLivraisonSelect: !!adresseLivraisonSelect,
+            adresseFacturationSelect: !!adresseFacturationSelect,
+            editAddressLivraisonBtn: !!editAddressLivraisonBtn,
+            editAddressFacturationBtn: !!editAddressFacturationBtn
         });
         
-        adresseFacturationSelect.addEventListener('change', function() {
-            editAddressFacturationBtn.style.display = this.value ? 'inline-block' : 'none';
+        adresseLivraisonSelect?.addEventListener('change', function() {
+            console.log('📍 [DEBUG] Adresse livraison changée:', this.value);
+            if (editAddressLivraisonBtn) {
+                editAddressLivraisonBtn.style.display = this.value ? 'inline-block' : 'none';
+                console.log('📍 [DEBUG] Bouton edit adresse livraison:', this.value ? 'affiché' : 'caché');
+            }
+        });
+        
+        adresseFacturationSelect?.addEventListener('change', function() {
+            console.log('📍 [DEBUG] Adresse facturation changée:', this.value);
+            if (editAddressFacturationBtn) {
+                editAddressFacturationBtn.style.display = this.value ? 'inline-block' : 'none';
+                console.log('📍 [DEBUG] Bouton edit adresse facturation:', this.value ? 'affiché' : 'caché');
+            }
         });
         
         editAddressLivraisonBtn.addEventListener('click', function() {
