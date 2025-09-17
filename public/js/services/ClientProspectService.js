@@ -257,11 +257,15 @@ class ClientProspectService {
         this.log('📞 Chargement contacts pour client:', clientId);
         
         try {
-            const response = await fetch(`/client/${clientId}/contacts`);
+            const url = `/client/${clientId}/contacts`;
+            this.log('📞 URL API contacts:', url);
+            const response = await fetch(url);
+            this.log('📞 Réponse API contacts - Status:', response.status);
+            
             if (!response.ok) throw new Error(`HTTP ${response.status}`);
             
             this.currentContacts = await response.json();
-            this.log('📞 Contacts chargés:', this.currentContacts.length);
+            this.log('📞 Contacts chargés:', this.currentContacts.length, this.currentContacts);
         } catch (error) {
             this.error('Erreur chargement contacts:', error);
             this.currentContacts = [];
@@ -275,11 +279,15 @@ class ClientProspectService {
         this.log('📍 Chargement adresses pour client:', clientId);
         
         try {
-            const response = await fetch(`/client/${clientId}/addresses`);
+            const url = `/client/${clientId}/addresses`;
+            this.log('📍 URL API adresses:', url);
+            const response = await fetch(url);
+            this.log('📍 Réponse API adresses - Status:', response.status);
+            
             if (!response.ok) throw new Error(`HTTP ${response.status}`);
             
             this.currentAddresses = await response.json();
-            this.log('📍 Adresses chargées:', this.currentAddresses.length);
+            this.log('📍 Adresses chargées:', this.currentAddresses.length, this.currentAddresses);
         } catch (error) {
             this.error('Erreur chargement adresses:', error);
             this.currentAddresses = [];
@@ -290,20 +298,36 @@ class ClientProspectService {
      * Popule les sélecteurs de contacts
      */
     populateContacts() {
+        this.log('📝 PopulateContacts appelée avec', this.currentContacts.length, 'contacts');
+        
         // Support pour les deux types de sélecteurs (création et édition)
         let contactLivraisonSelect = document.querySelector(this.config.selectors.contactLivraisonSelect);
         let contactFacturationSelect = document.querySelector(this.config.selectors.contactFacturationSelect);
         
+        this.log('📝 Sélecteurs trouvés:', {
+            livraison: !!contactLivraisonSelect,
+            facturation: !!contactFacturationSelect,
+            mode: this.config.mode
+        });
+        
         // Si on ne trouve pas les sélecteurs par défaut, essayer les sélecteurs Symfony
         if (!contactLivraisonSelect && this.config.mode === 'edit') {
             contactLivraisonSelect = document.querySelector('#devis_contactLivraison');
+            this.log('📝 Utilisation sélecteur Symfony livraison');
         }
         if (!contactFacturationSelect && this.config.mode === 'edit') {
             contactFacturationSelect = document.querySelector('#devis_contactFacturation');
+            this.log('📝 Utilisation sélecteur Symfony facturation');
         }
         
         if (!contactLivraisonSelect || !contactFacturationSelect) {
             this.log('⚠️ Sélecteurs de contacts non trouvés');
+            this.log('⚠️ Éléments disponibles:', {
+                contactLivraison: !!contactLivraisonSelect,
+                contactFacturation: !!contactFacturationSelect,
+                selectorLivraison: this.config.selectors.contactLivraisonSelect,
+                selectorFacturation: this.config.selectors.contactFacturationSelect
+            });
             return;
         }
         
