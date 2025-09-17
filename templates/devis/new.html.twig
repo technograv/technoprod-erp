@@ -256,9 +256,10 @@
 
                 <!-- Section 2: Client/Prospect -->
                 <!-- Section Client / Prospect -->
-                {% include 'devis/partials/client_selector.html.twig' with {
+                {% include 'devis/partials/client_selector_v2.html.twig' with {
                     'prospects': prospects,
-                    'show_header': true
+                    'show_header': true,
+                    'mode': 'create'
                 } %}
 
                 <!-- Menu projets existants (apparaît après sélection client) -->

@@ -1,0 +1,227 @@
+{#
+    Template réutilisable pour la sélection et gestion Client/Prospect v2
+    Utilise le service JavaScript ClientProspectService
+    
+    Variables attendues :
+    - prospects : Liste des clients/prospects
+    - show_header : Afficher l'en-tête de section (défaut: true)
+    - selected_client : Client pré-sélectionné (optionnel)
+    - mode : 'create' ou 'edit' (défaut: 'create')
+#}
+
+{% set show_header = show_header ?? true %}
+{% set mode = mode ?? 'create' %}
+
+<div class="form-section">
+    {% if show_header %}
+    <div class="form-section-header">
+        <i class="fas fa-user-tie me-2"></i>Client / Prospect
+    </div>
+    {% endif %}
+    <div class="form-section-body">
+        <!-- Sélection Client/Prospect -->
+        <div class="client-selector-container">
+            <label for="prospect" class="form-label">Sélectionner un client/prospect *</label>
+            <div class="d-flex align-items-center gap-2">
+                {# Champ caché pour synchroniser avec le formulaire #}
+                <input type="hidden" id="client_field" name="client" value="{{ selected_client.id|default('') }}">
+                
+                <select class="form-select" id="prospect" name="prospect" style="flex-grow: 1;">
+                    <option value="">Choisir un client/prospect...</option>
+                    {% for prospect in prospects %}
+                        <option value="{{ prospect.id }}" 
+                                {{ (selected_client|default(null) and selected_client.id == prospect.id) ? 'selected' : '' }}>
+                            {% if prospect.nomEntreprise %}
+                                {% if prospect.formeJuridique and not prospect.nomEntreprise starts with prospect.formeJuridique.nom %}
+                                    {{ prospect.formeJuridique.nom }} {{ prospect.nomEntreprise }}
+                                {% else %}
+                                    {{ prospect.nomEntreprise }}
+                                {% endif %}
+                            {% else %}
+                                {% if prospect.formeJuridique %}{{ prospect.formeJuridique.nom }} {% endif %}{{ prospect.nom }}{% if prospect.prenom %} {{ prospect.prenom }}{% endif %}
+                            {% endif %}
+                        </option>
+                    {% endfor %}
+                </select>
+                
+                <!-- Boutons d'action client -->
+                <button type="button" class="btn btn-success btn-sm" id="add-client-btn" 
+                        title="Ajouter un nouveau client">
+                    <i class="fas fa-plus"></i>
+                </button>
+                <button type="button" class="btn btn-primary btn-sm" id="edit-client-btn" 
+                        title="Modifier le client sélectionné" style="display: none;">
+                    <i class="fas fa-edit"></i>
+                </button>
+            </div>
+        </div>
+
+        <!-- Menu contacts (apparaît après sélection client) -->
+        <div id="contact-selection" class="contact-dropdown" style="display: none;">
+            <div class="row">
+                <!-- Contact de livraison -->
+                <div class="col-md-6">
+                    <label for="contact_defaut" class="form-label">Contact en charge du projet</label>
+                    <div class="d-flex align-items-center gap-2 mb-3">
+                        <select class="form-select" id="contact_defaut" name="contact_defaut" style="flex-grow: 1;">
+                            <option value="">Choisir un contact...</option>
+                        </select>
+                        <!-- Boutons d'action contact livraison -->
+                        <button type="button" class="btn btn-success btn-sm" id="add-contact-btn" 
+                                title="Ajouter un nouveau contact">
+                            <i class="fas fa-plus"></i>
+                        </button>
+                        <button type="button" class="btn btn-primary btn-sm" id="edit-contact-livraison-btn" 
+                                title="Modifier le contact sélectionné" style="display: none;">
+                            <i class="fas fa-edit"></i>
+                        </button>
+                    </div>
+                    
+                    <!-- Menu déroulant des adresses de livraison -->
+                    <label for="adresse_livraison_select" class="form-label">Adresse de livraison</label>
+                    <div class="d-flex align-items-center gap-2">
+                        <select class="form-select" id="adresse_livraison_select" name="adresse_livraison_select" style="flex-grow: 1;">
+                            <option value="">Choisir une adresse...</option>
+                        </select>
+                        <!-- Boutons d'action adresse livraison -->
+                        <button type="button" class="btn btn-success btn-sm" id="add-address-livraison-btn" 
+                                title="Ajouter une nouvelle adresse">
+                            <i class="fas fa-plus"></i>
+                        </button>
+                        <button type="button" class="btn btn-primary btn-sm" id="edit-address-livraison-btn" 
+                                title="Modifier l'adresse sélectionnée" style="display: none;">
+                            <i class="fas fa-edit"></i>
+                        </button>
+                    </div>
+                </div>
+                
+                <!-- Contact de facturation -->
+                <div class="col-md-6">
+                    <label for="contact_facturation" class="form-label">Contact de facturation</label>
+                    <div class="d-flex align-items-center gap-2 mb-3">
+                        <select class="form-select" id="contact_facturation" name="contact_facturation" style="flex-grow: 1;">
+                            <option value="">Choisir un contact...</option>
+                        </select>
+                        <!-- Boutons d'action contact facturation -->
+                        <button type="button" class="btn btn-success btn-sm" id="add-contact-facturation-btn" 
+                                title="Ajouter un nouveau contact de facturation">
+                            <i class="fas fa-plus"></i>
+                        </button>
+                        <button type="button" class="btn btn-primary btn-sm" id="edit-contact-facturation-btn" 
+                                title="Modifier le contact sélectionné" style="display: none;">
+                            <i class="fas fa-edit"></i>
+                        </button>
+                    </div>
+                    
+                    <!-- Menu déroulant des adresses de facturation -->
+                    <label for="adresse_facturation_select" class="form-label">Adresse de facturation</label>
+                    <div class="d-flex align-items-center gap-2">
+                        <select class="form-select" id="adresse_facturation_select" name="adresse_facturation_select" style="flex-grow: 1;">
+                            <option value="">Choisir une adresse...</option>
+                        </select>
+                        <!-- Boutons d'action adresse facturation -->
+                        <button type="button" class="btn btn-success btn-sm" id="add-address-facturation-btn" 
+                                title="Ajouter une nouvelle adresse">
+                            <i class="fas fa-plus"></i>
+                        </button>
+                        <button type="button" class="btn btn-primary btn-sm" id="edit-address-facturation-btn" 
+                                title="Modifier l'adresse sélectionnée" style="display: none;">
+                            <i class="fas fa-edit"></i>
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Inclusion du service JavaScript -->
+<script src="/js/services/ClientProspectService.js"></script>
+
+<script>
+// Initialisation du service ClientProspectService
+(function() {
+    'use strict';
+    
+    let clientService = null;
+    
+    function initClientProspectService() {
+        // Configuration du service
+        const config = {
+            debug: true,
+            mode: '{{ mode }}',
+            selectors: {
+                clientSelect: '#prospect',
+                clientField: '#client_field',
+                contactLivraisonSelect: '#contact_defaut',
+                contactFacturationSelect: '#contact_facturation',
+                adresseLivraisonSelect: '#adresse_livraison_select',
+                adresseFacturationSelect: '#adresse_facturation_select',
+                contactSelection: '#contact-selection',
+                editClientBtn: '#edit-client-btn',
+                editContactLivraisonBtn: '#edit-contact-livraison-btn',
+                editContactFacturationBtn: '#edit-contact-facturation-btn',
+                editAddressLivraisonBtn: '#edit-address-livraison-btn',
+                editAddressFacturationBtn: '#edit-address-facturation-btn'
+            }
+        };
+        
+        // Créer et initialiser le service
+        clientService = new ClientProspectService(config);
+        
+        if (clientService.init()) {
+            console.log('✅ ClientProspectService initialisé avec succès');
+            
+            // Ajouter les gestionnaires pour les boutons d'ajout
+            setupAddButtons();
+        } else {
+            console.error('❌ Échec de l\'initialisation du ClientProspectService');
+        }
+    }
+    
+    function setupAddButtons() {
+        // Boutons d'ajout (pas gérés par le service)
+        document.getElementById('add-client-btn')?.addEventListener('click', function() {
+            window.open('/client/new', '_blank');
+        });
+        
+        document.getElementById('add-contact-btn')?.addEventListener('click', function() {
+            if (clientService?.currentClient) {
+                window.open(`/client/${clientService.currentClient.id}/edit#add-contact`, '_blank');
+            }
+        });
+        
+        document.getElementById('add-contact-facturation-btn')?.addEventListener('click', function() {
+            if (clientService?.currentClient) {
+                window.open(`/client/${clientService.currentClient.id}/edit#add-contact`, '_blank');
+            }
+        });
+        
+        document.getElementById('add-address-livraison-btn')?.addEventListener('click', function() {
+            if (clientService?.currentClient) {
+                window.open(`/client/${clientService.currentClient.id}/edit#add-address`, '_blank');
+            }
+        });
+        
+        document.getElementById('add-address-facturation-btn')?.addEventListener('click', function() {
+            if (clientService?.currentClient) {
+                window.open(`/client/${clientService.currentClient.id}/edit#add-address`, '_blank');
+            }
+        });
+    }
+    
+    // Initialiser quand le DOM est prêt
+    if (document.readyState === 'loading') {
+        document.addEventListener('DOMContentLoaded', initClientProspectService);
+    } else {
+        initClientProspectService();
+    }
+    
+    // Nettoyer avant déchargement de la page
+    window.addEventListener('beforeunload', function() {
+        if (clientService) {
+            clientService.destroy();
+        }
+    });
+})();
+</script>
