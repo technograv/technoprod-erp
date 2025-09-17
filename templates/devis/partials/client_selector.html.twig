@@ -25,7 +25,7 @@
             <label for="prospect" class="form-label">Sélectionner un client/prospect *</label>
             <div class="d-flex align-items-center gap-2">
                 {# Champ caché pour synchroniser avec le formulaire #}
-                <input type="hidden" id="client_field" name="client" value="{{ selected_client.id ?? '' }}">
+                <input type="hidden" id="client_field" name="client" value="{{ selected_client.id|default('') }}">
                 
                 <select class="form-select" id="prospect" name="prospect" style="flex-grow: 1;">
                     <option value="">Choisir un client/prospect...</option>
@@ -91,7 +91,7 @@
                                 data-addresses="{{ addresses|json_encode }}"
                                 data-default-facturation="{{ defaultContactFacturation }}"
                                 data-default-livraison="{{ defaultContactLivraison }}"
-                                {{ (selected_client and selected_client.id == prospect.id) ? 'selected' : '' }}>
+                                {{ (selected_client|default(null) and selected_client.id == prospect.id) ? 'selected' : '' }}>
                             {% if prospect.nomEntreprise %}
                                 {% if prospect.formeJuridique and not prospect.nomEntreprise starts with prospect.formeJuridique.nom %}
                                     {{ prospect.formeJuridique.nom }} {{ prospect.nomEntreprise }}
