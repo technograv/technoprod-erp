@@ -59,26 +59,19 @@
     
     <div class="row">
         <div class="col-12">
+            <!-- Client / Prospect et Commercial -->
+            {% include 'devis/partials/client_edit_selector.html.twig' with {
+                'form': form,
+                'devis': devis,
+                'show_header': false
+            } %}
+            
             <!-- Informations générales -->
             <div class="form-section">
                 <div class="form-section-header">
                     <h5 class="mb-0"><i class="fas fa-info-circle me-2"></i>Informations générales</h5>
                 </div>
                 <div class="form-section-body">
-                    <div class="row">
-                        <div class="col-md-6">
-                            {{ form_row(form.client, {
-                                'label': 'Client / Prospect',
-                                'attr': {'class': 'form-select client-select', 'data-populate-tiers': 'true'}
-                            }) }}
-                        </div>
-                        <div class="col-md-6">
-                            {{ form_row(form.commercial, {
-                                'label': 'Commercial',
-                                'attr': {'class': 'form-select'}
-                            }) }}
-                        </div>
-                    </div>
                     <div class="row">
                         <div class="col-md-3">
                             {{ form_row(form.numeroDevis, {
@@ -108,100 +101,13 @@
                 </div>
             </div>
 
-            <!-- Adresses et contacts -->
+            <!-- Options avancées -->
             <div class="form-section">
                 <div class="form-section-header">
-                    <h5 class="mb-0"><i class="fas fa-address-card me-2"></i>Adresses et contacts</h5>
+                    <h5 class="mb-0"><i class="fas fa-cogs me-2"></i>Options avancées</h5>
                 </div>
                 <div class="form-section-body">
-                    <div class="row">
-                        <div class="col-md-6">
-                            <div class="mb-3">
-                                {{ form_row(form.contactLivraison, {
-                                    'label': 'Contact livraison',
-                                    'attr': {'class': 'form-select'}
-                                }) }}
-                            </div>
-                            <div class="mb-3">
-                                <label class="form-label">Adresse de livraison</label>
-                                <div class="border rounded p-3 bg-light">
-                                    <div class="row">
-                                        <div class="col-md-12">
-                                            {{ form_row(form.tiersAdresseLivraison, {
-                                                'label': 'Adresse',
-                                                'attr': {'class': 'form-control'}
-                                            }) }}
-                                        </div>
-                                    </div>
-                                    <div class="row">
-                                        <div class="col-md-4">
-                                            {{ form_row(form.tiersCodePostalLivraison, {
-                                                'label': 'Code postal',
-                                                'attr': {
-                                                    'class': 'form-control postal-autocomplete', 
-                                                    'maxlength': '5',
-                                                    'data-target-ville': 'devis_tiersVilleLivraison'
-                                                }
-                                            }) }}
-                                        </div>
-                                        <div class="col-md-8">
-                                            {{ form_row(form.tiersVilleLivraison, {
-                                                'label': 'Ville',
-                                                'attr': {
-                                                    'class': 'form-control ville-autocomplete',
-                                                    'data-target-postal': 'devis_tiersCodePostalLivraison'
-                                                }
-                                            }) }}
-                                        </div>
-                                    </div>
-                                </div>
-                            </div>
-                        </div>
-                        <div class="col-md-6">
-                            <div class="mb-3">
-                                {{ form_row(form.contactFacturation, {
-                                    'label': 'Contact facturation',
-                                    'attr': {'class': 'form-select'}
-                                }) }}
-                            </div>
-                            <div class="mb-3">
-                                <label class="form-label">Adresse de facturation</label>
-                                <div class="border rounded p-3 bg-light">
-                                    <div class="row">
-                                        <div class="col-md-12">
-                                            {{ form_row(form.tiersAdresse, {
-                                                'label': 'Adresse',
-                                                'attr': {'class': 'form-control'}
-                                            }) }}
-                                        </div>
-                                    </div>
-                                    <div class="row">
-                                        <div class="col-md-4">
-                                            {{ form_row(form.tiersCodePostal, {
-                                                'label': 'Code postal',
-                                                'attr': {
-                                                    'class': 'form-control postal-autocomplete', 
-                                                    'maxlength': '5',
-                                                    'data-target-ville': 'devis_tiersVille'
-                                                }
-                                            }) }}
-                                        </div>
-                                        <div class="col-md-8">
-                                            {{ form_row(form.tiersVille, {
-                                                'label': 'Ville',
-                                                'attr': {
-                                                    'class': 'form-control ville-autocomplete',
-                                                    'data-target-postal': 'devis_tiersCodePostal'
-                                                }
-                                            }) }}
-                                        </div>
-                                    </div>
-                                </div>
-                            </div>
-                        </div>
-                    </div>
-                    
-                    <!-- Dernière ligne: Email automatique + Modèle de document -->
+                    <!-- Email automatique + Modèle de document -->
                     <div class="row">
                         <div class="col-md-6">
                             <div class="d-flex align-items-center">

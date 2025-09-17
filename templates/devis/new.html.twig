@@ -46,6 +46,44 @@
             transform: scale(1.1);
             box-shadow: 0 4px 8px rgba(0,0,0,0.2);
         }
+        
+        /* Styles pour les boutons d'action du bloc Client/Prospect */
+        .btn-sm {
+            padding: 0.375rem 0.75rem;
+            font-size: 0.875rem;
+            border-radius: 0.375rem;
+            min-width: 38px;
+            height: 38px;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+        }
+        
+        .btn-success {
+            background: linear-gradient(135deg, #28a745 0%, #20c997 100%);
+            border: none;
+            color: white;
+            transition: all 0.3s ease;
+        }
+        
+        .btn-success:hover {
+            background: linear-gradient(135deg, #218838 0%, #1ba085 100%);
+            transform: translateY(-1px);
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        }
+        
+        .btn-primary {
+            background: linear-gradient(135deg, #007bff 0%, #6f42c1 100%);
+            border: none;
+            color: white;
+            transition: all 0.3s ease;
+        }
+        
+        .btn-primary:hover {
+            background: linear-gradient(135deg, #0056b3 0%, #5a2d91 100%);
+            transform: translateY(-1px);
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        }
         .contact-dropdown {
             margin-top: 1rem;
             padding: 1rem;
@@ -217,163 +255,16 @@
                 </div>
 
                 <!-- Section 2: Client/Prospect -->
-                <div class="form-section">
-                    <div class="form-section-header">
-                        <i class="fas fa-user-tie me-2"></i>Client / Prospect
-                    </div>
-                    <div class="form-section-body">
-                        <div class="client-selector-container">
-                            <label for="prospect" class="form-label">Sélectionner un client/prospect *</label>
-                            <div class="d-flex align-items-center gap-2" style="width: 100% !important;">
-                                {# Champ caché pour synchroniser avec le formulaire #}
-                                <input type="hidden" id="client_field" name="client" value="">
-                                <select class="form-select" id="prospect" name="prospect" style="flex-grow: 1 !important; min-width: 0;">
-                                    <option value="">Choisir un client/prospect...</option>
-                                    {% for prospect in prospects %}
-                                        {% set contacts = [] %}
-                                        {% set defaultContactFacturation = null %}
-                                        {% set defaultContactLivraison = null %}
-                                        
-                                        {# Identifier les contacts par défaut #}
-                                        {% if prospect.contactFacturationDefault %}
-                                            {% set defaultContactFacturation = prospect.contactFacturationDefault.id %}
-                                        {% endif %}
-                                        {% if prospect.contactLivraisonDefault %}
-                                            {% set defaultContactLivraison = prospect.contactLivraisonDefault.id %}
-                                        {% endif %}
-                                        
-                                        {# Récupérer TOUS les contacts du client avec info sur les contacts par défaut et adresses #}
-                                        {% for contact in prospect.contacts %}
-                                            {% set adresse = null %}
-                                            {% if contact.adresse %}
-                                                {% set adresse = {
-                                                    'id': contact.adresse.id,
-                                                    'ligne1': contact.adresse.ligne1,
-                                                    'ligne2': contact.adresse.ligne2,
-                                                    'codePostal': contact.adresse.codePostal,
-                                                    'ville': contact.adresse.ville,
-                                                    'pays': contact.adresse.pays ?? 'France'
-                                                } %}
-                                            {% endif %}
-                                            
-                                            {% set contacts = contacts|merge([{
-                                                'id': contact.id,
-                                                'nom': contact.nom,
-                                                'prenom': contact.prenom,
-                                                'fonction': contact.fonction ?? 'Contact',
-                                                'is_facturation_default': contact.isFacturationDefault,
-                                                'is_livraison_default': contact.isLivraisonDefault,
-                                                'adresse': adresse
-                                            }]) %}
-                                        {% endfor %}
-                                        <option value="{{ prospect.id }}" 
-                                                data-contacts="{{ contacts|json_encode }}"
-                                                data-projects="[]"
-                                                data-default-facturation="{{ defaultContactFacturation }}"
-                                                data-default-livraison="{{ defaultContactLivraison }}">
-                                            {% if prospect.nomEntreprise %}
-                                                {% if prospect.formeJuridique and not prospect.nomEntreprise starts with prospect.formeJuridique.nom %}
-                                                    {{ prospect.formeJuridique.nom }} {{ prospect.nomEntreprise }}
-                                                {% else %}
-                                                    {{ prospect.nomEntreprise }}
-                                                {% endif %}
-                                            {% else %}
-                                                {% if prospect.formeJuridique %}{{ prospect.formeJuridique.nom }} {% endif %}{{ prospect.nom }}{% if prospect.prenom %} {{ prospect.prenom }}{% endif %}
-                                            {% endif %}
-                                        </option>
-                                    {% endfor %}
-                                </select>
-                                <button type="button" class="add-client-btn" id="add-client-btn" 
-                                        title="Ajouter un nouveau client" style="flex-shrink: 0 !important;">
-                                    <i class="fas fa-plus"></i>
-                                </button>
-                            </div>
-                        </div>
+                <!-- Section Client / Prospect -->
+                {% include 'devis/partials/client_selector.html.twig' with {
+                    'prospects': prospects,
+                    'show_header': true
+                } %}
 
-                        <!-- Menu contacts (apparaît après sélection client) -->
-                        <div id="contact-selection" class="contact-dropdown" style="display: none;">
-                            <div class="row">
-                                <div class="col-md-6">
-                                    <label for="contact_defaut" class="form-label">Contact en charge du projet</label>
-                                    <div class="d-flex align-items-center gap-2" style="width: 100% !important;">
-                                        <select class="form-select" id="contact_defaut" name="contact_defaut" style="flex-grow: 1 !important; min-width: 0;">
-                                            <option value="">Choisir un contact...</option>
-                                        </select>
-                                        <button type="button" class="add-client-btn" id="add-contact-btn" 
-                                                title="Ajouter un nouveau contact" style="flex-shrink: 0 !important;">
-                                            <i class="fas fa-plus"></i>
-                                        </button>
-                                    </div>
-                                    <!-- Adresse du contact en charge du projet -->
-                                    <div id="adresse-contact-projet" class="mt-3" style="display: none;">
-                                        <label class="form-label text-muted">Adresse de livraison pour ce projet</label>
-                                        <div class="address-edit-section p-3 bg-light rounded border">
-                                            <div class="row">
-                                                <div class="col-md-12">
-                                                    <label class="form-label">Adresse</label>
-                                                    <input type="text" class="form-control mb-2" id="adresse_projet_ligne1" 
-                                                           name="adresse_projet_ligne1" placeholder="Ex: 123 rue de la Paix">
-                                                </div>
-                                                <div class="col-md-6">
-                                                    <label class="form-label">Code postal</label>
-                                                    <input type="text" class="form-control mb-2" id="adresse_projet_code_postal" 
-                                                           name="adresse_projet_code_postal" placeholder="31000">
-                                                </div>
-                                                <div class="col-md-6">
-                                                    <label class="form-label">Ville</label>
-                                                    <input type="text" class="form-control mb-2" id="adresse_projet_ville" 
-                                                           name="adresse_projet_ville" placeholder="Toulouse">
-                                                </div>
-                                            </div>
-                                            <div class="mt-2">
-                                                <small class="text-muted" id="address-status-projet">Modifiable pour ce projet uniquement</small>
-                                            </div>
-                                        </div>
-                                    </div>
-                                </div>
-                                <div class="col-md-6">
-                                    <label for="contact_facturation" class="form-label">Contact de facturation</label>
-                                    <div class="d-flex align-items-center gap-2" style="width: 100% !important;">
-                                        <select class="form-select" id="contact_facturation" name="contact_facturation" style="flex-grow: 1 !important; min-width: 0;">
-                                            <option value="">Choisir un contact...</option>
-                                        </select>
-                                        <button type="button" class="add-client-btn" id="add-contact-facturation-btn" 
-                                                title="Ajouter un nouveau contact de facturation" style="flex-shrink: 0 !important;">
-                                            <i class="fas fa-plus"></i>
-                                        </button>
-                                    </div>
-                                    <!-- Adresse du contact de facturation -->
-                                    <div id="adresse-contact-facturation" class="mt-3" style="display: none;">
-                                        <label class="form-label text-muted">Adresse de facturation pour ce projet</label>
-                                        <div class="address-edit-section p-3 bg-light rounded border">
-                                            <div class="row">
-                                                <div class="col-md-12">
-                                                    <label class="form-label">Adresse</label>
-                                                    <input type="text" class="form-control mb-2" id="adresse_facturation_ligne1" 
-                                                           name="adresse_facturation_ligne1" placeholder="Ex: 123 rue de la Paix">
-                                                </div>
-                                                <div class="col-md-6">
-                                                    <label class="form-label">Code postal</label>
-                                                    <input type="text" class="form-control mb-2" id="adresse_facturation_code_postal" 
-                                                           name="adresse_facturation_code_postal" placeholder="31000">
-                                                </div>
-                                                <div class="col-md-6">
-                                                    <label class="form-label">Ville</label>
-                                                    <input type="text" class="form-control mb-2" id="adresse_facturation_ville" 
-                                                           name="adresse_facturation_ville" placeholder="Toulouse">
-                                                </div>
-                                            </div>
-                                            <div class="mt-2">
-                                                <small class="text-muted" id="address-status-facturation">Modifiable pour ce projet uniquement</small>
-                                            </div>
-                                        </div>
-                                    </div>
-                                </div>
-                            </div>
-                        </div>
-
-                        <!-- Menu projets existants (apparaît après sélection client) -->
-                        <div id="projects-selection" class="projects-dropdown" style="display: none;">
+                <!-- Menu projets existants (apparaît après sélection client) -->
+                <div id="projects-selection" class="projects-dropdown" style="display: none; margin-top: 1rem;">
+                    <div class="form-section">
+                        <div class="form-section-body">
                             <label for="projet_existant" class="form-label">
                                 <i class="fas fa-folder me-1"></i>Importer d'un projet existant
                             </label>

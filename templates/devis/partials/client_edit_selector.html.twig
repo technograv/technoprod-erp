@@ -1,0 +1,453 @@
+{#
+    Template réutilisable pour la gestion Client/Prospect en mode édition
+    
+    Variables attendues :
+    - form : Le formulaire Symfony
+    - devis : L'entité Devis en cours d'édition
+    - show_header : Afficher l'en-tête de section (défaut: true)
+#}
+
+{% set show_header = show_header ?? true %}
+
+<div class="form-section">
+    {% if show_header %}
+    <div class="form-section-header">
+        <h5 class="mb-0"><i class="fas fa-user-tie me-2"></i>Client / Prospect</h5>
+    </div>
+    {% endif %}
+    <div class="form-section-body">
+        <div class="row">
+            <div class="col-md-6">
+                <div class="d-flex align-items-end gap-2">
+                    {{ form_widget(form.client, {
+                        'attr': {'class': 'form-select client-select', 'data-populate-tiers': 'true', 'style': 'flex-grow: 1;'}
+                    }) }}
+                    
+                    <!-- Boutons d'action client -->
+                    <button type="button" class="btn btn-success btn-sm" id="add-client-btn" 
+                            title="Ajouter un nouveau client">
+                        <i class="fas fa-plus"></i>
+                    </button>
+                    <button type="button" class="btn btn-primary btn-sm" id="edit-client-btn" 
+                            title="Modifier le client sélectionné" 
+                            style="{{ devis.client ? '' : 'display: none;' }}">
+                        <i class="fas fa-edit"></i>
+                    </button>
+                </div>
+                {{ form_label(form.client, 'Client / Prospect') }}
+                {{ form_errors(form.client) }}
+            </div>
+            <div class="col-md-6">
+                {{ form_row(form.commercial, {
+                    'label': 'Commercial',
+                    'attr': {'class': 'form-select'}
+                }) }}
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Section Adresses et contacts améliorée -->
+<div class="form-section">
+    <div class="form-section-header">
+        <h5 class="mb-0"><i class="fas fa-address-card me-2"></i>Adresses et contacts</h5>
+    </div>
+    <div class="form-section-body">
+        <div class="row">
+            <!-- Contact et adresse de livraison -->
+            <div class="col-md-6">
+                <div class="mb-3">
+                    <label class="form-label">Contact livraison</label>
+                    <div class="d-flex align-items-center gap-2">
+                        {{ form_widget(form.contactLivraison, {
+                            'attr': {'class': 'form-select contact-select', 'style': 'flex-grow: 1;'}
+                        }) }}
+                        
+                        <!-- Boutons d'action contact livraison -->
+                        <button type="button" class="btn btn-success btn-sm" id="add-contact-livraison-btn" 
+                                title="Ajouter un nouveau contact">
+                            <i class="fas fa-plus"></i>
+                        </button>
+                        <button type="button" class="btn btn-primary btn-sm" id="edit-contact-livraison-btn" 
+                                title="Modifier le contact sélectionné" 
+                                style="{{ devis.contactLivraison ? '' : 'display: none;' }}">
+                            <i class="fas fa-edit"></i>
+                        </button>
+                    </div>
+                    {{ form_errors(form.contactLivraison) }}
+                </div>
+                
+                <!-- Menu déroulant adresse de livraison -->
+                <div class="mb-3">
+                    <label class="form-label">Adresse de livraison</label>
+                    <div class="d-flex align-items-center gap-2 mb-2">
+                        <select class="form-select" id="adresse_livraison_select" name="adresse_livraison_select" style="flex-grow: 1;">
+                            <option value="">Choisir une adresse existante...</option>
+                        </select>
+                        
+                        <!-- Boutons d'action adresse livraison -->
+                        <button type="button" class="btn btn-success btn-sm" id="add-address-livraison-btn" 
+                                title="Ajouter une nouvelle adresse">
+                            <i class="fas fa-plus"></i>
+                        </button>
+                        <button type="button" class="btn btn-primary btn-sm" id="edit-address-livraison-btn" 
+                                title="Modifier l'adresse sélectionnée" style="display: none;">
+                            <i class="fas fa-edit"></i>
+                        </button>
+                    </div>
+                    
+                    <!-- Champs d'adresse modifiables pour ce devis -->
+                    <div class="border rounded p-3 bg-light">
+                        <small class="text-muted mb-2 d-block">Adresse pour ce devis (modifiable)</small>
+                        <div class="row">
+                            <div class="col-md-12">
+                                {{ form_row(form.tiersAdresseLivraison, {
+                                    'label': 'Adresse',
+                                    'attr': {'class': 'form-control'}
+                                }) }}
+                            </div>
+                        </div>
+                        <div class="row">
+                            <div class="col-md-4">
+                                {{ form_row(form.tiersCodePostalLivraison, {
+                                    'label': 'Code postal',
+                                    'attr': {
+                                        'class': 'form-control postal-autocomplete', 
+                                        'maxlength': '5',
+                                        'data-target-ville': 'devis_tiersVilleLivraison'
+                                    }
+                                }) }}
+                            </div>
+                            <div class="col-md-8">
+                                {{ form_row(form.tiersVilleLivraison, {
+                                    'label': 'Ville',
+                                    'attr': {
+                                        'class': 'form-control ville-autocomplete',
+                                        'data-target-postal': 'devis_tiersCodePostalLivraison'
+                                    }
+                                }) }}
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- Contact et adresse de facturation -->
+            <div class="col-md-6">
+                <div class="mb-3">
+                    <label class="form-label">Contact facturation</label>
+                    <div class="d-flex align-items-center gap-2">
+                        {{ form_widget(form.contactFacturation, {
+                            'attr': {'class': 'form-select contact-select', 'style': 'flex-grow: 1;'}
+                        }) }}
+                        
+                        <!-- Boutons d'action contact facturation -->
+                        <button type="button" class="btn btn-success btn-sm" id="add-contact-facturation-btn" 
+                                title="Ajouter un nouveau contact">
+                            <i class="fas fa-plus"></i>
+                        </button>
+                        <button type="button" class="btn btn-primary btn-sm" id="edit-contact-facturation-btn" 
+                                title="Modifier le contact sélectionné"
+                                style="{{ devis.contactFacturation ? '' : 'display: none;' }}">
+                            <i class="fas fa-edit"></i>
+                        </button>
+                    </div>
+                    {{ form_errors(form.contactFacturation) }}
+                </div>
+                
+                <!-- Menu déroulant adresse de facturation -->
+                <div class="mb-3">
+                    <label class="form-label">Adresse de facturation</label>
+                    <div class="d-flex align-items-center gap-2 mb-2">
+                        <select class="form-select" id="adresse_facturation_select" name="adresse_facturation_select" style="flex-grow: 1;">
+                            <option value="">Choisir une adresse existante...</option>
+                        </select>
+                        
+                        <!-- Boutons d'action adresse facturation -->
+                        <button type="button" class="btn btn-success btn-sm" id="add-address-facturation-btn" 
+                                title="Ajouter une nouvelle adresse">
+                            <i class="fas fa-plus"></i>
+                        </button>
+                        <button type="button" class="btn btn-primary btn-sm" id="edit-address-facturation-btn" 
+                                title="Modifier l'adresse sélectionnée" style="display: none;">
+                            <i class="fas fa-edit"></i>
+                        </button>
+                    </div>
+                    
+                    <!-- Champs d'adresse modifiables pour ce devis -->
+                    <div class="border rounded p-3 bg-light">
+                        <small class="text-muted mb-2 d-block">Adresse pour ce devis (modifiable)</small>
+                        <div class="row">
+                            <div class="col-md-12">
+                                {{ form_row(form.tiersAdresse, {
+                                    'label': 'Adresse',
+                                    'attr': {'class': 'form-control'}
+                                }) }}
+                            </div>
+                        </div>
+                        <div class="row">
+                            <div class="col-md-4">
+                                {{ form_row(form.tiersCodePostal, {
+                                    'label': 'Code postal',
+                                    'attr': {
+                                        'class': 'form-control postal-autocomplete', 
+                                        'maxlength': '5',
+                                        'data-target-ville': 'devis_tiersVille'
+                                    }
+                                }) }}
+                            </div>
+                            <div class="col-md-8">
+                                {{ form_row(form.tiersVille, {
+                                    'label': 'Ville',
+                                    'attr': {
+                                        'class': 'form-control ville-autocomplete',
+                                        'data-target-postal': 'devis_tiersCodePostal'
+                                    }
+                                }) }}
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+// Script JavaScript pour gérer les interactions du bloc Client/Prospect en mode édition
+(function() {
+    'use strict';
+    
+    let currentClientId = {{ devis.client ? devis.client.id : 'null' }};
+    let currentAddresses = [];
+    
+    function initClientEditSelector() {
+        // Boutons d'action client
+        setupClientButtons();
+        
+        // Boutons d'action contacts
+        setupContactButtons();
+        
+        // Boutons d'action adresses
+        setupAddressButtons();
+        
+        // Gestion changement de client
+        setupClientChangeHandler();
+        
+        // Charger les adresses du client actuel
+        if (currentClientId) {
+            loadClientAddresses(currentClientId);
+        }
+    }
+    
+    function setupClientButtons() {
+        const addClientBtn = document.getElementById('add-client-btn');
+        const editClientBtn = document.getElementById('edit-client-btn');
+        
+        addClientBtn?.addEventListener('click', function() {
+            window.open('/client/new', '_blank');
+        });
+        
+        editClientBtn?.addEventListener('click', function() {
+            if (currentClientId) {
+                window.open(`/client/${currentClientId}/edit`, '_blank');
+            }
+        });
+    }
+    
+    function setupContactButtons() {
+        // Boutons contact livraison
+        document.getElementById('add-contact-livraison-btn')?.addEventListener('click', function() {
+            if (currentClientId) {
+                window.open(`/client/${currentClientId}/edit#add-contact`, '_blank');
+            }
+        });
+        
+        document.getElementById('edit-contact-livraison-btn')?.addEventListener('click', function() {
+            const contactSelect = document.getElementById('devis_contactLivraison');
+            const contactId = contactSelect?.value;
+            if (contactId && currentClientId) {
+                window.open(`/client/${currentClientId}/edit#contact-${contactId}`, '_blank');
+            }
+        });
+        
+        // Boutons contact facturation
+        document.getElementById('add-contact-facturation-btn')?.addEventListener('click', function() {
+            if (currentClientId) {
+                window.open(`/client/${currentClientId}/edit#add-contact`, '_blank');
+            }
+        });
+        
+        document.getElementById('edit-contact-facturation-btn')?.addEventListener('click', function() {
+            const contactSelect = document.getElementById('devis_contactFacturation');
+            const contactId = contactSelect?.value;
+            if (contactId && currentClientId) {
+                window.open(`/client/${currentClientId}/edit#contact-${contactId}`, '_blank');
+            }
+        });
+        
+        // Gestion changement contacts pour affichage boutons
+        const contactLivraisonSelect = document.getElementById('devis_contactLivraison');
+        const contactFacturationSelect = document.getElementById('devis_contactFacturation');
+        const editContactLivraisonBtn = document.getElementById('edit-contact-livraison-btn');
+        const editContactFacturationBtn = document.getElementById('edit-contact-facturation-btn');
+        
+        contactLivraisonSelect?.addEventListener('change', function() {
+            editContactLivraisonBtn.style.display = this.value ? 'inline-block' : 'none';
+        });
+        
+        contactFacturationSelect?.addEventListener('change', function() {
+            editContactFacturationBtn.style.display = this.value ? 'inline-block' : 'none';
+        });
+    }
+    
+    function setupAddressButtons() {
+        // Boutons adresse livraison
+        document.getElementById('add-address-livraison-btn')?.addEventListener('click', function() {
+            if (currentClientId) {
+                window.open(`/client/${currentClientId}/edit#add-address`, '_blank');
+            }
+        });
+        
+        document.getElementById('edit-address-livraison-btn')?.addEventListener('click', function() {
+            const addressSelect = document.getElementById('adresse_livraison_select');
+            const addressId = addressSelect?.value;
+            if (addressId && currentClientId) {
+                window.open(`/client/${currentClientId}/edit#address-${addressId}`, '_blank');
+            }
+        });
+        
+        // Boutons adresse facturation
+        document.getElementById('add-address-facturation-btn')?.addEventListener('click', function() {
+            if (currentClientId) {
+                window.open(`/client/${currentClientId}/edit#add-address`, '_blank');
+            }
+        });
+        
+        document.getElementById('edit-address-facturation-btn')?.addEventListener('click', function() {
+            const addressSelect = document.getElementById('adresse_facturation_select');
+            const addressId = addressSelect?.value;
+            if (addressId && currentClientId) {
+                window.open(`/client/${currentClientId}/edit#address-${addressId}`, '_blank');
+            }
+        });
+        
+        // Gestion changement adresses pour remplir les champs et afficher boutons
+        setupAddressChangeHandlers();
+    }
+    
+    function setupAddressChangeHandlers() {
+        const adresseLivraisonSelect = document.getElementById('adresse_livraison_select');
+        const adresseFacturationSelect = document.getElementById('adresse_facturation_select');
+        const editAddressLivraisonBtn = document.getElementById('edit-address-livraison-btn');
+        const editAddressFacturationBtn = document.getElementById('edit-address-facturation-btn');
+        
+        adresseLivraisonSelect?.addEventListener('change', function() {
+            const addressId = this.value;
+            editAddressLivraisonBtn.style.display = addressId ? 'inline-block' : 'none';
+            
+            if (addressId) {
+                const address = currentAddresses.find(addr => addr.id == addressId);
+                if (address) {
+                    populateAddressFields('livraison', address);
+                }
+            }
+        });
+        
+        adresseFacturationSelect?.addEventListener('change', function() {
+            const addressId = this.value;
+            editAddressFacturationBtn.style.display = addressId ? 'inline-block' : 'none';
+            
+            if (addressId) {
+                const address = currentAddresses.find(addr => addr.id == addressId);
+                if (address) {
+                    populateAddressFields('facturation', address);
+                }
+            }
+        });
+    }
+    
+    function setupClientChangeHandler() {
+        const clientSelect = document.getElementById('devis_client');
+        const editClientBtn = document.getElementById('edit-client-btn');
+        
+        clientSelect?.addEventListener('change', function() {
+            currentClientId = this.value;
+            editClientBtn.style.display = currentClientId ? 'inline-block' : 'none';
+            
+            if (currentClientId) {
+                loadClientAddresses(currentClientId);
+            } else {
+                clearAddressSelectors();
+            }
+        });
+    }
+    
+    function loadClientAddresses(clientId) {
+        fetch(`/client/${clientId}/addresses`)
+            .then(response => response.json())
+            .then(addresses => {
+                currentAddresses = addresses;
+                populateAddressSelectors(addresses);
+            })
+            .catch(error => {
+                console.error('Erreur lors du chargement des adresses:', error);
+                currentAddresses = [];
+                clearAddressSelectors();
+            });
+    }
+    
+    function populateAddressSelectors(addresses) {
+        const adresseLivraisonSelect = document.getElementById('adresse_livraison_select');
+        const adresseFacturationSelect = document.getElementById('adresse_facturation_select');
+        
+        // Vider les sélecteurs
+        adresseLivraisonSelect.innerHTML = '<option value="">Choisir une adresse existante...</option>';
+        adresseFacturationSelect.innerHTML = '<option value="">Choisir une adresse existante...</option>';
+        
+        // Ajouter les adresses
+        addresses.forEach(address => {
+            const optionLivraison = new Option(address.label, address.id);
+            const optionFacturation = new Option(address.label, address.id);
+            
+            adresseLivraisonSelect.appendChild(optionLivraison);
+            adresseFacturationSelect.appendChild(optionFacturation);
+        });
+    }
+    
+    function populateAddressFields(type, address) {
+        const prefix = type === 'livraison' ? 'tiersAdresseLivraison' : 'tiersAdresse';
+        const postalPrefix = type === 'livraison' ? 'tiersCodePostalLivraison' : 'tiersCodePostal';
+        const villePrefix = type === 'livraison' ? 'tiersVilleLivraison' : 'tiersVille';
+        
+        // Remplir les champs avec les données de l'adresse
+        const addressField = document.getElementById(`devis_${prefix}`);
+        const postalField = document.getElementById(`devis_${postalPrefix}`);
+        const villeField = document.getElementById(`devis_${villePrefix}`);
+        
+        if (addressField) addressField.value = address.ligne1 || '';
+        if (postalField) postalField.value = address.codePostal || '';
+        if (villeField) villeField.value = address.ville || '';
+    }
+    
+    function clearAddressSelectors() {
+        const adresseLivraisonSelect = document.getElementById('adresse_livraison_select');
+        const adresseFacturationSelect = document.getElementById('adresse_facturation_select');
+        
+        adresseLivraisonSelect.innerHTML = '<option value="">Choisir une adresse existante...</option>';
+        adresseFacturationSelect.innerHTML = '<option value="">Choisir une adresse existante...</option>';
+        
+        document.getElementById('edit-address-livraison-btn').style.display = 'none';
+        document.getElementById('edit-address-facturation-btn').style.display = 'none';
+        
+        currentAddresses = [];
+    }
+    
+    // Initialiser quand le DOM est prêt
+    if (document.readyState === 'loading') {
+        document.addEventListener('DOMContentLoaded', initClientEditSelector);
+    } else {
+        initClientEditSelector();
+    }
+})();
+</script>
