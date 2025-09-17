@@ -421,32 +421,18 @@
                         <div class="row">
                             <div class="col-md-6">
                                 <div class="mb-3">
-                                    <label for="methode_expedition" class="form-label">Méthode d'expédition</label>
-                                    <select class="form-select" id="methode_expedition" name="methode_expedition">
-                                        <option value="livraison">Livraison</option>
-                                        <option value="chantier">Sur chantier</option>
-                                        <option value="retrait">Retrait en magasin</option>
-                                        <option value="transporteur">Transporteur</option>
-                                    </select>
-                                </div>
-                            </div>
-                        </div>
-                        
-                        <div class="row">
-                            <div class="col-md-6">
-                                <div class="mb-3">
                                     <label for="date_livraison" class="form-label">Date de livraison prévue</label>
                                     <input type="date" class="form-control" id="date_livraison" name="date_livraison" min="1900-01-01" max="9999-12-31">
                                 </div>
                             </div>
                             <div class="col-md-6">
                                 <div class="mb-3">
-                                    <label for="modele_document" class="form-label">Modèle de document</label>
-                                    <select class="form-select" id="modele_document" name="modele_document">
-                                        <option value="standard">Modèle standard</option>
-                                        <option value="moderne">Modèle moderne</option>
-                                        <option value="classique">Modèle classique</option>
-                                        <option value="personnalise">Modèle personnalisé</option>
+                                    <label for="methode_expedition" class="form-label">Méthode d'expédition</label>
+                                    <select class="form-select" id="methode_expedition" name="methode_expedition">
+                                        <option value="livraison">Livraison</option>
+                                        <option value="chantier">Sur chantier</option>
+                                        <option value="retrait">Retrait en magasin</option>
+                                        <option value="transporteur">Transporteur</option>
                                     </select>
                                 </div>
                             </div>
@@ -944,6 +930,20 @@
             theme: 'bootstrap-5',
             placeholder: 'Choisir un client/prospect...',
             allowClear: true
+        });
+        
+        // Corriger l'autocomplétion après TAB - ouvrir automatiquement le dropdown
+        $('#prospect').on('select2:focus', function(e) {
+            $(this).select2('open');
+        });
+        
+        // Gérer le focus via TAB pour ouvrir automatiquement le dropdown
+        $('#delai_livraison').on('keydown', function(e) {
+            if (e.key === 'Tab' && !e.shiftKey) {
+                setTimeout(function() {
+                    $('#prospect').select2('open');
+                }, 100);
+            }
         });
 
         $('#contact_defaut').select2AutoFocus({

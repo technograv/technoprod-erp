@@ -189,7 +189,7 @@ class WorkflowController extends AbstractController
     }
 
     #[Route('/dashboard', name: 'workflow_dashboard')]
-    public function dashboard(): Response
+    public function dashboard(Request $request): Response
     {
         /** @var User $user */
         $user = $this->getUser();
@@ -205,8 +205,10 @@ class WorkflowController extends AbstractController
         $recentFactures = $this->entityManager->getRepository(Facture::class)
             ->findBy([], ['updatedAt' => 'DESC'], 5);
 
+        // Récupérer l'offset de semaine depuis la requête
+        $currentWeekOffset = (int) $request->query->get('week', 0);
+        
         // Générer les jours ouvrés (lundi à vendredi) pour le calendrier
-        $currentWeekOffset = 0;
         $startOfWeek = new \DateTime('monday this week');
         $startOfWeek->modify($currentWeekOffset . ' weeks');
         
@@ -229,16 +231,26 @@ class WorkflowController extends AbstractController
         
         $selectedCalendarIds = $preferences ? $preferences->getSelectedCalendarIds() : ['primary'];
         
-        // Récupérer les événements Google Calendar pour la semaine courante
+        // Récupérer les événements Google Calendar pour la semaine demandée
         $weekEvents = [];
         try {
             if ($user->isGoogleAccount()) {
+                $this->logger->info('Chargement calendrier pour semaine', [
+                    'user_id' => $user->getId(),
+                    'week_offset' => $currentWeekOffset,
+                    'start_of_week' => $startOfWeek->format('Y-m-d')
+                ]);
                 $weekEvents = $this->googleCalendarService->getWeekEvents($user, $startOfWeek, $selectedCalendarIds);
+                $this->logger->info('Événements chargés', [
+                    'user_id' => $user->getId(),
+                    'events_count' => count($weekEvents)
+                ]);
             }
         } catch (\Exception $e) {
             // En cas d'erreur, continuer sans les événements calendar
             $this->logger->warning('Erreur récupération calendrier Google', [
                 'user_id' => $user->getId(),
+                'week_offset' => $currentWeekOffset,
                 'error' => $e->getMessage()
             ]);
         }
@@ -386,13 +398,180 @@ class WorkflowController extends AbstractController
     }
 
     #[Route('/dashboard/calendar-ajax', name: 'workflow_dashboard_calendar_ajax', methods: ['GET'])]
-    public function calendarAjax(): JsonResponse
+    public function calendarAjax(Request $request): JsonResponse
     {
-        // Route placeholder pour éviter l'erreur de template
-        return $this->json([
-            'success' => false,
-            'message' => 'Fonctionnalité calendrier temporairement désactivée'
-        ]);
+        try {
+            /** @var User $user */
+            $user = $this->getUser();
+            
+            if (!$user) {
+                return $this->json([
+                    'success' => false,
+                    'message' => 'Utilisateur non authentifié'
+                ], 401);
+            }
+
+            // Récupérer l'offset de semaine depuis les paramètres de requête
+            $weekOffset = (int) $request->query->get('week', 0);
+            
+            // Calculer la semaine demandée
+            $startOfWeek = new \DateTime('monday this week');
+            $startOfWeek->modify($weekOffset . ' weeks');
+            
+            // Générer les jours ouvrés (lundi à vendredi) pour la nouvelle semaine
+            $weekDays = [];
+            for ($i = 0; $i < 5; $i++) {
+                $day = clone $startOfWeek;
+                $day->modify('+' . $i . ' days');
+                
+                $weekDays[] = [
+                    'date' => $day,
+                    'day_number' => $day->format('j'),
+                    'day_short_fr' => $this->getDayShortFr($day->format('N')),
+                    'is_today' => $day->format('Y-m-d') === (new \DateTime())->format('Y-m-d')
+                ];
+            }
+
+            // Récupérer les préférences utilisateur pour les calendriers
+            $preferences = $this->entityManager->getRepository(\App\Entity\UserPreferences::class)
+                ->findOneBy(['user' => $user]);
+            
+            $selectedCalendarIds = $preferences ? $preferences->getSelectedCalendarIds() : ['primary'];
+            
+            // Récupérer les événements Google Calendar pour la semaine demandée
+            $weekEvents = [];
+            try {
+                if ($user->isGoogleAccount()) {
+                    $startTime = microtime(true);
+                    $weekEvents = $this->googleCalendarService->getWeekEvents($user, $startOfWeek, $selectedCalendarIds);
+                    $endTime = microtime(true);
+                    
+                    $this->logger->info('Calendrier Google chargé via AJAX', [
+                        'user_id' => $user->getId(),
+                        'week_offset' => $weekOffset,
+                        'duration_ms' => round(($endTime - $startTime) * 1000, 2),
+                        'events_count' => count($weekEvents)
+                    ]);
+                }
+            } catch (\Exception $e) {
+                // En cas d'erreur, continuer sans les événements calendar
+                $this->logger->warning('Erreur récupération calendrier Google pour AJAX', [
+                    'user_id' => $user->getId(),
+                    'week_offset' => $weekOffset,
+                    'error' => $e->getMessage()
+                ]);
+                $weekEvents = [];
+            }
+
+            // Générer le HTML du calendrier pour la nouvelle semaine
+            $calendarHtml = $this->renderView('workflow/partials/calendar_week.html.twig', [
+                'week_events' => $weekEvents,
+                'week_days' => $weekDays,
+                'start_of_week' => $startOfWeek
+            ]);
+
+            // Formater le titre de la semaine
+            $endOfWeek = clone $startOfWeek;
+            $endOfWeek->modify('+4 days'); // Vendredi
+            
+            $weekTitle = 'Semaine du ' . $startOfWeek->format('d/m') . ' au ' . $endOfWeek->format('d/m/Y');
+
+            return $this->json([
+                'success' => true,
+                'calendar_html' => $calendarHtml,
+                'week_title' => $weekTitle,
+                'week_offset' => $weekOffset,
+                'start_date' => $startOfWeek->format('Y-m-d'),
+                'end_date' => $endOfWeek->format('Y-m-d')
+            ]);
+            
+        } catch (\Exception $e) {
+            $this->logger->error('Erreur dans calendarAjax', [
+                'user_id' => $this->getUser()?->getId(),
+                'week_offset' => $request->query->get('week', 0),
+                'error' => $e->getMessage(),
+                'trace' => $e->getTraceAsString()
+            ]);
+            
+            return $this->json([
+                'success' => false,
+                'message' => 'Erreur lors du chargement du calendrier: ' . $e->getMessage()
+            ], 500);
+        }
+    }
+
+    #[Route('/dashboard/calendar-events-ajax', name: 'workflow_dashboard_calendar_events_ajax', methods: ['GET'])]
+    public function calendarEventsAjax(Request $request): JsonResponse
+    {
+        try {
+            /** @var User $user */
+            $user = $this->getUser();
+            
+            if (!$user) {
+                return $this->json([
+                    'success' => false,
+                    'message' => 'Utilisateur non authentifié'
+                ], 401);
+            }
+
+            // Récupérer l'offset de semaine depuis les paramètres de requête
+            $weekOffset = (int) $request->query->get('week', 0);
+            
+            // Calculer la semaine demandée
+            $startOfWeek = new \DateTime('monday this week');
+            $startOfWeek->modify($weekOffset . ' weeks');
+            
+            // Récupérer les préférences utilisateur pour les calendriers
+            $preferences = $this->entityManager->getRepository(\App\Entity\UserPreferences::class)
+                ->findOneBy(['user' => $user]);
+            
+            $selectedCalendarIds = $preferences ? $preferences->getSelectedCalendarIds() : ['primary'];
+            
+            // Charger les événements Google Calendar
+            $weekEvents = [];
+            try {
+                if ($user->isGoogleAccount()) {
+                    $startTime = microtime(true);
+                    $weekEvents = $this->googleCalendarService->getWeekEvents($user, $startOfWeek, $selectedCalendarIds);
+                    $endTime = microtime(true);
+                    
+                    $this->logger->info('Événements Google Calendar chargés en async', [
+                        'user_id' => $user->getId(),
+                        'week_offset' => $weekOffset,
+                        'duration_ms' => round(($endTime - $startTime) * 1000, 2),
+                        'events_count' => count($weekEvents)
+                    ]);
+                }
+            } catch (\Exception $e) {
+                $this->logger->warning('Erreur récupération événements Google Calendar async', [
+                    'user_id' => $user->getId(),
+                    'week_offset' => $weekOffset,
+                    'error' => $e->getMessage()
+                ]);
+                return $this->json([
+                    'success' => false,
+                    'message' => 'Erreur chargement calendrier: ' . $e->getMessage()
+                ]);
+            }
+
+            return $this->json([
+                'success' => true,
+                'events' => $weekEvents,
+                'week_offset' => $weekOffset
+            ]);
+            
+        } catch (\Exception $e) {
+            $this->logger->error('Erreur dans calendarEventsAjax', [
+                'user_id' => $this->getUser()?->getId(),
+                'week_offset' => $request->query->get('week', 0),
+                'error' => $e->getMessage()
+            ]);
+            
+            return $this->json([
+                'success' => false,
+                'message' => 'Erreur serveur: ' . $e->getMessage()
+            ], 500);
+        }
     }
 
     #[Route('/prospection-telephonique', name: 'workflow_prospection_telephonique', methods: ['POST'])]

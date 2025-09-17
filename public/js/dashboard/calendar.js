@@ -23,6 +23,7 @@ class CalendarDashboard {
             .then(data => {
                 if (data.success) {
                     this.updateCalendarDisplay(data);
+                    this.currentWeekOffset = offset;
                     window.currentWeekOffset = offset;
                 } else {
                     console.error('Erreur chargement semaine:', data.message);
@@ -50,10 +51,31 @@ class CalendarDashboard {
         }
         
         // Mise à jour titre semaine
-        const weekTitle = document.getElementById('calendar-week-title');
+        const weekTitle = document.getElementById('week-date');
         if (weekTitle && data.week_title) {
             weekTitle.textContent = data.week_title;
         }
+        
+        // Mise à jour des boutons de navigation
+        this.updateNavigationButtons(data.week_offset);
+    }
+
+    updateNavigationButtons(offset) {
+        const btnPrev = document.getElementById('btn-prev-week');
+        const btnNext = document.getElementById('btn-next-week');
+        
+        if (btnPrev) {
+            btnPrev.setAttribute('onclick', `changeWeekAjax(${offset - 1})`);
+        }
+        if (btnNext) {
+            btnNext.setAttribute('onclick', `changeWeekAjax(${offset + 1})`);
+        }
+    }
+
+    // Méthode pour revenir à la semaine actuelle
+    goToCurrentWeek() {
+        console.log('Retour à la semaine actuelle');
+        this.changeWeekAjax(0);
     }
 
     // Fonctions prospection

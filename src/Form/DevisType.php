@@ -256,6 +256,21 @@ class DevisType extends AbstractType
                 'required' => false,
                 'attr' => ['class' => 'form-select address-select']
             ])
+            ->add('tiersAdresseLivraison', TextType::class, [
+                'label' => 'Adresse livraison',
+                'required' => false,
+                'attr' => ['class' => 'form-control', 'placeholder' => 'Adresse de livraison']
+            ])
+            ->add('tiersCodePostalLivraison', TextType::class, [
+                'label' => 'Code postal livraison',
+                'required' => false,
+                'attr' => ['class' => 'form-control', 'placeholder' => 'Code postal', 'maxlength' => '5']
+            ])
+            ->add('tiersVilleLivraison', TextType::class, [
+                'label' => 'Ville livraison',
+                'required' => false,
+                'attr' => ['class' => 'form-control', 'placeholder' => 'Ville de livraison']
+            ])
             ->add('delaiLivraison', TextType::class, [
                 'label' => 'Délai de livraison',
                 'required' => false,
@@ -277,6 +292,18 @@ class DevisType extends AbstractType
                     'class' => 'form-control',
                     'placeholder' => 'email@example.com'
                 ]
+            ])
+            ->add('modeleDocument', ChoiceType::class, [
+                'label' => 'Modèle de document',
+                'choices' => [
+                    'Modèle standard' => 'standard',
+                    'Modèle moderne' => 'moderne',
+                    'Modèle classique' => 'classique',
+                    'Modèle personnalisé' => 'personnalise'
+                ],
+                'placeholder' => 'Choisir un modèle...',
+                'required' => false,
+                'attr' => ['class' => 'form-select']
             ])
             
             // Onglet Notes

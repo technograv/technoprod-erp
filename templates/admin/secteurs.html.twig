@@ -592,8 +592,8 @@
     }
 
     function chargerTousLesSecteurs() {
-        console.log('🔍 DEBUG: Appel API /admin/secteurs/all-geo-data');
-        fetch('/admin/secteurs/all-geo-data')
+        console.log('🔍 DEBUG: Appel API /admin/debug/secteurs-geo');
+        fetch('/admin/debug/secteurs-geo')
             .then(response => response.json())
             .then(data => {
                 console.log('🔍 DEBUG: Données de tous les secteurs reçues:', data);

@@ -257,7 +257,7 @@
     }
 
     function chargerTousLesSecteurs() {
-        fetch('/admin/secteurs/all-geo-data')
+        fetch('/admin/debug/secteurs-geo')
             .then(response => response.json())
             .then(data => {
                 console.log('📍 Données de tous les secteurs reçues:', data);
