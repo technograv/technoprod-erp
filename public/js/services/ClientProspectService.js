@@ -71,10 +71,10 @@ class ClientProspectService {
      * Vérifie que les éléments DOM requis existent
      */
     checkRequiredElements() {
+        // Seul le sélecteur client est vraiment requis au démarrage
+        // Les autres éléments peuvent être cachés ou non encore visibles
         const required = [
-            this.config.selectors.clientSelect,
-            this.config.selectors.contactLivraisonSelect,
-            this.config.selectors.contactFacturationSelect
+            this.config.selectors.clientSelect
         ];
         
         const missing = required.filter(selector => !document.querySelector(selector));
@@ -82,6 +82,17 @@ class ClientProspectService {
         if (missing.length > 0) {
             this.error('Éléments manquants:', missing);
             return false;
+        }
+        
+        // Vérifier les éléments optionnels et les signaler si manquants (sans échouer)
+        const optional = [
+            this.config.selectors.contactLivraisonSelect,
+            this.config.selectors.contactFacturationSelect
+        ];
+        
+        const missingOptional = optional.filter(selector => !document.querySelector(selector));
+        if (missingOptional.length > 0) {
+            this.log('⚠️ Éléments optionnels non trouvés (normal si pas encore visibles):', missingOptional);
         }
         
         return true;
