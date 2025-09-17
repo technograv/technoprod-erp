@@ -1058,7 +1058,8 @@ async function init() {
             initEventListeners();
             initLayoutPanel();
             initClientAutocomplete();
-            initContactAddressSynchronization();
+            // DÉSACTIVÉ - Remplacé par ClientProspectService unifié
+            // initContactAddressSynchronization();
             initQuillNotesClientEditor(); // Initialiser l'éditeur WYSIWYG des notes client
         }
         calculateTotals();
