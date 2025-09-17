@@ -2011,11 +2011,12 @@ function initContactAddressSynchronization() {
         mutations.forEach(function(mutation) {
             if (mutation.type === 'attributes' && mutation.attributeName === 'value') {
                 const clientId = clientHiddenField.value;
-                if (clientId) {
-                    loadClientContactsAndAddresses(clientId);
-                } else {
-                    clearContactsAndAddresses();
-                }
+                // DÉSACTIVÉ - Remplacé par ClientProspectService unifié
+                // if (clientId) {
+                //     loadClientContactsAndAddresses(clientId);
+                // } else {
+                //     clearContactsAndAddresses();
+                // }
             }
         });
     });
@@ -2025,11 +2026,12 @@ function initContactAddressSynchronization() {
     // Écouter aussi les événements manuels sur le select client
     clientHiddenField.addEventListener('change', function() {
         const clientId = this.value;
-        if (clientId) {
-            loadClientContactsAndAddresses(clientId);
-        } else {
-            clearContactsAndAddresses();
-        }
+        // DÉSACTIVÉ - Remplacé par ClientProspectService unifié
+        // if (clientId) {
+        //     loadClientContactsAndAddresses(clientId);
+        // } else {
+        //     clearContactsAndAddresses();
+        // }
     });
 
     // Synchroniser adresse quand contact change
@@ -2085,10 +2087,11 @@ function initContactAddressSynchronization() {
         });
     }
 
+    // DÉSACTIVÉ - Ancien système remplacé par ClientProspectService unifié
     // Charger les données initiales si un client est sélectionné
-    if (clientHiddenField.value) {
-        loadClientContactsAndAddresses(clientHiddenField.value);
-    }
+    // if (clientHiddenField.value) {
+    //     loadClientContactsAndAddresses(clientHiddenField.value);
+    // }
 }
 
 async function loadClientContactsAndAddresses(clientId) {
