@@ -71,11 +71,17 @@ class ClientProspectService {
      * Vérifie que les éléments DOM requis existent
      */
     checkRequiredElements() {
+        this.log('🔍 Vérification des éléments requis...');
+        
         // Seul le sélecteur client est vraiment requis au démarrage
         // Les autres éléments peuvent être cachés ou non encore visibles
         const required = [
             this.config.selectors.clientSelect
         ];
+        
+        this.log('🔍 Sélecteur client recherché:', this.config.selectors.clientSelect);
+        const clientElement = document.querySelector(this.config.selectors.clientSelect);
+        this.log('🔍 Élément client trouvé:', !!clientElement, clientElement?.id, clientElement?.tagName);
         
         const missing = required.filter(selector => !document.querySelector(selector));
         
@@ -95,6 +101,7 @@ class ClientProspectService {
             this.log('⚠️ Éléments optionnels non trouvés (normal si pas encore visibles):', missingOptional);
         }
         
+        this.log('✅ Vérification éléments requis réussie');
         return true;
     }
     
@@ -102,6 +109,8 @@ class ClientProspectService {
      * Attache tous les événements nécessaires
      */
     attachEvents() {
+        this.log('🔗 Début attachement des événements...');
+        
         const clientSelect = document.querySelector(this.config.selectors.clientSelect);
         
         // Support pour les deux types de sélecteurs (création et édition)
