@@ -1030,12 +1030,6 @@
             $('#summary-date-validite').text(date.toLocaleDateString('fr-FR'));
         });
 
-        // Bouton ajouter client
-        $('#add-client-btn').on('click', function() {
-            console.log('Bouton + cliqué pour nouveau client');
-            $('#newClientModal').modal('show');
-        });
-
         // Logique d'affichage conditionnel du champ entreprise selon la forme juridique
         function updateEntrepriseField() {
             const formeJuridiqueSelect = $('#new_client_forme_juridique');
@@ -1420,34 +1414,6 @@
                     $button.prop('disabled', false).html('<i class="fas fa-save me-1"></i>Créer et sélectionner');
                 }
             });
-        });
-
-        // Bouton ajouter contact en charge du projet
-        $('#add-contact-btn').on('click', function() {
-            const selectedProspectId = $('#prospect').val();
-            if (!selectedProspectId) {
-                alert('Veuillez d\'abord sélectionner un client/prospect');
-                return;
-            }
-            
-            // Stocker l'ID du prospect et le type de contact
-            $('#newContactModal').data('prospect-id', selectedProspectId);
-            $('#newContactModal').data('contact-type', 'projet');
-            $('#newContactModal').modal('show');
-        });
-
-        // Bouton ajouter contact de facturation
-        $('#add-contact-facturation-btn').on('click', function() {
-            const selectedProspectId = $('#prospect').val();
-            if (!selectedProspectId) {
-                alert('Veuillez d\'abord sélectionner un client/prospect');
-                return;
-            }
-            
-            // Stocker l'ID du prospect et le type de contact
-            $('#newContactModal').data('prospect-id', selectedProspectId);
-            $('#newContactModal').data('contact-type', 'facturation');
-            $('#newContactModal').modal('show');
         });
 
         // Sauvegarde nouveau contact

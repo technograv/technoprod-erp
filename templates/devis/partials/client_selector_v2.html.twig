@@ -23,26 +23,38 @@
         <div class="client-selector-container">
             <label for="prospect" class="form-label">Sélectionner un client/prospect *</label>
             <div class="d-flex align-items-center gap-2">
-                {# Champ caché pour synchroniser avec le formulaire #}
-                <input type="hidden" id="client_field" name="client" value="{{ selected_client.id|default('') }}">
-                
-                <select class="form-select" id="prospect" name="prospect" style="flex-grow: 1;">
-                    <option value="">Choisir un client/prospect...</option>
-                    {% for prospect in prospects %}
-                        <option value="{{ prospect.id }}" 
-                                {{ (selected_client|default(null) and selected_client.id == prospect.id) ? 'selected' : '' }}>
-                            {% if prospect.nomEntreprise %}
-                                {% if prospect.formeJuridique and not prospect.nomEntreprise starts with prospect.formeJuridique.nom %}
-                                    {{ prospect.formeJuridique.nom }} {{ prospect.nomEntreprise }}
+                {% if mode == 'edit' and form is defined %}
+                    {# Mode édition : utiliser le champ Symfony avec classes Select2 #}
+                    {{ form_widget(form.client, {
+                        'attr': {
+                            'class': 'form-select select2-autocomplete', 
+                            'id': 'prospect', 
+                            'style': 'flex-grow: 1;',
+                            'data-placeholder': 'Choisir un client/prospect...'
+                        }
+                    }) }}
+                {% else %}
+                    {# Mode création : champ caché pour synchroniser avec le formulaire #}
+                    <input type="hidden" id="client_field" name="client" value="{{ selected_client.id|default('') }}">
+                    
+                    <select class="form-select select2-autocomplete" id="prospect" name="prospect" style="flex-grow: 1;" data-placeholder="Choisir un client/prospect...">
+                        <option value="">Choisir un client/prospect...</option>
+                        {% for prospect in prospects %}
+                            <option value="{{ prospect.id }}" 
+                                    {{ (selected_client|default(null) and selected_client.id == prospect.id) ? 'selected' : '' }}>
+                                {% if prospect.nomEntreprise %}
+                                    {% if prospect.formeJuridique and not prospect.nomEntreprise starts with prospect.formeJuridique.nom %}
+                                        {{ prospect.formeJuridique.nom }} {{ prospect.nomEntreprise }}
+                                    {% else %}
+                                        {{ prospect.nomEntreprise }}
+                                    {% endif %}
                                 {% else %}
-                                    {{ prospect.nomEntreprise }}
+                                    {% if prospect.formeJuridique %}{{ prospect.formeJuridique.nom }} {% endif %}{{ prospect.nom }}{% if prospect.prenom %} {{ prospect.prenom }}{% endif %}
                                 {% endif %}
-                            {% else %}
-                                {% if prospect.formeJuridique %}{{ prospect.formeJuridique.nom }} {% endif %}{{ prospect.nom }}{% if prospect.prenom %} {{ prospect.prenom }}{% endif %}
-                            {% endif %}
-                        </option>
-                    {% endfor %}
-                </select>
+                            </option>
+                        {% endfor %}
+                    </select>
+                {% endif %}
                 
                 <!-- Boutons d'action client -->
                 <button type="button" class="btn btn-success btn-sm" id="add-client-btn" 
@@ -55,6 +67,20 @@
                 </button>
             </div>
         </div>
+
+        <!-- Champ Commercial (en mode édition seulement) -->
+        {% if mode == 'edit' and form is defined %}
+        <div class="commercial-selector-container mt-3">
+            <div class="row">
+                <div class="col-md-6">
+                    {{ form_row(form.commercial, {
+                        'label': 'Commercial',
+                        'attr': {'class': 'form-select'}
+                    }) }}
+                </div>
+            </div>
+        </div>
+        {% endif %}
 
         <!-- Menu contacts (apparaît après sélection client) -->
         <div id="contact-selection" class="contact-dropdown" style="display: none;">
@@ -147,13 +173,14 @@
     let clientService = null;
     
     function initClientProspectService() {
-        // Configuration du service
+        // Configuration du service selon le mode
+        const mode = '{{ mode }}';
         const config = {
             debug: true,
-            mode: '{{ mode }}',
+            mode: mode,
             selectors: {
                 clientSelect: '#prospect',
-                clientField: '#client_field',
+                clientField: mode === 'edit' ? null : '#client_field', // Pas de champ séparé en mode édition
                 contactLivraisonSelect: '#contact_defaut',
                 contactFacturationSelect: '#contact_facturation',
                 adresseLivraisonSelect: '#adresse_livraison_select',
@@ -173,42 +200,33 @@
         if (clientService.init()) {
             console.log('✅ ClientProspectService initialisé avec succès');
             
-            // Ajouter les gestionnaires pour les boutons d'ajout
-            setupAddButtons();
+            // Initialiser Select2 pour tous les champs avec autocomplétion
+            initializeSelect2Fields();
         } else {
             console.error('❌ Échec de l\'initialisation du ClientProspectService');
         }
     }
     
-    function setupAddButtons() {
-        // Boutons d'ajout (pas gérés par le service)
-        document.getElementById('add-client-btn')?.addEventListener('click', function() {
-            window.open('/client/new', '_blank');
-        });
-        
-        document.getElementById('add-contact-btn')?.addEventListener('click', function() {
-            if (clientService?.currentClient) {
-                window.open(`/client/${clientService.currentClient.id}/edit#add-contact`, '_blank');
-            }
-        });
-        
-        document.getElementById('add-contact-facturation-btn')?.addEventListener('click', function() {
-            if (clientService?.currentClient) {
-                window.open(`/client/${clientService.currentClient.id}/edit#add-contact`, '_blank');
-            }
-        });
-        
-        document.getElementById('add-address-livraison-btn')?.addEventListener('click', function() {
-            if (clientService?.currentClient) {
-                window.open(`/client/${clientService.currentClient.id}/edit#add-address`, '_blank');
-            }
-        });
-        
-        document.getElementById('add-address-facturation-btn')?.addEventListener('click', function() {
-            if (clientService?.currentClient) {
-                window.open(`/client/${clientService.currentClient.id}/edit#add-address`, '_blank');
-            }
-        });
+    function initializeSelect2Fields() {
+        if (window.$ && typeof $.fn.select2 !== 'undefined') {
+            // Initialiser Select2 pour tous les éléments avec la classe select2-autocomplete
+            $('.select2-autocomplete').each(function() {
+                if (!$(this).hasClass('select2-hidden-accessible')) {
+                    $(this).select2({
+                        placeholder: $(this).data('placeholder') || 'Choisir...',
+                        allowClear: true,
+                        language: 'fr',
+                        width: '100%',
+                        dropdownAutoWidth: true,
+                        dropdownParent: $(this).parent()
+                    });
+                }
+            });
+            console.log('✅ Select2 initialisé pour les champs avec autocomplétion');
+        } else {
+            // Retry si jQuery ou Select2 pas encore chargé
+            setTimeout(initializeSelect2Fields, 500);
+        }
     }
     
     // Initialiser quand le DOM est prêt

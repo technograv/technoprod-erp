@@ -83,7 +83,6 @@
         {% for adresse in client.adresses %}
             {% if adresse.nom == 'Siège social' or loop.first %}
                 {% set adressePrincipale = adresse %}
-                {% break %}
             {% endif %}
         {% endfor %}
         

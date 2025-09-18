@@ -19,9 +19,10 @@
     <div class="form-section-body">
         <div class="row">
             <div class="col-md-6">
-                <div class="d-flex align-items-end gap-2">
+                <label for="devis_client" class="form-label">Client / Prospect</label>
+                <div class="d-flex align-items-center gap-2">
                     {{ form_widget(form.client, {
-                        'attr': {'class': 'form-select client-select', 'id': 'prospect', 'style': 'flex-grow: 1;'}
+                        'attr': {'class': 'form-control form-select client-select', 'style': 'flex-grow: 1;'}
                     }) }}
                     
                     <!-- Boutons d'action client -->
@@ -35,12 +36,12 @@
                         <i class="fas fa-edit"></i>
                     </button>
                 </div>
-                {{ form_label(form.client, 'Client / Prospect') }}
                 {{ form_errors(form.client) }}
             </div>
             <div class="col-md-6">
                 {{ form_row(form.commercial, {
                     'label': 'Commercial',
+                    'label_attr': {'class': 'form-label'},
                     'attr': {'class': 'form-select'}
                 }) }}
             </div>
@@ -97,8 +98,8 @@
                         </button>
                     </div>
                     
-                    <!-- Champs d'adresse modifiables pour ce devis -->
-                    <div class="border rounded p-3 bg-light">
+                    <!-- Champs d'adresse modifiables pour ce devis (masqués) -->
+                    <div class="border rounded p-3 bg-light" style="display: none;">
                         <small class="text-muted mb-2 d-block">Adresse pour ce devis (modifiable)</small>
                         <div class="row">
                             <div class="col-md-12">
@@ -175,8 +176,8 @@
                         </button>
                     </div>
                     
-                    <!-- Champs d'adresse modifiables pour ce devis -->
-                    <div class="border rounded p-3 bg-light">
+                    <!-- Champs d'adresse modifiables pour ce devis (masqués) -->
+                    <div class="border rounded p-3 bg-light" style="display: none;">
                         <small class="text-muted mb-2 d-block">Adresse pour ce devis (modifiable)</small>
                         <div class="row">
                             <div class="col-md-12">
@@ -231,7 +232,7 @@
             debug: true,
             mode: 'edit',
             selectors: {
-                clientSelect: '#devis_client',  // Vrai ID Symfony sur la page d'édition
+                clientSelect: '#devis_client',  // ID Symfony correct pour le champ client
                 contactLivraisonSelect: '#devis_contactLivraison',  // Vrais IDs Symfony 
                 contactFacturationSelect: '#devis_contactFacturation', // Vrais IDs Symfony
                 adresseLivraisonSelect: '#adresse_livraison_select',
@@ -251,11 +252,8 @@
         if (clientService.init()) {
             console.log('✅ ClientProspectService initialisé pour l\'édition');
             
-            // Ajouter les gestionnaires pour les boutons d'ajout
-            setupAddButtons();
-            
             // Initialiser avec le client sélectionné si il y en a un
-            const clientSelect = document.querySelector('#prospect');
+            const clientSelect = document.querySelector('#devis_client');
             if (clientSelect?.value) {
                 console.log('🔄 Initialisation avec client:', clientSelect.value);
                 clientService.handleClientChange(clientSelect.value);
@@ -263,40 +261,6 @@
         } else {
             console.error('❌ Échec de l\'initialisation du ClientProspectService');
         }
-    }
-    
-    function setupAddButtons() {
-        // Boutons d'ajout (pas gérés par le service)
-        document.getElementById('add-client-btn')?.addEventListener('click', function() {
-            window.open('/client/new', '_blank');
-        });
-        
-        document.getElementById('add-contact-btn')?.addEventListener('click', function() {
-            if (clientService?.currentClient) {
-                window.open(`/client/${clientService.currentClient.id}/edit#add-contact`, '_blank');
-            }
-        });
-        
-        document.getElementById('add-contact-facturation-btn')?.addEventListener('click', function() {
-            if (clientService?.currentClient) {
-                window.open(`/client/${clientService.currentClient.id}/edit#add-contact`, '_blank');
-            }
-        });
-        
-        document.getElementById('add-address-livraison-btn')?.addEventListener('click', function() {
-            if (clientService?.currentClient) {
-                window.open(`/client/${clientService.currentClient.id}/edit#add-address`, '_blank');
-            }
-        });
-        
-        document.getElementById('add-address-facturation-btn')?.addEventListener('click', function() {
-            if (clientService?.currentClient) {
-                window.open(`/client/${clientService.currentClient.id}/edit#add-address`, '_blank');
-            }
-        });
-        
-        // Gestionnaire spécial pour les changements d'adresses afin de remplir les champs du formulaire
-        setupAddressToFormSync();
     }
     
     function setupAddressToFormSync() {
@@ -354,5 +318,31 @@
             clientService.destroy();
         }
     });
+    
+    // Initialiser Select2 pour l'autocomplétion du champ client
+    setTimeout(function() {
+        if (window.$ && typeof $.fn.select2 !== 'undefined') {
+            const clientSelect = $('#devis_client');
+            if (clientSelect.length && !clientSelect.hasClass('select2-hidden-accessible')) {
+                clientSelect.select2({
+                    placeholder: 'Choisir un client/prospect...',
+                    allowClear: true,
+                    language: 'fr',
+                    width: '100%',
+                    dropdownAutoWidth: true,
+                    theme: 'bootstrap-5'
+                });
+                
+                // Ajuster la hauteur pour correspondre aux autres champs
+                $('.select2-container--bootstrap-5 .select2-selection--single').css({
+                    'height': '38px',
+                    'padding': '0.375rem 0.75rem',
+                    'line-height': '1.5'
+                });
+                
+                console.log('✅ Select2 initialisé pour le champ client en mode édition');
+            }
+        }
+    }, 1000);
 })();
 </script>

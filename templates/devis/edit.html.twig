@@ -24,32 +24,13 @@
     </div>
 {% endif %}
 
-<!-- En-tête -->
-<div class="page-header">
-    <div class="container-fluid">
-        <div class="row align-items-center">
-            <div class="col-md-8">
-                <h1 class="mb-1"><i class="fas fa-edit me-3"></i>Modifier Devis {{ devis.numeroDevis }}</h1>
-                <p class="mb-0">
-                    <span class="badge bg-{{ devis.statutCouleur }} status-badge">{{ devis.statutLibelle }}</span>
-                    {% if devis.client %}
-                        <span class="ms-2">{{ devis.client.nomComplet }}</span>
-                    {% endif %}
-                    <span class="badge bg-info ms-2" title="Sauvegarde automatique activée">
-                        <i class="fas fa-cloud-upload-alt me-1"></i>Auto-sauvegarde
-                    </span>
-                </p>
-            </div>
-            <div class="col-md-4 text-end">
-                <div class="btn-group">
-                    <a href="{{ path('app_devis_show', {'id': devis.id}) }}" class="btn btn-light">
-                        <i class="fas fa-eye"></i> Voir le devis
-                    </a>
-                    <a href="{{ path('app_devis_index') }}" class="btn btn-outline-light">
-                        <i class="fas fa-arrow-left"></i> Retour à la liste
-                    </a>
-                </div>
-            </div>
+<!-- Titre avec espacement uniforme -->
+<div class="container-fluid" style="margin-top: 2rem;">
+    <div class="row">
+        <div class="col-12">
+            <h1 class="page-title mb-4">
+                <i class="fas fa-edit me-3"></i>Modifier Devis {{ devis.numeroDevis }}
+            </h1>
         </div>
     </div>
 </div>
@@ -59,14 +40,7 @@
     
     <div class="row">
         <div class="col-12">
-            <!-- Client / Prospect et Commercial -->
-            {% include 'devis/partials/client_edit_selector.html.twig' with {
-                'form': form,
-                'devis': devis,
-                'show_header': false
-            } %}
-            
-            <!-- Informations générales -->
+            <!-- Informations générales (en premier) -->
             <div class="form-section">
                 <div class="form-section-header">
                     <h5 class="mb-0"><i class="fas fa-info-circle me-2"></i>Informations générales</h5>
@@ -76,30 +50,41 @@
                         <div class="col-md-3">
                             {{ form_row(form.numeroDevis, {
                                 'label': 'Numéro de devis',
+                                'label_attr': {'class': 'form-label'},
                                 'attr': {'class': 'form-control', 'readonly': true}
                             }) }}
                         </div>
                         <div class="col-md-3">
                             {{ form_row(form.dateCreation, {
                                 'label': 'Date de création',
+                                'label_attr': {'class': 'form-label'},
                                 'attr': {'class': 'form-control'}
                             }) }}
                         </div>
                         <div class="col-md-3">
                             {{ form_row(form.dateValidite, {
                                 'label': 'Date de validité',
+                                'label_attr': {'class': 'form-label'},
                                 'attr': {'class': 'form-control'}
                             }) }}
                         </div>
                         <div class="col-md-3">
                             {{ form_row(form.statut, {
                                 'label': 'Statut',
+                                'label_attr': {'class': 'form-label'},
                                 'attr': {'class': 'form-select'}
                             }) }}
                         </div>
                     </div>
                 </div>
             </div>
+            
+            <!-- Client / Prospect et Commercial -->
+            {% include 'devis/partials/client_edit_selector.html.twig' with {
+                'form': form,
+                'devis': devis,
+                'show_header': false
+            } %}
 
             <!-- Options avancées -->
             <div class="form-section">
@@ -110,19 +95,19 @@
                     <!-- Email automatique + Modèle de document -->
                     <div class="row">
                         <div class="col-md-6">
-                            <div class="d-flex align-items-center">
-                                <label class="form-label mb-0 me-3" for="email_envoi_automatique_display">
-                                    <i class="fas fa-paper-plane me-2 text-primary"></i>Ce devis sera envoyé automatiquement à l'adresse :
-                                </label>
-                                {{ form_row(form.emailEnvoiAutomatique, {
-                                    'label': false,
-                                    'attr': {'class': 'form-control', 'placeholder': 'Email du contact'}
-                                }) }}
-                            </div>
+                            {{ form_row(form.emailEnvoiAutomatique, {
+                                'label': 'Email d\'envoi automatique',
+                                'label_attr': {'class': 'form-label'},
+                                'attr': {'class': 'form-control', 'placeholder': 'email@example.com'}
+                            }) }}
+                            <small class="text-muted">
+                                <i class="fas fa-paper-plane me-1"></i>Ce devis sera envoyé automatiquement à cette adresse
+                            </small>
                         </div>
                         <div class="col-md-6">
                             {{ form_row(form.modeleDocument, {
                                 'label': 'Modèle de document',
+                                'label_attr': {'class': 'form-label'},
                                 'attr': {'class': 'form-select'}
                             }) }}
                             <small class="text-muted">
@@ -174,12 +159,14 @@
                         <div class="col-md-3">
                             {{ form_row(form.remiseGlobalePercent, {
                                 'label': 'Remise globale (%)',
+                                'label_attr': {'class': 'form-label'},
                                 'attr': {'class': 'form-control', 'min': 0, 'max': 100, 'step': 0.01, 'id': 'remise-percent-main'}
                             }) }}
                         </div>
                         <div class="col-md-3">
                             {{ form_row(form.remiseGlobaleMontant, {
                                 'label': 'Remise globale (€)',
+                                'label_attr': {'class': 'form-label'},
                                 'attr': {'class': 'form-control', 'min': 0, 'step': 0.01, 'id': 'remise-montant-main'}
                             }) }}
                         </div>
@@ -212,24 +199,28 @@
                         <div class="col-md-3">
                             {{ form_row(form.acomptePercent, {
                                 'label': 'Acompte (%)',
+                                'label_attr': {'class': 'form-label'},
                                 'attr': {'class': 'form-control', 'min': 0, 'max': 100, 'step': 0.01}
                             }) }}
                         </div>
                         <div class="col-md-3">
                             {{ form_row(form.acompteMontant, {
                                 'label': 'Acompte (€)',
+                                'label_attr': {'class': 'form-label'},
                                 'attr': {'class': 'form-control', 'min': 0, 'step': 0.01}
                             }) }}
                         </div>
                         <div class="col-md-3">
                             {{ form_row(form.delaiLivraison, {
                                 'label': 'Délai de livraison',
+                                'label_attr': {'class': 'form-label'},
                                 'attr': {'class': 'form-control', 'placeholder': 'Ex: 2-3 semaines'}
                             }) }}
                         </div>
                         <div class="col-md-3">
                             {{ form_row(form.dateLivraison, {
                                 'label': 'Date de livraison',
+                                'label_attr': {'class': 'form-label'},
                                 'attr': {'class': 'form-control'}
                             }) }}
                         </div>

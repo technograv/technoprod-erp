@@ -12,6 +12,7 @@ class ModalService {
         };
         
         this.currentModal = null;
+        this.scrollPosition = 0;
         this.log('🚀 ModalService initialisé');
     }
     
@@ -26,12 +27,78 @@ class ModalService {
     }
     
     /**
+     * Sauvegarde la position actuelle et empêche le déplacement du contenu
+     */
+    saveScrollPosition() {
+        this.scrollPosition = window.pageYOffset || document.documentElement.scrollTop;
+        this.log('📍 Position sauvegardée:', this.scrollPosition);
+    }
+    
+    /**
+     * Restaure la position d'origine
+     */
+    restoreScrollPosition() {
+        // Restaurer la position de scroll
+        window.scrollTo(0, this.scrollPosition);
+        this.log('📍 Position restaurée:', this.scrollPosition);
+    }
+    
+    /**
+     * Ajoute un style CSS global pour empêcher le déplacement des modales
+     */
+    addGlobalNoShiftStyle() {
+        // Vérifier si le style existe déjà
+        if (document.getElementById('modal-no-shift-global-style')) {
+            return;
+        }
+        
+        const styleElement = document.createElement('style');
+        styleElement.id = 'modal-no-shift-global-style';
+        styleElement.textContent = `
+            /* SOLUTION ULTIME - Masquer complètement le contenu principal */
+            body.modal-open > *:not(.modal):not(.modal-backdrop) {
+                visibility: hidden !important;
+            }
+            
+            /* Empêcher Bootstrap de modifier le padding du body */
+            body.modal-open {
+                padding-right: 0 !important;
+                overflow: hidden !important;
+                position: relative !important;
+            }
+            
+            /* La modale reste visible */
+            body.modal-open .modal,
+            body.modal-open .modal-backdrop {
+                visibility: visible !important;
+            }
+            
+            /* Empêcher tout reflow en figeant la page */
+            body.modal-open * {
+                transition: none !important;
+                animation: none !important;
+                transform: none !important;
+            }
+        `;
+        document.head.appendChild(styleElement);
+        
+        this.log('🔧 Style anti-déplacement ajouté');
+    }
+    
+    
+    
+    
+    
+    /**
      * Ouvre une modale avec le contenu d'une URL
      */
     async openModal(url, title = 'Édition', options = {}) {
         this.log('🔧 Ouverture modale:', url);
         
         try {
+            // Sauvegarder la position avant ouverture
+            this.saveScrollPosition();
+            
             // Créer la modale si elle n'existe pas
             this.createModalStructure();
             
@@ -86,9 +153,15 @@ class ModalService {
         
         document.querySelector(this.config.modalContainer).insertAdjacentHTML('beforeend', modalHtml);
         
+        // Ajouter un style CSS global pour empêcher le déplacement
+        this.addGlobalNoShiftStyle();
+        
         // Initialiser la modale Bootstrap
         const modalElement = document.getElementById(this.config.modalId);
-        this.currentModal = new bootstrap.Modal(modalElement);
+        this.currentModal = new bootstrap.Modal(modalElement, {
+            backdrop: true,
+            keyboard: true
+        });
         
         // Écouter la fermeture de la modale
         modalElement.addEventListener('hidden.bs.modal', () => {
@@ -174,7 +247,7 @@ class ModalService {
     initializeModalContent(container) {
         this.log('🔧 Initialisation contenu modale');
         
-        // Réexécuter les scripts inline dans la modale
+        // Réexécuter les scripts inline dans la modale avec protection contre les redéclarations
         const scripts = container.querySelectorAll('script');
         scripts.forEach(script => {
             if (script.src) {
@@ -182,10 +255,17 @@ class ModalService {
                 return;
             }
             
-            // Script inline - réexécuter
-            const newScript = document.createElement('script');
-            newScript.textContent = script.textContent;
-            script.parentNode.replaceChild(newScript, script);
+            // Script inline - réexécuter avec protection
+            try {
+                const newScript = document.createElement('script');
+                // Encapsuler le script pour éviter les conflits de variables
+                newScript.textContent = `(function(){${script.textContent}})();`;
+                script.parentNode.replaceChild(newScript, script);
+            } catch (error) {
+                console.warn('Erreur lors de l\'exécution du script:', error);
+                // Supprimer le script problématique
+                script.remove();
+            }
         });
         
         // Initialiser Select2 si présent
@@ -282,6 +362,9 @@ class ModalService {
         if (modalElement) {
             modalElement.remove();
         }
+        
+        // Restaurer la position de la page
+        this.restoreScrollPosition();
     }
 }
 

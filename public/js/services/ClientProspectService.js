@@ -160,6 +160,9 @@ class ClientProspectService {
         
         // Boutons d'édition
         this.attachEditButtons();
+        
+        // Boutons d'ajout
+        this.attachAddButtons();
     }
     
     /**
@@ -211,6 +214,53 @@ class ClientProspectService {
             const addressSelect = document.querySelector(this.config.selectors.adresseFacturationSelect);
             if (addressSelect?.value) {
                 this.openAddressModal(addressSelect.value);
+            }
+        });
+    }
+    
+    /**
+     * Attache les événements des boutons d'ajout
+     */
+    attachAddButtons() {
+        // Sélecteurs des boutons d'ajout
+        const addClientBtn = document.getElementById('add-client-btn');
+        const addContactBtn = document.getElementById('add-contact-btn');
+        const addContactFacturationBtn = document.getElementById('add-contact-facturation-btn');
+        const addAddressLivraisonBtn = document.getElementById('add-address-livraison-btn');
+        const addAddressFacturationBtn = document.getElementById('add-address-facturation-btn');
+        
+        // Bouton ajouter client
+        addClientBtn?.addEventListener('click', () => {
+            if (this.getModalService()) {
+                this.getModalService().openModal('/client/new?modal=1', 'Nouveau client');
+            }
+        });
+        
+        // Bouton ajouter contact livraison
+        addContactBtn?.addEventListener('click', () => {
+            if (this.currentClient && this.getModalService()) {
+                this.getModalService().openModal(`/client/${this.currentClient.id}/edit?modal=1#add-contact`, 'Ajouter un contact');
+            }
+        });
+        
+        // Bouton ajouter contact facturation
+        addContactFacturationBtn?.addEventListener('click', () => {
+            if (this.currentClient && this.getModalService()) {
+                this.getModalService().openModal(`/client/${this.currentClient.id}/edit?modal=1#add-contact`, 'Ajouter un contact de facturation');
+            }
+        });
+        
+        // Bouton ajouter adresse livraison
+        addAddressLivraisonBtn?.addEventListener('click', () => {
+            if (this.currentClient && this.getModalService()) {
+                this.getModalService().openModal(`/client/${this.currentClient.id}/edit?modal=1#add-address`, 'Ajouter une adresse de livraison');
+            }
+        });
+        
+        // Bouton ajouter adresse facturation
+        addAddressFacturationBtn?.addEventListener('click', () => {
+            if (this.currentClient && this.getModalService()) {
+                this.getModalService().openModal(`/client/${this.currentClient.id}/edit?modal=1#add-address`, 'Ajouter une adresse de facturation');
             }
         });
     }
@@ -553,7 +603,7 @@ class ClientProspectService {
         this.log('🔧 Ouverture modale contact:', contactId);
         
         if (this.currentClient && this.getModalService()) {
-            this.getModalService().openModal(`/contact/${contactId}/edit?modal=1`, 'Modifier le contact');
+            this.getModalService().openModal(`/client/${this.currentClient.id}/edit?modal=1#contact-${contactId}`, 'Modifier le contact');
         } else if (this.currentClient) {
             // Fallback si ModalService non disponible
             window.open(`/client/${this.currentClient.id}/edit#contact-${contactId}`, '_blank');
@@ -567,7 +617,7 @@ class ClientProspectService {
         this.log('🔧 Ouverture modale adresse:', addressId);
         
         if (this.currentClient && this.getModalService()) {
-            this.getModalService().openModal(`/adresse/${addressId}/edit?modal=1`, 'Modifier l\'adresse');
+            this.getModalService().openModal(`/client/${this.currentClient.id}/edit?modal=1#address-${addressId}`, 'Modifier l\'adresse');
         } else if (this.currentClient) {
             // Fallback si ModalService non disponible
             window.open(`/client/${this.currentClient.id}/edit#address-${addressId}`, '_blank');
