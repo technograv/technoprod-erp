@@ -133,20 +133,8 @@ class ClientProspectService {
             this.setupSelect2Support(clientSelect, 'client');
         }
         
-        // Changement de contacts - Support Select2
-        if (contactLivraisonSelect) {
-            contactLivraisonSelect.addEventListener('change', (e) => {
-                this.handleContactChange('livraison', e.target.value);
-            });
-            this.setupSelect2Support(contactLivraisonSelect, 'contact-livraison');
-        }
-        
-        if (contactFacturationSelect) {
-            contactFacturationSelect.addEventListener('change', (e) => {
-                this.handleContactChange('facturation', e.target.value);
-            });
-            this.setupSelect2Support(contactFacturationSelect, 'contact-facturation');
-        }
+        // Changement de contacts - Support Select2 (peut être différé si éléments non visibles)
+        this.attachContactEvents(contactLivraisonSelect, contactFacturationSelect);
         
         // Changement d'adresses
         adresseLivraisonSelect?.addEventListener('change', (e) => {
@@ -494,6 +482,11 @@ class ClientProspectService {
         const contactSection = document.querySelector(this.config.selectors.contactSelection);
         if (contactSection) {
             contactSection.style.display = 'block';
+            
+            // Attacher les événements aux contacts maintenant qu'ils sont visibles
+            setTimeout(() => {
+                this.attachContactEventsWhenVisible();
+            }, 100);
         }
     }
     
@@ -572,6 +565,41 @@ class ClientProspectService {
         }
     }
     
+    /**
+     * Attache les événements aux contacts (gère les éléments non encore visibles)
+     */
+    attachContactEvents(contactLivraisonSelect, contactFacturationSelect) {
+        if (contactLivraisonSelect) {
+            contactLivraisonSelect.addEventListener('change', (e) => {
+                this.handleContactChange('livraison', e.target.value);
+            });
+            this.setupSelect2Support(contactLivraisonSelect, 'contact-livraison');
+        }
+        
+        if (contactFacturationSelect) {
+            contactFacturationSelect.addEventListener('change', (e) => {
+                this.handleContactChange('facturation', e.target.value);
+            });
+            this.setupSelect2Support(contactFacturationSelect, 'contact-facturation');
+        }
+        
+        // Si les éléments n'existent pas encore (page création), on les attachera plus tard
+        if (!contactLivraisonSelect || !contactFacturationSelect) {
+            this.log('⚠️ Éléments contacts non trouvés, seront attachés après affichage de la section');
+        }
+    }
+
+    /**
+     * Attache les événements aux contacts quand la section devient visible
+     */
+    attachContactEventsWhenVisible() {
+        const contactLivraisonSelect = document.querySelector(this.config.selectors.contactLivraisonSelect);
+        const contactFacturationSelect = document.querySelector(this.config.selectors.contactFacturationSelect);
+        
+        this.log('🔧 Attachement différé des événements contacts');
+        this.attachContactEvents(contactLivraisonSelect, contactFacturationSelect);
+    }
+
     /**
      * Configure le support Select2 avec retry automatique
      */
