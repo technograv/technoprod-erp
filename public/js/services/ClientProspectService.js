@@ -577,9 +577,14 @@ class ClientProspectService {
      */
     setupSelect2Support(element, type) {
         let retryCount = 0;
-        const maxRetries = 10;
+        const maxRetries = 20; // Plus de tentatives
         
         const checkSelect2 = () => {
+            this.log(`🔍 Vérification Select2 pour ${type} (tentative ${retryCount + 1}/${maxRetries})`);
+            this.log(`🔍 Element classes:`, element.className);
+            this.log(`🔍 jQuery disponible:`, !!window.$);
+            this.log(`🔍 Element Select2:`, window.$ ? $(element).hasClass('select2-hidden-accessible') : 'jQuery non disponible');
+            
             if (window.$ && $(element).hasClass('select2-hidden-accessible')) {
                 this.log(`🔧 Select2 détecté pour ${type}, ajout événement Select2`);
                 
@@ -602,14 +607,14 @@ class ClientProspectService {
             
             retryCount++;
             if (retryCount < maxRetries) {
-                setTimeout(checkSelect2, 500);
+                setTimeout(checkSelect2, 1000); // Délai plus long
             } else {
                 this.log(`⚠️ Select2 non trouvé pour ${type} après ${maxRetries} tentatives`);
             }
         };
         
         // Première vérification immédiate, puis avec délai
-        setTimeout(checkSelect2, 100);
+        setTimeout(checkSelect2, 500); // Délai initial plus long
     }
 
     /**
