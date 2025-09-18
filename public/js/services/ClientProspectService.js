@@ -129,8 +129,8 @@ class ClientProspectService {
                 this.handleClientChange(e.target.value);
             });
             
-            // Ajouter support Select2 avec délai pour qu'il s'initialise
-            this.setupSelect2Support(clientSelect, 'client');
+            // Support Select2 avec événements globaux
+            this.setupSelect2GlobalEvents(clientSelect);
         }
         
         // Changement de contacts - Support Select2 (peut être différé si éléments non visibles)
@@ -598,6 +598,32 @@ class ClientProspectService {
         
         this.log('🔧 Attachement différé des événements contacts');
         this.attachContactEvents(contactLivraisonSelect, contactFacturationSelect);
+    }
+
+    /**
+     * Configure le support Select2 avec événements globaux
+     */
+    setupSelect2GlobalEvents(clientSelect) {
+        if (window.$) {
+            this.log('🌍 Configuration événements Select2 globaux pour client');
+            
+            // Utiliser les événements globaux Select2
+            $(document).on('select2:select', this.config.selectors.clientSelect, (e) => {
+                this.log('👤 Événement Select2 global client:', e.params.data.id);
+                this.handleClientChange(e.params.data.id);
+            });
+            
+            // Aussi écouter les événements sur l'élément directement avec délai
+            setTimeout(() => {
+                if ($(clientSelect).hasClass('select2-hidden-accessible')) {
+                    this.log('🔧 Select2 détecté directement pour client');
+                    $(clientSelect).on('select2:select', (e) => {
+                        this.log('👤 Événement Select2 direct client:', e.params.data.id);
+                        this.handleClientChange(e.params.data.id);
+                    });
+                }
+            }, 2000);
+        }
     }
 
     /**
