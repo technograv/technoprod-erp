@@ -2389,9 +2389,9 @@ function syncContactEmail(contactId) {
     
     console.log('✅ window.clientContacts disponible:', window.clientContacts.length, 'contacts');
     
-    const emailDisplayField = document.getElementById('email_envoi_automatique_display');
+    const emailDisplayField = document.getElementById('devis_emailEnvoiAutomatique');
     if (!emailDisplayField) {
-        console.log('❌ Champ email_envoi_automatique_display introuvable');
+        console.log('❌ Champ devis_emailEnvoiAutomatique introuvable');
         return;
     }
     
@@ -2413,11 +2413,9 @@ function syncContactEmail(contactId) {
     if (selectedContact.email) {
         console.log('📧 Mise à jour email:', selectedContact.email);
         emailDisplayField.value = selectedContact.email;
-        updateHiddenEmailField(selectedContact.email);
     } else {
         console.log('❌ Pas d\'email pour ce contact');
         emailDisplayField.value = '';
-        updateHiddenEmailField('');
     }
 }
 
@@ -2437,20 +2435,12 @@ function clearContactsAndAddresses() {
     });
     
     // Vider aussi le champ email d'envoi automatique
-    const emailDisplayField = document.getElementById('email_envoi_automatique_display');
+    const emailDisplayField = document.getElementById('devis_emailEnvoiAutomatique');
     if (emailDisplayField) {
         emailDisplayField.value = '';
-        updateHiddenEmailField('');
     }
 }
 
-function updateHiddenEmailField(value) {
-    // Mettre à jour le champ caché Symfony
-    const hiddenEmailField = document.getElementById('devis_emailEnvoiAutomatique');
-    if (hiddenEmailField) {
-        hiddenEmailField.value = value;
-    }
-}
 
 // ==========================================
 // GESTION CLIENT SELECT
