@@ -784,8 +784,14 @@ final class ClientController extends AbstractController
             }
         }
 
-        return $this->render('client/edit.html.twig', [
+        // Vérifier si c'est une requête pour modale
+        $isModal = $request->query->get('modal') === '1' || $request->headers->get('X-Requested-With') === 'XMLHttpRequest';
+        
+        $template = $isModal ? 'client/edit_modal.html.twig' : 'client/edit.html.twig';
+        
+        return $this->render($template, [
             'client' => $client,
+            'isModal' => $isModal,
         ]);
     }
 

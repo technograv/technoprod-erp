@@ -538,9 +538,12 @@ class ClientProspectService {
     openClientModal(clientId) {
         this.log('🔧 Ouverture modale client:', clientId);
         
-        // Pour l'instant, fallback vers nouvelle fenêtre
-        // TODO: Implémenter les modales
-        window.open(`/client/${clientId}/edit`, '_blank');
+        if (this.getModalService()) {
+            this.getModalService().openModal(`/client/${clientId}/edit?modal=1`, 'Modifier le client');
+        } else {
+            // Fallback si ModalService non disponible
+            window.open(`/client/${clientId}/edit`, '_blank');
+        }
     }
     
     /**
@@ -549,9 +552,10 @@ class ClientProspectService {
     openContactModal(contactId) {
         this.log('🔧 Ouverture modale contact:', contactId);
         
-        // Pour l'instant, fallback vers nouvelle fenêtre
-        // TODO: Implémenter les modales
-        if (this.currentClient) {
+        if (this.currentClient && this.getModalService()) {
+            this.getModalService().openModal(`/contact/${contactId}/edit?modal=1`, 'Modifier le contact');
+        } else if (this.currentClient) {
+            // Fallback si ModalService non disponible
             window.open(`/client/${this.currentClient.id}/edit#contact-${contactId}`, '_blank');
         }
     }
@@ -562,11 +566,25 @@ class ClientProspectService {
     openAddressModal(addressId) {
         this.log('🔧 Ouverture modale adresse:', addressId);
         
-        // Pour l'instant, fallback vers nouvelle fenêtre
-        // TODO: Implémenter les modales
-        if (this.currentClient) {
+        if (this.currentClient && this.getModalService()) {
+            this.getModalService().openModal(`/adresse/${addressId}/edit?modal=1`, 'Modifier l\'adresse');
+        } else if (this.currentClient) {
+            // Fallback si ModalService non disponible
             window.open(`/client/${this.currentClient.id}/edit#address-${addressId}`, '_blank');
         }
+    }
+    
+    /**
+     * Obtient l'instance du ModalService
+     */
+    getModalService() {
+        if (!this.modalService && window.ModalService) {
+            this.modalService = new ModalService({
+                debug: this.config.debug,
+                refreshOnSuccess: true // Rafraîchir après succès pour mettre à jour les données
+            });
+        }
+        return this.modalService;
     }
     
     /**
@@ -697,6 +715,11 @@ class ClientProspectService {
      * Nettoie le service
      */
     destroy() {
+        if (this.modalService) {
+            this.modalService.cleanup();
+            this.modalService = null;
+        }
+        
         this.currentClient = null;
         this.currentContacts = [];
         this.currentAddresses = [];

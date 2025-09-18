@@ -1,0 +1,289 @@
+/**
+ * Service de gestion des modales pour l'édition des entités
+ * Utilise Bootstrap 5 pour l'affichage et Ajax pour le chargement du contenu
+ */
+class ModalService {
+    constructor(config = {}) {
+        this.config = {
+            debug: config.debug || false,
+            modalContainer: config.modalContainer || 'body',
+            modalId: config.modalId || 'dynamic-modal',
+            ...config
+        };
+        
+        this.currentModal = null;
+        this.log('🚀 ModalService initialisé');
+    }
+    
+    log(message, data = null) {
+        if (this.config.debug) {
+            console.log(`[ModalService] ${message}`, data || '');
+        }
+    }
+    
+    error(message, error = null) {
+        console.error(`[ModalService] ${message}`, error || '');
+    }
+    
+    /**
+     * Ouvre une modale avec le contenu d'une URL
+     */
+    async openModal(url, title = 'Édition', options = {}) {
+        this.log('🔧 Ouverture modale:', url);
+        
+        try {
+            // Créer la modale si elle n'existe pas
+            this.createModalStructure();
+            
+            // Afficher le loader
+            this.showLoader(title);
+            
+            // Charger le contenu
+            const content = await this.loadContent(url);
+            
+            // Afficher le contenu dans la modale
+            this.showContent(title, content, options);
+            
+            this.log('✅ Modale ouverte avec succès');
+        } catch (error) {
+            this.error('Erreur ouverture modale:', error);
+            this.showError('Erreur lors du chargement de la page.');
+        }
+    }
+    
+    /**
+     * Crée la structure HTML de la modale
+     */
+    createModalStructure() {
+        // Supprimer la modale existante si elle existe
+        const existingModal = document.getElementById(this.config.modalId);
+        if (existingModal) {
+            existingModal.remove();
+        }
+        
+        const modalHtml = `
+            <div class="modal fade" id="${this.config.modalId}" tabindex="-1" aria-hidden="true">
+                <div class="modal-dialog modal-xl">
+                    <div class="modal-content">
+                        <div class="modal-header">
+                            <h5 class="modal-title">Chargement...</h5>
+                            <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                        </div>
+                        <div class="modal-body">
+                            <div class="text-center">
+                                <div class="spinner-border" role="status">
+                                    <span class="visually-hidden">Chargement...</span>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="modal-footer d-none">
+                            <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Fermer</button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        `;
+        
+        document.querySelector(this.config.modalContainer).insertAdjacentHTML('beforeend', modalHtml);
+        
+        // Initialiser la modale Bootstrap
+        const modalElement = document.getElementById(this.config.modalId);
+        this.currentModal = new bootstrap.Modal(modalElement);
+        
+        // Écouter la fermeture de la modale
+        modalElement.addEventListener('hidden.bs.modal', () => {
+            this.cleanup();
+        });
+    }
+    
+    /**
+     * Affiche le loader
+     */
+    showLoader(title) {
+        const modal = document.getElementById(this.config.modalId);
+        modal.querySelector('.modal-title').textContent = title;
+        this.currentModal.show();
+    }
+    
+    /**
+     * Charge le contenu d'une URL
+     */
+    async loadContent(url) {
+        this.log('📥 Chargement contenu:', url);
+        
+        const response = await fetch(url, {
+            method: 'GET',
+            headers: {
+                'X-Requested-With': 'XMLHttpRequest',
+                'Accept': 'text/html,application/xhtml+xml'
+            }
+        });
+        
+        if (!response.ok) {
+            throw new Error(`HTTP ${response.status}`);
+        }
+        
+        return await response.text();
+    }
+    
+    /**
+     * Affiche le contenu dans la modale
+     */
+    showContent(title, content, options = {}) {
+        const modal = document.getElementById(this.config.modalId);
+        const modalTitle = modal.querySelector('.modal-title');
+        const modalBody = modal.querySelector('.modal-body');
+        const modalFooter = modal.querySelector('.modal-footer');
+        
+        modalTitle.textContent = title;
+        modalBody.innerHTML = content;
+        
+        // Afficher/masquer le footer selon les options
+        if (options.showFooter) {
+            modalFooter.classList.remove('d-none');
+        } else {
+            modalFooter.classList.add('d-none');
+        }
+        
+        // Initialiser les scripts dans le contenu chargé
+        this.initializeModalContent(modalBody);
+    }
+    
+    /**
+     * Affiche une erreur dans la modale
+     */
+    showError(message) {
+        const modal = document.getElementById(this.config.modalId);
+        const modalTitle = modal.querySelector('.modal-title');
+        const modalBody = modal.querySelector('.modal-body');
+        
+        modalTitle.textContent = 'Erreur';
+        modalBody.innerHTML = `
+            <div class="alert alert-danger">
+                <i class="fas fa-exclamation-triangle me-2"></i>
+                ${message}
+            </div>
+        `;
+        
+        this.currentModal.show();
+    }
+    
+    /**
+     * Initialise les scripts dans le contenu de la modale
+     */
+    initializeModalContent(container) {
+        this.log('🔧 Initialisation contenu modale');
+        
+        // Réexécuter les scripts inline dans la modale
+        const scripts = container.querySelectorAll('script');
+        scripts.forEach(script => {
+            if (script.src) {
+                // Script externe - ne pas recharger
+                return;
+            }
+            
+            // Script inline - réexécuter
+            const newScript = document.createElement('script');
+            newScript.textContent = script.textContent;
+            script.parentNode.replaceChild(newScript, script);
+        });
+        
+        // Initialiser Select2 si présent
+        if (window.$ && typeof $.fn.select2 !== 'undefined') {
+            $(container).find('select.form-select').each(function() {
+                if (!$(this).hasClass('select2-hidden-accessible')) {
+                    $(this).select2();
+                }
+            });
+        }
+        
+        // Initialiser les autres composants si nécessaire
+        this.initializeFormHandling(container);
+    }
+    
+    /**
+     * Gère la soumission des formulaires dans la modale
+     */
+    initializeFormHandling(container) {
+        const forms = container.querySelectorAll('form');
+        
+        forms.forEach(form => {
+            form.addEventListener('submit', (e) => {
+                e.preventDefault();
+                this.handleFormSubmit(form);
+            });
+        });
+    }
+    
+    /**
+     * Gère la soumission d'un formulaire via Ajax
+     */
+    async handleFormSubmit(form) {
+        this.log('📤 Soumission formulaire modale');
+        
+        try {
+            const formData = new FormData(form);
+            const response = await fetch(form.action, {
+                method: form.method || 'POST',
+                body: formData,
+                headers: {
+                    'X-Requested-With': 'XMLHttpRequest'
+                }
+            });
+            
+            const result = await response.text();
+            
+            if (response.ok) {
+                // Succès - fermer la modale et rafraîchir la page parent
+                this.log('✅ Formulaire soumis avec succès');
+                this.currentModal.hide();
+                
+                // Émettre un événement pour notifier le parent
+                window.dispatchEvent(new CustomEvent('modalFormSuccess', {
+                    detail: { form: form, response: result }
+                }));
+                
+                // Optionnel : rafraîchir la page parent
+                if (this.config.refreshOnSuccess) {
+                    window.location.reload();
+                }
+            } else {
+                // Erreur - afficher les erreurs dans la modale
+                this.showContent('Erreur', result);
+            }
+        } catch (error) {
+            this.error('Erreur soumission formulaire:', error);
+            this.showError('Erreur lors de la sauvegarde.');
+        }
+    }
+    
+    /**
+     * Ferme la modale
+     */
+    closeModal() {
+        if (this.currentModal) {
+            this.currentModal.hide();
+        }
+    }
+    
+    /**
+     * Nettoie les ressources
+     */
+    cleanup() {
+        this.log('🗑️ Nettoyage modale');
+        
+        if (this.currentModal) {
+            this.currentModal.dispose();
+            this.currentModal = null;
+        }
+        
+        // Supprimer l'élément DOM
+        const modalElement = document.getElementById(this.config.modalId);
+        if (modalElement) {
+            modalElement.remove();
+        }
+    }
+}
+
+// Rendre disponible globalement
+window.ModalService = ModalService;
