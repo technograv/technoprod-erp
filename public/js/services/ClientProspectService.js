@@ -446,8 +446,14 @@ class ClientProspectService {
         this.currentAddresses.forEach(address => {
             const label = this.formatAddressLabel(address);
             
-            const optionLivraison = new Option(label, address.id);
-            const optionFacturation = new Option(label, address.id);
+            // Créer les options avec HTML
+            const optionLivraison = document.createElement('option');
+            optionLivraison.value = address.id;
+            optionLivraison.innerHTML = label;
+            
+            const optionFacturation = document.createElement('option');
+            optionFacturation.value = address.id;
+            optionFacturation.innerHTML = label;
             
             adresseLivraisonSelect.appendChild(optionLivraison);
             adresseFacturationSelect.appendChild(optionFacturation);
@@ -579,7 +585,17 @@ class ClientProspectService {
      * Formate le libellé d'une adresse
      */
     formatAddressLabel(address) {
-        return address.label || `${address.nom || 'Adresse'} - ${address.ligne1} - ${address.codePostal} ${address.ville}`;
+        if (address.label) {
+            return address.label;
+        }
+        
+        const nom = address.nom || 'Adresse';
+        const ligne1 = address.ligne1 || '';
+        const codePostal = address.codePostal || '';
+        const ville = address.ville || '';
+        
+        // Format: "Nom : Adresse - code postal Ville"
+        return `${nom} : ${ligne1} - ${codePostal} ${ville}`;
     }
     
     /**

@@ -10,19 +10,19 @@
 
 {% set show_header = show_header ?? true %}
 
-<div class="form-section">
-    {% if show_header %}
+<!-- Section unifiée Client, Commercial, Adresses et contacts -->
+<div class="form-section" id="contact-selection">
     <div class="form-section-header">
-        <h5 class="mb-0"><i class="fas fa-user-tie me-2"></i>Client / Prospect</h5>
+        <h5 class="mb-0"><i class="fas fa-address-card me-2"></i>Client et contacts</h5>
     </div>
-    {% endif %}
     <div class="form-section-body">
-        <div class="row">
+        <!-- Client / Prospect et Commercial en premier -->
+        <div class="row mb-3">
             <div class="col-md-6">
                 <label for="devis_client" class="form-label">Client / Prospect</label>
                 <div class="d-flex align-items-center gap-2">
                     {{ form_widget(form.client, {
-                        'attr': {'class': 'form-control form-select client-select', 'style': 'flex-grow: 1;'}
+                        'attr': {'class': 'form-control form-select client-select', 'style': 'flex-grow: 1;', 'tabindex': '5'}
                     }) }}
                     
                     <!-- Boutons d'action client -->
@@ -46,15 +46,8 @@
                 }) }}
             </div>
         </div>
-    </div>
-</div>
-
-<!-- Section Adresses et contacts unifiée -->
-<div class="form-section" id="contact-selection">
-    <div class="form-section-header">
-        <h5 class="mb-0"><i class="fas fa-address-card me-2"></i>Adresses et contacts</h5>
-    </div>
-    <div class="form-section-body">
+        
+        <!-- Contacts et adresses -->
         <div class="row">
             <!-- Contact et adresse de livraison -->
             <div class="col-md-6">
@@ -212,6 +205,30 @@
                 </div>
             </div>
         </div>
+        
+        <!-- Email d'envoi automatique et Modèle de document -->
+        <div class="row">
+            <div class="col-md-6">
+                {{ form_row(form.emailEnvoiAutomatique, {
+                    'label': 'Email d\'envoi automatique',
+                    'label_attr': {'class': 'form-label'},
+                    'attr': {'class': 'form-control', 'placeholder': 'email@example.com'}
+                }) }}
+                <small class="text-muted">
+                    <i class="fas fa-paper-plane me-1"></i>Ce devis sera envoyé automatiquement à cette adresse
+                </small>
+            </div>
+            <div class="col-md-6">
+                {{ form_row(form.modeleDocument, {
+                    'label': 'Modèle de document',
+                    'label_attr': {'class': 'form-label'},
+                    'attr': {'class': 'form-select'}
+                }) }}
+                <small class="text-muted">
+                    <i class="fas fa-info-circle me-1"></i>Le modèle sélectionné sera utilisé lors de la génération PDF du devis.
+                </small>
+            </div>
+        </div>
     </div>
 </div>
 
@@ -330,7 +347,9 @@
                     language: 'fr',
                     width: '100%',
                     dropdownAutoWidth: true,
-                    theme: 'bootstrap-5'
+                    theme: 'bootstrap-5',
+                    selectOnClose: false,
+                    escapeMarkup: function (markup) { return markup; }
                 });
                 
                 // Ajuster la hauteur pour correspondre aux autres champs
@@ -340,7 +359,42 @@
                     'line-height': '1.5'
                 });
                 
-                console.log('✅ Select2 initialisé pour le champ client en mode édition');
+                // Améliorer la navigation clavier
+                const select2Container = clientSelect.next('.select2-container');
+                
+                // Gérer le focus sur le container Select2
+                select2Container.on('focus', function() {
+                    clientSelect.select2('open');
+                });
+                
+                // Gérer la navigation Tab depuis le champ statut
+                $('#devis_statut').on('keydown', function(e) {
+                    if (e.key === 'Tab' && !e.shiftKey) {
+                        e.preventDefault();
+                        // Donner le focus au champ Select2 et l'ouvrir
+                        setTimeout(function() {
+                            clientSelect.select2('open');
+                        }, 50);
+                    }
+                });
+                
+                // Permettre de taper directement quand le Select2 reçoit le focus
+                clientSelect.on('select2:open', function() {
+                    const searchField = $('.select2-search__field');
+                    if (searchField.length) {
+                        searchField.focus();
+                    }
+                });
+                
+                // Gérer la navigation Tab depuis le Select2
+                clientSelect.on('select2:close', function(e) {
+                    // Si on ferme avec Tab, aller au champ suivant
+                    setTimeout(function() {
+                        $('#devis_commercial').focus();
+                    }, 50);
+                });
+                
+                console.log('✅ Select2 initialisé pour le champ client avec navigation clavier améliorée');
             }
         }
     }, 1000);

@@ -209,6 +209,20 @@ class Adresse
     }
 
     /**
+     * Format d'affichage des adresses pour les sélecteurs
+     * Format: "Nom : Adresse - code postal Ville"
+     */
+    public function getDisplayLabel(): string
+    {
+        $nom = $this->nom ?? 'Adresse';
+        $ligne1 = $this->ligne1 ?? '';
+        $codePostal = $this->codePostal ?? '';
+        $ville = $this->ville ?? '';
+        
+        return $nom . ' : ' . $ligne1 . ' - ' . $codePostal . ' ' . $ville;
+    }
+
+    /**
      * Vérifie si l'adresse est navigable (a les informations minimales)
      */
     public function isNavigable(): bool
@@ -257,7 +271,7 @@ class Adresse
 
     public function __toString(): string
     {
-        return $this->getAdresseCourte();
+        return $this->getDisplayLabel();
     }
     
     /**

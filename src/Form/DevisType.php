@@ -228,7 +228,7 @@ class DevisType extends AbstractType
             ->add('adresseFacturation', EntityType::class, [
                 'class' => Adresse::class,
                 'choice_label' => function(Adresse $adresse) {
-                    return ($adresse->getNom() ?? 'Adresse') . ' - ' . $adresse->getLigne1() . ' - ' . $adresse->getVille();
+                    return $adresse->getDisplayLabel();
                 },
                 'placeholder' => 'Choisir une adresse de facturation',
                 'label' => 'Adresse de facturation',
@@ -249,7 +249,7 @@ class DevisType extends AbstractType
             ->add('adresseLivraison', EntityType::class, [
                 'class' => Adresse::class,
                 'choice_label' => function(Adresse $adresse) {
-                    return ($adresse->getNom() ?? 'Adresse') . ' - ' . $adresse->getLigne1() . ' - ' . $adresse->getVille();
+                    return $adresse->getDisplayLabel();
                 },
                 'placeholder' => 'Choisir une adresse de livraison',
                 'label' => 'Adresse de livraison',

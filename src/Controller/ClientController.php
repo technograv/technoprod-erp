@@ -387,7 +387,7 @@ final class ClientController extends AbstractController
         foreach ($client->getContacts() as $contact) {
             $adresse = $contact->getAdresse();
             if ($adresse && !in_array($adresse->getId(), $addressesAdded)) {
-                $label = ($adresse->getNom() ?? 'Adresse') . ' - ' . $adresse->getLigne1() . ' - ' . $adresse->getVille();
+                $label = $adresse->getDisplayLabel();
                 
                 $addresses[] = [
                     'id' => $adresse->getId(),
