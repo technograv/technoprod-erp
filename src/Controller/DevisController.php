@@ -357,6 +357,12 @@ final class DevisController extends AbstractController
     #[Route('/{id}/edit', name: 'app_devis_edit', methods: ['GET', 'POST'], requirements: ['id' => '\d+'])]
     public function edit(Request $request, Devis $devis, EntityManagerInterface $entityManager, DevisLoggerService $loggerService): Response
     {
+        // Rediriger les devis non-brouillon vers la page de consultation
+        if ($devis->getStatut() !== 'brouillon') {
+            $this->addFlash('warning', 'Ce devis a été envoyé et ne peut plus être modifié. Vous pouvez le consulter ci-dessous.');
+            return $this->redirect($this->generateUrl('app_devis_show', ['id' => $devis->getId()]) . '#lignes');
+        }
+
         // Créer une version si le devis a été envoyé et sera modifié
         $shouldCreateVersion = false;
         $originalDevisData = null;
