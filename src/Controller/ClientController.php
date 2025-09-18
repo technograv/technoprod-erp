@@ -1018,4 +1018,58 @@ final class ClientController extends AbstractController
             return $this->json(['success' => false, 'message' => 'Erreur lors de la suppression : ' . $e->getMessage()]);
         }
     }
+
+    #[Route('/list-json', name: 'app_client_list_json', methods: ['GET'])]
+    public function listJson(EntityManagerInterface $entityManager): JsonResponse
+    {
+        try {
+            // Vérifier l'authentification
+            if (!$this->getUser()) {
+                return $this->json([
+                    'error' => true,
+                    'message' => 'Authentification requise',
+                    'data' => []
+                ], 401);
+            }
+            
+            // Utiliser une requête DQL simple pour éviter les problèmes de lazy loading
+            $dql = 'SELECT c.id, c.nom, c.prenom, c.statut FROM App\Entity\Client c ORDER BY c.nom ASC';
+            $query = $entityManager->createQuery($dql);
+            $results = $query->getArrayResult();
+            
+            $data = [];
+            foreach ($results as $row) {
+                try {
+                    $nom = $row['nom'] ?? 'Client sans nom';
+                    $prenom = $row['prenom'] ?? '';
+                    
+                    // Construction simple du nom complet
+                    $nomComplet = trim($prenom . ' ' . $nom);
+                    if (empty($nomComplet)) {
+                        $nomComplet = 'Client #' . $row['id'];
+                    }
+                    
+                    $data[] = [
+                        'id' => $row['id'],
+                        'nom' => $nom,
+                        'nomComplet' => $nomComplet,
+                        'statut' => $row['statut'] ?? 'prospect'
+                    ];
+                } catch (\Exception $e) {
+                    // Si un client pose problème, on l'ignore mais on continue
+                    continue;
+                }
+            }
+            
+            return $this->json($data);
+            
+        } catch (\Exception $e) {
+            // En cas d'erreur, retourner une liste vide avec un message
+            return $this->json([
+                'error' => true,
+                'message' => 'Erreur lors du chargement des clients: ' . $e->getMessage(),
+                'data' => []
+            ], 500);
+        }
+    }
 }

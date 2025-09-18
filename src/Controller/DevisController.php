@@ -344,13 +344,18 @@ final class DevisController extends AbstractController
 
 
     #[Route('/{id}', name: 'app_devis_show', methods: ['GET'], requirements: ['id' => '\d+'])]
-    public function show(Devis $devis, DevisLoggerService $loggerService): Response
+    public function show(Devis $devis, DevisLoggerService $loggerService, EntityManagerInterface $entityManager): Response
     {
         $logs = $loggerService->getDevisLogs($devis);
+        
+        // Récupérer tous les clients pour la modal de duplication
+        $clientsRepository = $entityManager->getRepository(Client::class);
+        $clients = $clientsRepository->findAll();
         
         return $this->render('devis/show.html.twig', [
             'devis' => $devis,
             'logs' => $logs,
+            'clients' => $clients,
         ]);
     }
 
@@ -1260,12 +1265,13 @@ final class DevisController extends AbstractController
                 'designation' => $element->getDesignation(),
                 'description' => $element->getDescription(),
                 'quantite' => $element->getQuantite(),
-                'prixUnitaireHt' => $element->getPrixUnitaireHt(),
-                'tvaPercent' => $element->getTvaPercent(),
-                'totalLigneHt' => $element->getTotalLigneHt(),
+                'prix_unitaire_ht' => $element->getPrixUnitaireHt(),
+                'remise_percent' => $element->getRemisePercent(),
+                'tva_percent' => $element->getTvaPercent(),
+                'total_ligne_ht' => $element->getTotalLigneHt(),
                 'titre' => $element->getTitre(),
                 'imageVisible' => $element->getImageVisible(),
-                'produitId' => $element->getProduit() ? $element->getProduit()->getId() : null,
+                'produit_id' => $element->getProduit() ? $element->getProduit()->getId() : null,
                 'produit' => $element->getProduit() ? [
                     'id' => $element->getProduit()->getId(),
                     'reference' => $element->getProduit()->getReference(),
@@ -1274,9 +1280,27 @@ final class DevisController extends AbstractController
             ];
         }
 
+        // Capturer aussi les DevisItems (ancien système)
+        $items = [];
+        foreach ($devis->getDevisItems() as $item) {
+            $items[] = [
+                'is_product' => true,
+                'designation' => $item->getDesignation(),
+                'description' => $item->getDescription(),
+                'quantite' => $item->getQuantite(),
+                'prix_unitaire_ht' => $item->getPrixUnitaireHt(),
+                'remise_percent' => $item->getRemisePercent(),
+                'tva_percent' => $item->getTvaPercent(),
+                'total_ligne_ht' => $item->getTotalLigneHt(),
+                'ordre_affichage' => $item->getOrdreAffichage(),
+                'produit_id' => $item->getProduit() ? $item->getProduit()->getId() : null,
+            ];
+        }
+
         return [
             'devis_data' => $devisData,
-            'elements' => $elements
+            'elements' => $elements,
+            'items' => $items  // Pour compatibilité avec l'ancien système
         ];
     }
 
@@ -1318,13 +1342,18 @@ final class DevisController extends AbstractController
      * Affiche l'historique des versions d'un devis
      */
     #[Route('/{id}/versions', name: 'app_devis_versions', methods: ['GET'])]
-    public function versions(Devis $devis, DevisVersionRepository $versionRepository): Response
+    public function versions(Devis $devis, DevisVersionRepository $versionRepository, EntityManagerInterface $entityManager): Response
     {
         $versions = $versionRepository->findVersionsByDevis($devis);
+        
+        // Récupérer tous les clients pour la modal de duplication
+        $clientsRepository = $entityManager->getRepository(Client::class);
+        $clients = $clientsRepository->findAll();
 
         return $this->render('devis/versions.html.twig', [
             'devis' => $devis,
             'versions' => $versions,
+            'clients' => $clients,
         ]);
     }
 
@@ -1693,5 +1722,301 @@ final class DevisController extends AbstractController
             'success' => true,
             'message' => 'Totaux, remise et acompte mis à jour automatiquement'
         ]);
+    }
+
+    #[Route('/version/{id}/duplicate', name: 'app_devis_version_duplicate', methods: ['POST'])]
+    public function duplicateFromVersion(
+        int $id,
+        Request $request,
+        DevisVersionRepository $versionRepository,
+        ClientRepository $clientRepository,
+        EntityManagerInterface $entityManager,
+        DocumentNumerotationService $numerotationService
+    ): Response {
+        $version = $versionRepository->find($id);
+        
+        if (!$version) {
+            $this->addFlash('error', 'Version introuvable');
+            return $this->redirectToRoute('app_devis_index');
+        }
+        
+        $originalDevis = $version->getDevis();
+        
+        // Créer le nouveau devis
+        $newDevis = new Devis();
+        
+        // Déterminer le client
+        $duplicationType = $request->request->get('duplicationType', 'same');
+        if ($duplicationType === 'different') {
+            $newClientId = $request->request->get('newClientId');
+            if ($newClientId) {
+                $newClient = $clientRepository->find($newClientId);
+                if ($newClient) {
+                    $newDevis->setClient($newClient);
+                } else {
+                    $this->addFlash('error', 'Client sélectionné introuvable');
+                    return $this->redirectToRoute('app_devis_show', ['id' => $originalDevis->getId()]);
+                }
+            } else {
+                $this->addFlash('error', 'Veuillez sélectionner un client');
+                return $this->redirectToRoute('app_devis_show', ['id' => $originalDevis->getId()]);
+            }
+        } else {
+            // Même client
+            $newDevis->setClient($originalDevis->getClient());
+        }
+        
+        // Assigner les contacts par défaut du client sélectionné
+        $client = $newDevis->getClient();
+        if ($client) {
+            // Contact de livraison par défaut
+            foreach ($client->getContacts() as $contact) {
+                if ($contact->isLivraisonDefault()) {
+                    $newDevis->setContactLivraison($contact);
+                    break;
+                }
+            }
+            
+            // Contact de facturation par défaut
+            foreach ($client->getContacts() as $contact) {
+                if ($contact->isFacturationDefault()) {
+                    $newDevis->setContactFacturation($contact);
+                    break;
+                }
+            }
+            
+            // Email d'envoi automatique = email du contact de livraison ou facturation
+            if ($newDevis->getContactLivraison() && $newDevis->getContactLivraison()->getEmail()) {
+                $newDevis->setEmailEnvoiAutomatique($newDevis->getContactLivraison()->getEmail());
+            } elseif ($newDevis->getContactFacturation() && $newDevis->getContactFacturation()->getEmail()) {
+                $newDevis->setEmailEnvoiAutomatique($newDevis->getContactFacturation()->getEmail());
+            }
+        }
+        
+        // Paramètres du nouveau devis
+        $newDevis->setStatut('brouillon');
+        $newDevis->setDateCreation(new \DateTime());
+        $newDevis->setDateValidite((new \DateTime())->modify('+1 month'));
+        $newDevis->setCommercial($this->getUser());
+        
+        // Générer un nouveau numéro de devis
+        $numeroDevis = $numerotationService->genererProchainNumero('DE');
+        $newDevis->setNumeroDevis($numeroDevis);
+        
+        // Récupérer les données du snapshot de la version
+        $snapshotData = $version->getSnapshotData();
+        $devisData = $snapshotData['devis_data'] ?? $snapshotData['devis'] ?? [];
+        
+        
+        // Copier les conditions commerciales depuis le snapshot
+        if (isset($devisData['remiseGlobalePercent'])) {
+            $newDevis->setRemiseGlobalePercent($devisData['remiseGlobalePercent']);
+        }
+        if (isset($devisData['remiseGlobaleMontant'])) {
+            $newDevis->setRemiseGlobaleMontant($devisData['remiseGlobaleMontant']);
+        }
+        if (isset($devisData['acomptePercent'])) {
+            $newDevis->setAcomptePercent($devisData['acomptePercent']);
+        }
+        if (isset($devisData['acompteMontant'])) {
+            $newDevis->setAcompteMontant($devisData['acompteMontant']);
+        }
+        
+        // Copier les autres champs utiles
+        if (isset($devisData['delaiLivraison'])) {
+            $newDevis->setDelaiLivraison($devisData['delaiLivraison']);
+        }
+        if (isset($devisData['modeleDocument'])) {
+            $newDevis->setModeleDocument($devisData['modeleDocument']);
+        }
+        
+        // Notes avec indication de duplication
+        $notes = $request->request->get('notes', '');
+        if ($notes) {
+            $newDevis->setNotesInternes($notes);
+        } else {
+            $newDevis->setNotesInternes('Dupliqué depuis ' . $originalDevis->getNumeroDevis() . ' - ' . $version->generateAutoLabel());
+        }
+        
+        // Persister le devis avant d'ajouter les éléments
+        $entityManager->persist($newDevis);
+        $entityManager->flush();
+        
+        // Copier les éléments depuis le snapshot
+        $elements = $snapshotData['elements'] ?? $snapshotData['items'] ?? [];
+        
+        // Si on a des éléments dans le nouveau format (DevisElement)
+        if (method_exists($newDevis, 'addElement')) {
+            foreach ($elements as $elementData) {
+                $element = new \App\Entity\DevisElement();
+                $element->setDevis($newDevis);
+                $element->setType($elementData['type'] ?? 'product');
+                $element->setPosition($elementData['position'] ?? 0);
+                
+                if ($element->getType() === 'product') {
+                    $element->setDesignation($elementData['designation'] ?? '');
+                    $element->setDescription($elementData['description'] ?? '');
+                    $element->setQuantite($elementData['quantite'] ?? 1);
+                    
+                    // Support des différents formats de noms de clés
+                    $element->setPrixUnitaireHt(
+                        $elementData['prix_unitaire_ht'] ?? 
+                        $elementData['prixUnitaireHt'] ?? '0'
+                    );
+                    $element->setRemisePercent(
+                        $elementData['remise_percent'] ?? 
+                        $elementData['remisePercent'] ?? '0'
+                    );
+                    $element->setTvaPercent(
+                        $elementData['tva_percent'] ?? 
+                        $elementData['tvaPercent'] ?? '20'
+                    );
+                    $element->setTotalLigneHt(
+                        $elementData['total_ligne_ht'] ?? 
+                        $elementData['totalLigneHt'] ?? '0'
+                    );
+                    
+                    // Associer le produit si référencé (support des différents formats)
+                    $produitId = $elementData['produit_id'] ?? $elementData['produitId'] ?? null;
+                    if ($produitId) {
+                        $produit = $entityManager->getRepository(\App\Entity\Produit::class)->find($produitId);
+                        if ($produit) {
+                            $element->setProduit($produit);
+                            // S'assurer que la désignation et le prix correspondent au produit
+                            if (empty($elementData['designation'])) {
+                                $element->setDesignation($produit->getNom());
+                            }
+                            if (empty($elementData['prix_unitaire_ht']) || $elementData['prix_unitaire_ht'] === '0') {
+                                $element->setPrixUnitaireHt($produit->getPrixVenteHt());
+                            }
+                            
+                            // Le code produit sera automatiquement disponible via la relation
+                            // $element->getProduit()->getReference()
+                        }
+                    }
+                    
+                    // Recalculer le total de la ligne
+                    $quantite = floatval($element->getQuantite());
+                    $prixUnitaire = floatval($element->getPrixUnitaireHt());
+                    $remisePercent = floatval($element->getRemisePercent());
+                    
+                    $totalLigne = $quantite * $prixUnitaire;
+                    if ($remisePercent > 0) {
+                        $totalLigne = $totalLigne * (1 - $remisePercent / 100);
+                    }
+                    
+                    $element->setTotalLigneHt(number_format($totalLigne, 2, '.', ''));
+                } else {
+                    // Élément de mise en page
+                    if (isset($elementData['titre'])) {
+                        $element->setTitre($elementData['titre']);
+                    }
+                    if (isset($elementData['contenu'])) {
+                        $element->setContenu($elementData['contenu']);
+                    }
+                    if (isset($elementData['icon'])) {
+                        $element->setIcon($elementData['icon']);
+                    }
+                }
+                
+                $entityManager->persist($element);
+                $newDevis->addElement($element);
+            }
+        } else {
+            // Ancien format avec DevisItem et LayoutElement
+            // Copier les DevisItem
+            foreach ($elements as $itemData) {
+                if (isset($itemData['is_product']) && $itemData['is_product']) {
+                    $item = new DevisItem();
+                    $item->setDevis($newDevis);
+                    $item->setDesignation($itemData['designation'] ?? '');
+                    $item->setDescription($itemData['description'] ?? '');
+                    $item->setQuantite($itemData['quantite'] ?? 1);
+                    
+                    // Support des différents formats de noms de clés
+                    $item->setPrixUnitaireHt(
+                        $itemData['prix_unitaire_ht'] ?? 
+                        $itemData['prixUnitaireHt'] ?? '0'
+                    );
+                    $item->setRemisePercent(
+                        $itemData['remise_percent'] ?? 
+                        $itemData['remisePercent'] ?? '0'
+                    );
+                    $item->setTvaPercent(
+                        $itemData['tva_percent'] ?? 
+                        $itemData['tvaPercent'] ?? '20'
+                    );
+                    $item->setTotalLigneHt(
+                        $itemData['total_ligne_ht'] ?? 
+                        $itemData['totalLigneHt'] ?? '0'
+                    );
+                    $item->setOrdreAffichage(
+                        $itemData['ordre_affichage'] ?? 
+                        $itemData['ordreAffichage'] ?? 0
+                    );
+                    
+                    // Associer le produit si référencé (support des différents formats)
+                    $produitId = $itemData['produit_id'] ?? $itemData['produitId'] ?? null;
+                    if ($produitId) {
+                        $produit = $entityManager->getRepository(\App\Entity\Produit::class)->find($produitId);
+                        if ($produit) {
+                            $item->setProduit($produit);
+                            // S'assurer que la désignation et le prix correspondent au produit
+                            if (empty($itemData['designation'])) {
+                                $item->setDesignation($produit->getNom());
+                            }
+                            if (empty($itemData['prix_unitaire_ht']) || $itemData['prix_unitaire_ht'] === '0') {
+                                $item->setPrixUnitaireHt($produit->getPrixVenteHt());
+                            }
+                        }
+                    }
+                    
+                    // Recalculer le total de la ligne
+                    $quantite = floatval($item->getQuantite());
+                    $prixUnitaire = floatval($item->getPrixUnitaireHt());
+                    $remisePercent = floatval($item->getRemisePercent());
+                    
+                    $totalLigne = $quantite * $prixUnitaire;
+                    if ($remisePercent > 0) {
+                        $totalLigne = $totalLigne * (1 - $remisePercent / 100);
+                    }
+                    
+                    $item->setTotalLigneHt(number_format($totalLigne, 2, '.', ''));
+                    
+                    $entityManager->persist($item);
+                    $newDevis->addDevisItem($item);
+                }
+            }
+            
+            // Copier les LayoutElement
+            $layoutElements = $snapshotData['layout_elements'] ?? [];
+            foreach ($layoutElements as $layoutData) {
+                $layoutElement = new LayoutElement();
+                $layoutElement->setDevis($newDevis);
+                $layoutElement->setType($layoutData['type'] ?? 'section_title');
+                $layoutElement->setTitre($layoutData['titre'] ?? '');
+                $layoutElement->setContenu($layoutData['contenu'] ?? '');
+                $layoutElement->setIcon($layoutData['icon'] ?? '');
+                $layoutElement->setOrdreAffichage($layoutData['ordre_affichage'] ?? 0);
+                
+                $entityManager->persist($layoutElement);
+                $newDevis->addLayoutElement($layoutElement);
+            }
+        }
+        
+        // Calculer les totaux
+        $newDevis->calculateTotals();
+        
+        $entityManager->flush();
+        
+        $this->addFlash('success', sprintf(
+            'Devis %s créé avec succès (dupliqué depuis %s - %s)',
+            $newDevis->getNumeroDevis(),
+            $originalDevis->getNumeroDevis(),
+            $version->generateAutoLabel()
+        ));
+        
+        // Rediriger vers l'édition du nouveau devis
+        return $this->redirectToRoute('app_devis_edit', ['id' => $newDevis->getId()]);
     }
 }

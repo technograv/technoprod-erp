@@ -1041,9 +1041,12 @@ async function init() {
             initEventListeners();
             initLayoutPanel();
             initClientAutocomplete();
-            // DÉSACTIVÉ - Remplacé par ClientProspectService unifié
-            // initContactAddressSynchronization();
+            // Initialiser la synchronisation contact/adresse pour l'email
+            initContactAddressSynchronization();
             initQuillNotesClientEditor(); // Initialiser l'éditeur WYSIWYG des notes client
+            
+            // Charger les contacts du client actuel pour la synchronisation email
+            await loadInitialClientContacts();
         }
         calculateTotals();
     } catch (error) {
@@ -2376,29 +2379,43 @@ function syncContactAddress(contactId, adresseSelect) {
 }
 
 function syncContactEmail(contactId) {
+    console.log('🔧 syncContactEmail appelée avec contactId:', contactId);
+    
     // Utiliser les données déjà chargées pour synchroniser l'email
     if (!window.clientContacts) {
+        console.log('❌ window.clientContacts pas disponible');
         return;
     }
     
+    console.log('✅ window.clientContacts disponible:', window.clientContacts.length, 'contacts');
+    
     const emailDisplayField = document.getElementById('email_envoi_automatique_display');
     if (!emailDisplayField) {
+        console.log('❌ Champ email_envoi_automatique_display introuvable');
         return;
     }
+    
+    console.log('✅ Champ email trouvé');
     
     // Trouver le contact sélectionné
     const selectedContact = window.clientContacts.find(contact => contact.id == contactId);
     if (!selectedContact) {
+        console.log('❌ Contact non trouvé pour ID:', contactId);
+        console.log('📋 Contacts disponibles:', window.clientContacts.map(c => ({id: c.id, nom: c.nom, email: c.email})));
         emailDisplayField.value = '';
         updateHiddenEmailField('');
         return;
     }
     
+    console.log('✅ Contact trouvé:', selectedContact.nom, 'Email:', selectedContact.email);
+    
     // Mettre à jour le champ email avec l'email du contact
     if (selectedContact.email) {
+        console.log('📧 Mise à jour email:', selectedContact.email);
         emailDisplayField.value = selectedContact.email;
         updateHiddenEmailField(selectedContact.email);
     } else {
+        console.log('❌ Pas d\'email pour ce contact');
         emailDisplayField.value = '';
         updateHiddenEmailField('');
     }
@@ -2442,6 +2459,30 @@ function updateHiddenEmailField(value) {
 function initClientAutocomplete() {
     // Pas d'autocomplétion spéciale nécessaire - utilise le select Symfony standard
     // La fonction est conservée pour compatibilité avec les autres scripts
+}
+
+async function loadInitialClientContacts() {
+    const clientField = document.getElementById('devis_client');
+    if (!clientField || !clientField.value) {
+        console.log('Pas de client sélectionné au démarrage');
+        return;
+    }
+    
+    const clientId = clientField.value;
+    try {
+        console.log('Chargement initial des contacts pour client', clientId);
+        
+        // Charger les contacts du client
+        const contactsResponse = await fetch(`/client/${clientId}/contacts`);
+        const contactsData = await contactsResponse.json();
+        
+        // Stocker pour la synchronisation
+        window.clientContacts = contactsData;
+        
+        console.log('Contacts initiaux chargés:', contactsData.length);
+    } catch (error) {
+        console.error('Erreur lors du chargement initial des contacts:', error);
+    }
 }
 
 // ==========================================

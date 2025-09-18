@@ -174,6 +174,28 @@
             <div class="info-group">
                 <h6><i class="fas fa-list me-2"></i>Lignes de devis (version archivée)</h6>
                 {% set items = version.devisItems %}
+                
+                {# Calculer les totaux TVA par taux pour affichage détaillé #}
+                {% set tvaByTaux = {} %}
+                {% for item in items %}
+                    {% set tauxTva = item.tva_percent ?? item.tvaPercent ?? 20 %}
+                    {% set prixHt = item.prix_unitaire_ht ?? item.prixUnitaireHt ?? 0 %}
+                    {% set quantite = item.quantite ?? 1 %}
+                    {% set remise = item.remise_percent ?? item.remisePercent ?? 0 %}
+                    
+                    {% set totalHtLigne = prixHt * quantite %}
+                    {% if remise > 0 %}
+                        {% set totalHtLigne = totalHtLigne * (1 - remise / 100) %}
+                    {% endif %}
+                    
+                    {% set totalTvaLigne = totalHtLigne * tauxTva / 100 %}
+                    
+                    {% if tauxTva not in tvaByTaux|keys %}
+                        {% set tvaByTaux = tvaByTaux|merge({(tauxTva): 0}) %}
+                    {% endif %}
+                    {% set tvaByTaux = tvaByTaux|merge({(tauxTva): (tvaByTaux[tauxTva] + totalTvaLigne)}) %}
+                {% endfor %}
+                
                 {% if items %}
                     <div class="table-responsive">
                         <table class="table table-hover version-items-table">
@@ -183,6 +205,7 @@
                                     <th>Description</th>
                                     <th class="text-center">Qté</th>
                                     <th class="text-end">Prix unit. HT</th>
+                                    <th class="text-center">Remise</th>
                                     <th class="text-center">TVA</th>
                                     <th class="text-end">Total HT</th>
                                 </tr>
@@ -200,23 +223,39 @@
                                         </td>
                                         <td>{{ item.description ?: '-' }}</td>
                                         <td class="text-center">{{ item.quantite }}</td>
-                                        <td class="text-end">{{ item.prixUnitaireHt }}€</td>
-                                        <td class="text-center">{{ item.tvaPercent }}%</td>
-                                        <td class="text-end"><strong>{{ item.totalLigneHt }}€</strong></td>
+                                        <td class="text-end">{{ item.prix_unitaire_ht ?? item.prixUnitaireHt ?? '0' }}€</td>
+                                        <td class="text-center">
+                                            {% set remise = item.remise_percent ?? item.remisePercent ?? 0 %}
+                                            {% if remise > 0 %}{{ remise }}%{% else %}-{% endif %}
+                                        </td>
+                                        <td class="text-center">{{ item.tva_percent ?? item.tvaPercent ?? '20' }}%</td>
+                                        <td class="text-end"><strong>{{ item.total_ligne_ht ?? item.totalLigneHt ?? '0' }}€</strong></td>
                                     </tr>
                                 {% endfor %}
                             </tbody>
                             <tfoot>
                                 <tr>
-                                    <th colspan="5" class="text-end">Total HT :</th>
+                                    <th colspan="6" class="text-end">Total HT :</th>
                                     <th class="text-end">{{ devisData.totalHt }}€</th>
                                 </tr>
-                                <tr>
-                                    <th colspan="5" class="text-end">TVA :</th>
-                                    <th class="text-end">{{ devisData.totalTva }}€</th>
-                                </tr>
+                                {# Affichage détaillé des TVA par taux #}
+                                {% if tvaByTaux|length > 1 %}
+                                    {% for taux, montant in tvaByTaux %}
+                                        {% if montant > 0.001 %}
+                                            <tr>
+                                                <th colspan="6" class="text-end">TVA {{ taux }}% :</th>
+                                                <th class="text-end">{{ montant|number_format(2, ',', ' ') }}€</th>
+                                            </tr>
+                                        {% endif %}
+                                    {% endfor %}
+                                {% else %}
+                                    <tr>
+                                        <th colspan="6" class="text-end">TVA :</th>
+                                        <th class="text-end">{{ devisData.totalTva }}€</th>
+                                    </tr>
+                                {% endif %}
                                 <tr class="table-success">
-                                    <th colspan="5" class="text-end">Total TTC :</th>
+                                    <th colspan="6" class="text-end">Total TTC :</th>
                                     <th class="text-end">{{ devisData.totalTtc }}€</th>
                                 </tr>
                             </tfoot>
