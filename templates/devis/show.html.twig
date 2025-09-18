@@ -471,13 +471,22 @@
                             </tr>
                             {% endif %}
                             {% set tvaDetails = devis.tvaDetailsByRate %}
-                            {% if tvaDetails|length > 1 %}
-                                {# Plusieurs taux de TVA : affichage détaillé #}
+                            {# Compter uniquement les taux avec montant > 0 #}
+                            {% set tvaRatesWithAmount = 0 %}
+                            {% for taux, detail in tvaDetails %}
+                                {% if detail.totalTva > 0.001 %}
+                                    {% set tvaRatesWithAmount = tvaRatesWithAmount + 1 %}
+                                {% endif %}
+                            {% endfor %}
+                            {% if tvaRatesWithAmount > 1 %}
+                                {# Plusieurs taux de TVA : affichage détaillé (sans les montants à 0) #}
                                 {% for taux, detail in tvaDetails %}
-                                <tr>
-                                    <th colspan="7" class="text-end">TVA {{ taux }}% :</th>
-                                    <th class="text-end">{{ detail.totalTva|number_format(2, '.', '') }}€</th>
-                                </tr>
+                                    {% if detail.totalTva > 0.001 %}
+                                    <tr>
+                                        <th colspan="7" class="text-end">TVA {{ taux }}% :</th>
+                                        <th class="text-end">{{ detail.totalTva|number_format(2, '.', '') }}€</th>
+                                    </tr>
+                                    {% endif %}
                                 {% endfor %}
                                 <tr>
                                     <th colspan="7" class="text-end">Total TVA :</th>
