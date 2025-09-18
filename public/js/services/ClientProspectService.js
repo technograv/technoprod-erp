@@ -123,6 +123,8 @@ class ClientProspectService {
         
         // Changement de client - Support Select2
         if (clientSelect) {
+            this.log('🔧 Client select trouvé, ID:', clientSelect.id, 'Classes:', clientSelect.className);
+            
             // Événement DOM standard
             clientSelect.addEventListener('change', (e) => {
                 this.log('👤 Événement change DOM client:', e.target.value);
@@ -131,6 +133,8 @@ class ClientProspectService {
             
             // Support Select2 avec événements globaux
             this.setupSelect2GlobalEvents(clientSelect);
+        } else {
+            this.log('❌ Client select non trouvé avec sélecteur:', this.config.selectors.clientSelect);
         }
         
         // Changement de contacts - Support Select2 (peut être différé si éléments non visibles)
@@ -604,6 +608,9 @@ class ClientProspectService {
      * Configure le support Select2 avec événements globaux
      */
     setupSelect2GlobalEvents(clientSelect) {
+        this.log('🔧 setupSelect2GlobalEvents appelée pour:', clientSelect.id);
+        this.log('🔧 jQuery disponible:', !!window.$);
+        
         if (window.$) {
             this.log('🌍 Configuration événements Select2 globaux pour client');
             
@@ -615,6 +622,10 @@ class ClientProspectService {
             
             // Aussi écouter les événements sur l'élément directement avec délai
             setTimeout(() => {
+                this.log('🔍 Vérification Select2 après 2s, element:', clientSelect.id);
+                this.log('🔍 Element classes:', clientSelect.className);
+                this.log('🔍 Has Select2 class:', $(clientSelect).hasClass('select2-hidden-accessible'));
+                
                 if ($(clientSelect).hasClass('select2-hidden-accessible')) {
                     this.log('🔧 Select2 détecté directement pour client');
                     $(clientSelect).on('select2:select', (e) => {
@@ -623,6 +634,8 @@ class ClientProspectService {
                     });
                 }
             }, 2000);
+        } else {
+            this.log('❌ jQuery non disponible pour Select2');
         }
     }
 
