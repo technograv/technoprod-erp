@@ -129,14 +129,8 @@ class ClientProspectService {
                 this.handleClientChange(e.target.value);
             });
             
-            // Événement Select2 si Select2 est utilisé
-            if (window.$ && $(clientSelect).hasClass('select2-hidden-accessible')) {
-                this.log('🔧 Sélecteur client utilise Select2, ajout événement Select2');
-                $(clientSelect).on('select2:select', (e) => {
-                    this.log('👤 Événement Select2 client:', e.params.data.id);
-                    this.handleClientChange(e.params.data.id);
-                });
-            }
+            // Ajouter support Select2 avec délai pour qu'il s'initialise
+            this.setupSelect2Support(clientSelect, 'client');
         }
         
         // Changement de contacts - Support Select2
@@ -144,26 +138,14 @@ class ClientProspectService {
             contactLivraisonSelect.addEventListener('change', (e) => {
                 this.handleContactChange('livraison', e.target.value);
             });
-            
-            // Support Select2 pour contact livraison
-            if (window.$ && $(contactLivraisonSelect).hasClass('select2-hidden-accessible')) {
-                $(contactLivraisonSelect).on('select2:select', (e) => {
-                    this.handleContactChange('livraison', e.params.data.id);
-                });
-            }
+            this.setupSelect2Support(contactLivraisonSelect, 'contact-livraison');
         }
         
         if (contactFacturationSelect) {
             contactFacturationSelect.addEventListener('change', (e) => {
                 this.handleContactChange('facturation', e.target.value);
             });
-            
-            // Support Select2 pour contact facturation
-            if (window.$ && $(contactFacturationSelect).hasClass('select2-hidden-accessible')) {
-                $(contactFacturationSelect).on('select2:select', (e) => {
-                    this.handleContactChange('facturation', e.params.data.id);
-                });
-            }
+            this.setupSelect2Support(contactFacturationSelect, 'contact-facturation');
         }
         
         // Changement d'adresses
@@ -590,6 +572,46 @@ class ClientProspectService {
         }
     }
     
+    /**
+     * Configure le support Select2 avec retry automatique
+     */
+    setupSelect2Support(element, type) {
+        let retryCount = 0;
+        const maxRetries = 10;
+        
+        const checkSelect2 = () => {
+            if (window.$ && $(element).hasClass('select2-hidden-accessible')) {
+                this.log(`🔧 Select2 détecté pour ${type}, ajout événement Select2`);
+                
+                if (type === 'client') {
+                    $(element).on('select2:select', (e) => {
+                        this.log('👤 Événement Select2 client:', e.params.data.id);
+                        this.handleClientChange(e.params.data.id);
+                    });
+                } else if (type === 'contact-livraison') {
+                    $(element).on('select2:select', (e) => {
+                        this.handleContactChange('livraison', e.params.data.id);
+                    });
+                } else if (type === 'contact-facturation') {
+                    $(element).on('select2:select', (e) => {
+                        this.handleContactChange('facturation', e.params.data.id);
+                    });
+                }
+                return true;
+            }
+            
+            retryCount++;
+            if (retryCount < maxRetries) {
+                setTimeout(checkSelect2, 500);
+            } else {
+                this.log(`⚠️ Select2 non trouvé pour ${type} après ${maxRetries} tentatives`);
+            }
+        };
+        
+        // Première vérification immédiate, puis avec délai
+        setTimeout(checkSelect2, 100);
+    }
+
     /**
      * Nettoie le service
      */
