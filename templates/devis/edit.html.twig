@@ -304,10 +304,26 @@
             {% endif %}
             
             <!-- TVA globale -->
-            <div class="summary-line tva-line">
-                <span class="summary-label">TVA :</span>
-                <span class="summary-value total-tva">{{ devis.totalTva }}€</span>
-            </div>
+            {% set tvaDetails = devis.tvaDetailsByRate %}
+            {% if tvaDetails|length > 1 %}
+                {# Plusieurs taux de TVA : affichage détaillé #}
+                {% for taux, detail in tvaDetails %}
+                <div class="summary-line tva-line">
+                    <span class="summary-label">TVA {{ taux }}% :</span>
+                    <span class="summary-value">{{ detail.totalTva|number_format(2, '.', '') }}€</span>
+                </div>
+                {% endfor %}
+                <div class="summary-line tva-line total-tva-line">
+                    <span class="summary-label">Total TVA :</span>
+                    <span class="summary-value total-tva">{{ devis.totalTva }}€</span>
+                </div>
+            {% else %}
+                {# Un seul taux : affichage simple #}
+                <div class="summary-line tva-line total-tva-line">
+                    <span class="summary-label">TVA :</span>
+                    <span class="summary-value total-tva">{{ devis.totalTva }}€</span>
+                </div>
+            {% endif %}
             
             <!-- Total TTC final -->
             <div class="summary-line total-ttc-line">
@@ -1544,13 +1560,84 @@ async function reorderElements(elementIds) {
 // CALCULS
 // ==========================================
 
+function updateFloatingTvaDetails(tvaDetailsByRate, totalTvaRemise) {
+    // Trouver toutes les lignes de TVA détaillées dans le panneau flottant
+    const tvaLines = document.querySelectorAll('.floating-summary .tva-line');
+    const summaryBreakdown = document.querySelector('.floating-summary .summary-breakdown');
+    
+    if (!summaryBreakdown) return;
+    
+    // Compter uniquement les taux de TVA avec montant > 0
+    const tvaRates = Object.keys(tvaDetailsByRate);
+    const tvaRatesWithAmount = tvaRates.filter(taux => tvaDetailsByRate[taux].totalTva > 0.001);
+    const hasMultipleRates = tvaRatesWithAmount.length > 1;
+    
+    if (hasMultipleRates) {
+        // Supprimer les anciennes lignes de TVA
+        tvaLines.forEach(line => {
+            if (!line.classList.contains('total-tva-line')) {
+                line.remove();
+            }
+        });
+        
+        // Ajouter les nouvelles lignes détaillées AVANT la ligne "Total TVA"
+        let totalTvaLineRef = document.querySelector('.floating-summary .total-tva-line') || 
+                            document.querySelector('.floating-summary .tva-line:last-of-type');
+        
+        // Trier les taux (seulement ceux avec montant > 0)
+        const sortedRates = tvaRatesWithAmount.sort((a, b) => parseFloat(a) - parseFloat(b));
+        
+        sortedRates.forEach(taux => {
+            const detail = tvaDetailsByRate[taux];
+            const lineDiv = document.createElement('div');
+            lineDiv.className = 'summary-line tva-line tva-detail-line';
+            lineDiv.innerHTML = `
+                <span class="summary-label">TVA ${parseFloat(taux)}% :</span>
+                <span class="summary-value">${detail.totalTva.toFixed(2)}€</span>
+            `;
+            
+            if (totalTvaLineRef) {
+                summaryBreakdown.insertBefore(lineDiv, totalTvaLineRef);
+            } else {
+                summaryBreakdown.appendChild(lineDiv);
+            }
+        });
+        
+        // Mettre à jour ou créer la ligne "Total TVA"
+        let totalTvaLine = document.querySelector('.floating-summary .total-tva-line');
+        if (!totalTvaLine) {
+            totalTvaLine = document.createElement('div');
+            totalTvaLine.className = 'summary-line tva-line total-tva-line';
+            summaryBreakdown.appendChild(totalTvaLine);
+        }
+        totalTvaLine.innerHTML = `
+            <span class="summary-label">Total TVA :</span>
+            <span class="summary-value total-tva">${totalTvaRemise.toFixed(2)}€</span>
+        `;
+    } else {
+        // Un seul taux : supprimer les lignes détaillées
+        const detailLines = document.querySelectorAll('.floating-summary .tva-detail-line');
+        detailLines.forEach(line => line.remove());
+        
+        // Remettre le libellé simple
+        const totalTvaLine = document.querySelector('.floating-summary .total-tva-line');
+        if (totalTvaLine) {
+            totalTvaLine.innerHTML = `
+                <span class="summary-label">TVA :</span>
+                <span class="summary-value total-tva">${totalTvaRemise.toFixed(2)}€</span>
+            `;
+        }
+    }
+}
+
 function calculateTotals() {
     const productElements = elements.filter(e => e.is_product);
     
     let totalHt = 0;
     let totalTva = 0;
+    let tvaDetailsByRate = {};
     
-    productElements.forEach(element => {
+    productElements.forEach((element, index) => {
         // Recalculer le total de ligne à partir des données de base
         const quantite = parseFloat(element.quantite || 1);
         const prixUnitaire = parseFloat(element.prix_unitaire_ht || 0);
@@ -1558,9 +1645,17 @@ function calculateTotals() {
         const tvaPercent = parseFloat(element.tva_percent || 0);
         
         const lineHt = quantite * prixUnitaire * (1 - remisePercent / 100);
+        const lineTva = lineHt * (tvaPercent / 100);
         
         totalHt += lineHt;
-        totalTva += lineHt * (tvaPercent / 100);
+        totalTva += lineTva;
+        
+        // Grouper par taux de TVA
+        if (!tvaDetailsByRate[tvaPercent]) {
+            tvaDetailsByRate[tvaPercent] = { totalHt: 0, totalTva: 0, taux: tvaPercent };
+        }
+        tvaDetailsByRate[tvaPercent].totalHt += lineHt;
+        tvaDetailsByRate[tvaPercent].totalTva += lineTva;
     });
     
     // Notifier le système de remise du total HT avant remise
@@ -1575,6 +1670,7 @@ function calculateTotals() {
     const remisePercent = parseFloat(remisePercentEl?.value || 0);
     const remiseMontantSaisie = parseFloat(remiseMontantEl?.value || 0);
     
+    
     // Calculer la remise : priorité au pourcentage si les deux sont renseignés
     let remiseMontant = 0;
     if (remisePercent > 0) {
@@ -1584,7 +1680,30 @@ function calculateTotals() {
     }
     
     const totalHtRemise = totalHt - remiseMontant;
-    const totalTvaRemise = totalHtRemise * (totalTva / totalHt || 0); // Proportionnelle
+    
+    // Appliquer la remise aux détails de TVA (même logique que calculateTotals())
+    let totalTvaRemise = 0;
+    if (remisePercent > 0) {
+        // Remise pourcentage : s'applique sur HT ET TVA
+        const facteurRemise = 1 - (remisePercent / 100);
+        for (let taux in tvaDetailsByRate) {
+            tvaDetailsByRate[taux].totalHt *= facteurRemise;
+            tvaDetailsByRate[taux].totalTva *= facteurRemise;
+            totalTvaRemise += tvaDetailsByRate[taux].totalTva;
+        }
+    } else if (remiseMontantSaisie > 0) {
+        // Remise fixe : s'applique SEULEMENT sur HT
+        const facteurHt = totalHtRemise / totalHt;
+        for (let taux in tvaDetailsByRate) {
+            tvaDetailsByRate[taux].totalHt *= facteurHt;
+            // TVA reste inchangée pour remise fixe
+            totalTvaRemise += tvaDetailsByRate[taux].totalTva;
+        }
+    } else {
+        // Pas de remise
+        totalTvaRemise = totalTva;
+    }
+    
     const totalTtc = totalHtRemise + totalTvaRemise;
     
     // Mettre à jour les totaux dans l'interface principale si les éléments existent
@@ -1639,7 +1758,12 @@ function calculateTotals() {
         }
     }
     
-    if (floatingTotalTva) floatingTotalTva.textContent = totalTvaRemise.toFixed(2) + '€';
+    
+    // Mettre à jour les détails de TVA par taux dans le panneau flottant
+    updateFloatingTvaDetails(tvaDetailsByRate, totalTvaRemise);
+    
+    // Don't update floatingTotalTva here as it's handled by updateFloatingTvaDetails
+    // if (floatingTotalTva) floatingTotalTva.textContent = totalTvaRemise.toFixed(2) + '€';
     if (floatingTotalTtc) floatingTotalTtc.textContent = totalTtc.toFixed(2) + '€';
     // Affichage dans la barre de résumé : TTC final ou HT selon présence de remise
     if (floatingSummaryDisplay) {

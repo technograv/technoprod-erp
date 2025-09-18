@@ -540,6 +540,64 @@ class Devis
         $this->totalTtc = number_format($totalHt + $totalTva, 2, '.', '');
     }
 
+    /**
+     * Calcule les totaux de TVA groupés par taux
+     * @return array Array avec les taux comme clés et [totalHt, totalTva] comme valeurs
+     */
+    public function getTvaDetailsByRate(): array
+    {
+        $tvaDetailsAvantRemise = [];
+        $totalHtAvantRemise = 0;
+        $totalTvaAvantRemise = 0;
+        
+        // Calculer les totaux par taux AVANT remise
+        foreach ($this->elements as $element) {
+            if ($element->getType() === 'product') {
+                $tauxTva = floatval($element->getTvaPercent());
+                $totalLigneHt = floatval($element->getTotalLigneHt());
+                $tvaLigne = $totalLigneHt * $tauxTva / 100;
+                
+                if (!isset($tvaDetailsAvantRemise[$tauxTva])) {
+                    $tvaDetailsAvantRemise[$tauxTva] = [
+                        'totalHt' => 0,
+                        'totalTva' => 0,
+                        'taux' => $tauxTva
+                    ];
+                }
+                
+                $tvaDetailsAvantRemise[$tauxTva]['totalHt'] += $totalLigneHt;
+                $tvaDetailsAvantRemise[$tauxTva]['totalTva'] += $tvaLigne;
+                $totalHtAvantRemise += $totalLigneHt;
+                $totalTvaAvantRemise += $tvaLigne;
+            }
+        }
+        
+        // Appliquer la même logique de remise que dans calculateTotals()
+        $totalHtFinal = floatval($this->totalHt);
+        $totalTvaFinal = floatval($this->totalTva);
+        
+        $tvaDetails = [];
+        
+        if ($totalHtAvantRemise > 0 && $totalTvaAvantRemise > 0) {
+            // Calculer les facteurs de réduction basés sur les totaux finaux
+            $facteurHt = $totalHtFinal / $totalHtAvantRemise;
+            $facteurTva = $totalTvaFinal / $totalTvaAvantRemise;
+            
+            foreach ($tvaDetailsAvantRemise as $taux => $detail) {
+                $tvaDetails[$taux] = [
+                    'totalHt' => $detail['totalHt'] * $facteurHt,
+                    'totalTva' => $detail['totalTva'] * $facteurTva,
+                    'taux' => $taux
+                ];
+            }
+        }
+        
+        // Trier par taux de TVA
+        ksort($tvaDetails);
+        
+        return $tvaDetails;
+    }
+
     public function generateNumeroDevis(): string
     {
         $year = date('Y');

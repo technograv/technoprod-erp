@@ -398,10 +398,36 @@
                 <td><strong>Total HT:</strong></td>
                 <td class="text-right"><strong>{{ devis.totalHt|number_format(2, ',', ' ') }}€</strong></td>
             </tr>
-            <tr>
-                <td>TVA:</td>
-                <td class="text-right">{{ devis.totalTva|number_format(2, ',', ' ') }}€</td>
-            </tr>
+            {# Récapitulatif TVA détaillé par taux #}
+            {% set tvaDetailsByRate = devis.getTvaDetailsByRate() %}
+            {# Compter uniquement les taux avec montant > 0 #}
+            {% set tvaRatesWithAmount = 0 %}
+            {% for taux, detail in tvaDetailsByRate %}
+                {% if detail.totalTva > 0.001 %}
+                    {% set tvaRatesWithAmount = tvaRatesWithAmount + 1 %}
+                {% endif %}
+            {% endfor %}
+            {% if tvaRatesWithAmount > 1 %}
+                {# Plusieurs taux de TVA : afficher le détail (seulement les montants > 0) #}
+                {% for taux, detail in tvaDetailsByRate %}
+                    {% if detail.totalTva > 0.001 %}
+                        <tr>
+                            <td>TVA {{ taux }}%:</td>
+                            <td class="text-right">{{ detail.totalTva|number_format(2, ',', ' ') }}€</td>
+                        </tr>
+                    {% endif %}
+                {% endfor %}
+                <tr style="border-top: 1px solid #dee2e6;">
+                    <td><strong>Total TVA:</strong></td>
+                    <td class="text-right"><strong>{{ devis.totalTva|number_format(2, ',', ' ') }}€</strong></td>
+                </tr>
+            {% else %}
+                {# Un seul taux de TVA : affichage simple #}
+                <tr>
+                    <td>TVA:</td>
+                    <td class="text-right">{{ devis.totalTva|number_format(2, ',', ' ') }}€</td>
+                </tr>
+            {% endif %}
             <tr class="total-row">
                 <td><strong>TOTAL TTC:</strong></td>
                 <td class="text-right"><strong>{{ devis.totalTtc|number_format(2, ',', ' ') }}€</strong></td>

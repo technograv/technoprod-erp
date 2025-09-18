@@ -470,10 +470,26 @@
                                 </th>
                             </tr>
                             {% endif %}
-                            <tr>
-                                <th colspan="7" class="text-end">TVA :</th>
-                                <th class="text-end">{{ devis.totalTva }}€</th>
-                            </tr>
+                            {% set tvaDetails = devis.tvaDetailsByRate %}
+                            {% if tvaDetails|length > 1 %}
+                                {# Plusieurs taux de TVA : affichage détaillé #}
+                                {% for taux, detail in tvaDetails %}
+                                <tr>
+                                    <th colspan="7" class="text-end">TVA {{ taux }}% :</th>
+                                    <th class="text-end">{{ detail.totalTva|number_format(2, '.', '') }}€</th>
+                                </tr>
+                                {% endfor %}
+                                <tr>
+                                    <th colspan="7" class="text-end">Total TVA :</th>
+                                    <th class="text-end">{{ devis.totalTva }}€</th>
+                                </tr>
+                            {% else %}
+                                {# Un seul taux : affichage simple #}
+                                <tr>
+                                    <th colspan="7" class="text-end">TVA :</th>
+                                    <th class="text-end">{{ devis.totalTva }}€</th>
+                                </tr>
+                            {% endif %}
                             <tr class="table-success">
                                 <th colspan="7" class="text-end">Total TTC :</th>
                                 <th class="text-end">{{ devis.totalTtc }}€</th>
