@@ -163,6 +163,9 @@
 
 <!-- Inclusion des services JavaScript -->
 <script src="/js/services/ModalService.js"></script>
+<script src="/js/services/AddressModalService.js"></script>
+<script src="/js/services/ContactModalService.js"></script>
+<script src="/js/services/ClientModalService.js"></script>
 <script src="/js/services/ClientProspectService.js"></script>
 
 <script>
@@ -242,5 +245,121 @@
             clientService.destroy();
         }
     });
+    
+    // ==========================================
+    // GESTION DES MODALES D'ADRESSE
+    // ==========================================
+    
+    let addressModalService = null;
+    
+    // Initialiser le service de modales d'adresse
+    if (window.AddressModalService) {
+        addressModalService = new AddressModalService({
+            debug: true,
+            onAddressCreated: function(detail) {
+                // Recharger les adresses pour le client actuel
+                if (clientService) {
+                    const clientSelect = document.getElementById('prospect');
+                    const clientId = clientSelect?.value;
+                    if (clientId) {
+                        clientService.handleClientChange(clientId);
+                    }
+                }
+            },
+            onAddressUpdated: function(detail) {
+                // Recharger les adresses pour le client actuel
+                if (clientService) {
+                    const clientSelect = document.getElementById('prospect');
+                    const clientId = clientSelect?.value;
+                    if (clientId) {
+                        clientService.handleClientChange(clientId);
+                    }
+                }
+            }
+        });
+        
+        // Attacher automatiquement aux boutons de la page devis
+        addressModalService.attachToDevisPage();
+    }
+    
+    // ==========================================
+    // GESTION DES MODALES DE CONTACT
+    // ==========================================
+    
+    let contactModalService = null;
+    
+    // Initialiser le service de modales de contact
+    if (window.ContactModalService) {
+        contactModalService = new ContactModalService({
+            debug: true,
+            onContactCreated: function(detail) {
+                // Recharger les contacts pour le client actuel
+                if (clientService) {
+                    const clientSelect = document.getElementById('prospect');
+                    const clientId = clientSelect?.value;
+                    if (clientId) {
+                        clientService.handleClientChange(clientId);
+                    }
+                }
+            },
+            onContactUpdated: function(detail) {
+                // Recharger les contacts pour le client actuel
+                if (clientService) {
+                    const clientSelect = document.getElementById('prospect');
+                    const clientId = clientSelect?.value;
+                    if (clientId) {
+                        clientService.handleClientChange(clientId);
+                    }
+                }
+            }
+        });
+        
+        // Attacher automatiquement aux boutons de la page devis
+        contactModalService.attachToDevisPage();
+    }
+    
+    // ==========================================
+    // GESTION DES MODALES DE CLIENT
+    // ==========================================
+    
+    let clientModalService = null;
+    
+    // Initialiser le service de modales de client
+    if (window.ClientModalService) {
+        clientModalService = new ClientModalService({
+            debug: true,
+            onClientCreated: function(detail) {
+                // Recharger la liste des clients
+                if (window.$ && typeof $.fn.select2 !== 'undefined') {
+                    const clientSelect = $('#prospect');
+                    
+                    // Ajouter le nouveau client à la liste
+                    const newOption = new Option(detail.client.label, detail.client.id, true, true);
+                    clientSelect.append(newOption).trigger('change');
+                    
+                    // Déclencher le changement pour charger les contacts/adresses
+                    if (clientService) {
+                        clientService.handleClientChange(detail.client.id);
+                    }
+                }
+            },
+            onClientUpdated: function(detail) {
+                // Mettre à jour le label du client dans la liste
+                if (window.$ && typeof $.fn.select2 !== 'undefined') {
+                    const clientSelect = $('#prospect');
+                    const currentValue = clientSelect.val();
+                    
+                    if (currentValue == detail.client.id) {
+                        // Mettre à jour l'option existante
+                        clientSelect.find(`option[value="${detail.client.id}"]`).text(detail.client.label);
+                        clientSelect.trigger('change.select2');
+                    }
+                }
+            }
+        });
+        
+        // Attacher automatiquement aux boutons de la page devis
+        clientModalService.attachToDevisPage();
+    }
 })();
 </script>

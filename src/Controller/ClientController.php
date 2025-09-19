@@ -1072,4 +1072,277 @@ final class ClientController extends AbstractController
             ], 500);
         }
     }
+    
+    #[Route('/modal/new', name: 'app_client_modal_new', methods: ['GET', 'POST'])]
+    public function modalNew(Request $request, EntityManagerInterface $entityManager): Response
+    {
+        try {
+            if ($request->isMethod('GET')) {
+                // Récupérer les formes juridiques
+                $formesJuridiques = $entityManager->getRepository(\App\Entity\FormeJuridique::class)
+                    ->findBy(['actif' => true], ['ordre' => 'ASC']);
+                
+                return $this->render('client/modal_new_working.html.twig', [
+                    'client' => new Client(),
+                    'type' => 'client',
+                    'formes_juridiques' => $formesJuridiques
+                ]);
+            }
+            
+            if ($request->isMethod('POST')) {
+                // Créer un nouveau client
+                $client = new Client();
+                $type = $request->query->get('type', 'client');
+                $client->setStatut($type === 'prospect' ? 'prospect' : 'client');
+                
+                // Traitement des données du formulaire POST
+                $formeJuridiqueId = $request->request->get('formeJuridique');
+                $nom = $request->request->get('nom');
+                $prenom = $request->request->get('prenom');
+                $nomEntreprise = $request->request->get('nomEntreprise');
+                $civilite = $request->request->get('civilite');
+                
+                // Récupérer email/téléphone pour les particuliers et notes pour tous
+                $emailParticulier = $request->request->get('emailParticulier');
+                $telephoneParticulier = $request->request->get('telephoneParticulier');
+                $notes = $request->request->get('notes');
+
+                if ($formeJuridiqueId && ($nom || $nomEntreprise)) {
+                    // Récupérer la forme juridique
+                    $formeJuridique = $entityManager->getRepository(\App\Entity\FormeJuridique::class)->find($formeJuridiqueId);
+                    if ($formeJuridique) {
+                        $client->setFormeJuridique($formeJuridique);
+                    }
+                    
+                    // Configurer les champs de base du client
+                    if ($formeJuridique && $formeJuridique->getTemplateFormulaire() === 'personne_physique') {
+                        // Pour un particulier
+                        $client->setNom($nom);
+                        $client->setPrenom($prenom);
+                        $client->setCivilite($civilite);
+                        $client->setEmail($emailParticulier);
+                        $client->setTelephone($telephoneParticulier);
+                    } else {
+                        // Pour une entreprise - pas d'email/téléphone direct, seulement via contacts
+                        $client->setNomEntreprise($nomEntreprise);
+                    }
+                    
+                    // Ajouter les notes si fournies
+                    if ($notes) {
+                        $client->setNotes($notes);
+                    }
+                    
+                    // Générer le code client automatiquement
+                    $code = $this->generateClientCode($entityManager, $type);
+                    $client->setCode($code);
+
+                    $entityManager->persist($client);
+                    
+                    // Créer contact et adresse selon le type de personne
+                    if ($formeJuridique && $formeJuridique->getTemplateFormulaire() === 'personne_physique') {
+                        // Pour un particulier, créer un contact basé sur ses propres infos
+                        if ($nom) {
+                            $contact = new \App\Entity\Contact();
+                            $contact->setClient($client);
+                            $contact->setCivilite($civilite);
+                            $contact->setNom($nom);
+                            $contact->setPrenom($prenom);
+                            $contact->setEmail($emailParticulier);
+                            $contact->setTelephone($telephoneParticulier);
+                            $contact->setIsFacturationDefault(true);
+                            $contact->setIsLivraisonDefault(true);
+                            
+                            $entityManager->persist($contact);
+                            
+                            // Créer l'adresse personnelle
+                            $adresseLigne1 = $request->request->get('particulier_adresse_ligne1');
+                            if ($adresseLigne1) {
+                                $adresse = new \App\Entity\Adresse();
+                                $adresse->setClient($client);
+                                $adresse->setNom('Domicile');
+                                $adresse->setLigne1($adresseLigne1);
+                                $adresse->setCodePostal($request->request->get('particulier_adresse_codePostal'));
+                                $adresse->setVille($request->request->get('particulier_adresse_ville'));
+                                $adresse->setPays($request->request->get('particulier_adresse_pays') ?: 'France');
+                                
+                                $entityManager->persist($adresse);
+                                
+                                // Associer l'adresse au contact
+                                $contact->setAdresse($adresse);
+                            }
+                            
+                            // Définir comme contacts par défaut pour le client
+                            $client->setContactFacturationDefault($contact);
+                            $client->setContactLivraisonDefault($contact);
+                        }
+                    } elseif ($formeJuridique && $formeJuridique->getTemplateFormulaire() === 'personne_morale') {
+                        // Créer le contact principal
+                        $contactNom = $request->request->get('contact_nom');
+                        if ($contactNom) {
+                            $contact = new \App\Entity\Contact();
+                            $contact->setClient($client);
+                            $contact->setCivilite($request->request->get('contact_civilite'));
+                            $contact->setNom($contactNom);
+                            $contact->setPrenom($request->request->get('contact_prenom'));
+                            $contact->setFonction($request->request->get('contact_fonction'));
+                            $contact->setEmail($request->request->get('contact_email'));
+                            $contact->setTelephone($request->request->get('contact_telephone'));
+                            $contact->setIsFacturationDefault(true);
+                            $contact->setIsLivraisonDefault(true);
+                            
+                            $entityManager->persist($contact);
+                            
+                            // Créer l'adresse du siège social
+                            $adresseLigne1 = $request->request->get('adresse_ligne1');
+                            if ($adresseLigne1) {
+                                $adresse = new \App\Entity\Adresse();
+                                $adresse->setClient($client);
+                                $adresse->setNom('Siège social');
+                                $adresse->setLigne1($adresseLigne1);
+                                $adresse->setLigne2($request->request->get('adresse_ligne2'));
+                                $adresse->setCodePostal($request->request->get('adresse_codePostal'));
+                                $adresse->setVille($request->request->get('adresse_ville'));
+                                $adresse->setPays($request->request->get('adresse_pays') ?: 'France');
+                                
+                                $entityManager->persist($adresse);
+                                
+                                // Associer l'adresse au contact
+                                $contact->setAdresse($adresse);
+                                
+                                // Définir comme contacts par défaut pour le client
+                                $client->setContactFacturationDefault($contact);
+                                $client->setContactLivraisonDefault($contact);
+                            }
+                        }
+                    }
+                    
+                    $entityManager->flush();
+
+                    if ($request->isXmlHttpRequest()) {
+                        return $this->json([
+                            'success' => true,
+                            'message' => ($type === 'prospect' ? 'Prospect' : 'Client') . ' créé avec succès',
+                            'client' => [
+                                'id' => $client->getId(),
+                                'label' => $client->getNomEntreprise() ?: ($client->getPrenom() . ' ' . $client->getNom()),
+                                'nom' => $client->getNom(),
+                                'nomEntreprise' => $client->getNomEntreprise(),
+                                'email' => $client->getEmail(),
+                                'code' => $client->getCode()
+                            ]
+                        ]);
+                    }
+
+                    return $this->redirectToRoute('app_client_edit', ['id' => $client->getId()]);
+                }
+
+                if ($request->isXmlHttpRequest()) {
+                    return $this->json([
+                        'success' => false,
+                        'message' => 'Le nom ou l\'entreprise est obligatoire'
+                    ], 400);
+                }
+                
+                // Retourner le template avec les erreurs
+                $formesJuridiques = $entityManager->getRepository(\App\Entity\FormeJuridique::class)
+                    ->findBy(['actif' => true], ['ordre' => 'ASC']);
+                
+                return $this->render('client/modal_new_working.html.twig', [
+                    'client' => $client,
+                    'type' => 'client',
+                    'formes_juridiques' => $formesJuridiques,
+                    'error' => 'Le nom ou l\'entreprise est obligatoire'
+                ]);
+            }
+        } catch (\Exception $e) {
+            // Log de débogage
+            error_log("Erreur modalNew: " . $e->getMessage());
+            if ($request->isXmlHttpRequest()) {
+                return $this->json([
+                    'success' => false,
+                    'message' => 'Erreur serveur: ' . $e->getMessage()
+                ], 500);
+            }
+            throw $e;
+        }
+    }
+    
+    #[Route('/modal/edit/{id}', name: 'app_client_modal_edit', methods: ['GET', 'POST'])]
+    public function modalEdit(Client $client, Request $request, EntityManagerInterface $entityManager): Response
+    {
+        if ($request->isMethod('POST')) {
+            // Traitement des données du formulaire POST
+            $nom = $request->request->get('nom');
+            $nomEntreprise = $request->request->get('nomEntreprise');
+            $email = $request->request->get('email');
+            $telephone = $request->request->get('telephone');
+            $siret = $request->request->get('siret');
+            $tvaIntra = $request->request->get('tvaIntra');
+
+            if ($nom || $nomEntreprise) {
+                $client->setNom($nom);
+                $client->setNomEntreprise($nomEntreprise);
+                $client->setEmail($email);
+                $client->setTelephone($telephone);
+                $client->setSiret($siret);
+                $client->setTvaIntra($tvaIntra);
+
+                $entityManager->flush();
+
+                if ($request->isXmlHttpRequest()) {
+                    return $this->json([
+                        'success' => true,
+                        'message' => 'Client modifié avec succès',
+                        'client' => [
+                            'id' => $client->getId(),
+                            'label' => $client->getNomEntreprise() ?: ($client->getPrenom() . ' ' . $client->getNom()),
+                            'nom' => $client->getNom(),
+                            'nomEntreprise' => $client->getNomEntreprise(),
+                            'email' => $client->getEmail(),
+                            'code' => $client->getCode()
+                        ]
+                    ]);
+                }
+
+                return $this->redirectToRoute('app_client_edit', ['id' => $client->getId()]);
+            }
+
+            if ($request->isXmlHttpRequest()) {
+                return $this->json([
+                    'success' => false,
+                    'message' => 'Le nom ou l\'entreprise est obligatoire'
+                ], 400);
+            }
+        }
+
+        return $this->render('client/modal_edit.html.twig', [
+            'client' => $client
+        ]);
+    }
+    
+    private function generateClientCode(EntityManagerInterface $entityManager, string $type): string
+    {
+        $prefix = $type === 'prospect' ? 'P' : 'C';
+        $year = date('Y');
+        
+        // Trouver le dernier code pour ce type et cette année
+        $lastClient = $entityManager->getRepository(Client::class)
+            ->createQueryBuilder('c')
+            ->where('c.code LIKE :pattern')
+            ->setParameter('pattern', $prefix . $year . '%')
+            ->orderBy('c.code', 'DESC')
+            ->setMaxResults(1)
+            ->getQuery()
+            ->getOneOrNullResult();
+        
+        if ($lastClient && $lastClient->getCode()) {
+            // Extraire le numéro et l'incrémenter
+            $lastNumber = intval(substr($lastClient->getCode(), -4));
+            $nextNumber = $lastNumber + 1;
+        } else {
+            $nextNumber = 1;
+        }
+        
+        return $prefix . $year . str_pad($nextNumber, 4, '0', STR_PAD_LEFT);
+    }
 }

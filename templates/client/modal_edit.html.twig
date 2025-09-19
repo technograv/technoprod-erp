@@ -1,0 +1,172 @@
+<div class="modal-header">
+    <h5 class="modal-title">
+        <i class="fas fa-user-edit me-2"></i>Modifier {{ client.nomEntreprise ?: (client.prenom ~ ' ' ~ client.nom) }}
+    </h5>
+    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+</div>
+<div class="modal-body">
+    <form id="client-form" method="POST">
+        <div class="row">
+            <div class="col-12">
+                <div class="mb-3">
+                    <label class="form-label">Code</label>
+                    <input type="text" class="form-control" value="{{ client.code }}" readonly disabled>
+                    <small class="form-text text-muted">
+                        Le code ne peut pas être modifié
+                    </small>
+                </div>
+            </div>
+        </div>
+        
+        <div class="row">
+            <div class="col-12">
+                <div class="mb-3">
+                    <label class="form-label">Nom de l'entreprise</label>
+                    <input type="text" class="form-control" name="nomEntreprise" id="client-nom-entreprise" 
+                           value="{{ client.nomEntreprise }}" placeholder="Société ABC...">
+                    <small class="form-text text-muted">
+                        Laissez vide pour un particulier
+                    </small>
+                </div>
+            </div>
+        </div>
+        
+        <div class="row">
+            <div class="col-md-6">
+                <div class="mb-3">
+                    <label class="form-label">Prénom</label>
+                    <input type="text" class="form-control" name="prenom" id="client-prenom" 
+                           value="{{ client.prenom }}">
+                </div>
+            </div>
+            <div class="col-md-6">
+                <div class="mb-3">
+                    <label class="form-label">Nom</label>
+                    <input type="text" class="form-control" name="nom" id="client-nom" 
+                           value="{{ client.nom }}">
+                </div>
+            </div>
+        </div>
+        
+        <div class="row">
+            <div class="col-md-6">
+                <div class="mb-3">
+                    <label class="form-label">Email</label>
+                    <input type="email" class="form-control" name="email" id="client-email" 
+                           value="{{ client.email }}">
+                </div>
+            </div>
+            <div class="col-md-6">
+                <div class="mb-3">
+                    <label class="form-label">Téléphone</label>
+                    <input type="tel" class="form-control" name="telephone" id="client-telephone" 
+                           value="{{ client.telephone }}">
+                </div>
+            </div>
+        </div>
+        
+        <div class="row">
+            <div class="col-md-6">
+                <div class="mb-3">
+                    <label class="form-label">SIRET</label>
+                    <input type="text" class="form-control" name="siret" id="client-siret" 
+                           value="{{ client.siret }}" maxlength="14" placeholder="12345678901234">
+                </div>
+            </div>
+            <div class="col-md-6">
+                <div class="mb-3">
+                    <label class="form-label">N° TVA Intra</label>
+                    <input type="text" class="form-control" name="tvaIntra" id="client-tva-intra" 
+                           value="{{ client.tvaIntra }}" placeholder="FR12345678901">
+                </div>
+            </div>
+        </div>
+    </form>
+</div>
+<div class="modal-footer">
+    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">
+        <i class="fas fa-times me-1"></i>Annuler
+    </button>
+    <button type="button" class="btn btn-primary" id="save-client-btn">
+        <i class="fas fa-save me-1"></i>Modifier le client
+    </button>
+</div>
+
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    // Gérer la soumission du formulaire
+    document.getElementById('save-client-btn').addEventListener('click', function() {
+        submitClientForm();
+    });
+    
+    // Permettre la soumission avec Entrée
+    document.getElementById('client-form').addEventListener('submit', function(e) {
+        e.preventDefault();
+        submitClientForm();
+    });
+    
+    // Formater le SIRET automatiquement
+    document.getElementById('client-siret').addEventListener('input', function(e) {
+        let value = e.target.value.replace(/\D/g, '');
+        if (value.length > 14) value = value.substr(0, 14);
+        e.target.value = value;
+    });
+});
+
+function submitClientForm() {
+    const form = document.getElementById('client-form');
+    const formData = new FormData(form);
+    const submitBtn = document.getElementById('save-client-btn');
+    
+    // Validation côté client
+    const nomEntreprise = formData.get('nomEntreprise').trim();
+    const nom = formData.get('nom').trim();
+    
+    if (!nomEntreprise && !nom) {
+        alert('Veuillez renseigner au moins le nom de l\'entreprise ou le nom de la personne');
+        return;
+    }
+    
+    // Désactiver le bouton pendant la soumission
+    submitBtn.disabled = true;
+    submitBtn.innerHTML = '<i class="fas fa-spinner fa-spin me-1"></i>Modification...';
+    
+    // Soumettre via fetch
+    fetch(window.location.href, {
+        method: 'POST',
+        body: formData,
+        headers: {
+            'X-Requested-With': 'XMLHttpRequest'
+        }
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.success) {
+            // Émettre un événement pour notifier la page parent
+            window.dispatchEvent(new CustomEvent('clientUpdated', {
+                detail: { 
+                    client: data.client,
+                    message: data.message
+                }
+            }));
+            
+            // Fermer la modale
+            const modal = bootstrap.Modal.getInstance(document.querySelector('.modal'));
+            if (modal) {
+                modal.hide();
+            }
+        } else {
+            alert(data.message || 'Erreur lors de la modification');
+        }
+    })
+    .catch(error => {
+        console.error('Erreur:', error);
+        alert('Erreur lors de la modification');
+    })
+    .finally(() => {
+        // Réactiver le bouton
+        submitBtn.disabled = false;
+        submitBtn.innerHTML = '<i class="fas fa-save me-1"></i>Modifier le client';
+    });
+}
+</script>

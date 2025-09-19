@@ -1,0 +1,27 @@
+<div class="modal-header">
+    <h5 class="modal-title">
+        <i class="fas fa-user-plus me-2"></i>Test minimal
+    </h5>
+    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+</div>
+<div class="modal-body">
+    <p>Template de débogage minimal</p>
+    
+    <select class="form-control" id="forme-juridique-select" required>
+        <option value="">Sélectionner...</option>
+        {% for forme in formes_juridiques %}
+            <option value="{{ forme.id }}" data-template="{{ forme.templateFormulaire }}">
+                {{ forme.nom }}
+            </option>
+        {% endfor %}
+    </select>
+</div>
+<div class="modal-footer">
+    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Fermer</button>
+</div>
+
+<script>
+console.log('🚀 Test minimal chargé');
+const select = document.getElementById('forme-juridique-select');
+console.log('✅ Sélecteur trouvé:', select);
+</script>

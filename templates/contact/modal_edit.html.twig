@@ -1,0 +1,180 @@
+<div class="modal-header">
+    <h5 class="modal-title">
+        <i class="fas fa-user-edit me-2"></i>Modifier le contact "{{ contact.prenom }} {{ contact.nom }}"
+    </h5>
+    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+</div>
+<div class="modal-body">
+    <form id="contact-form" method="POST">
+        <div class="row">
+            <div class="col-md-6">
+                <div class="mb-3">
+                    <label class="form-label">Prénom</label>
+                    <input type="text" class="form-control" name="prenom" id="contact-prenom" 
+                           value="{{ contact.prenom }}">
+                </div>
+            </div>
+            <div class="col-md-6">
+                <div class="mb-3">
+                    <label class="form-label">Nom *</label>
+                    <input type="text" class="form-control" name="nom" id="contact-nom" 
+                           value="{{ contact.nom }}" required>
+                </div>
+            </div>
+        </div>
+        
+        <div class="row">
+            <div class="col-md-6">
+                <div class="mb-3">
+                    <label class="form-label">Email</label>
+                    <input type="email" class="form-control" name="email" id="contact-email" 
+                           value="{{ contact.email }}">
+                </div>
+            </div>
+            <div class="col-md-6">
+                <div class="mb-3">
+                    <label class="form-label">Fonction</label>
+                    <input type="text" class="form-control" name="fonction" id="contact-fonction" 
+                           value="{{ contact.fonction }}" placeholder="Directeur, Commercial, Comptable...">
+                </div>
+            </div>
+        </div>
+        
+        <div class="row">
+            <div class="col-md-6">
+                <div class="mb-3">
+                    <label class="form-label">Téléphone fixe</label>
+                    <input type="tel" class="form-control" name="telephone" id="contact-telephone" 
+                           value="{{ contact.telephone }}">
+                </div>
+            </div>
+            <div class="col-md-6">
+                <div class="mb-3">
+                    <label class="form-label">Mobile</label>
+                    <input type="tel" class="form-control" name="mobile" id="contact-mobile" 
+                           value="{{ contact.mobile }}">
+                </div>
+            </div>
+        </div>
+        
+        <div class="row">
+            <div class="col-12">
+                <div class="mb-3">
+                    <label class="form-label">Adresse associée</label>
+                    <select class="form-select" name="adresse" id="contact-adresse">
+                        <option value="">-- Sélectionner une adresse --</option>
+                        {% for adresse in adresses %}
+                            <option value="{{ adresse.id }}" 
+                                    {% if contact.adresse and contact.adresse.id == adresse.id %}selected{% endif %}>
+                                {{ adresse.getDisplayLabel() }}
+                            </option>
+                        {% endfor %}
+                    </select>
+                    <small class="form-text text-muted">
+                        Vous pouvez associer ce contact à une adresse spécifique
+                    </small>
+                </div>
+            </div>
+        </div>
+        
+        <div class="row">
+            <div class="col-md-6">
+                <div class="form-check mb-3">
+                    <input class="form-check-input" type="checkbox" name="isFacturationDefault" 
+                           id="contact-facturation-default" {% if contact.isFacturationDefault %}checked{% endif %}>
+                    <label class="form-check-label" for="contact-facturation-default">
+                        <i class="fas fa-file-invoice me-1"></i>Contact de facturation par défaut
+                    </label>
+                </div>
+            </div>
+            <div class="col-md-6">
+                <div class="form-check mb-3">
+                    <input class="form-check-input" type="checkbox" name="isLivraisonDefault" 
+                           id="contact-livraison-default" {% if contact.isLivraisonDefault %}checked{% endif %}>
+                    <label class="form-check-label" for="contact-livraison-default">
+                        <i class="fas fa-truck me-1"></i>Contact de livraison par défaut
+                    </label>
+                </div>
+            </div>
+        </div>
+    </form>
+</div>
+<div class="modal-footer">
+    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">
+        <i class="fas fa-times me-1"></i>Annuler
+    </button>
+    <button type="button" class="btn btn-primary" id="save-contact-btn">
+        <i class="fas fa-save me-1"></i>Modifier le contact
+    </button>
+</div>
+
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    // Gérer la soumission du formulaire
+    document.getElementById('save-contact-btn').addEventListener('click', function() {
+        submitContactForm();
+    });
+    
+    // Permettre la soumission avec Entrée
+    document.getElementById('contact-form').addEventListener('submit', function(e) {
+        e.preventDefault();
+        submitContactForm();
+    });
+});
+
+function submitContactForm() {
+    const form = document.getElementById('contact-form');
+    const formData = new FormData(form);
+    const submitBtn = document.getElementById('save-contact-btn');
+    
+    // Validation côté client
+    const nom = formData.get('nom').trim();
+    
+    if (!nom) {
+        alert('Le nom est obligatoire');
+        return;
+    }
+    
+    // Désactiver le bouton pendant la soumission
+    submitBtn.disabled = true;
+    submitBtn.innerHTML = '<i class="fas fa-spinner fa-spin me-1"></i>Modification...';
+    
+    // Soumettre via fetch
+    fetch(window.location.href, {
+        method: 'POST',
+        body: formData,
+        headers: {
+            'X-Requested-With': 'XMLHttpRequest'
+        }
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.success) {
+            // Émettre un événement pour notifier la page parent
+            window.dispatchEvent(new CustomEvent('contactUpdated', {
+                detail: { 
+                    contact: data.contact,
+                    message: data.message
+                }
+            }));
+            
+            // Fermer la modale
+            const modal = bootstrap.Modal.getInstance(document.querySelector('.modal'));
+            if (modal) {
+                modal.hide();
+            }
+        } else {
+            alert(data.message || 'Erreur lors de la modification du contact');
+        }
+    })
+    .catch(error => {
+        console.error('Erreur:', error);
+        alert('Erreur lors de la modification du contact');
+    })
+    .finally(() => {
+        // Réactiver le bouton
+        submitBtn.disabled = false;
+        submitBtn.innerHTML = '<i class="fas fa-save me-1"></i>Modifier le contact';
+    });
+}
+</script>

@@ -186,6 +186,7 @@ class ModalService {
         
         const response = await fetch(url, {
             method: 'GET',
+            credentials: 'same-origin', // Inclure les cookies de session
             headers: {
                 'X-Requested-With': 'XMLHttpRequest',
                 'Accept': 'text/html,application/xhtml+xml'
@@ -193,6 +194,14 @@ class ModalService {
         });
         
         if (!response.ok) {
+            // Essayer de lire le contenu de l'erreur pour le débogage
+            let errorContent = '';
+            try {
+                errorContent = await response.text();
+                console.error('Contenu erreur 500:', errorContent);
+            } catch (e) {
+                console.error('Impossible de lire le contenu de l\'erreur');
+            }
             throw new Error(`HTTP ${response.status}`);
         }
         

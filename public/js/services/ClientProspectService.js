@@ -229,40 +229,37 @@ class ClientProspectService {
         const addAddressLivraisonBtn = document.getElementById('add-address-livraison-btn');
         const addAddressFacturationBtn = document.getElementById('add-address-facturation-btn');
         
-        // Bouton ajouter client
-        addClientBtn?.addEventListener('click', () => {
-            if (this.getModalService()) {
-                this.getModalService().openModal('/client/new?modal=1', 'Nouveau client');
-            }
-        });
+        // Bouton ajouter client - géré par ClientModalService
+        // addClientBtn?.addEventListener('click', () => {
+        //     if (this.getModalService()) {
+        //         this.getModalService().openModal('/client/new?modal=1', 'Nouveau client');
+        //     }
+        // });
         
-        // Bouton ajouter contact livraison
-        addContactBtn?.addEventListener('click', () => {
-            if (this.currentClient && this.getModalService()) {
-                this.getModalService().openModal(`/client/${this.currentClient.id}/edit?modal=1#add-contact`, 'Ajouter un contact');
-            }
-        });
+        // Boutons contact et adresse - gérés par les services modales dédiés
+        // addContactBtn?.addEventListener('click', () => {
+        //     if (this.currentClient && this.getModalService()) {
+        //         this.getModalService().openModal(`/client/${this.currentClient.id}/edit?modal=1#add-contact`, 'Ajouter un contact');
+        //     }
+        // });
         
-        // Bouton ajouter contact facturation
-        addContactFacturationBtn?.addEventListener('click', () => {
-            if (this.currentClient && this.getModalService()) {
-                this.getModalService().openModal(`/client/${this.currentClient.id}/edit?modal=1#add-contact`, 'Ajouter un contact de facturation');
-            }
-        });
+        // addContactFacturationBtn?.addEventListener('click', () => {
+        //     if (this.currentClient && this.getModalService()) {
+        //         this.getModalService().openModal(`/client/${this.currentClient.id}/edit?modal=1#add-contact`, 'Ajouter un contact de facturation');
+        //     }
+        // });
         
-        // Bouton ajouter adresse livraison
-        addAddressLivraisonBtn?.addEventListener('click', () => {
-            if (this.currentClient && this.getModalService()) {
-                this.getModalService().openModal(`/client/${this.currentClient.id}/edit?modal=1#add-address`, 'Ajouter une adresse de livraison');
-            }
-        });
+        // addAddressLivraisonBtn?.addEventListener('click', () => {
+        //     if (this.currentClient && this.getModalService()) {
+        //         this.getModalService().openModal(`/client/${this.currentClient.id}/edit?modal=1#add-address`, 'Ajouter une adresse de livraison');
+        //     }
+        // });
         
-        // Bouton ajouter adresse facturation
-        addAddressFacturationBtn?.addEventListener('click', () => {
-            if (this.currentClient && this.getModalService()) {
-                this.getModalService().openModal(`/client/${this.currentClient.id}/edit?modal=1#add-address`, 'Ajouter une adresse de facturation');
-            }
-        });
+        // addAddressFacturationBtn?.addEventListener('click', () => {
+        //     if (this.currentClient && this.getModalService()) {
+        //         this.getModalService().openModal(`/client/${this.currentClient.id}/edit?modal=1#add-address`, 'Ajouter une adresse de facturation');
+        //     }
+        // });
     }
     
     /**

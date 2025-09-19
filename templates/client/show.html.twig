@@ -458,7 +458,12 @@
                                             {% if not adresse.isDeleted %}
                                                 <tr>
                                                     <td><strong>{{ adresse.nom }}</strong></td>
-                                                    <td>{{ adresse.ligne1 }}</td>
+                                                    <td>
+                                                        {{ adresse.ligne1 }}
+                                                        {% if adresse.ligne2 %}
+                                                            <br><small class="text-muted">{{ adresse.ligne2 }}</small>
+                                                        {% endif %}
+                                                    </td>
                                                     <td>{{ adresse.codePostal }}</td>
                                                     <td>{{ adresse.ville }}</td>
                                                     <td>{{ adresse.pays }}</td>

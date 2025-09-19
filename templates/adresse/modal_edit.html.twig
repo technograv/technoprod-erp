@@ -1,0 +1,139 @@
+<div class="modal-header">
+    <h5 class="modal-title">
+        <i class="fas fa-edit me-2"></i>Modifier l'adresse "{{ adresse.nom }}"
+    </h5>
+    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+</div>
+<div class="modal-body">
+    <form id="address-form" method="POST">
+        <div class="mb-3">
+            <label class="form-label">Nom/Type de l'adresse *</label>
+            <input type="text" class="form-control" name="nom" id="address-nom" 
+                   value="{{ adresse.nom }}" placeholder="Siège social, Entrepôt, etc." required>
+            <small class="form-text text-muted">
+                Exemple : Siège social, Entrepôt, Bureau commercial, etc.
+            </small>
+        </div>
+        
+        <div class="mb-3">
+            <label class="form-label">Adresse *</label>
+            <input type="text" class="form-control" name="ligne1" id="address-ligne1" 
+                   value="{{ adresse.ligne1 }}" placeholder="Numéro et rue" required>
+        </div>
+        
+        <div class="row">
+            <div class="col-md-4">
+                <label class="form-label">Code postal *</label>
+                <div class="position-relative">
+                    <input type="text" class="form-control postal-autocomplete" 
+                           name="codePostal" id="address-code-postal" 
+                           value="{{ adresse.codePostal }}" required 
+                           maxlength="5" data-target-ville="address-ville">
+                </div>
+            </div>
+            <div class="col-md-8">
+                <label class="form-label">Ville *</label>
+                <div class="position-relative">
+                    <input type="text" class="form-control ville-autocomplete" 
+                           name="ville" id="address-ville" 
+                           value="{{ adresse.ville }}" required 
+                           data-target-postal="address-code-postal">
+                </div>
+            </div>
+        </div>
+        
+        <div class="mt-3">
+            <label class="form-label">Pays</label>
+            <input type="text" class="form-control" name="pays" id="address-pays" 
+                   value="{{ adresse.pays ?: 'France' }}">
+        </div>
+    </form>
+</div>
+<div class="modal-footer">
+    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">
+        <i class="fas fa-times me-1"></i>Annuler
+    </button>
+    <button type="button" class="btn btn-primary" id="save-address-btn">
+        <i class="fas fa-save me-1"></i>Modifier l'adresse
+    </button>
+</div>
+
+<script>
+// Initialiser l'autocomplétion pour les communes françaises
+document.addEventListener('DOMContentLoaded', function() {
+    // Réutiliser la logique d'autocomplétion existante
+    if (typeof initCommuneAutocomplete === 'function') {
+        initCommuneAutocomplete();
+    }
+    
+    // Gérer la soumission du formulaire
+    document.getElementById('save-address-btn').addEventListener('click', function() {
+        submitAddressForm();
+    });
+    
+    // Permettre la soumission avec Entrée
+    document.getElementById('address-form').addEventListener('submit', function(e) {
+        e.preventDefault();
+        submitAddressForm();
+    });
+});
+
+function submitAddressForm() {
+    const form = document.getElementById('address-form');
+    const formData = new FormData(form);
+    const submitBtn = document.getElementById('save-address-btn');
+    
+    // Validation côté client
+    const nom = formData.get('nom').trim();
+    const ligne1 = formData.get('ligne1').trim();
+    const codePostal = formData.get('codePostal').trim();
+    const ville = formData.get('ville').trim();
+    
+    if (!nom || !ligne1 || !codePostal || !ville) {
+        alert('Veuillez remplir tous les champs obligatoires');
+        return;
+    }
+    
+    // Désactiver le bouton pendant la soumission
+    submitBtn.disabled = true;
+    submitBtn.innerHTML = '<i class="fas fa-spinner fa-spin me-1"></i>Modification...';
+    
+    // Soumettre via fetch
+    fetch(window.location.href, {
+        method: 'POST',
+        body: formData,
+        headers: {
+            'X-Requested-With': 'XMLHttpRequest'
+        }
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.success) {
+            // Émettre un événement pour notifier la page parent
+            window.dispatchEvent(new CustomEvent('addressUpdated', {
+                detail: { 
+                    adresse: data.adresse,
+                    message: data.message
+                }
+            }));
+            
+            // Fermer la modale
+            const modal = bootstrap.Modal.getInstance(document.querySelector('.modal'));
+            if (modal) {
+                modal.hide();
+            }
+        } else {
+            alert(data.message || 'Erreur lors de la modification de l\'adresse');
+        }
+    })
+    .catch(error => {
+        console.error('Erreur:', error);
+        alert('Erreur lors de la modification de l\'adresse');
+    })
+    .finally(() => {
+        // Réactiver le bouton
+        submitBtn.disabled = false;
+        submitBtn.innerHTML = '<i class="fas fa-save me-1"></i>Modifier l\'adresse';
+    });
+}
+</script>
