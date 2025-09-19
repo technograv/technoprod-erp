@@ -141,7 +141,14 @@ class ClientModalService {
                 const clientSelect = typeof clientSelector === 'string'
                     ? document.getElementById(clientSelector)
                     : clientSelector;
-                const clientId = clientSelect?.value;
+                let clientId = clientSelect?.value;
+                
+                // Si le clientId n'est pas trouvé dans le select principal, 
+                // chercher dans le champ caché client_field (pour les pages de devis)
+                if (!clientId && document.getElementById('client_field')) {
+                    clientId = document.getElementById('client_field').value;
+                }
+                
                 this.editClient(clientId);
             });
         }
@@ -156,7 +163,7 @@ class ClientModalService {
         this.attachToButtons({
             addClientBtn: 'add-client-btn',
             editClientBtn: 'edit-client-btn',
-            clientSelector: 'devis_client'
+            clientSelector: 'prospect'
         });
     }
     

@@ -163,6 +163,48 @@ class ClientProspectService {
         
         // Boutons d'ajout
         this.attachAddButtons();
+        
+        // Événements de modales globaux
+        this.attachModalEvents();
+    }
+    
+    /**
+     * Attache les événements globaux des modales
+     */
+    attachModalEvents() {
+        // Écouter la création de clients
+        window.addEventListener('clientCreated', (event) => {
+            this.log('✅ Client créé:', event.detail.client);
+            
+            // Recharger la liste des clients
+            if (window.$ && typeof $.fn.select2 !== 'undefined') {
+                const clientSelect = $(this.config.selectors.clientSelect);
+                
+                // Ajouter le nouveau client à la liste
+                const newOption = new Option(event.detail.client.label, event.detail.client.id, true, true);
+                clientSelect.append(newOption).trigger('change');
+                
+                // Déclencher le changement pour charger les contacts/adresses
+                this.handleClientChange(event.detail.client.id);
+            }
+        });
+        
+        // Écouter la mise à jour de clients
+        window.addEventListener('clientUpdated', (event) => {
+            this.log('✅ Client modifié:', event.detail.client);
+            
+            // Mettre à jour le label du client dans la liste
+            if (window.$ && typeof $.fn.select2 !== 'undefined') {
+                const clientSelect = $(this.config.selectors.clientSelect);
+                const currentValue = clientSelect.val();
+                
+                if (currentValue == event.detail.client.id) {
+                    // Mettre à jour l'option existante
+                    clientSelect.find(`option[value="${event.detail.client.id}"]`).text(event.detail.client.label);
+                    clientSelect.trigger('change.select2');
+                }
+            }
+        });
     }
     
     /**
@@ -176,8 +218,15 @@ class ClientProspectService {
         const editAddressFacturationBtn = document.querySelector(this.config.selectors.editAddressFacturationBtn);
         
         editClientBtn?.addEventListener('click', () => {
+            this.log('🖱️ Clic sur bouton édition client', {
+                currentClient: this.currentClient,
+                hasCurrentClient: !!this.currentClient
+            });
+            
             if (this.currentClient) {
                 this.openClientModal(this.currentClient.id);
+            } else {
+                console.warn('⚠️ Aucun client sélectionné pour l\'édition');
             }
         });
         
@@ -229,12 +278,12 @@ class ClientProspectService {
         const addAddressLivraisonBtn = document.getElementById('add-address-livraison-btn');
         const addAddressFacturationBtn = document.getElementById('add-address-facturation-btn');
         
-        // Bouton ajouter client - géré par ClientModalService
-        // addClientBtn?.addEventListener('click', () => {
-        //     if (this.getModalService()) {
-        //         this.getModalService().openModal('/client/new?modal=1', 'Nouveau client');
-        //     }
-        // });
+        // Bouton ajouter client
+        addClientBtn?.addEventListener('click', () => {
+            if (this.getModalService()) {
+                this.getModalService().openModal('/client/modal/new', 'Nouveau client');
+            }
+        });
         
         // Boutons contact et adresse - gérés par les services modales dédiés
         // addContactBtn?.addEventListener('click', () => {
@@ -602,7 +651,7 @@ class ClientProspectService {
         this.log('🔧 Ouverture modale client:', clientId);
         
         if (this.getModalService()) {
-            this.getModalService().openModal(`/client/${clientId}/edit?modal=1`, 'Modifier le client');
+            this.getModalService().openModal(`/client/modal/edit/${clientId}`, 'Modifier le client');
         } else {
             // Fallback si ModalService non disponible
             window.open(`/client/${clientId}/edit`, '_blank');

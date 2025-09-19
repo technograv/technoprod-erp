@@ -6,6 +6,7 @@ use App\Entity\Client;
 use App\Entity\Adresse;
 use App\Entity\Contact;
 use App\Entity\CommuneFrancaise;
+use App\Entity\FormeJuridique;
 use App\Form\ClientType;
 use App\Service\ClientLoggerService;
 use Doctrine\ORM\EntityManagerInterface;
@@ -154,10 +155,7 @@ final class ClientController extends AbstractController
         
         // Gérer les données spécifiques à la forme juridique
         if ($client->getFormeJuridique() && $client->getFormeJuridique()->isPersonnePhysique()) {
-            // Pour une personne physique, pas de dénomination (reste NULL) mais stocker prénom/nom séparément
-            $client->setNom(null); // Pas de dénomination pour les particuliers
-            $client->setPrenom($request->request->get('personne_prenom'));
-            $client->setCivilite($request->request->get('personne_civilite'));
+            // Pour une personne physique, les données nom/prénom/civilité sont maintenant dans Contact
             $client->setFamille('Particulier'); // Définir automatiquement la famille
             
             // Pour une personne physique, créer un contact avec les données du client
@@ -799,7 +797,10 @@ final class ClientController extends AbstractController
     public function archive(Client $client, EntityManagerInterface $entityManager, ClientLoggerService $clientLogger): Response
     {
         // Archiver le client (le marquer comme inactif)
-        $client->setActif(false);
+        // Marquer tous les contacts comme inactifs (équivalent ancien setActif)
+        foreach ($client->getContacts() as $contact) {
+            $contact->setActif(false);
+        }
         
         try {
             $entityManager->flush();
@@ -1116,14 +1117,11 @@ final class ClientController extends AbstractController
                     
                     // Configurer les champs de base du client
                     if ($formeJuridique && $formeJuridique->getTemplateFormulaire() === 'personne_physique') {
-                        // Pour un particulier
-                        $client->setNom($nom);
-                        $client->setPrenom($prenom);
-                        $client->setCivilite($civilite);
-                        $client->setEmail($emailParticulier);
-                        $client->setTelephone($telephoneParticulier);
+                        // Pour un particulier, les données vont dans le contact principal
+                        // (nom/prénom/civilité/email/telephone maintenant dans Contact)
+                        // Ne plus définir directement sur Client depuis refactoring BDD
                     } else {
-                        // Pour une entreprise - pas d'email/téléphone direct, seulement via contacts
+                        // Pour une entreprise
                         $client->setNomEntreprise($nomEntreprise);
                     }
                     
@@ -1273,19 +1271,34 @@ final class ClientController extends AbstractController
         if ($request->isMethod('POST')) {
             // Traitement des données du formulaire POST
             $nom = $request->request->get('nom');
+            $prenom = $request->request->get('prenom');
             $nomEntreprise = $request->request->get('nomEntreprise');
             $email = $request->request->get('email');
             $telephone = $request->request->get('telephone');
-            $siret = $request->request->get('siret');
-            $tvaIntra = $request->request->get('tvaIntra');
+            $notes = $request->request->get('notes');
+            $formeJuridiqueId = $request->request->get('formeJuridique');
 
             if ($nom || $nomEntreprise) {
-                $client->setNom($nom);
+                // Mettre à jour les données sur Client
                 $client->setNomEntreprise($nomEntreprise);
-                $client->setEmail($email);
-                $client->setTelephone($telephone);
-                $client->setSiret($siret);
-                $client->setTvaIntra($tvaIntra);
+                $client->setNotes($notes);
+                
+                // Gérer la forme juridique
+                if ($formeJuridiqueId) {
+                    $formeJuridique = $entityManager->getRepository(FormeJuridique::class)->find($formeJuridiqueId);
+                    if ($formeJuridique) {
+                        $client->setFormeJuridique($formeJuridique);
+                    }
+                }
+
+                // Mettre à jour le contact de facturation par défaut avec nom/prénom/email/telephone
+                $contact = $client->getContactFacturationDefault();
+                if ($contact && ($nom || $prenom || $email || $telephone)) {
+                    if ($nom) $contact->setNom($nom);
+                    if ($prenom) $contact->setPrenom($prenom);
+                    if ($email) $contact->setEmail($email);
+                    if ($telephone) $contact->setTelephone($telephone);
+                }
 
                 $entityManager->flush();
 
@@ -1315,8 +1328,13 @@ final class ClientController extends AbstractController
             }
         }
 
+        // Récupérer les formes juridiques pour le sélecteur
+        $formeJuridiqueRepository = $entityManager->getRepository(FormeJuridique::class);
+        $formesJuridiques = $formeJuridiqueRepository->findBy(['actif' => true], ['nom' => 'ASC']);
+
         return $this->render('client/modal_edit.html.twig', [
-            'client' => $client
+            'client' => $client,
+            'formes_juridiques' => $formesJuridiques
         ]);
     }
     

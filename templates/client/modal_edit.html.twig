@@ -5,84 +5,107 @@
     <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
 </div>
 <div class="modal-body">
-    <form id="client-form" method="POST">
-        <div class="row">
-            <div class="col-12">
-                <div class="mb-3">
-                    <label class="form-label">Code</label>
-                    <input type="text" class="form-control" value="{{ client.code }}" readonly disabled>
-                    <small class="form-text text-muted">
-                        Le code ne peut pas être modifié
-                    </small>
-                </div>
+    <form id="client-form" method="POST" data-client-id="{{ client.id }}">
+    <!-- Code client (lecture seule) -->
+    <div class="row">
+        <div class="col-12">
+            <div class="mb-3">
+                <label class="form-label">Code client</label>
+                <input type="text" class="form-control" value="{{ client.code }}" readonly disabled>
             </div>
         </div>
-        
+    </div>
+    
+    <!-- Forme juridique (modifiable avec restrictions) -->
+    <div class="row">
+        <div class="col-12">
+            <div class="mb-3">
+                <label class="form-label">Forme juridique <span class="text-danger">*</span></label>
+                <select class="form-control" name="formeJuridique" id="forme-juridique-select" required>
+                    <option value="">Sélectionner une forme juridique...</option>
+                    {% for forme in formes_juridiques %}
+                        {# Restriction : si client actuel est personne morale, ne pas permettre personne physique #}
+                        {% set disabled = client.formeJuridique and 
+                                         client.formeJuridique.templateFormulaire == 'personne_morale' and 
+                                         forme.templateFormulaire == 'personne_physique' %}
+                        
+                        <option value="{{ forme.id }}" 
+                                {{ client.formeJuridique and client.formeJuridique.id == forme.id ? 'selected' : '' }}
+                                {{ disabled ? 'disabled' : '' }}
+                                data-template="{{ forme.templateFormulaire }}">
+                            {{ forme.nom }}{{ disabled ? ' (non autorisé)' : '' }}
+                        </option>
+                    {% endfor %}
+                </select>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Dénomination (selon le type) -->
+    {% if client.formeJuridique and client.formeJuridique.templateFormulaire == 'personne_morale' %}
+        <!-- Pour les entreprises -->
         <div class="row">
             <div class="col-12">
                 <div class="mb-3">
-                    <label class="form-label">Nom de l'entreprise</label>
+                    <label class="form-label">Dénomination sociale <span class="text-danger">*</span></label>
                     <input type="text" class="form-control" name="nomEntreprise" id="client-nom-entreprise" 
-                           value="{{ client.nomEntreprise }}" placeholder="Société ABC...">
-                    <small class="form-text text-muted">
-                        Laissez vide pour un particulier
-                    </small>
+                           value="{{ client.nomEntreprise }}" placeholder="Nom de l'entreprise, raison sociale...">
                 </div>
             </div>
         </div>
-        
+    {% else %}
+        <!-- Pour les particuliers -->
         <div class="row">
             <div class="col-md-6">
                 <div class="mb-3">
-                    <label class="form-label">Prénom</label>
+                    <label class="form-label">Prénom <span class="text-danger">*</span></label>
                     <input type="text" class="form-control" name="prenom" id="client-prenom" 
-                           value="{{ client.prenom }}">
+                           value="{{ client.prenom }}" placeholder="Prénom">
                 </div>
             </div>
             <div class="col-md-6">
                 <div class="mb-3">
-                    <label class="form-label">Nom</label>
+                    <label class="form-label">Nom <span class="text-danger">*</span></label>
                     <input type="text" class="form-control" name="nom" id="client-nom" 
-                           value="{{ client.nom }}">
+                           value="{{ client.nom }}" placeholder="Nom de famille">
                 </div>
             </div>
         </div>
+    {% endif %}
         
-        <div class="row">
-            <div class="col-md-6">
-                <div class="mb-3">
-                    <label class="form-label">Email</label>
-                    <input type="email" class="form-control" name="email" id="client-email" 
-                           value="{{ client.email }}">
+        <!-- Email et téléphone uniquement pour les particuliers -->
+        {% if client.formeJuridique and client.formeJuridique.templateFormulaire == 'personne_physique' %}
+            <div class="row">
+                <div class="col-md-6">
+                    <div class="mb-3">
+                        <label class="form-label">Email</label>
+                        <input type="email" class="form-control" name="email" id="client-email" 
+                               value="{{ client.email }}">
+                    </div>
+                </div>
+                <div class="col-md-6">
+                    <div class="mb-3">
+                        <label class="form-label">Téléphone</label>
+                        <input type="tel" class="form-control" name="telephone" id="client-telephone" 
+                               value="{{ client.telephone }}">
+                    </div>
                 </div>
             </div>
-            <div class="col-md-6">
-                <div class="mb-3">
-                    <label class="form-label">Téléphone</label>
-                    <input type="tel" class="form-control" name="telephone" id="client-telephone" 
-                           value="{{ client.telephone }}">
-                </div>
-            </div>
-        </div>
-        
-        <div class="row">
-            <div class="col-md-6">
-                <div class="mb-3">
-                    <label class="form-label">SIRET</label>
-                    <input type="text" class="form-control" name="siret" id="client-siret" 
-                           value="{{ client.siret }}" maxlength="14" placeholder="12345678901234">
-                </div>
-            </div>
-            <div class="col-md-6">
-                <div class="mb-3">
-                    <label class="form-label">N° TVA Intra</label>
-                    <input type="text" class="form-control" name="tvaIntra" id="client-tva-intra" 
-                           value="{{ client.tvaIntra }}" placeholder="FR12345678901">
-                </div>
+        {% endif %}
+    
+    <!-- Notes et observations -->
+    <div class="row">
+        <div class="col-12">
+            <div class="mb-3">
+                <label class="form-label">Notes et observations</label>
+                <textarea class="form-control" name="notes" id="client-notes" rows="3" 
+                          placeholder="Informations complémentaires, remarques particulières...">{{ client.notes }}</textarea>
             </div>
         </div>
-    </form>
+    </div>
+</form>
 </div>
+
 <div class="modal-footer">
     <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">
         <i class="fas fa-times me-1"></i>Annuler
@@ -93,25 +116,45 @@
 </div>
 
 <script>
-document.addEventListener('DOMContentLoaded', function() {
-    // Gérer la soumission du formulaire
-    document.getElementById('save-client-btn').addEventListener('click', function() {
-        submitClientForm();
-    });
-    
-    // Permettre la soumission avec Entrée
-    document.getElementById('client-form').addEventListener('submit', function(e) {
-        e.preventDefault();
-        submitClientForm();
-    });
-    
-    // Formater le SIRET automatiquement
-    document.getElementById('client-siret').addEventListener('input', function(e) {
-        let value = e.target.value.replace(/\D/g, '');
-        if (value.length > 14) value = value.substr(0, 14);
-        e.target.value = value;
-    });
-});
+// Exécuter immédiatement (pas d'attente DOMContentLoaded car modal chargée via AJAX)
+(function() {
+    // Attendre un petit délai pour que le DOM soit prêt
+    setTimeout(function() {
+        // Gérer la soumission du formulaire
+        const saveBtn = document.getElementById('save-client-btn');
+        
+        if (saveBtn) {
+            saveBtn.addEventListener('click', function() {
+                submitClientForm();
+            });
+        }
+        
+        // Permettre la soumission avec Entrée
+        const clientForm = document.getElementById('client-form');
+        if (clientForm) {
+            clientForm.addEventListener('submit', function(e) {
+                e.preventDefault();
+                submitClientForm();
+            });
+        }
+        
+        // Gérer le changement de forme juridique
+        const formeJuridiqueSelect = document.getElementById('forme-juridique-select');
+        if (formeJuridiqueSelect) {
+            formeJuridiqueSelect.addEventListener('change', function() {
+                updateFormFields();
+            });
+        }
+        
+        // Fonction pour mettre à jour les champs selon la forme juridique
+        function updateFormFields() {
+            const selectedOption = formeJuridiqueSelect.options[formeJuridiqueSelect.selectedIndex];
+            const templateType = selectedOption ? selectedOption.getAttribute('data-template') : null;
+            
+            // Mise à jour dynamique des champs selon la forme juridique
+        }
+    }, 100);
+})();
 
 function submitClientForm() {
     const form = document.getElementById('client-form');
@@ -119,8 +162,8 @@ function submitClientForm() {
     const submitBtn = document.getElementById('save-client-btn');
     
     // Validation côté client
-    const nomEntreprise = formData.get('nomEntreprise').trim();
-    const nom = formData.get('nom').trim();
+    const nomEntreprise = (formData.get('nomEntreprise') || '').trim();
+    const nom = (formData.get('nom') || '').trim();
     
     if (!nomEntreprise && !nom) {
         alert('Veuillez renseigner au moins le nom de l\'entreprise ou le nom de la personne');
@@ -131,8 +174,10 @@ function submitClientForm() {
     submitBtn.disabled = true;
     submitBtn.innerHTML = '<i class="fas fa-spinner fa-spin me-1"></i>Modification...';
     
-    // Soumettre via fetch
-    fetch(window.location.href, {
+    // Soumettre via fetch vers l'URL de la modal
+    const modalUrl = `/client/modal/edit/${document.querySelector('#client-form').dataset.clientId || '{{ client.id }}'}`;
+    
+    fetch(modalUrl, {
         method: 'POST',
         body: formData,
         headers: {

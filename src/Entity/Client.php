@@ -26,32 +26,13 @@ class Client
     private ?string $famille = null;
 
 
-    #[ORM\Column(length: 10, nullable: true)]
-    private ?string $civilite = null; // M., Mme, Mlle
-
-    #[ORM\Column(length: 200, nullable: true)]
-    #[Assert\Length(max: 200, maxMessage: 'Le nom ne peut pas dépasser {{ limit }} caractères')]
-    private ?string $nom = null; // Nom de l'entreprise ou nom de famille
-
     #[ORM\ManyToOne(targetEntity: FormeJuridique::class)]
     #[ORM\JoinColumn(nullable: true)]
     private ?FormeJuridique $formeJuridique = null;
 
-    #[ORM\Column(length: 100, nullable: true)]
-    private ?string $prenom = null; // Uniquement pour personne physique
-
     #[ORM\Column(length: 20)]
     private string $statut = 'prospect'; // 'prospect' ou 'client'
     
-    #[ORM\Column(type: 'boolean')]
-    private bool $actif = true; // true = actif, false = archivé
-    
-    #[ORM\Column(length: 180, nullable: true)]
-    #[Assert\Email(message: 'L\'adresse email n\'est pas valide')]
-    private ?string $email = null;
-    
-    #[ORM\Column(length: 25, nullable: true)]
-    private ?string $telephone = null;
     
     #[ORM\Column(length: 200, nullable: true)]
     private ?string $nomEntreprise = null;
@@ -91,8 +72,6 @@ class Client
     private ?string $notes = null;
 
     // Métadonnées
-    #[ORM\Column]
-    private ?bool $isActive = true;
 
     #[ORM\Column]
     private ?\DateTimeImmutable $createdAt = null;
@@ -170,38 +149,6 @@ class Client
     }
 
 
-    public function getCivilite(): ?string
-    {
-        return $this->civilite;
-    }
-
-    public function setCivilite(?string $civilite): static
-    {
-        $this->civilite = $civilite;
-        return $this;
-    }
-
-    public function getNom(): ?string
-    {
-        return $this->nom;
-    }
-
-    public function setNom(?string $nom): static
-    {
-        $this->nom = $nom;
-        return $this;
-    }
-
-    public function getPrenom(): ?string
-    {
-        return $this->prenom;
-    }
-
-    public function setPrenom(?string $prenom): static
-    {
-        $this->prenom = $prenom;
-        return $this;
-    }
 
     public function getStatut(): string
     {
@@ -214,16 +161,6 @@ class Client
         return $this;
     }
 
-    public function isActif(): bool
-    {
-        return $this->actif;
-    }
-
-    public function setActif(bool $actif): static
-    {
-        $this->actif = $actif;
-        return $this;
-    }
 
     public function getCommercial(): ?User
     {
@@ -419,16 +356,6 @@ class Client
         return $this;
     }
 
-    public function isActive(): ?bool
-    {
-        return $this->isActive;
-    }
-
-    public function setActive(bool $isActive): static
-    {
-        $this->isActive = $isActive;
-        return $this;
-    }
 
     public function getCreatedAt(): ?\DateTimeImmutable
     {
@@ -486,6 +413,49 @@ class Client
     }
 
 
+    // Méthodes d'accès aux données via les relations (pour maintenir compatibilité)
+    public function getEmail(): ?string
+    {
+        $contact = $this->getContactFacturationDefault();
+        return $contact ? $contact->getEmail() : null;
+    }
+
+    public function getTelephone(): ?string
+    {
+        $contact = $this->getContactFacturationDefault();
+        return $contact ? $contact->getTelephone() : null;
+    }
+
+    public function getCivilite(): ?string
+    {
+        $contact = $this->getContactFacturationDefault();
+        return $contact ? $contact->getCivilite() : null;
+    }
+
+    public function getNom(): ?string
+    {
+        $contact = $this->getContactFacturationDefault();
+        return $contact ? $contact->getNom() : null;
+    }
+
+    public function getPrenom(): ?string
+    {
+        $contact = $this->getContactFacturationDefault();
+        return $contact ? $contact->getPrenom() : null;
+    }
+
+    public function isActif(): bool
+    {
+        // Pour maintenir la compatibilité, on considère qu'un client est actif
+        // si il a au moins un contact (les contacts n'ont pas de champ actif)
+        return $this->contacts->count() > 0;
+    }
+
+    public function isActive(): bool
+    {
+        return $this->isActif();
+    }
+
     // Méthodes utilitaires
     public function isProspect(): bool
     {
@@ -517,10 +487,10 @@ class Client
                 return trim($civilite . $prenom . $nom);
             }
             // Fallback si pas de contact
-            return trim(($this->civilite ? $this->civilite . ' ' : '') . ($this->prenom ?: ''));
+            return 'Personne physique sans contact';
         } else {
             // Pour une personne morale, utiliser la dénomination
-            return $this->nom ?: 'Entreprise sans nom';
+            return $this->nomEntreprise ?: 'Entreprise sans nom';
         }
     }
 
@@ -552,27 +522,6 @@ class Client
         return $this;
     }
 
-    public function getEmail(): ?string
-    {
-        return $this->email;
-    }
-
-    public function setEmail(?string $email): static
-    {
-        $this->email = $email;
-        return $this;
-    }
-
-    public function getTelephone(): ?string
-    {
-        return $this->telephone;
-    }
-
-    public function setTelephone(?string $telephone): static
-    {
-        $this->telephone = $telephone;
-        return $this;
-    }
 
     public function getNomEntreprise(): ?string
     {

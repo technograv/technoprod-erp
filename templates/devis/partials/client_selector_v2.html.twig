@@ -322,44 +322,8 @@
     // GESTION DES MODALES DE CLIENT
     // ==========================================
     
-    let clientModalService = null;
-    
-    // Initialiser le service de modales de client
-    if (window.ClientModalService) {
-        clientModalService = new ClientModalService({
-            debug: true,
-            onClientCreated: function(detail) {
-                // Recharger la liste des clients
-                if (window.$ && typeof $.fn.select2 !== 'undefined') {
-                    const clientSelect = $('#prospect');
-                    
-                    // Ajouter le nouveau client à la liste
-                    const newOption = new Option(detail.client.label, detail.client.id, true, true);
-                    clientSelect.append(newOption).trigger('change');
-                    
-                    // Déclencher le changement pour charger les contacts/adresses
-                    if (clientService) {
-                        clientService.handleClientChange(detail.client.id);
-                    }
-                }
-            },
-            onClientUpdated: function(detail) {
-                // Mettre à jour le label du client dans la liste
-                if (window.$ && typeof $.fn.select2 !== 'undefined') {
-                    const clientSelect = $('#prospect');
-                    const currentValue = clientSelect.val();
-                    
-                    if (currentValue == detail.client.id) {
-                        // Mettre à jour l'option existante
-                        clientSelect.find(`option[value="${detail.client.id}"]`).text(detail.client.label);
-                        clientSelect.trigger('change.select2');
-                    }
-                }
-            }
-        });
-        
-        // Attacher automatiquement aux boutons de la page devis
-        clientModalService.attachToDevisPage();
-    }
+    // Note: ClientProspectService gère déjà l'édition des clients
+    // Pas besoin d'initialiser ClientModalService séparément car cela créerait
+    // des event listeners en double sur le même bouton
 })();
 </script>

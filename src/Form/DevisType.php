@@ -74,6 +74,12 @@ class DevisType extends AbstractType
                 'placeholder' => 'Choisir un prospect/client',
                 'label' => 'Prospect / Client',
                 'required' => false,
+                'query_builder' => function($repository) {
+                    return $repository->createQueryBuilder('c')
+                        ->leftJoin('c.contactFacturationDefault', 'contact')
+                        ->orderBy('c.nomEntreprise', 'ASC')
+                        ->addOrderBy('contact.nom', 'ASC');
+                },
                 'attr' => ['class' => 'form-select', 'data-populate-tiers' => 'true']
             ])
             ->add('commercial', EntityType::class, [

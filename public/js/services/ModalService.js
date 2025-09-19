@@ -217,18 +217,29 @@ class ModalService {
         const modalBody = modal.querySelector('.modal-body');
         const modalFooter = modal.querySelector('.modal-footer');
         
-        modalTitle.textContent = title;
-        modalBody.innerHTML = content;
-        
-        // Afficher/masquer le footer selon les options
-        if (options.showFooter) {
-            modalFooter.classList.remove('d-none');
+        // Vérifier si le contenu inclut déjà un header et un body
+        if (content.includes('modal-header') && content.includes('modal-body')) {
+            // Le contenu est complet, remplacer toute la structure
+            const modalContent = modal.querySelector('.modal-content');
+            modalContent.innerHTML = content;
         } else {
-            modalFooter.classList.add('d-none');
+            // Le contenu est juste le body, utiliser le header par défaut
+            modalTitle.textContent = title;
+            modalBody.innerHTML = content;
+        }
+        
+        // Afficher/masquer le footer selon les options (uniquement si pas de contenu complet)
+        if (!content.includes('modal-header')) {
+            if (options.showFooter) {
+                modalFooter.classList.remove('d-none');
+            } else {
+                modalFooter.classList.add('d-none');
+            }
         }
         
         // Initialiser les scripts dans le contenu chargé
-        this.initializeModalContent(modalBody);
+        const contentContainer = content.includes('modal-body') ? modal : modalBody;
+        this.initializeModalContent(contentContainer);
     }
     
     /**

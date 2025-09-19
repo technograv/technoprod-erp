@@ -327,7 +327,7 @@ final class DevisController extends AbstractController
             LEFT JOIN c.formeJuridique fj
             LEFT JOIN c.contactFacturationDefault contactFacturationDefault
             LEFT JOIN c.contactLivraisonDefault contactLivraisonDefault
-            ORDER BY c.nom ASC
+            ORDER BY c.nomEntreprise ASC, contactFacturationDefault.nom ASC
         ')->getResult();
 
         // Récupérer les formes juridiques pour le modal de création client
