@@ -200,15 +200,41 @@ class ContactModalService {
      * Configuration simple pour les pages de devis
      */
     attachToDevisPage() {
-        this.attachToButtons({
+        // Détecter automatiquement si on est sur la page NEW ou EDIT
+        const isEditPage = !!document.getElementById('devis_client');
+        const isNewPage = !!document.getElementById('prospect');
+        
+        let config = {
             addContactBtn: 'add-contact-btn',
             addContactFacturationBtn: 'add-contact-facturation-btn',
             editContactLivraisonBtn: 'edit-contact-livraison-btn',
-            editContactFacturationBtn: 'edit-contact-facturation-btn',
-            clientSelector: 'devis_client',
-            contactLivraisonSelector: 'devis_contactLivraison',
-            contactFacturationSelector: 'devis_contactFacturation'
-        });
+            editContactFacturationBtn: 'edit-contact-facturation-btn'
+        };
+        
+        if (isEditPage) {
+            // Page d'édition - utiliser les IDs Symfony
+            config = {
+                ...config,
+                clientSelector: 'devis_client',
+                contactLivraisonSelector: 'devis_contactLivraison',
+                contactFacturationSelector: 'devis_contactFacturation'
+            };
+            this.log('🔧 Configuration EDIT détectée');
+        } else if (isNewPage) {
+            // Page de création - utiliser les IDs custom
+            config = {
+                ...config,
+                clientSelector: 'prospect',
+                contactLivraisonSelector: 'contact_defaut',
+                contactFacturationSelector: 'contact_facturation'
+            };
+            this.log('🔧 Configuration NEW détectée');
+        } else {
+            this.error('❌ Impossible de détecter le type de page (NEW vs EDIT)');
+            return;
+        }
+        
+        this.attachToButtons(config);
     }
     
     /**

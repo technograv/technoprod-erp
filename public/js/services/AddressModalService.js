@@ -196,15 +196,33 @@ class AddressModalService {
      * Configuration simple pour les pages de devis
      */
     attachToDevisPage() {
-        this.attachToButtons({
+        // Détecter automatiquement si on est sur la page NEW ou EDIT
+        const isEditPage = !!document.getElementById('devis_client');
+        const isNewPage = !!document.getElementById('prospect');
+        
+        let config = {
             addLivraisonBtn: 'add-address-livraison-btn',
             addFacturationBtn: 'add-address-facturation-btn',
             editLivraisonBtn: 'edit-address-livraison-btn',
             editFacturationBtn: 'edit-address-facturation-btn',
-            clientSelector: 'devis_client',
             addressLivraisonSelector: 'adresse_livraison_select',
             addressFacturationSelector: 'adresse_facturation_select'
-        });
+        };
+        
+        if (isEditPage) {
+            // Page d'édition - utiliser l'ID Symfony
+            config.clientSelector = 'devis_client';
+            this.log('🔧 Configuration EDIT détectée');
+        } else if (isNewPage) {
+            // Page de création - utiliser l'ID custom
+            config.clientSelector = 'prospect';
+            this.log('🔧 Configuration NEW détectée');
+        } else {
+            this.error('❌ Impossible de détecter le type de page (NEW vs EDIT)');
+            return;
+        }
+        
+        this.attachToButtons(config);
     }
     
     /**

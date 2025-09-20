@@ -413,12 +413,33 @@
         addressModalService = new AddressModalService({
             debug: true,
             onAddressCreated: function(detail) {
-                // Recharger les adresses pour le client actuel
+                // Recharger les adresses pour le client actuel et sélectionner la nouvelle
                 if (clientService) {
                     const clientSelect = document.getElementById('devis_client');
                     const clientId = clientSelect?.value;
                     if (clientId) {
+                        // Recharger les adresses
                         clientService.handleClientChange(clientId);
+                        
+                        // Attendre un peu que les adresses soient chargées
+                        setTimeout(() => {
+                            // Sélectionner automatiquement la nouvelle adresse
+                            if (detail.adresse && detail.adresse.id) {
+                                const livraisonSelect = document.getElementById('adresse_livraison_select');
+                                const facturationSelect = document.getElementById('adresse_facturation_select');
+                                
+                                // Sélectionner dans les deux dropdowns par défaut
+                                if (livraisonSelect) {
+                                    livraisonSelect.value = detail.adresse.id;
+                                    livraisonSelect.dispatchEvent(new Event('change'));
+                                }
+                                
+                                if (facturationSelect) {
+                                    facturationSelect.value = detail.adresse.id;
+                                    facturationSelect.dispatchEvent(new Event('change'));
+                                }
+                            }
+                        }, 500); // Attendre 500ms pour que les adresses soient chargées
                     }
                 }
             },
@@ -449,12 +470,56 @@
         contactModalService = new ContactModalService({
             debug: true,
             onContactCreated: function(detail) {
-                // Recharger les contacts pour le client actuel
+                // Recharger les contacts pour le client actuel et sélectionner le nouveau
                 if (clientService) {
                     const clientSelect = document.getElementById('devis_client');
                     const clientId = clientSelect?.value;
                     if (clientId) {
+                        // Recharger les contacts
                         clientService.handleClientChange(clientId);
+                        
+                        // Attendre un peu que les contacts soient chargés
+                        setTimeout(() => {
+                            // Sélectionner automatiquement le nouveau contact
+                            if (detail.contact && detail.contact.id) {
+                                // Déterminer le type de contact créé selon les flags
+                                const isFacturation = detail.contact.isFacturationDefault;
+                                const isLivraison = detail.contact.isLivraisonDefault;
+                                
+                                // Sélectionner dans le bon dropdown
+                                if (isFacturation) {
+                                    const facturationSelect = document.getElementById('devis_contactFacturation');
+                                    if (facturationSelect) {
+                                        facturationSelect.value = detail.contact.id;
+                                        facturationSelect.dispatchEvent(new Event('change'));
+                                    }
+                                }
+                                
+                                if (isLivraison) {
+                                    const livraisonSelect = document.getElementById('devis_contactLivraison');
+                                    if (livraisonSelect) {
+                                        livraisonSelect.value = detail.contact.id;
+                                        livraisonSelect.dispatchEvent(new Event('change'));
+                                    }
+                                }
+                                
+                                // Si pas de flag spécifique, sélectionner dans les deux
+                                if (!isFacturation && !isLivraison) {
+                                    const facturationSelect = document.getElementById('devis_contactFacturation');
+                                    const livraisonSelect = document.getElementById('devis_contactLivraison');
+                                    
+                                    if (facturationSelect) {
+                                        facturationSelect.value = detail.contact.id;
+                                        facturationSelect.dispatchEvent(new Event('change'));
+                                    }
+                                    
+                                    if (livraisonSelect) {
+                                        livraisonSelect.value = detail.contact.id;
+                                        livraisonSelect.dispatchEvent(new Event('change'));
+                                    }
+                                }
+                            }
+                        }, 500); // Attendre 500ms pour que les contacts soient chargés
                     }
                 }
             },

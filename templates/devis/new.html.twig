@@ -529,6 +529,7 @@
     {{ parent() }}
     <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/js/select2.min.js"></script>
+    <script src="/js/services/PostalAutocompleteService.js"></script>
     <script>
     document.addEventListener('DOMContentLoaded', function() {
         // Initialiser l'autocomplétion des adresses au chargement de la page
@@ -840,65 +841,24 @@
 
         // Autocomplétion française pour l'adresse dans le popup et les champs d'adresse
         function setupAddressAutocomplete() {
+            const autocompleteService = new PostalAutocompleteService();
+            
             // Champs du popup nouveau client
-            const codePostalInput = $('#new_client_code_postal');
-            const villeInput = $('#new_client_ville');
+            if (document.getElementById('new_client_code_postal') && document.getElementById('new_client_ville')) {
+                autocompleteService.init('new_client_code_postal', 'new_client_ville');
+                console.log('Setup autocomplétion - Nouveau client: OK');
+            }
             
             // Champs d'adresse du projet
-            const codePostalProjetInput = $('#adresse_projet_code_postal');
-            const villeProjetInput = $('#adresse_projet_ville');
+            if (document.getElementById('adresse_projet_code_postal') && document.getElementById('adresse_projet_ville')) {
+                autocompleteService.init('adresse_projet_code_postal', 'adresse_projet_ville');
+                console.log('Setup autocomplétion - Adresse projet: OK');
+            }
             
             // Champs d'adresse de facturation
-            const codePostalFacturationInput = $('#adresse_facturation_code_postal');
-            const villeFacturationInput = $('#adresse_facturation_ville');
-            
-            console.log('Setup autocomplétion - Code postal found:', codePostalInput.length);
-            console.log('Setup autocomplétion - Ville found:', villeInput.length);
-            console.log('Setup autocomplétion - Code postal projet found:', codePostalProjetInput.length);
-            console.log('Setup autocomplétion - Ville projet found:', villeProjetInput.length);
-            console.log('Setup autocomplétion - Code postal facturation found:', codePostalFacturationInput.length);
-            console.log('Setup autocomplétion - Ville facturation found:', villeFacturationInput.length);
-            
-            // Supprimer les anciens event listeners pour éviter les doublons
-            codePostalInput.off('input.autocomplete');
-            villeInput.off('input.autocomplete');
-            codePostalProjetInput.off('input.autocomplete');
-            villeProjetInput.off('input.autocomplete');
-            codePostalFacturationInput.off('input.autocomplete');
-            villeFacturationInput.off('input.autocomplete');
-            
-            // Fonction helper pour configurer l'autocomplétion sur une paire de champs
-            function setupAutocompleteForPair(codePostalField, villeField) {
-                console.log('Setting up autocomplete for:', codePostalField.attr('id'), villeField.attr('id'));
-                
-                // Autocomplétion code postal
-                codePostalField.on('input.autocomplete', function() {
-                    const query = $(this).val();
-                    console.log('Code postal input triggered:', query, 'from field:', $(this).attr('id'));
-                    if (query.length >= 2) {
-                        searchCommunes(query, 'code_postal', codePostalField, villeField);
-                    }
-                });
-                
-                // Autocomplétion ville
-                villeField.on('input.autocomplete', function() {
-                    const query = $(this).val();
-                    console.log('Ville input triggered:', query, 'from field:', $(this).attr('id'));
-                    if (query.length >= 2) {
-                        searchCommunes(query, 'nom', villeField, codePostalField);
-                    }
-                });
-            }
-            
-            // Configurer l'autocomplétion pour chaque paire de champs
-            if (codePostalInput.length && villeInput.length) {
-                setupAutocompleteForPair(codePostalInput, villeInput);
-            }
-            if (codePostalProjetInput.length && villeProjetInput.length) {
-                setupAutocompleteForPair(codePostalProjetInput, villeProjetInput);
-            }
-            if (codePostalFacturationInput.length && villeFacturationInput.length) {
-                setupAutocompleteForPair(codePostalFacturationInput, villeFacturationInput);
+            if (document.getElementById('adresse_facturation_code_postal') && document.getElementById('adresse_facturation_ville')) {
+                autocompleteService.init('adresse_facturation_code_postal', 'adresse_facturation_ville');
+                console.log('Setup autocomplétion - Adresse facturation: OK');
             }
         }
         

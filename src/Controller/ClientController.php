@@ -380,22 +380,14 @@ final class ClientController extends AbstractController
     public function getAddresses(Client $client): JsonResponse
     {
         $addresses = [];
-        $addressesAdded = []; // Pour éviter les doublons
         
-        foreach ($client->getContacts() as $contact) {
-            $adresse = $contact->getAdresse();
-            if ($adresse && !in_array($adresse->getId(), $addressesAdded)) {
-                $label = $adresse->getDisplayLabel();
-                
-                $addresses[] = [
-                    'id' => $adresse->getId(),
-                    'label' => $label
-                ];
-                
-                $addressesAdded[] = $adresse->getId(); // Marquer comme ajoutée
-            }
+        // Retourner toutes les adresses du client (pas seulement celles liées aux contacts)
+        foreach ($client->getAdresses() as $adresse) {
+            $addresses[] = [
+                'id' => $adresse->getId(),
+                'label' => $adresse->getDisplayLabel()
+            ];
         }
-
         return $this->json($addresses);
     }
 

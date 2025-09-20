@@ -5,7 +5,7 @@
     <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
 </div>
 <div class="modal-body">
-    <form id="contact-form" method="POST">
+    <form id="contact-form" method="POST" data-contact-id="{{ contact.id }}">
         <div class="row">
             <div class="col-md-6">
                 <div class="mb-3">
@@ -52,7 +52,7 @@
                 <div class="mb-3">
                     <label class="form-label">Mobile</label>
                     <input type="tel" class="form-control" name="mobile" id="contact-mobile" 
-                           value="{{ contact.mobile }}">
+                           value="{{ contact.telephoneMobile }}">
                 </div>
             </div>
         </div>
@@ -61,18 +61,31 @@
             <div class="col-12">
                 <div class="mb-3">
                     <label class="form-label">Adresse associée</label>
-                    <select class="form-select" name="adresse" id="contact-adresse">
-                        <option value="">-- Sélectionner une adresse --</option>
-                        {% for adresse in adresses %}
-                            <option value="{{ adresse.id }}" 
-                                    {% if contact.adresse and contact.adresse.id == adresse.id %}selected{% endif %}>
-                                {{ adresse.getDisplayLabel() }}
-                            </option>
-                        {% endfor %}
-                    </select>
-                    <small class="form-text text-muted">
-                        Vous pouvez associer ce contact à une adresse spécifique
-                    </small>
+                    <div class="d-flex align-items-center gap-2">
+                        <select class="form-select" name="adresse" id="contact-adresse" style="flex-grow: 1;">
+                            <option value="">-- Sélectionner une adresse --</option>
+                            {% if adresses is defined and adresses is not empty %}
+                                {% for adresse in adresses %}
+                                    <option value="{{ adresse.id }}" 
+                                            {% if contact.adresse and contact.adresse.id == adresse.id %}selected{% endif %}>
+                                        {{ adresse.displayLabel }}
+                                    </option>
+                                {% endfor %}
+                            {% else %}
+                                <option value="" disabled>Aucune adresse disponible pour ce client</option>
+                            {% endif %}
+                        </select>
+                        <!-- Boutons d'action adresse -->
+                        <button type="button" class="btn btn-success btn-sm" id="add-address-btn" 
+                                title="Ajouter une nouvelle adresse" data-client-id="{{ contact.client.id }}">
+                            <i class="fas fa-plus"></i>
+                        </button>
+                        <button type="button" class="btn btn-primary btn-sm" id="edit-address-btn" 
+                                title="Modifier l'adresse sélectionnée" 
+                                style="{{ contact.adresse ? 'inline-block' : 'none' }}">
+                            <i class="fas fa-edit"></i>
+                        </button>
+                    </div>
                 </div>
             </div>
         </div>
@@ -108,19 +121,189 @@
     </button>
 </div>
 
+<!-- Charger les services nécessaires si pas déjà chargés -->
 <script>
-document.addEventListener('DOMContentLoaded', function() {
-    // Gérer la soumission du formulaire
-    document.getElementById('save-contact-btn').addEventListener('click', function() {
-        submitContactForm();
+// Charger ModalService d'abord
+if (!window.ModalService) {
+    const modalScript = document.createElement('script');
+    modalScript.src = '/js/services/ModalService.js';
+    document.head.appendChild(modalScript);
+}
+
+// Puis AddressModalService
+if (!window.AddressModalService) {
+    setTimeout(() => {
+        const script = document.createElement('script');
+        script.src = '/js/services/AddressModalService.js';
+        document.head.appendChild(script);
+    }, 100);
+}
+</script>
+
+<script>
+// Exécuter immédiatement (pas d'attente DOMContentLoaded car modal chargée via AJAX)
+(function() {
+    // Attendre un petit délai pour que le DOM soit prêt
+    setTimeout(function() {
+        // Gérer les boutons d'adresse
+        initAddressButtons();
+        
+        // Charger les adresses depuis l'API pour s'assurer qu'elles sont à jour
+        const currentAddressId = document.getElementById('contact-adresse').value;
+        reloadAddresses(currentAddressId);
+        
+        // Gérer la soumission du formulaire
+        const saveBtn = document.getElementById('save-contact-btn');
+        
+        if (saveBtn) {
+            saveBtn.addEventListener('click', function() {
+                submitContactForm();
+            });
+        }
+        
+        // Permettre la soumission avec Entrée
+        const contactForm = document.getElementById('contact-form');
+        if (contactForm) {
+            contactForm.addEventListener('submit', function(e) {
+                e.preventDefault();
+                submitContactForm();
+            });
+        }
+    }, 100);
+})();
+
+function initAddressButtons() {
+    const addressSelect = document.getElementById('contact-adresse');
+    const editBtn = document.getElementById('edit-address-btn');
+    const addBtn = document.getElementById('add-address-btn');
+    
+    // Écouter les événements de création/modification d'adresse
+    window.addEventListener('addressCreated', function(event) {
+        console.log('Adresse créée:', event.detail);
+        // Recharger les adresses disponibles
+        reloadAddresses(event.detail.adresse.id);
     });
     
-    // Permettre la soumission avec Entrée
-    document.getElementById('contact-form').addEventListener('submit', function(e) {
-        e.preventDefault();
-        submitContactForm();
+    window.addEventListener('addressUpdated', function(event) {
+        console.log('Adresse modifiée:', event.detail);
+        // Recharger les adresses disponibles et sélectionner l'adresse modifiée
+        reloadAddresses(event.detail.adresse.id);
     });
-});
+    
+    // Afficher/masquer le bouton modifier selon la sélection
+    if (addressSelect) {
+        addressSelect.addEventListener('change', function() {
+            if (editBtn) {
+                editBtn.style.display = this.value ? 'inline-block' : 'none';
+            }
+        });
+    }
+    
+    // Gérer le clic sur ajouter adresse
+    if (addBtn) {
+        addBtn.addEventListener('click', function() {
+            const clientId = this.dataset.clientId;
+            if (clientId && window.AddressModalService) {
+                // Fermer la modale contact actuelle
+                const currentModal = bootstrap.Modal.getInstance(document.querySelector('.modal'));
+                if (currentModal) {
+                    currentModal.hide();
+                }
+                
+                // Ouvrir la modale d'ajout d'adresse
+                setTimeout(() => {
+                    const addressService = new AddressModalService({ debug: true });
+                    addressService.createAddress(clientId);
+                }, 300);
+            }
+        });
+    }
+    
+    // Gérer le clic sur modifier adresse
+    if (editBtn) {
+        editBtn.addEventListener('click', function() {
+            const addressId = addressSelect?.value;
+            if (addressId && window.AddressModalService) {
+                // Fermer la modale contact actuelle
+                const currentModal = bootstrap.Modal.getInstance(document.querySelector('.modal'));
+                if (currentModal) {
+                    currentModal.hide();
+                }
+                
+                // Ouvrir la modale d'édition d'adresse
+                setTimeout(() => {
+                    const addressService = new AddressModalService({ debug: true });
+                    addressService.editAddress(addressId);
+                }, 300);
+            }
+        });
+    }
+}
+
+function reloadAddresses(selectedAddressId = null) {
+    console.log('🔄 reloadAddresses (EDIT) appelé avec selectedAddressId:', selectedAddressId);
+    
+    const addressSelect = document.getElementById('contact-adresse');
+    const clientId = document.getElementById('add-address-btn')?.dataset.clientId;
+    
+    console.log('🔍 Éléments trouvés (EDIT):', {
+        addressSelect: !!addressSelect,
+        clientId: clientId,
+        addBtn: !!document.getElementById('add-address-btn')
+    });
+    
+    if (!addressSelect || !clientId) {
+        console.error('❌ reloadAddresses (EDIT): Éléments manquants', { addressSelect: !!addressSelect, clientId });
+        return;
+    }
+    
+    const apiUrl = `/client/${clientId}/addresses`;
+    console.log('📡 Appel API adresses (EDIT):', apiUrl);
+    
+    // Charger les adresses via API
+    fetch(apiUrl)
+        .then(response => {
+            console.log('📡 Réponse API adresses (EDIT):', response.status, response.statusText);
+            if (!response.ok) {
+                throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+            }
+            return response.json();
+        })
+        .then(addresses => {
+            console.log('📊 Adresses reçues (EDIT):', addresses);
+            
+            // Vider et repeupler le select
+            addressSelect.innerHTML = '<option value="">-- Sélectionner une adresse --</option>';
+            
+            if (addresses && addresses.length > 0) {
+                addresses.forEach(address => {
+                    const option = document.createElement('option');
+                    option.value = address.id;
+                    option.textContent = address.label;
+                    if (selectedAddressId && address.id == selectedAddressId) {
+                        option.selected = true;
+                    }
+                    addressSelect.appendChild(option);
+                });
+            } else {
+                const option = document.createElement('option');
+                option.value = '';
+                option.textContent = 'Aucune adresse disponible pour ce client';
+                option.disabled = true;
+                addressSelect.appendChild(option);
+            }
+            
+            // Mettre à jour le bouton d'édition
+            const editBtn = document.getElementById('edit-address-btn');
+            if (editBtn) {
+                editBtn.style.display = addressSelect.value ? 'inline-block' : 'none';
+            }
+        })
+        .catch(error => {
+            console.error('Erreur rechargement adresses:', error);
+            addressSelect.innerHTML = '<option value="">-- Erreur chargement adresses --</option>';
+        });
+}
 
 function submitContactForm() {
     const form = document.getElementById('contact-form');
@@ -128,7 +311,7 @@ function submitContactForm() {
     const submitBtn = document.getElementById('save-contact-btn');
     
     // Validation côté client
-    const nom = formData.get('nom').trim();
+    const nom = (formData.get('nom') || '').trim();
     
     if (!nom) {
         alert('Le nom est obligatoire');
@@ -139,8 +322,11 @@ function submitContactForm() {
     submitBtn.disabled = true;
     submitBtn.innerHTML = '<i class="fas fa-spinner fa-spin me-1"></i>Modification...';
     
-    // Soumettre via fetch
-    fetch(window.location.href, {
+    // Soumettre via fetch vers l'URL de la modal
+    const contactId = document.querySelector('#contact-form').dataset.contactId || '{{ contact.id }}';
+    const modalUrl = `/contact/modal/edit/${contactId}`;
+    
+    fetch(modalUrl, {
         method: 'POST',
         body: formData,
         headers: {

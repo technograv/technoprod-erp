@@ -4,6 +4,7 @@
 
 {% block stylesheets %}
     {{ parent() }}
+    <script src="/js/services/PostalAutocompleteService.js"></script>
     <style>
         .form-section {
             background: white;
@@ -711,109 +712,35 @@
             suggestions.style.width = rect.width + 'px';
         }
 
-        // Autocomplétion des communes françaises
+        // Autocomplétion des communes françaises - utilise PostalAutocompleteService unifié
         function setupCommuneAutocomplete() {
-            const fields = document.querySelectorAll('[data-type="postal"], [data-type="city"]');
+            const service = new PostalAutocompleteService();
             
-            fields.forEach(function(field) {
-                // Éviter les doublons d'event listeners
-                if (field.hasAttribute('data-autocomplete-initialized')) {
-                    return;
+            // Configurer les paires de champs pour l'autocomplétion
+            const fieldPairs = [
+                // Adresse entreprise/société
+                {
+                    postal: document.querySelector('input[name="adresse_code_postal"]'),
+                    ville: document.querySelector('input[name="adresse_ville"]')
+                },
+                // Adresse personne physique
+                {
+                    postal: document.querySelector('input[name="personne_adresse_code_postal"]'),
+                    ville: document.querySelector('input[name="personne_adresse_ville"]')
                 }
-                field.setAttribute('data-autocomplete-initialized', 'true');
-                
-                let searchTimeout;
-
-                field.addEventListener('input', function() {
-                    const query = this.value.trim();
-                    const suggestionsContainer = createGlobalSuggestionsContainer();
-                    currentActiveField = this;
+            ];
+            
+            fieldPairs.forEach(pair => {
+                if (pair.postal && pair.ville) {
+                    // Configurer l'autocomplétion pour chaque paire
+                    service.setupAutocompleteForInput(pair.postal);
+                    service.setupAutocompleteForInput(pair.ville);
                     
-                    clearTimeout(searchTimeout);
-                    
-                    if (query.length < 2) {
-                        suggestionsContainer.style.display = 'none';
-                        return;
-                    }
-                    
-                    
-                    searchTimeout = setTimeout(() => {
-                        fetch(`/client/api/communes/search?q=${encodeURIComponent(query)}`)
-                            .then(response => {
-                                return response.json();
-                            })
-                            .then(data => {
-                                suggestionsContainer.innerHTML = '';
-                                
-                                if (data.length > 0) {
-                                    data.forEach(commune => {
-                                        const div = document.createElement('div');
-                                        div.className = 'commune-suggestion';
-                                        div.textContent = `${commune.codePostal} - ${commune.nomCommune}`;
-                                        div.addEventListener('click', () => selectCommune(field, commune));
-                                        suggestionsContainer.appendChild(div);
-                                    });
-                                    positionSuggestions(field);
-                                    suggestionsContainer.style.display = 'block';
-                                } else {
-                                    suggestionsContainer.style.display = 'none';
-                                }
-                            })
-                            .catch(error => {
-                                suggestionsContainer.style.display = 'none';
-                            });
-                    }, 300);
-                });
-
-                field.addEventListener('blur', function() {
-                    setTimeout(() => {
-                        const suggestionsContainer = createGlobalSuggestionsContainer();
-                        suggestionsContainer.style.display = 'none';
-                        currentActiveField = null;
-                    }, 200);
-                });
-
+                    console.log('✅ PostalAutocompleteService configuré pour:', pair.postal.name, '↔', pair.ville.name);
+                }
             });
         }
 
-        function selectCommune(inputField, commune) {
-            const inputType = inputField.dataset.type;
-            const fieldName = inputField.name;
-            
-            if (inputType === 'postal') {
-                inputField.value = commune.codePostal;
-                
-                // Déterminer le champ ville correspondant selon le type (personne physique ou morale)
-                let villeField = null;
-                if (fieldName === 'personne_adresse_code_postal') {
-                    villeField = document.querySelector('input[name="personne_adresse_ville"]');
-                } else {
-                    villeField = document.querySelector('input[name="adresse_ville"]');
-                }
-                
-                if (villeField) {
-                    villeField.value = commune.nomCommune;
-                }
-            } else if (inputType === 'city') {
-                inputField.value = commune.nomCommune;
-                
-                // Déterminer le champ code postal correspondant selon le type (personne physique ou morale)
-                let codePostalField = null;
-                if (fieldName === 'personne_adresse_ville') {
-                    codePostalField = document.querySelector('input[name="personne_adresse_code_postal"]');
-                } else {
-                    codePostalField = document.querySelector('input[name="adresse_code_postal"]');
-                }
-                
-                if (codePostalField) {
-                    codePostalField.value = commune.codePostal;
-                }
-            }
-            
-            updateSummary();
-            const suggestionsContainer = createGlobalSuggestionsContainer();
-            suggestionsContainer.style.display = 'none';
-        }
 
         // Variables pour tracker le champ actif
         let currentActiveField = null;

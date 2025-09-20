@@ -230,6 +230,13 @@ class ClientProspectService {
             }
         });
         
+        // IMPORTANT: Les boutons d'édition Contact et Adresse sont maintenant gérés par
+        // ContactModalService et AddressModalService pour éviter les doubles modales
+        // Ces services utilisent les nouvelles routes modales (/contact/modal/edit et /adresse/modal/edit)
+        // au lieu des anciennes routes (/client/{id}/edit#contact-{id})
+        
+        // Les event listeners ci-dessous sont DÉSACTIVÉS pour éviter les conflits
+        /*
         editContactLivraisonBtn?.addEventListener('click', () => {
             let contactSelect = document.querySelector(this.config.selectors.contactLivraisonSelect);
             // Support pour les sélecteurs Symfony en mode édition
@@ -265,6 +272,7 @@ class ClientProspectService {
                 this.openAddressModal(addressSelect.value);
             }
         });
+        */
     }
     
     /**
@@ -660,29 +668,29 @@ class ClientProspectService {
     
     /**
      * Ouvre la modale de contact
+     * DEPRECATED: Utiliser ContactModalService à la place
+     * Cette méthode est conservée pour compatibilité mais redirige vers les nouvelles routes
      */
     openContactModal(contactId) {
-        this.log('🔧 Ouverture modale contact:', contactId);
+        this.log('🔧 [DEPRECATED] openContactModal - Utiliser ContactModalService');
         
-        if (this.currentClient && this.getModalService()) {
-            this.getModalService().openModal(`/client/${this.currentClient.id}/edit?modal=1#contact-${contactId}`, 'Modifier le contact');
-        } else if (this.currentClient) {
-            // Fallback si ModalService non disponible
-            window.open(`/client/${this.currentClient.id}/edit#contact-${contactId}`, '_blank');
+        // Utiliser les nouvelles routes modales
+        if (contactId && this.getModalService()) {
+            this.getModalService().openModal(`/contact/modal/edit/${contactId}`, 'Modifier le contact');
         }
     }
     
     /**
      * Ouvre la modale d'adresse
+     * DEPRECATED: Utiliser AddressModalService à la place
+     * Cette méthode est conservée pour compatibilité mais redirige vers les nouvelles routes
      */
     openAddressModal(addressId) {
-        this.log('🔧 Ouverture modale adresse:', addressId);
+        this.log('🔧 [DEPRECATED] openAddressModal - Utiliser AddressModalService');
         
-        if (this.currentClient && this.getModalService()) {
-            this.getModalService().openModal(`/client/${this.currentClient.id}/edit?modal=1#address-${addressId}`, 'Modifier l\'adresse');
-        } else if (this.currentClient) {
-            // Fallback si ModalService non disponible
-            window.open(`/client/${this.currentClient.id}/edit#address-${addressId}`, '_blank');
+        // Utiliser les nouvelles routes modales
+        if (addressId && this.getModalService()) {
+            this.getModalService().openModal(`/adresse/modal/edit/${addressId}`, 'Modifier l\'adresse');
         }
     }
     

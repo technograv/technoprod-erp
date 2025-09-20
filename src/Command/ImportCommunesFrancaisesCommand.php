@@ -86,11 +86,82 @@ class ImportCommunesFrancaisesCommand extends Command
 
     private function downloadCsvData(string $url, SymfonyStyle $io): ?string
     {
-        // Utiliser une version locale de données de test si l'URL n'est pas accessible
-        $testData = $this->getTestData();
+        $io->info('Récupération des données depuis l\'API officielle geo.api.gouv.fr...');
         
-        $io->note('Utilisation de données de test (quelques communes de référence)');
-        return $testData;
+        try {
+            // Utiliser l'API officielle française pour toutes les communes
+            $context = stream_context_create([
+                'http' => [
+                    'timeout' => 120,
+                    'user_agent' => 'TechnoProd ERP/CRM - Import communes françaises'
+                ]
+            ]);
+            
+            $apiUrl = 'https://geo.api.gouv.fr/communes?fields=nom,code,codesPostaux,centre,departement,region,population&format=json';
+            $jsonData = file_get_contents($apiUrl, false, $context);
+            
+            if ($jsonData === false) {
+                $io->warning('Impossible d\'accéder à l\'API officielle, utilisation des données de test...');
+                return $this->getTestData();
+            }
+            
+            $communes = json_decode($jsonData, true);
+            if (!$communes) {
+                $io->warning('Erreur de décodage JSON, utilisation des données de test...');
+                return $this->getTestData();
+            }
+            
+            $io->success(sprintf('✅ %d communes récupérées depuis l\'API officielle', count($communes)));
+            
+            // Convertir en format CSV pour compatibilité avec le code existant
+            return $this->convertToCsv($communes, $io);
+            
+        } catch (\Exception $e) {
+            $io->warning('Erreur API: ' . $e->getMessage() . ', utilisation des données de test...');
+            return $this->getTestData();
+        }
+    }
+
+    private function convertToCsv(array $communes, SymfonyStyle $io): string
+    {
+        $csv = "code_postal,nom_commune,code_departement,nom_departement,code_region,nom_region,population,latitude,longitude\n";
+        
+        $progress = $io->createProgressBar(count($communes));
+        $progress->setMessage('Conversion des données...');
+        $progress->start();
+        
+        foreach ($communes as $commune) {
+            // Une commune peut avoir plusieurs codes postaux
+            $codesPostaux = $commune['codesPostaux'] ?? [];
+            if (empty($codesPostaux)) {
+                $codesPostaux = ['00000']; // Code par défaut si manquant
+            }
+            
+            foreach ($codesPostaux as $codePostal) {
+                $row = [
+                    $codePostal,
+                    $commune['nom'] ?? '',
+                    $commune['departement']['code'] ?? '',
+                    $commune['departement']['nom'] ?? '',
+                    $commune['region']['code'] ?? '',
+                    $commune['region']['nom'] ?? '',
+                    $commune['population'] ?? '',
+                    isset($commune['centre']['coordinates'][1]) ? $commune['centre']['coordinates'][1] : '',
+                    isset($commune['centre']['coordinates'][0]) ? $commune['centre']['coordinates'][0] : ''
+                ];
+                
+                $csv .= implode(',', array_map(function($field) {
+                    return '"' . str_replace('"', '""', $field) . '"';
+                }, $row)) . "\n";
+            }
+            
+            $progress->advance();
+        }
+        
+        $progress->finish();
+        $io->newLine();
+        
+        return $csv;
     }
 
     private function processCsvData(string $csvData, SymfonyStyle $io, ?int $limit): void

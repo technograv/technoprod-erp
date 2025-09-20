@@ -5,14 +5,11 @@
     <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
 </div>
 <div class="modal-body">
-    <form id="address-form" method="POST">
+    <form id="address-form" method="POST" data-adresse-id="{{ adresse.id }}">
         <div class="mb-3">
             <label class="form-label">Nom/Type de l'adresse *</label>
             <input type="text" class="form-control" name="nom" id="address-nom" 
                    value="{{ adresse.nom }}" placeholder="Siège social, Entrepôt, etc." required>
-            <small class="form-text text-muted">
-                Exemple : Siège social, Entrepôt, Bureau commercial, etc.
-            </small>
         </div>
         
         <div class="mb-3">
@@ -58,25 +55,38 @@
     </button>
 </div>
 
+<!-- Charger le service d'autocomplétion -->
+<script src="/js/services/PostalAutocompleteService.js"></script>
+
 <script>
-// Initialiser l'autocomplétion pour les communes françaises
-document.addEventListener('DOMContentLoaded', function() {
-    // Réutiliser la logique d'autocomplétion existante
-    if (typeof initCommuneAutocomplete === 'function') {
-        initCommuneAutocomplete();
-    }
-    
-    // Gérer la soumission du formulaire
-    document.getElementById('save-address-btn').addEventListener('click', function() {
-        submitAddressForm();
-    });
-    
-    // Permettre la soumission avec Entrée
-    document.getElementById('address-form').addEventListener('submit', function(e) {
-        e.preventDefault();
-        submitAddressForm();
-    });
-});
+// Exécuter immédiatement (pas d'attente DOMContentLoaded car modal chargée via AJAX)
+(function() {
+    // Attendre un petit délai pour que le DOM soit prêt
+    setTimeout(function() {
+        // Initialiser l'autocomplétion avec le service réutilisable
+        const autocompleteService = new PostalAutocompleteService();
+        autocompleteService.init('address-code-postal', 'address-ville');
+        
+        // Gérer la soumission du formulaire
+        const saveBtn = document.getElementById('save-address-btn');
+        
+        if (saveBtn) {
+            saveBtn.addEventListener('click', function() {
+                submitAddressForm();
+            });
+        }
+        
+        // Permettre la soumission avec Entrée
+        const addressForm = document.getElementById('address-form');
+        if (addressForm) {
+            addressForm.addEventListener('submit', function(e) {
+                e.preventDefault();
+                submitAddressForm();
+            });
+        }
+    }, 100);
+})();
+
 
 function submitAddressForm() {
     const form = document.getElementById('address-form');
@@ -84,10 +94,10 @@ function submitAddressForm() {
     const submitBtn = document.getElementById('save-address-btn');
     
     // Validation côté client
-    const nom = formData.get('nom').trim();
-    const ligne1 = formData.get('ligne1').trim();
-    const codePostal = formData.get('codePostal').trim();
-    const ville = formData.get('ville').trim();
+    const nom = (formData.get('nom') || '').trim();
+    const ligne1 = (formData.get('ligne1') || '').trim();
+    const codePostal = (formData.get('codePostal') || '').trim();
+    const ville = (formData.get('ville') || '').trim();
     
     if (!nom || !ligne1 || !codePostal || !ville) {
         alert('Veuillez remplir tous les champs obligatoires');
@@ -98,8 +108,11 @@ function submitAddressForm() {
     submitBtn.disabled = true;
     submitBtn.innerHTML = '<i class="fas fa-spinner fa-spin me-1"></i>Modification...';
     
-    // Soumettre via fetch
-    fetch(window.location.href, {
+    // Soumettre via fetch vers l'URL de la modal
+    const adresseId = document.querySelector('#address-form').dataset.adresseId || '{{ adresse.id }}';
+    const modalUrl = `/adresse/modal/edit/${adresseId}`;
+    
+    fetch(modalUrl, {
         method: 'POST',
         body: formData,
         headers: {

@@ -4,6 +4,7 @@ namespace App\Controller;
 
 use App\Entity\Contact;
 use App\Entity\Client;
+use App\Entity\Adresse;
 use Doctrine\ORM\EntityManagerInterface;
 use Symfony\Bundle\FrameworkBundle\Controller\AbstractController;
 use Symfony\Component\HttpFoundation\Request;
@@ -31,6 +32,7 @@ class ContactController extends AbstractController
             $telephone = $request->request->get('telephone');
             $fonction = $request->request->get('fonction');
             $mobile = $request->request->get('mobile');
+            $adresseId = $request->request->get('adresse');
             
             // Checkboxes
             $isFacturationDefault = $request->request->get('isFacturationDefault') === 'on';
@@ -42,9 +44,19 @@ class ContactController extends AbstractController
                 $contact->setEmail($email);
                 $contact->setTelephone($telephone);
                 $contact->setFonction($fonction);
-                $contact->setMobile($mobile);
+                $contact->setTelephoneMobile($mobile);
                 $contact->setIsFacturationDefault($isFacturationDefault);
                 $contact->setIsLivraisonDefault($isLivraisonDefault);
+                
+                // Gérer l'adresse si sélectionnée
+                if ($adresseId) {
+                    $adresse = $entityManager->getRepository(Adresse::class)->find($adresseId);
+                    if ($adresse && $adresse->getClient() === $client) {
+                        $contact->setAdresse($adresse);
+                    }
+                } else {
+                    $contact->setAdresse(null);
+                }
 
                 // Si c'est le contact de facturation par défaut, désactiver les autres
                 if ($isFacturationDefault) {
@@ -78,7 +90,7 @@ class ContactController extends AbstractController
                             'nom' => $contact->getNom(),
                             'email' => $contact->getEmail(),
                             'telephone' => $contact->getTelephone(),
-                            'mobile' => $contact->getMobile(),
+                            'mobile' => $contact->getTelephoneMobile(),
                             'fonction' => $contact->getFonction(),
                             'isFacturationDefault' => $contact->isFacturationDefault(),
                             'isLivraisonDefault' => $contact->isLivraisonDefault()
@@ -120,6 +132,7 @@ class ContactController extends AbstractController
             $telephone = $request->request->get('telephone');
             $fonction = $request->request->get('fonction');
             $mobile = $request->request->get('mobile');
+            $adresseId = $request->request->get('adresse');
             
             // Checkboxes
             $isFacturationDefault = $request->request->get('isFacturationDefault') === 'on';
@@ -131,9 +144,19 @@ class ContactController extends AbstractController
                 $contact->setEmail($email);
                 $contact->setTelephone($telephone);
                 $contact->setFonction($fonction);
-                $contact->setMobile($mobile);
+                $contact->setTelephoneMobile($mobile);
                 $contact->setIsFacturationDefault($isFacturationDefault);
                 $contact->setIsLivraisonDefault($isLivraisonDefault);
+                
+                // Gérer l'adresse si sélectionnée
+                if ($adresseId) {
+                    $adresse = $entityManager->getRepository(Adresse::class)->find($adresseId);
+                    if ($adresse && $adresse->getClient() === $client) {
+                        $contact->setAdresse($adresse);
+                    }
+                } else {
+                    $contact->setAdresse(null);
+                }
 
                 // Si c'est le contact de facturation par défaut, désactiver les autres
                 if ($isFacturationDefault) {
@@ -166,7 +189,7 @@ class ContactController extends AbstractController
                             'nom' => $contact->getNom(),
                             'email' => $contact->getEmail(),
                             'telephone' => $contact->getTelephone(),
-                            'mobile' => $contact->getMobile(),
+                            'mobile' => $contact->getTelephoneMobile(),
                             'fonction' => $contact->getFonction(),
                             'isFacturationDefault' => $contact->isFacturationDefault(),
                             'isLivraisonDefault' => $contact->isLivraisonDefault()

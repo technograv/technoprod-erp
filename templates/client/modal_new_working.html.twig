@@ -234,6 +234,7 @@
     </button>
 </div>
 
+<script src="/js/services/PostalAutocompleteService.js"></script>
 <script>
 console.log('🚀 Initialisation modale client');
 
@@ -447,154 +448,23 @@ function setupAutocompleteForPair(codePostalField, villeField) {
         return;
     }
     
-    console.log('🔗 Liaison autocomplétion:', codePostalField.id || codePostalField.name, '↔', villeField.id || villeField.name);
+    console.log('🔗 PostalAutocompleteService liaison:', codePostalField.id || codePostalField.name, '↔', villeField.id || villeField.name);
     
-    // Retirer les anciens listeners pour éviter les doublons
-    const newCodePostalField = codePostalField.cloneNode(true);
-    const newVilleField = villeField.cloneNode(true);
-    codePostalField.parentNode.replaceChild(newCodePostalField, codePostalField);
-    villeField.parentNode.replaceChild(newVilleField, villeField);
+    // Utiliser le service unifié PostalAutocompleteService
+    const service = new PostalAutocompleteService();
     
-    // Autocomplétion code postal
-    newCodePostalField.addEventListener('input', function(e) {
-        const query = this.value.trim();
-        console.log('🔍 Recherche CP:', query, 'longueur:', query.length);
-        if (query.length >= 2) {
-            searchCommunes(query, 'code_postal', newCodePostalField, newVilleField);
-        }
-    });
+    // Marquer les champs avec data-type pour le service
+    codePostalField.setAttribute('data-type', 'postal');
+    villeField.setAttribute('data-type', 'city');
     
-    // Autocomplétion ville
-    newVilleField.addEventListener('input', function(e) {
-        const query = this.value.trim();
-        console.log('🔍 Recherche Ville:', query, 'longueur:', query.length);
-        if (query.length >= 2) {
-            searchCommunes(query, 'nom', newVilleField, newCodePostalField);
-        }
-    });
+    // Configurer l'autocomplétion avec le service unifié
+    service.setupAutocompleteForInput(codePostalField);
+    service.setupAutocompleteForInput(villeField);
+    
+    console.log('✅ PostalAutocompleteService configuré pour la paire');
 }
 
-function searchCommunes(query, type, primaryInput, secondaryInput) {
-    // Essayons plusieurs URLs possibles selon ce qui existe
-    const urls = [
-        `/api/communes/search?q=${encodeURIComponent(query)}&type=${type}`,
-        `/client/api/communes/search?q=${encodeURIComponent(query)}&type=${type}`,
-        `/public/api/communes/search?q=${encodeURIComponent(query)}&type=${type}`,
-        `/public/api/communes/search?${type === 'code_postal' ? 'postal' : 'ville'}=${encodeURIComponent(query)}`,
-        `/secteur/api/communes/search?q=${encodeURIComponent(query)}&type=${type}`
-    ];
-    
-    console.log('🌐 Tentative recherche communes pour:', query, 'type:', type);
-    
-    // Essayer la première URL
-    tryFetch(urls, 0, query, type, primaryInput, secondaryInput);
-}
-
-function tryFetch(urls, index, query, type, primaryInput, secondaryInput) {
-    if (index >= urls.length) {
-        console.error('❌ Toutes les URLs ont échoué');
-        return;
-    }
-    
-    const url = urls[index];
-    console.log(`🔄 Essai URL ${index + 1}/${urls.length}:`, url);
-    
-    fetch(url)
-        .then(response => {
-            console.log('📨 Réponse reçue:', response.status, response.statusText);
-            if (!response.ok) {
-                throw new Error(`HTTP ${response.status}`);
-            }
-            return response.json();
-        })
-        .then(data => {
-            console.log('📊 Données reçues:', data);
-            const communes = data.communes || data || [];
-            console.log('🏘️ Nombre de communes:', Array.isArray(communes) ? communes.length : 0);
-            
-            if (communes.length > 0) {
-                showCommunesSuggestions(communes, primaryInput, secondaryInput, type);
-            } else {
-                console.log('⚠️ Aucune commune trouvée');
-            }
-        })
-        .catch(error => {
-            console.error(`❌ Erreur avec URL ${index + 1}:`, error);
-            // Essayer l'URL suivante
-            tryFetch(urls, index + 1, query, type, primaryInput, secondaryInput);
-        });
-}
-
-function showCommunesSuggestions(communes, primaryInput, secondaryInput, type) {
-    console.log('📝 Affichage suggestions pour', communes.length, 'communes');
-    
-    // Supprimer les suggestions existantes
-    const existingSuggestions = document.querySelectorAll('.commune-suggestions');
-    existingSuggestions.forEach(s => s.remove());
-    
-    if (!communes || communes.length === 0) {
-        console.log('⚠️ Pas de communes à afficher');
-        return;
-    }
-    
-    // Créer le conteneur de suggestions
-    const suggestions = document.createElement('div');
-    suggestions.className = 'commune-suggestions';
-    suggestions.style.cssText = 'position: absolute; z-index: 99999; background: white; border: 1px solid #ddd; border-radius: 4px; max-height: 200px; overflow-y: auto; width: 100%; box-shadow: 0 2px 4px rgba(0,0,0,0.1); top: 100%; left: 0;';
-    
-    console.log('🏘️ Première commune:', communes[0]);
-    
-    communes.forEach((commune, index) => {
-        const item = document.createElement('div');
-        item.className = 'commune-suggestion-item';
-        item.style.cssText = 'padding: 8px 12px; cursor: pointer; border-bottom: 1px solid #eee;';
-        
-        // Déterminer les valeurs selon la structure de données
-        let cp = commune.codePostal || commune.code_postal || commune.postal || '';
-        let ville = commune.nomCommune || commune.nom || commune.ville || commune.name || '';
-        
-        console.log(`  ${index}: CP="${cp}", Ville="${ville}"`);
-        
-        item.innerHTML = `<strong>${cp}</strong> - ${ville}`;
-        
-        item.addEventListener('mouseover', () => {
-            item.style.backgroundColor = '#f5f5f5';
-        });
-        
-        item.addEventListener('mouseout', () => {
-            item.style.backgroundColor = 'white';
-        });
-        
-        item.addEventListener('click', () => {
-            console.log('✅ Sélection:', cp, '-', ville);
-            
-            if (type === 'code_postal') {
-                primaryInput.value = cp;
-                secondaryInput.value = ville;
-            } else {
-                primaryInput.value = ville;
-                secondaryInput.value = cp;
-            }
-            suggestions.remove();
-        });
-        
-        suggestions.appendChild(item);
-    });
-    
-    // Positionner les suggestions
-    const parent = primaryInput.parentElement;
-    parent.style.position = 'relative';
-    parent.appendChild(suggestions);
-    
-    console.log('✅ Suggestions ajoutées au DOM');
-}
-
-// Fermer suggestions au clic ailleurs
-document.addEventListener('click', function(e) {
-    if (!e.target.closest('.commune-suggestions') && !e.target.matches('input')) {
-        document.querySelectorAll('.commune-suggestions').forEach(s => s.remove());
-    }
-});
+// Les fonctions d'autocomplétion sont maintenant gérées par PostalAutocompleteService
 
 // ==================================
 // FORMATAGE DES NUMÉROS DE TÉLÉPHONE
