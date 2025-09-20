@@ -234,7 +234,17 @@
     </button>
 </div>
 
-<script src="/js/services/PostalAutocompleteService.js"></script>
+<!-- PostalAutocompleteService should be available globally from main page -->
+<script>
+// Charger PostalAutocompleteService si pas déjà disponible
+if (typeof PostalAutocompleteService === 'undefined') {
+    console.log('📥 Chargement PostalAutocompleteService depuis la modale...');
+    const script = document.createElement('script');
+    script.src = '/js/services/PostalAutocompleteService.js';
+    script.async = false; // Force synchronous loading
+    document.head.appendChild(script);
+}
+</script>
 <script>
 console.log('🚀 Initialisation modale client');
 
@@ -442,10 +452,22 @@ function setupPostalAutocomplete() {
     setupAutocompleteForPair(particulierCP, particulierVille);
 }
 
-function setupAutocompleteForPair(codePostalField, villeField) {
+function setupAutocompleteForPair(codePostalField, villeField, retryCount = 0) {
     if (!codePostalField || !villeField) {
         console.log('⚠️ Champs manquants, autocomplétion non configurée');
         return;
+    }
+    
+    // Vérifier que PostalAutocompleteService est disponible
+    if (typeof PostalAutocompleteService === 'undefined') {
+        if (retryCount < 50) { // Maximum 50 tentatives (5 secondes)
+            console.warn(`⚠️ PostalAutocompleteService not yet available in modal, retrying in 100ms... (${retryCount + 1}/50)`);
+            setTimeout(() => setupAutocompleteForPair(codePostalField, villeField, retryCount + 1), 100);
+            return;
+        } else {
+            console.error('❌ PostalAutocompleteService unavailable after 50 retries, autocomplete disabled');
+            return;
+        }
     }
     
     console.log('🔗 PostalAutocompleteService liaison:', codePostalField.id || codePostalField.name, '↔', villeField.id || villeField.name);

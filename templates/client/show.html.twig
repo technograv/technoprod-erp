@@ -309,7 +309,7 @@
                             <div class="col-md-4">
                                 <div class="info-row">
                                     <div class="info-label">Dénomination :</div>
-                                    <div class="info-value"><strong>{{ client.nomComplet ?: 'Non définie' }}</strong></div>
+                                    <div class="info-value"><strong>{{ client.nomEntreprise ?: (client.nom ? (client.prenom ~ ' ' ~ client.nom) : 'Non définie') }}</strong></div>
                                 </div>
                             </div>
                         </div>

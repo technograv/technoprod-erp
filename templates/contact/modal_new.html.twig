@@ -4,6 +4,46 @@
     </h5>
     <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
 </div>
+
+<style>
+/* Fix pour Select2 dans les modals - AGRESSIF */
+.modal .select2-container {
+    z-index: 9999 !important;
+}
+.modal .select2-dropdown {
+    z-index: 10000 !important;
+}
+.select2-container--open .select2-dropdown {
+    z-index: 10001 !important;
+}
+
+/* Forcer le dropdown Select2 au-dessus de la modale mais dans la modale */
+.modal .select2-dropdown {
+    z-index: 1070 !important;
+}
+.modal .select2-container--bootstrap-5 .select2-dropdown {
+    z-index: 1070 !important;
+}
+.modal .select2-container--open .select2-dropdown {
+    z-index: 1070 !important;
+}
+
+
+/* Gestion des modales empilées - adresse par-dessus contact */
+.modal {
+    z-index: 1050;
+}
+.modal.show {
+    z-index: 1055;
+}
+/* Modale d'adresse au-dessus de contact */
+.modal + .modal {
+    z-index: 1060 !important;
+}
+.modal + .modal .modal-backdrop {
+    z-index: 1059 !important;
+}
+</style>
 <div class="modal-body">
     <form id="contact-form" method="POST" data-client-id="{{ client.id }}">
         <div class="row">
@@ -112,33 +152,80 @@
 
 <!-- Charger les services nécessaires si pas déjà chargés -->
 <script>
-// Charger ModalService d'abord
-if (!window.ModalService) {
-    const modalScript = document.createElement('script');
-    modalScript.src = '/js/services/ModalService.js';
-    document.head.appendChild(modalScript);
-}
+// Fonction globale pour charger les services requis
+window.loadRequiredServices = async function() {
+    console.log('🔧 Chargement des services requis...');
+    
+    // Charger ModalService d'abord si pas présent
+    if (!window.ModalService) {
+        console.log('📥 Chargement ModalService...');
+        await new Promise((resolve) => {
+            const modalScript = document.createElement('script');
+            modalScript.src = '/js/services/ModalService.js';
+            modalScript.onload = () => {
+                console.log('✅ ModalService chargé');
+                resolve();
+            };
+            modalScript.onerror = () => {
+                console.error('❌ Erreur chargement ModalService');
+                resolve(); // Continuer même en cas d'erreur
+            };
+            document.head.appendChild(modalScript);
+        });
+    }
 
-// Puis AddressModalService
-if (!window.AddressModalService) {
-    setTimeout(() => {
-        const script = document.createElement('script');
-        script.src = '/js/services/AddressModalService.js';
-        document.head.appendChild(script);
-    }, 100);
-}
+    // Puis AddressModalService si pas présent
+    if (!window.AddressModalService) {
+        console.log('📥 Chargement AddressModalService...');
+        await new Promise((resolve) => {
+            const script = document.createElement('script');
+            script.src = '/js/services/AddressModalService.js';
+            script.onload = () => {
+                console.log('✅ AddressModalService chargé');
+                resolve();
+            };
+            script.onerror = () => {
+                console.error('❌ Erreur chargement AddressModalService');
+                resolve(); // Continuer même en cas d'erreur
+            };
+            document.head.appendChild(script);
+        });
+    }
+    
+    console.log('✅ Tous les services sont disponibles');
+    return true;
+};
 </script>
 
 <script>
 // Exécuter immédiatement (pas d'attente DOMContentLoaded car modal chargée via AJAX)
-(function() {
+(async function() {
+    console.log('🚀 Initialisation modal contact - début');
+    
+    // Charger les services requis avant d'initialiser les fonctionnalités
+    await window.loadRequiredServices();
+    
     // Attendre un petit délai pour que le DOM soit prêt
     setTimeout(function() {
+        console.log('🔧 DOM prêt et services chargés, initialisation des boutons et rechargement adresses');
+        
+        // Stocker automatiquement les informations de contact pour les prochaines actions
+        window.lastContactEditEvent = {
+            mode: 'new',
+            contactId: null,
+            clientId: '{{ client.id }}',
+            fromModal: false // Par défaut, pas depuis une modale
+        };
+        console.log('💾 Auto-stockage info contact à l\'ouverture (NEW):', window.lastContactEditEvent);
+        
         // Gérer les boutons d'adresse
         initAddressButtons();
         
         // Charger les adresses depuis l'API pour s'assurer qu'elles sont à jour
         reloadAddresses();
+        
+        // Initialiser le formatage des numéros de téléphone
+        setupPhoneFormatting();
         
         // Gérer la soumission du formulaire
         const saveBtn = document.getElementById('save-contact-btn');
@@ -167,42 +254,106 @@ function initAddressButtons() {
     
     // Écouter les événements de création/modification d'adresse
     window.addEventListener('addressCreated', function(event) {
-        console.log('Adresse créée:', event.detail);
-        // Recharger les adresses disponibles
-        reloadAddresses(event.detail.adresse.id);
+        console.log('🏠 Adresse créée - retour vers modale contact (NEW):', event.detail);
+        
+        // Attendre que la modale adresse se ferme puis rouvrir la modale contact
+        setTimeout(() => {
+            console.log('🔄 Réouverture modale contact création avec nouvelle adresse:', event.detail.adresse.id);
+            const clientId = '{{ client.id }}'; // Récupérer l'ID du client depuis Twig
+            const contactService = new ContactModalService({ debug: true });
+            contactService.createContact(clientId);
+            
+            // Programmer la sélection de l'adresse après ouverture de la modale
+            setTimeout(() => {
+                const addressSelect = document.getElementById('contact-adresse');
+                if (addressSelect) {
+                    addressSelect.value = event.detail.adresse.id;
+                    addressSelect.dispatchEvent(new Event('change'));
+                    console.log('🎯 Adresse présélectionnée (NEW):', event.detail.adresse.id);
+                }
+            }, 500);
+        }, 300);
     });
     
     window.addEventListener('addressUpdated', function(event) {
-        console.log('Adresse modifiée:', event.detail);
-        // Recharger les adresses disponibles et sélectionner l'adresse modifiée
-        reloadAddresses(event.detail.adresse.id);
+        console.log('🏠 Adresse modifiée - retour vers modale contact (NEW):', event.detail);
+        
+        // Attendre que la modale adresse se ferme puis rouvrir la modale contact
+        setTimeout(() => {
+            console.log('🔄 Réouverture modale contact création après modification adresse:', event.detail.adresse.id);
+            const clientId = '{{ client.id }}'; // Récupérer l'ID du client depuis Twig
+            const contactService = new ContactModalService({ debug: true });
+            contactService.createContact(clientId);
+            
+            // Programmer la sélection de l'adresse après ouverture de la modale
+            setTimeout(() => {
+                const addressSelect = document.getElementById('contact-adresse');
+                if (addressSelect) {
+                    addressSelect.value = event.detail.adresse.id;
+                    addressSelect.dispatchEvent(new Event('change'));
+                    console.log('🎯 Adresse présélectionnée après modification (NEW):', event.detail.adresse.id);
+                }
+            }, 500);
+        }, 300);
     });
     
     // Afficher/masquer le bouton modifier selon la sélection
     if (addressSelect) {
-        addressSelect.addEventListener('change', function() {
-            if (editBtn) {
-                editBtn.style.display = this.value ? 'inline-block' : 'none';
-            }
+        console.log('✅ AddressSelect trouvé, ajout event listener change (NEW)');
+        
+        // Supprimer d'éventuels anciens event listeners
+        addressSelect.removeEventListener('change', handleAddressChange);
+        
+        // Ajouter le nouvel event listener
+        addressSelect.addEventListener('change', handleAddressChange);
+        
+        // Event listener aussi pour Select2
+        if (window.$ && $(addressSelect).hasClass('select2-hidden-accessible')) {
+            console.log('✅ Select2 détecté, ajout event listener select2:select (NEW)');
+            $(addressSelect).off('select2:select select2:unselect').on('select2:select select2:unselect', function(e) {
+                console.log('🔧 Select2 event déclenché (NEW):', e.type, 'valeur:', this.value);
+                handleAddressChange.call(this);
+            });
+        }
+        
+        // Test initial de l'état
+        console.log('🔍 État initial du bouton (NEW):', {
+            addressValue: addressSelect.value,
+            editBtnExists: !!editBtn,
+            editBtnDisplay: editBtn ? editBtn.style.display : 'N/A'
         });
+    } else {
+        console.log('❌ AddressSelect introuvable (NEW)');
     }
     
     // Gérer le clic sur ajouter adresse
     if (addBtn) {
         addBtn.addEventListener('click', function() {
+            console.log('🖱️ CLIC sur bouton ajouter adresse (NEW)');
             const clientId = this.dataset.clientId;
+            console.log('🔍 ClientId trouvé (NEW):', clientId);
+            console.log('🔍 AddressModalService disponible (NEW):', !!window.AddressModalService);
+            
             if (clientId && window.AddressModalService) {
-                // Fermer la modale contact actuelle
-                const currentModal = bootstrap.Modal.getInstance(document.querySelector('.modal'));
-                if (currentModal) {
-                    currentModal.hide();
-                }
+                console.log('⚠️ Mode création: pas de sauvegarde automatique, ouverture directe modale adresse');
                 
-                // Ouvrir la modale d'ajout d'adresse
-                setTimeout(() => {
-                    const addressService = new AddressModalService({ debug: true });
-                    addressService.createAddress(clientId);
-                }, 300);
+                // Stocker les informations pour le retour
+                window.lastContactEditEvent = {
+                    mode: 'new',
+                    contactId: null,
+                    clientId: '{{ client.id }}',
+                    fromModal: true // Indique qu'on vient d'une modale contact
+                };
+                console.log('💾 Stockage info contact pour retour (ADD NEW):', window.lastContactEditEvent);
+                
+                // En mode création, pas de sauvegarde automatique car le contact n'existe pas encore
+                // Ouvrir directement la modale d'adresse pour création
+                openAddressModalDirectly(clientId, 'create');
+            } else {
+                console.log('❌ Conditions non remplies (NEW):', {
+                    clientId: !!clientId,
+                    addressService: !!window.AddressModalService
+                });
             }
         });
     }
@@ -210,21 +361,45 @@ function initAddressButtons() {
     // Gérer le clic sur modifier adresse
     if (editBtn) {
         editBtn.addEventListener('click', function() {
+            console.log('🖱️ CLIC sur bouton modifier adresse (NEW)');
+            const addressSelect = document.getElementById('contact-adresse');
             const addressId = addressSelect?.value;
+            console.log('🔍 AddressId trouvé (NEW):', addressId);
+            console.log('🔍 AddressModalService disponible (NEW):', !!window.AddressModalService);
+            
             if (addressId && window.AddressModalService) {
-                // Fermer la modale contact actuelle
-                const currentModal = bootstrap.Modal.getInstance(document.querySelector('.modal'));
-                if (currentModal) {
-                    currentModal.hide();
-                }
+                console.log('⚠️ Mode création: pas de sauvegarde automatique, ouverture directe modale adresse');
                 
-                // Ouvrir la modale d'édition d'adresse
-                setTimeout(() => {
-                    const addressService = new AddressModalService({ debug: true });
-                    addressService.editAddress(addressId);
-                }, 300);
+                // En mode création, pas de sauvegarde automatique car le contact n'existe pas encore
+                // Ouvrir directement la modale d'adresse
+                openAddressModalDirectly(addressId, 'edit');
+            } else {
+                console.log('❌ Conditions non remplies (NEW):', {
+                    addressId: !!addressId,
+                    addressService: !!window.AddressModalService
+                });
             }
         });
+    }
+}
+
+// Fonction séparée pour gérer le changement d'adresse
+function handleAddressChange() {
+    const editBtn = document.getElementById('edit-address-btn');
+    const shouldShow = this.value ? 'inline-block' : 'none';
+    
+    console.log('🔧 handleAddressChange appelé (NEW):', { 
+        addressValue: this.value, 
+        shouldShow: shouldShow,
+        buttonFound: !!editBtn,
+        currentDisplay: editBtn ? editBtn.style.display : 'N/A'
+    });
+    
+    if (editBtn) {
+        editBtn.style.display = shouldShow;
+        console.log('✅ Bouton edit mis à jour (NEW):', editBtn.style.display);
+    } else {
+        console.log('❌ EditBtn introuvable lors du changement (NEW)');
     }
 }
 
@@ -232,33 +407,46 @@ function reloadAddresses(selectedAddressId = null) {
     console.log('🔄 reloadAddresses appelé avec selectedAddressId:', selectedAddressId);
     
     const addressSelect = document.getElementById('contact-adresse');
-    const clientId = document.getElementById('add-address-btn')?.dataset.clientId;
+    const clientId = document.getElementById('add-address-btn')?.dataset.clientId || '{{ client.id }}'; // Fallback Twig
     
     console.log('🔍 Éléments trouvés:', {
         addressSelect: !!addressSelect,
         clientId: clientId,
-        addBtn: !!document.getElementById('add-address-btn')
+        addBtn: !!document.getElementById('add-address-btn'),
+        'form clientId': document.getElementById('contact-form')?.dataset.clientId
     });
     
-    if (!addressSelect || !clientId) {
-        console.error('❌ reloadAddresses: Éléments manquants', { addressSelect: !!addressSelect, clientId });
+    // Essayer plusieurs sources pour le clientId
+    const finalClientId = clientId || document.getElementById('contact-form')?.dataset.clientId;
+    
+    if (!addressSelect || !finalClientId) {
+        console.error('❌ reloadAddresses: Éléments manquants', { 
+            addressSelect: !!addressSelect, 
+            clientId: clientId,
+            finalClientId: finalClientId,
+            formElement: !!document.getElementById('contact-form')
+        });
         return;
     }
     
-    const apiUrl = `/client/${clientId}/addresses`;
+    const apiUrl = `/client/${finalClientId}/addresses`;
     console.log('📡 Appel API adresses:', apiUrl);
     
     // Charger les adresses via API
     fetch(apiUrl)
         .then(response => {
             console.log('📡 Réponse API adresses:', response.status, response.statusText);
+            console.log('📡 Headers de réponse:', Object.fromEntries(response.headers.entries()));
             if (!response.ok) {
-                throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+                return response.text().then(text => {
+                    console.error('❌ Erreur API détail:', text);
+                    throw new Error(`HTTP ${response.status}: ${response.statusText} - ${text}`);
+                });
             }
             return response.json();
         })
         .then(addresses => {
-            console.log('📊 Adresses reçues:', addresses);
+            console.log('📊 Adresses reçues (type:', typeof addresses, ', longueur:', addresses?.length, '):', addresses);
             
             // Vider et repeupler le select
             addressSelect.innerHTML = '<option value="">-- Sélectionner une adresse --</option>';
@@ -281,16 +469,99 @@ function reloadAddresses(selectedAddressId = null) {
                 addressSelect.appendChild(option);
             }
             
+            // 🔧 Mettre à jour Select2 si présent
+            if (window.$ && $(addressSelect).hasClass('select2-hidden-accessible')) {
+                console.log('🔧 Rafraîchissement Select2 pour', addressSelect.id, 'avec selectedAddressId:', selectedAddressId);
+                try {
+                    const $select = $(addressSelect);
+                    
+                    // D'abord, sélectionner la bonne option dans le DOM natif
+                    if (selectedAddressId) {
+                        console.log('🎯 Pré-sélection option:', selectedAddressId);
+                        addressSelect.value = selectedAddressId;
+                    }
+                    
+                    // Ensuite, forcer la reconstruction complète de Select2
+                    console.log('🔄 Destruction et reconstruction Select2...');
+                    $select.select2('destroy');
+                    
+                    // Réinitialiser avec configuration simple
+                    $select.select2({
+                        dropdownParent: $select.closest('.modal'),
+                        width: '100%',
+                        theme: 'bootstrap-5',
+                        dropdownAutoWidth: true
+                    });
+                    
+                    // Re-sélectionner après reconstruction
+                    if (selectedAddressId) {
+                        console.log('🎯 Post-sélection Select2:', selectedAddressId);
+                        $select.val(selectedAddressId).trigger('change');
+                    }
+                    
+                    console.log('✅ Select2 reconstruit avec succès, valeur finale:', $select.val());
+                } catch (e) {
+                    console.error('❌ Erreur reconstruction Select2:', e);
+                }
+            }
+            
             // Mettre à jour le bouton d'édition
             const editBtn = document.getElementById('edit-address-btn');
             if (editBtn) {
-                editBtn.style.display = addressSelect.value ? 'inline-block' : 'none';
+                const shouldShow = addressSelect.value ? 'inline-block' : 'none';
+                console.log('🔧 Mise à jour bouton edit adresse (NEW):', { 
+                    addressValue: addressSelect.value, 
+                    shouldShow: shouldShow,
+                    currentDisplay: editBtn.style.display 
+                });
+                editBtn.style.display = shouldShow;
+            } else {
+                console.log('❌ Bouton edit-address-btn introuvable (NEW)');
             }
         })
         .catch(error => {
             console.error('Erreur rechargement adresses:', error);
             addressSelect.innerHTML = '<option value="">-- Erreur chargement adresses --</option>';
         });
+}
+
+function openAddressModalDirectly(idValue, mode) {
+    console.log('🔗 Fermeture modale contact et ouverture modale adresse (' + mode.toUpperCase() + ') pour:', idValue);
+    
+    // Stocker les informations pour le retour
+    window.lastContactEditEvent = {
+        mode: 'new',
+        contactId: null,
+        clientId: '{{ client.id }}',
+        fromModal: true // Indique qu'on vient d'une modale contact
+    };
+    console.log('💾 Stockage info contact pour retour:', window.lastContactEditEvent);
+    
+    // Fermer la modale contact
+    const modal = bootstrap.Modal.getInstance(document.querySelector('.modal'));
+    if (modal) {
+        console.log('✅ Instance modal trouvée, fermeture...');
+        modal.hide();
+    } else {
+        console.log('❌ Aucune instance modal trouvée');
+    }
+    
+    // Attendre que la fermeture soit complète avant d'ouvrir la nouvelle modale
+    setTimeout(() => {
+        console.log('⏰ Timeout écoulé, création du service adresse...');
+        try {
+            const addressService = new AddressModalService({ debug: true });
+            if (mode === 'create') {
+                console.log('✅ Service adresse créé, appel createAddress...');
+                addressService.createAddress(idValue);
+            } else if (mode === 'edit') {
+                console.log('✅ Service adresse créé, appel editAddress...');
+                addressService.editAddress(idValue);
+            }
+        } catch (error) {
+            console.error('❌ Erreur création service adresse:', error);
+        }
+    }, 300);
 }
 
 function submitContactForm() {
@@ -349,6 +620,53 @@ function submitContactForm() {
         // Réactiver le bouton
         submitBtn.disabled = false;
         submitBtn.innerHTML = '<i class="fas fa-plus me-1"></i>Ajouter le contact';
+    });
+}
+
+// ==================================
+// FORMATAGE DES NUMÉROS DE TÉLÉPHONE
+// ==================================
+
+function formatPhoneNumber(value) {
+    // Supprimer tous les caractères non numériques
+    const numbers = value.replace(/\D/g, '');
+    
+    // Limiter à 10 chiffres pour la France
+    const limited = numbers.substring(0, 10);
+    
+    // Formater en groupes de 2 chiffres (format français)
+    if (limited.length === 0) return '';
+    
+    const formatted = limited.match(/.{1,2}/g);
+    return formatted ? formatted.join(' ') : limited;
+}
+
+function setupPhoneFormatting() {
+    console.log('📞 Configuration formatage téléphones (modale contact new)');
+    
+    // Sélectionner tous les champs téléphone
+    const phoneFields = document.querySelectorAll('input[type="tel"], input[name*="telephone"], input[name*="phone"], input[id*="telephone"], input[name*="mobile"]');
+    
+    phoneFields.forEach(field => {
+        field.addEventListener('input', function(e) {
+            const cursorPos = this.selectionStart;
+            const oldValue = this.value;
+            const newValue = formatPhoneNumber(this.value);
+            
+            this.value = newValue;
+            
+            // Ajuster la position du curseur
+            if (newValue.length > oldValue.length) {
+                this.setSelectionRange(cursorPos + 1, cursorPos + 1);
+            } else {
+                this.setSelectionRange(cursorPos, cursorPos);
+            }
+        });
+        
+        // Formater à la perte de focus aussi
+        field.addEventListener('blur', function() {
+            this.value = formatPhoneNumber(this.value);
+        });
     });
 }
 </script>

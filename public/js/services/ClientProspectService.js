@@ -198,10 +198,47 @@ class ClientProspectService {
                 const clientSelect = $(this.config.selectors.clientSelect);
                 const currentValue = clientSelect.val();
                 
+                this.log('🔄 Mise à jour client select:', {
+                    clientId: event.detail.client.id,
+                    newLabel: event.detail.client.label,
+                    currentValue: currentValue,
+                    sameClient: currentValue == event.detail.client.id,
+                    fullClientData: event.detail.client,
+                    hasSelect2: clientSelect.hasClass('select2-hidden-accessible')
+                });
+                
                 if (currentValue == event.detail.client.id) {
                     // Mettre à jour l'option existante
-                    clientSelect.find(`option[value="${event.detail.client.id}"]`).text(event.detail.client.label);
-                    clientSelect.trigger('change.select2');
+                    const option = clientSelect.find(`option[value="${event.detail.client.id}"]`);
+                    const oldText = option.text();
+                    
+                    this.log('🔍 Avant mise à jour:', {
+                        optionFound: option.length > 0,
+                        oldText: oldText,
+                        newText: event.detail.client.label
+                    });
+                    
+                    if (option.length > 0) {
+                        option.text(event.detail.client.label);
+                        
+                        // Déclencher les événements Select2 pour forcer la mise à jour de l'affichage
+                        clientSelect.trigger('change.select2');
+                        clientSelect.trigger('select2:select');
+                        
+                        // Forcer le rafraîchissement de l'affichage Select2
+                        if (clientSelect.hasClass('select2-hidden-accessible')) {
+                            clientSelect.select2('destroy').select2();
+                        }
+                        
+                        this.log('✅ Label client mis à jour:', {
+                            from: oldText,
+                            to: event.detail.client.label,
+                            optionTextAfter: option.text(),
+                            currentDisplayedValue: clientSelect.siblings('.select2-container').find('.select2-selection__rendered').text()
+                        });
+                    } else {
+                        this.log('❌ Option non trouvée pour ID:', event.detail.client.id);
+                    }
                 }
             }
         });
@@ -763,8 +800,12 @@ class ClientProspectService {
             
             // Utiliser les événements globaux Select2
             $(document).on('select2:select', this.config.selectors.clientSelect, (e) => {
-                this.log('👤 Événement Select2 global client:', e.params.data.id);
-                this.handleClientChange(e.params.data.id);
+                if (e.params && e.params.data) {
+                    this.log('👤 Événement Select2 global client:', e.params.data.id);
+                    this.handleClientChange(e.params.data.id);
+                } else {
+                    this.log('👤 Événement Select2 global client (manuel):', $(e.target).val());
+                }
             });
             
             // Aussi écouter les événements sur l'élément directement avec délai
@@ -776,8 +817,13 @@ class ClientProspectService {
                 if ($(clientSelect).hasClass('select2-hidden-accessible')) {
                     this.log('🔧 Select2 détecté directement pour client');
                     $(clientSelect).on('select2:select', (e) => {
-                        this.log('👤 Événement Select2 direct client:', e.params.data.id);
-                        this.handleClientChange(e.params.data.id);
+                        if (e.params && e.params.data) {
+                            this.log('👤 Événement Select2 direct client:', e.params.data.id);
+                            this.handleClientChange(e.params.data.id);
+                        } else {
+                            this.log('👤 Événement Select2 direct client (manuel):', $(clientSelect).val());
+                            // Ne pas re-déclencher handleClientChange si c'est un événement manuel
+                        }
                     });
                 }
             }, 2000);
@@ -804,16 +850,24 @@ class ClientProspectService {
                 
                 if (type === 'client') {
                     $(element).on('select2:select', (e) => {
-                        this.log('👤 Événement Select2 client:', e.params.data.id);
-                        this.handleClientChange(e.params.data.id);
+                        if (e.params && e.params.data) {
+                            this.log('👤 Événement Select2 client:', e.params.data.id);
+                            this.handleClientChange(e.params.data.id);
+                        } else {
+                            this.log('👤 Événement Select2 client (manuel):', $(element).val());
+                        }
                     });
                 } else if (type === 'contact-livraison') {
                     $(element).on('select2:select', (e) => {
-                        this.handleContactChange('livraison', e.params.data.id);
+                        if (e.params && e.params.data) {
+                            this.handleContactChange('livraison', e.params.data.id);
+                        }
                     });
                 } else if (type === 'contact-facturation') {
                     $(element).on('select2:select', (e) => {
-                        this.handleContactChange('facturation', e.params.data.id);
+                        if (e.params && e.params.data) {
+                            this.handleContactChange('facturation', e.params.data.id);
+                        }
                     });
                 }
                 return true;

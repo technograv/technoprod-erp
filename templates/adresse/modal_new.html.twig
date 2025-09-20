@@ -81,6 +81,74 @@
                 submitAddressForm();
             });
         }
+        
+        // Gérer les boutons Annuler et Fermer pour retourner à la modale contact
+        const cancelBtn = document.querySelector('.btn-secondary[data-bs-dismiss="modal"]');
+        const closeBtn = document.querySelector('.btn-close[data-bs-dismiss="modal"]');
+        
+        function handleAddressCancelClose() {
+            console.log('🔙 Fermeture modale adresse sans sauvegarde');
+            
+            // Vérifier si on vient vraiment d'une modale contact
+            const lastContactEvent = window.lastContactEditEvent;
+            const fromContact = lastContactEvent && (lastContactEvent.fromModal === true);
+            
+            console.log('🔍 Source d\'ouverture:', {
+                fromContact: fromContact,
+                lastContactEvent: lastContactEvent
+            });
+            
+            // Fermer la modale adresse
+            const modal = bootstrap.Modal.getInstance(document.querySelector('.modal'));
+            if (modal) {
+                modal.hide();
+            }
+            
+            // Rouvrir la modale contact seulement si on vient d'une modale contact
+            if (fromContact) {
+                setTimeout(() => {
+                    console.log('🔄 Réouverture modale contact:', lastContactEvent.contactId);
+                    const contactService = new ContactModalService({ debug: true });
+                    if (lastContactEvent.mode === 'edit') {
+                        contactService.editContact(lastContactEvent.contactId);
+                    } else {
+                        contactService.createContact(lastContactEvent.clientId);
+                    }
+                }, 300);
+            } else {
+                console.log('✅ Fermeture simple - pas de retour vers modale contact');
+            }
+        }
+        
+        if (cancelBtn) {
+            cancelBtn.addEventListener('click', handleAddressCancelClose);
+        }
+        if (closeBtn) {
+            closeBtn.addEventListener('click', handleAddressCancelClose);
+        }
+        
+        // Gérer la fermeture de la modale par clic à côté ou ESC
+        const modalElement = document.querySelector('.modal');
+        if (modalElement) {
+            modalElement.addEventListener('hidden.bs.modal', function(e) {
+                console.log('🔔 Modale adresse fermée (toutes méthodes)');
+                
+                // Réinitialiser le flag
+                window.editAddressInProgress = false;
+                
+                // Nettoyage simple des backdrops
+                setTimeout(() => {
+                    const backdrops = document.querySelectorAll('.modal-backdrop');
+                    if (backdrops.length > 0) {
+                        console.log('🧹 Nettoyage', backdrops.length, 'backdrops');
+                        backdrops.forEach(backdrop => backdrop.remove());
+                        document.body.classList.remove('modal-open');
+                        document.body.style.removeProperty('padding-right');
+                        document.body.style.removeProperty('overflow');
+                    }
+                }, 100);
+            });
+        }
     }, 100);
 })();
 
@@ -127,9 +195,10 @@ function submitAddressForm() {
                 }
             }));
             
-            // Fermer la modale
+            // Fermeture normale de la modale adresse
             const modal = bootstrap.Modal.getInstance(document.querySelector('.modal'));
             if (modal) {
+                console.log('🔒 Fermeture modale adresse (NEW)');
                 modal.hide();
             }
         } else {

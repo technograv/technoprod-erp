@@ -42,14 +42,19 @@
                         {% for prospect in prospects %}
                             <option value="{{ prospect.id }}" 
                                     {{ (selected_client|default(null) and selected_client.id == prospect.id) ? 'selected' : '' }}>
-                                {% if prospect.nomEntreprise %}
-                                    {% if prospect.formeJuridique and not prospect.nomEntreprise starts with prospect.formeJuridique.nom %}
-                                        {{ prospect.formeJuridique.nom }} {{ prospect.nomEntreprise }}
-                                    {% else %}
-                                        {{ prospect.nomEntreprise }}
-                                    {% endif %}
+{% if prospect.formeJuridique and prospect.formeJuridique.templateFormulaire == 'personne_morale' %}
+                                    {# Entreprise : toujours afficher forme juridique + dénomination sociale #}
+                                    {{ prospect.formeJuridique.nom }}{% if prospect.nomEntreprise %} {{ prospect.nomEntreprise }}{% else %} [Dénomination manquante]{% endif %}
+                                {% elseif prospect.formeJuridique and prospect.formeJuridique.templateFormulaire == 'personne_physique' %}
+                                    {# Particulier : forme juridique + prénom nom #}
+                                    {{ prospect.formeJuridique.nom }}{% if prospect.prenom %} {{ prospect.prenom }}{% endif %}{% if prospect.nom %} {{ prospect.nom }}{% endif %}
                                 {% else %}
-                                    {% if prospect.formeJuridique %}{{ prospect.formeJuridique.nom }} {% endif %}{{ prospect.nom }}{% if prospect.prenom %} {{ prospect.prenom }}{% endif %}
+                                    {# Fallback pour les anciens clients sans forme juridique #}
+                                    {% if prospect.nomEntreprise %}
+                                        {{ prospect.nomEntreprise }}
+                                    {% else %}
+                                        {% if prospect.prenom %}{{ prospect.prenom }} {% endif %}{{ prospect.nom }}
+                                    {% endif %}
                                 {% endif %}
                             </option>
                         {% endfor %}

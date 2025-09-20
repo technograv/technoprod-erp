@@ -402,13 +402,27 @@ final class ClientController extends AbstractController
                 // Tracker les changements sur les champs principaux du client
                 $clientChanges = [];
                 
-                // Dénomination
-                $oldNom = $client->getNom();
-                if (isset($data['nom']) && $oldNom !== $data['nom']) {
-                    $clientChanges['nom'] = ['old' => $oldNom, 'new' => $data['nom']];
-                    $client->setNom($data['nom']);
-                } elseif (isset($data['nom'])) {
-                    $client->setNom($data['nom']);
+                // Dénomination - Gérer séparément nom et nomEntreprise
+                // Pour les entreprises, utiliser nomEntreprise
+                if (isset($data['nomEntreprise'])) {
+                    $oldNomEntreprise = $client->getNomEntreprise();
+                    if ($oldNomEntreprise !== $data['nomEntreprise']) {
+                        $clientChanges['nomEntreprise'] = ['old' => $oldNomEntreprise, 'new' => $data['nomEntreprise']];
+                        $client->setNomEntreprise($data['nomEntreprise']);
+                    } else {
+                        $client->setNomEntreprise($data['nomEntreprise']);
+                    }
+                }
+                
+                // Pour les particuliers, utiliser nom (obsolète, maintenant géré via Contact)
+                if (isset($data['nom'])) {
+                    $oldNom = $client->getNom();
+                    if ($oldNom !== $data['nom']) {
+                        $clientChanges['nom'] = ['old' => $oldNom, 'new' => $data['nom']];
+                        $client->setNom($data['nom']);
+                    } else {
+                        $client->setNom($data['nom']);
+                    }
                 }
                 
                 // Forme juridique
@@ -1300,7 +1314,7 @@ final class ClientController extends AbstractController
                         'message' => 'Client modifié avec succès',
                         'client' => [
                             'id' => $client->getId(),
-                            'label' => $client->getNomEntreprise() ?: ($client->getPrenom() . ' ' . $client->getNom()),
+                            'label' => $client->getNomComplet(), // Utiliser la méthode complète formatée
                             'nom' => $client->getNom(),
                             'nomEntreprise' => $client->getNomEntreprise(),
                             'email' => $client->getEmail(),

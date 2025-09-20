@@ -840,7 +840,18 @@
         // Logique forme juridique supprimée - gérée par les nouveaux services modales
 
         // Autocomplétion française pour l'adresse dans le popup et les champs d'adresse
-        function setupAddressAutocomplete() {
+        function setupAddressAutocomplete(retryCount = 0) {
+            if (typeof PostalAutocompleteService === 'undefined') {
+                if (retryCount < 5) { // Maximum 5 tentatives (500ms) - devrait être suffisant
+                    console.warn(`PostalAutocompleteService not yet available, retrying in 100ms... (${retryCount + 1}/5)`);
+                    setTimeout(() => setupAddressAutocomplete(retryCount + 1), 100);
+                    return;
+                } else {
+                    console.error('❌ PostalAutocompleteService unavailable after 5 retries, autocomplete disabled for address fields');
+                    return;
+                }
+            }
+            
             const autocompleteService = new PostalAutocompleteService();
             
             // Champs du popup nouveau client

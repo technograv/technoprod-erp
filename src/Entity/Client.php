@@ -477,20 +477,34 @@ class Client
 
     public function getNomComplet(): string
     {
-        if ($this->formeJuridique && $this->formeJuridique->isPersonnePhysique()) {
-            // Pour une personne physique, utiliser civilité + prénom + nom du contact principal
+        if ($this->formeJuridique && $this->formeJuridique->getTemplateFormulaire() == 'personne_morale') {
+            // Entreprise : forme juridique + dénomination sociale
+            $formeJuridique = $this->formeJuridique->getNom();
+            $denomination = $this->nomEntreprise ?: '[Dénomination manquante]';
+            return $formeJuridique . ' ' . $denomination;
+        } elseif ($this->formeJuridique && $this->formeJuridique->getTemplateFormulaire() == 'personne_physique') {
+            // Particulier : forme juridique + prénom nom
+            $formeJuridique = $this->formeJuridique->getNom();
             $contact = $this->getContactFacturationDefault();
             if ($contact) {
-                $civilite = $contact->getCivilite() ? $contact->getCivilite() . ' ' : '';
-                $prenom = $contact->getPrenom() ? $contact->getPrenom() . ' ' : '';
-                $nom = $contact->getNom() ?: '';
-                return trim($civilite . $prenom . $nom);
+                $prenom = $contact->getPrenom() ? ' ' . $contact->getPrenom() : '';
+                $nom = $contact->getNom() ? ' ' . $contact->getNom() : '';
+                return $formeJuridique . $prenom . $nom;
             }
-            // Fallback si pas de contact
-            return 'Personne physique sans contact';
+            return $formeJuridique;
         } else {
-            // Pour une personne morale, utiliser la dénomination
-            return $this->nomEntreprise ?: 'Entreprise sans nom';
+            // Fallback pour les anciens clients sans forme juridique
+            if ($this->nomEntreprise) {
+                return $this->nomEntreprise;
+            } else {
+                $contact = $this->getContactFacturationDefault();
+                if ($contact) {
+                    $prenom = $contact->getPrenom() ? $contact->getPrenom() . ' ' : '';
+                    $nom = $contact->getNom() ?: '';
+                    return trim($prenom . $nom);
+                }
+                return 'Client sans nom';
+            }
         }
     }
 

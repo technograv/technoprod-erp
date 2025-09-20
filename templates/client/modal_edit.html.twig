@@ -187,6 +187,9 @@ function submitClientForm() {
     .then(response => response.json())
     .then(data => {
         if (data.success) {
+            // Debug du client modifié
+            console.log('📝 Client modifié - Données reçues du serveur:', data.client);
+            
             // Émettre un événement pour notifier la page parent
             window.dispatchEvent(new CustomEvent('clientUpdated', {
                 detail: { 
