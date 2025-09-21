@@ -35,6 +35,62 @@
     </div>
 </div>
 
+<!-- Styles pour gestion des modales empilées -->
+<style>
+/* Fix pour Select2 dans les modals - AGRESSIF */
+.modal .select2-container {
+    z-index: 9999 !important;
+}
+.modal .select2-dropdown {
+    z-index: 10000 !important;
+}
+.select2-container--open .select2-dropdown {
+    z-index: 10001 !important;
+}
+
+/* Forcer le dropdown Select2 au-dessus de la modale mais dans la modale */
+.modal .select2-dropdown {
+    z-index: 1070 !important;
+}
+.modal .select2-container--bootstrap-5 .select2-dropdown {
+    z-index: 1070 !important;
+}
+.modal .select2-container--open .select2-dropdown {
+    z-index: 1070 !important;
+}
+
+/* Gestion des modales empilées - adresse par-dessus contact */
+.modal {
+    z-index: 1050;
+}
+.modal.show {
+    z-index: 1055;
+}
+/* Modale d'adresse au-dessus de contact */
+.modal + .modal {
+    z-index: 1060 !important;
+}
+.modal + .modal .modal-backdrop {
+    z-index: 1059 !important;
+}
+
+/* Gestion spécifique pour 3 modales empilées (rare mais possible) */
+.modal + .modal + .modal {
+    z-index: 1065 !important;
+}
+.modal + .modal + .modal .modal-backdrop {
+    z-index: 1064 !important;
+}
+
+/* Correction pour les backdrops multiples */
+.modal-backdrop.fade {
+    opacity: 0.5;
+}
+.modal-backdrop.show {
+    opacity: 0.5;
+}
+</style>
+
 <div class="container-fluid">
     {{ form_start(form, {'attr': {'id': 'devis-form', 'class': 'devis-form'}}) }}
     
@@ -1011,6 +1067,12 @@
 <script src="/js/services/PostalAutocompleteService.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/sortablejs@1.15.0/Sortable.min.js"></script>
 <script src="https://cdn.quilljs.com/1.3.6/quill.min.js"></script>
+<!-- Services de modales -->
+<script src="/js/services/ModalService.js"></script>
+<script src="/js/services/AddressModalService.js"></script>
+<script src="/js/services/ContactModalService.js"></script>
+<script src="/js/services/ClientModalService.js"></script>
+<script src="/js/services/ClientProspectService.js"></script>
 
 <script>
 (function() {
@@ -3139,6 +3201,299 @@ function showError(message) {
 
 document.addEventListener('DOMContentLoaded', function() {
     init();
+    
+    // ==========================================
+    // INITIALISATION UNIQUE DES SERVICES DE MODALES
+    // ==========================================
+    
+    console.log('🚀 Initialisation des services de modales...');
+    
+    // Vérifier d'abord le bouton avant initialisation
+    const addClientBtn = document.getElementById('add-client-btn');
+    if (addClientBtn) {
+        console.log('🔴 [EDIT.HTML.TWIG] Bouton add-client-btn trouvé, listeners actuels:', addClientBtn.onclick, addClientBtn);
+        
+        // Ajouter un listener temporaire pour debug
+        addClientBtn.addEventListener('click', function(e) {
+            console.log('🔴🔴 [DEBUG] CLICK sur add-client-btn détecté !', e);
+            console.trace('Stack trace du click:');
+        }, true);
+    }
+    
+    // Initialiser ClientModalService (une seule fois)
+    if (window.ClientModalService && !window.clientModalServiceInstance) {
+        console.log('📍 [EDIT.HTML.TWIG] Création de ClientModalService...');
+        window.clientModalServiceInstance = new ClientModalService({
+            debug: true,
+            onClientCreated: function(detail) {
+                console.log('📍 [EDIT.HTML.TWIG] ClientModalService.onClientCreated appelé');
+                if (window.$ && typeof $.fn.select2 !== 'undefined') {
+                    const clientSelect = $('#devis_client');
+                    const newOption = new Option(detail.client.label, detail.client.id, true, true);
+                    clientSelect.append(newOption).trigger('change');
+                    
+                    if (window.clientProspectService) {
+                        window.clientProspectService.handleClientChange(detail.client.id);
+                    }
+                }
+            },
+            onClientUpdated: function(detail) {
+                if (window.$ && typeof $.fn.select2 !== 'undefined') {
+                    const clientSelect = $('#devis_client');
+                    const currentValue = clientSelect.val();
+                    
+                    if (currentValue == detail.client.id) {
+                        clientSelect.find(`option[value="${detail.client.id}"]`).text(detail.client.label);
+                        clientSelect.trigger('change.select2');
+                    }
+                }
+            }
+        });
+        console.log('📍 [EDIT.HTML.TWIG] Configuration pour page EDIT...');
+        // Configuration spécifique pour la page d'édition (pas attachToDevisPage qui est pour NEW)
+        window.clientModalServiceInstance.attachToButtons({
+            addClientBtn: 'add-client-btn',
+            editClientBtn: 'edit-client-btn',
+            clientSelector: 'devis_client'  // ID correct pour la page d'édition
+        });
+        console.log('✅ [EDIT.HTML.TWIG] ClientModalService initialisé et attaché');
+    }
+    
+    // Initialiser ContactModalService
+    if (window.ContactModalService) {
+        const contactModalService = new ContactModalService({
+            debug: true,
+            onContactCreated: function(detail) {
+                console.log('📞 [EDIT] Contact créé, rechargement puis fermeture...');
+                
+                const clientSelect = document.getElementById('devis_client');
+                const clientId = clientSelect?.value;
+                if (clientId && window.clientProspectService) {
+                    // Recharger les contacts d'abord
+                    window.clientProspectService.handleClientChange(clientId);
+                    
+                    // Attendre que les contacts soient chargés puis sélectionner et fermer
+                    setTimeout(() => {
+                        // Sélectionner automatiquement le nouveau contact
+                        if (detail.contact && detail.contact.id) {
+                            // Obtenir les éléments une seule fois pour éviter la redéclaration
+                            const facturationSelect = document.getElementById('devis_contactFacturation');
+                            const livraisonSelect = document.getElementById('devis_contactLivraison');
+                            
+                            const isFacturation = detail.contact.isFacturationDefault;
+                            const isLivraison = detail.contact.isLivraisonDefault;
+                            
+                            if (isFacturation) {
+                                if (facturationSelect) {
+                                    facturationSelect.value = detail.contact.id;
+                                    facturationSelect.dispatchEvent(new Event('change'));
+                                }
+                            }
+                            
+                            if (isLivraison) {
+                                if (livraisonSelect) {
+                                    livraisonSelect.value = detail.contact.id;
+                                    livraisonSelect.dispatchEvent(new Event('change'));
+                                }
+                            }
+                            
+                            // Si pas de flag spécifique, sélectionner dans les deux
+                            if (!isFacturation && !isLivraison) {
+                                
+                                if (facturationSelect) {
+                                    facturationSelect.value = detail.contact.id;
+                                    facturationSelect.dispatchEvent(new Event('change'));
+                                }
+                                
+                                if (livraisonSelect) {
+                                    livraisonSelect.value = detail.contact.id;
+                                    livraisonSelect.dispatchEvent(new Event('change'));
+                                }
+                            }
+                        }
+                        
+                        // Fermer la modale après sélection
+                        if (contactModalService.modalService) {
+                            contactModalService.modalService.closeModal();
+                            console.log('📞 [EDIT] Contact sélectionné et modale fermée');
+                        }
+                    }, 800); // Attendre plus longtemps pour que le rechargement soit fini
+                }
+            },
+            onContactUpdated: function(detail) {
+                console.log('📞 [EDIT] Contact modifié, rechargement puis re-sélection...', detail);
+                
+                const clientSelect = document.getElementById('devis_client');
+                const clientId = clientSelect?.value;
+                if (clientId && window.clientProspectService && detail.contact) {
+                    // Recharger SEULEMENT les contacts (pas les adresses)
+                    window.clientProspectService.reloadContactsOnly(clientId).then(() => {
+                        const contactId = detail.contact.id;
+                        console.log('📞 [EDIT] Tentative de re-sélection du contact ID:', contactId);
+                        
+                        // Essayer de re-sélectionner dans les deux dropdowns selon le type de contact
+                        const livraisonSelect = document.getElementById('devis_contactLivraison');
+                        const facturationSelect = document.getElementById('devis_contactFacturation');
+                        
+                        // Vérifier quel dropdown contenait le contact modifié
+                        let wasInLivraison = false;
+                        let wasInFacturation = false;
+                        
+                        if (livraisonSelect) {
+                            // Vérifier si le contact existe dans les options de livraison
+                            const livraisonOption = Array.from(livraisonSelect.options).find(opt => opt.value == contactId);
+                            if (livraisonOption) {
+                                livraisonSelect.value = contactId;
+                                livraisonSelect.dispatchEvent(new Event('change'));
+                                wasInLivraison = true;
+                                console.log('📞 [EDIT] Contact re-sélectionné dans livraison');
+                            }
+                        }
+                        
+                        if (facturationSelect) {
+                            // Vérifier si le contact existe dans les options de facturation  
+                            const facturationOption = Array.from(facturationSelect.options).find(opt => opt.value == contactId);
+                            if (facturationOption) {
+                                facturationSelect.value = contactId;
+                                facturationSelect.dispatchEvent(new Event('change'));
+                                wasInFacturation = true;
+                                console.log('📞 [EDIT] Contact re-sélectionné dans facturation');
+                            }
+                        }
+                        
+                        // Synchroniser l'email d'envoi automatique si c'est le contact de livraison
+                        if (livraisonSelect && livraisonSelect.value == contactId) {
+                            console.log('📧 [EDIT] Synchronisation email après modification contact livraison');
+                            if (typeof syncContactEmail === 'function') {
+                                syncContactEmail(contactId);
+                            }
+                        }
+                        
+                        // Fermer la modale
+                        if (contactModalService.modalService) {
+                            contactModalService.modalService.closeModal();
+                            console.log('📞 [EDIT] Contact rechargé, re-sélectionné et modale fermée');
+                        }
+                    });
+                }
+            }
+        });
+        contactModalService.attachToDevisPage();
+        console.log('✅ ContactModalService initialisé');
+    }
+    
+    // PRÉVENTION: Initialiser les événements de navigation inter-modales (ne pas nettoyer ici)
+    // window.lastContactEditEvent = null; // COMMENTÉ - on garde les événements existants pour la navigation
+    console.log('🧹 [EDIT] Conservation des événements de navigation inter-modales existants');
+    
+    // Initialiser AddressModalService
+    if (window.AddressModalService) {
+        const addressModalService = new AddressModalService({
+            debug: true,
+            onAddressCreated: function(detail) {
+                console.log('📍 [EDIT] Adresse créée, rechargement puis fermeture...', detail);
+                
+                const clientSelect = document.getElementById('devis_client');
+                const clientId = clientSelect?.value;
+                if (clientId && window.clientProspectService) {
+                    // Recharger SEULEMENT les adresses (pas les contacts) - version asynchrone
+                    window.clientProspectService.reloadAddressesOnly(clientId).then(() => {
+                        // Sélectionner automatiquement la nouvelle adresse
+                        if (detail.adresse && detail.adresse.id) {
+                            const livraisonSelect = document.getElementById('adresse_livraison_select');
+                            const facturationSelect = document.getElementById('adresse_facturation_select');
+                            
+                            // Sélectionner dans les deux dropdowns par défaut
+                            if (livraisonSelect) {
+                                livraisonSelect.value = detail.adresse.id;
+                                livraisonSelect.dispatchEvent(new Event('change'));
+                            }
+                            
+                            if (facturationSelect) {
+                                facturationSelect.value = detail.adresse.id;
+                                facturationSelect.dispatchEvent(new Event('change'));
+                            }
+                        }
+                        
+                        // NE PAS fermer la modale ici - la modale d'adresse gère sa propre fermeture et navigation
+                        console.log('📍 [EDIT] Adresse sélectionnée - la modale se ferme automatiquement');
+                    });
+                }
+            },
+            onAddressUpdated: function(detail) {
+                console.log('📍 [EDIT] Adresse modifiée, rechargement puis re-sélection...', detail);
+                
+                // NE PAS effacer lastContactEditEvent ici - nécessaire pour la navigation multi-modale
+                // window.lastContactEditEvent = null; // COMMENTÉ - laissé à la modale d'adresse
+                
+                const clientSelect = document.getElementById('devis_client');
+                const clientId = clientSelect?.value;
+                if (clientId && window.clientProspectService && detail.adresse) {
+                    // Recharger SEULEMENT les adresses (pas les contacts) - version asynchrone
+                    window.clientProspectService.reloadAddressesOnly(clientId).then(() => {
+                        const addressId = detail.adresse.id;
+                        console.log('📍 [EDIT] Tentative de re-sélection de l\'adresse ID:', addressId);
+                        
+                        // Essayer de re-sélectionner dans les deux dropdowns d'adresses
+                        const livraisonSelect = document.getElementById('adresse_livraison_select');
+                        const facturationSelect = document.getElementById('adresse_facturation_select');
+                        
+                        if (livraisonSelect) {
+                            // Vérifier si l'adresse existe dans les options de livraison
+                            const livraisonOption = Array.from(livraisonSelect.options).find(opt => opt.value == addressId);
+                            if (livraisonOption) {
+                                livraisonSelect.value = addressId;
+                                livraisonSelect.dispatchEvent(new Event('change'));
+                                console.log('📍 [EDIT] Adresse re-sélectionnée dans livraison');
+                            }
+                        }
+                        
+                        if (facturationSelect) {
+                            // Vérifier si l'adresse existe dans les options de facturation
+                            const facturationOption = Array.from(facturationSelect.options).find(opt => opt.value == addressId);
+                            if (facturationOption) {
+                                facturationSelect.value = addressId;
+                                facturationSelect.dispatchEvent(new Event('change'));
+                                console.log('📍 [EDIT] Adresse re-sélectionnée dans facturation');
+                            }
+                        }
+                        
+                        // NE PAS fermer la modale ici - la modale d'adresse gère sa propre fermeture et navigation
+                        console.log('📍 [EDIT] Adresse re-sélectionnée - la modale se ferme automatiquement');
+                    });
+                }
+            }
+        });
+        addressModalService.attachToDevisPage();
+        console.log('✅ AddressModalService initialisé');
+    }
+    
+    // VÉRIFICATION FINALE DES LISTENERS ET PRÉVENTION DES CONFLITS
+    setTimeout(function() {
+        const btn = document.getElementById('add-client-btn');
+        if (btn) {
+            console.log('🔍🔍 [VÉRIFICATION FINALE] État du bouton add-client-btn:');
+            console.log('  - onclick:', btn.onclick);
+            console.log('  - Élément complet:', btn);
+            
+            // Lister tous les event listeners (si possible avec Chrome DevTools)
+            if (window.getEventListeners) {
+                console.log('  - Event Listeners:', window.getEventListeners(btn));
+            }
+        }
+        
+        // PRÉVENTION: Ajouter un gestionnaire global pour éviter les ouvertures de modales parasites
+        document.addEventListener('modalOpening', function(e) {
+            console.log('🚨 [MODAL-DEBUG] Modale en cours d\'ouverture:', e.detail);
+        });
+        
+        // Surveiller spécifiquement les conflits entre modales
+        const originalBootstrapModal = window.bootstrap?.Modal;
+        if (originalBootstrapModal) {
+            console.log('🔍 [MODAL-DEBUG] Bootstrap Modal intercepté pour debugging');
+        }
+        
+    }, 2000);
 });
 
 // Variables globales pour l'éditeur WYSIWYG

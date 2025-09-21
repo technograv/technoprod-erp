@@ -126,7 +126,11 @@ class ClientModalService {
                 ? document.getElementById(addClientBtn)
                 : addClientBtn;
                 
-            btn?.addEventListener('click', () => {
+            // Retirer tous les event listeners existants pour éviter les doublons
+            const newBtn = btn.cloneNode(true);
+            btn.parentNode.replaceChild(newBtn, btn);
+            
+            newBtn?.addEventListener('click', () => {
                 this.createClient();
             });
         }
@@ -137,7 +141,11 @@ class ClientModalService {
                 ? document.getElementById(editClientBtn)
                 : editClientBtn;
                 
-            btn?.addEventListener('click', () => {
+            // Retirer tous les event listeners existants pour éviter les doublons
+            const newBtn = btn.cloneNode(true);
+            btn.parentNode.replaceChild(newBtn, btn);
+            
+            newBtn?.addEventListener('click', () => {
                 const clientSelect = typeof clientSelector === 'string'
                     ? document.getElementById(clientSelector)
                     : clientSelector;

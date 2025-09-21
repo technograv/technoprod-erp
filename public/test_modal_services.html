@@ -1,0 +1,58 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Test Modal Services</title>
+    <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/js/bootstrap.bundle.min.js"></script>
+</head>
+<body>
+    <h1>Testing Modal Services</h1>
+    <div id="test-results"></div>
+
+    <script src="/js/services/ModalService.js"></script>
+    <script src="/js/services/ContactModalService.js"></script>
+    <script src="/js/services/AddressModalService.js"></script>
+    <script src="/js/services/ClientProspectService.js"></script>
+    
+    <script>
+        // Test if services are loaded
+        const results = document.getElementById('test-results');
+        
+        try {
+            // Test ModalService
+            if (typeof ModalService !== 'undefined') {
+                results.innerHTML += '<p>✅ ModalService loaded</p>';
+            } else {
+                results.innerHTML += '<p>❌ ModalService not loaded</p>';
+            }
+            
+            // Test ContactModalService
+            if (typeof ContactModalService !== 'undefined') {
+                results.innerHTML += '<p>✅ ContactModalService loaded</p>';
+            } else {
+                results.innerHTML += '<p>❌ ContactModalService not loaded</p>';
+            }
+            
+            // Test AddressModalService
+            if (typeof AddressModalService !== 'undefined') {
+                results.innerHTML += '<p>✅ AddressModalService loaded</p>';
+            } else {
+                results.innerHTML += '<p>❌ AddressModalService not loaded</p>';
+            }
+            
+            // Test ClientProspectService
+            if (typeof ClientProspectService !== 'undefined') {
+                results.innerHTML += '<p>✅ ClientProspectService loaded</p>';
+            } else {
+                results.innerHTML += '<p>❌ ClientProspectService not loaded</p>';
+            }
+            
+            console.log('All service availability tests completed');
+            
+        } catch (error) {
+            results.innerHTML += `<p>❌ Error: ${error.message}</p>`;
+            console.error('Service test error:', error);
+        }
+    </script>
+</body>
+</html>

@@ -232,12 +232,7 @@
     </div>
 </div>
 
-<!-- Inclusion des services JavaScript -->
-<script src="/js/services/ModalService.js"></script>
-<script src="/js/services/AddressModalService.js"></script>
-<script src="/js/services/ContactModalService.js"></script>
-<script src="/js/services/ClientModalService.js"></script>
-<script src="/js/services/ClientProspectService.js"></script>
+<!-- Les services JavaScript sont inclus dans le template principal -->
 
 <script>
 // Initialisation du service ClientProspectService pour l'édition
@@ -251,6 +246,7 @@
         const config = {
             debug: true,
             mode: 'edit',
+            disableModalButtons: true, // IMPORTANT: Ne pas gérer les boutons de modales
             selectors: {
                 clientSelect: '#devis_client',  // ID Symfony correct pour le champ client
                 contactLivraisonSelect: '#devis_contactLivraison',  // Vrais IDs Symfony 
@@ -267,10 +263,25 @@
         };
         
         // Créer et initialiser le service
+        console.log('🔍 [CLIENT_EDIT_SELECTOR] Création de ClientProspectService avec config:', config);
         clientService = new ClientProspectService(config);
         
+        // Rendre le service accessible globalement pour les autres services
+        window.clientProspectService = clientService;
+        
+        console.log('🔍 [CLIENT_EDIT_SELECTOR] Appel de clientService.init()...');
         if (clientService.init()) {
-            console.log('✅ ClientProspectService initialisé pour l\'édition');
+            console.log('✅ [CLIENT_EDIT_SELECTOR] ClientProspectService initialisé pour l\'édition');
+            
+            // PATCH TEMPORAIRE: Désactiver les boutons de ClientProspectService
+            // car il ne respecte pas le flag disableModalButtons
+            console.log('🛑 [PATCH] Suppression des event listeners ajoutés par ClientProspectService...');
+            const addClientBtn = document.getElementById('add-client-btn');
+            if (addClientBtn) {
+                const newBtn = addClientBtn.cloneNode(true);
+                addClientBtn.parentNode.replaceChild(newBtn, addClientBtn);
+                console.log('🛑 [PATCH] Event listeners du bouton add-client-btn supprimés');
+            }
             
             // Initialiser avec le client sélectionné si il y en a un
             const clientSelect = document.querySelector('#devis_client');
@@ -403,185 +414,10 @@
     }, 1000);
     
     // ==========================================
-    // GESTION DES MODALES D'ADRESSE
+    // PAS D'INITIALISATION DE MODALES ICI
     // ==========================================
-    
-    let addressModalService = null;
-    
-    // Initialiser le service de modales d'adresse
-    if (window.AddressModalService) {
-        addressModalService = new AddressModalService({
-            debug: true,
-            onAddressCreated: function(detail) {
-                // Recharger les adresses pour le client actuel et sélectionner la nouvelle
-                if (clientService) {
-                    const clientSelect = document.getElementById('devis_client');
-                    const clientId = clientSelect?.value;
-                    if (clientId) {
-                        // Recharger les adresses
-                        clientService.handleClientChange(clientId);
-                        
-                        // Attendre un peu que les adresses soient chargées
-                        setTimeout(() => {
-                            // Sélectionner automatiquement la nouvelle adresse
-                            if (detail.adresse && detail.adresse.id) {
-                                const livraisonSelect = document.getElementById('adresse_livraison_select');
-                                const facturationSelect = document.getElementById('adresse_facturation_select');
-                                
-                                // Sélectionner dans les deux dropdowns par défaut
-                                if (livraisonSelect) {
-                                    livraisonSelect.value = detail.adresse.id;
-                                    livraisonSelect.dispatchEvent(new Event('change'));
-                                }
-                                
-                                if (facturationSelect) {
-                                    facturationSelect.value = detail.adresse.id;
-                                    facturationSelect.dispatchEvent(new Event('change'));
-                                }
-                            }
-                        }, 500); // Attendre 500ms pour que les adresses soient chargées
-                    }
-                }
-            },
-            onAddressUpdated: function(detail) {
-                // Recharger les adresses pour le client actuel
-                if (clientService) {
-                    const clientSelect = document.getElementById('devis_client');
-                    const clientId = clientSelect?.value;
-                    if (clientId) {
-                        clientService.handleClientChange(clientId);
-                    }
-                }
-            }
-        });
-        
-        // Attacher automatiquement aux boutons de la page devis
-        addressModalService.attachToDevisPage();
-    }
-    
-    // ==========================================
-    // GESTION DES MODALES DE CONTACT
-    // ==========================================
-    
-    let contactModalService = null;
-    
-    // Initialiser le service de modales de contact
-    if (window.ContactModalService) {
-        contactModalService = new ContactModalService({
-            debug: true,
-            onContactCreated: function(detail) {
-                // Recharger les contacts pour le client actuel et sélectionner le nouveau
-                if (clientService) {
-                    const clientSelect = document.getElementById('devis_client');
-                    const clientId = clientSelect?.value;
-                    if (clientId) {
-                        // Recharger les contacts
-                        clientService.handleClientChange(clientId);
-                        
-                        // Attendre un peu que les contacts soient chargés
-                        setTimeout(() => {
-                            // Sélectionner automatiquement le nouveau contact
-                            if (detail.contact && detail.contact.id) {
-                                // Déterminer le type de contact créé selon les flags
-                                const isFacturation = detail.contact.isFacturationDefault;
-                                const isLivraison = detail.contact.isLivraisonDefault;
-                                
-                                // Sélectionner dans le bon dropdown
-                                if (isFacturation) {
-                                    const facturationSelect = document.getElementById('devis_contactFacturation');
-                                    if (facturationSelect) {
-                                        facturationSelect.value = detail.contact.id;
-                                        facturationSelect.dispatchEvent(new Event('change'));
-                                    }
-                                }
-                                
-                                if (isLivraison) {
-                                    const livraisonSelect = document.getElementById('devis_contactLivraison');
-                                    if (livraisonSelect) {
-                                        livraisonSelect.value = detail.contact.id;
-                                        livraisonSelect.dispatchEvent(new Event('change'));
-                                    }
-                                }
-                                
-                                // Si pas de flag spécifique, sélectionner dans les deux
-                                if (!isFacturation && !isLivraison) {
-                                    const facturationSelect = document.getElementById('devis_contactFacturation');
-                                    const livraisonSelect = document.getElementById('devis_contactLivraison');
-                                    
-                                    if (facturationSelect) {
-                                        facturationSelect.value = detail.contact.id;
-                                        facturationSelect.dispatchEvent(new Event('change'));
-                                    }
-                                    
-                                    if (livraisonSelect) {
-                                        livraisonSelect.value = detail.contact.id;
-                                        livraisonSelect.dispatchEvent(new Event('change'));
-                                    }
-                                }
-                            }
-                        }, 500); // Attendre 500ms pour que les contacts soient chargés
-                    }
-                }
-            },
-            onContactUpdated: function(detail) {
-                // Recharger les contacts pour le client actuel
-                if (clientService) {
-                    const clientSelect = document.getElementById('devis_client');
-                    const clientId = clientSelect?.value;
-                    if (clientId) {
-                        clientService.handleClientChange(clientId);
-                    }
-                }
-            }
-        });
-        
-        // Attacher automatiquement aux boutons de la page devis
-        contactModalService.attachToDevisPage();
-    }
-    
-    // ==========================================
-    // GESTION DES MODALES DE CLIENT
-    // ==========================================
-    
-    let clientModalService = null;
-    
-    // Initialiser le service de modales de client
-    if (window.ClientModalService) {
-        clientModalService = new ClientModalService({
-            debug: true,
-            onClientCreated: function(detail) {
-                // Recharger la liste des clients
-                if (window.$ && typeof $.fn.select2 !== 'undefined') {
-                    const clientSelect = $('#devis_client');
-                    
-                    // Ajouter le nouveau client à la liste
-                    const newOption = new Option(detail.client.label, detail.client.id, true, true);
-                    clientSelect.append(newOption).trigger('change');
-                    
-                    // Déclencher le changement pour charger les contacts/adresses
-                    if (clientService) {
-                        clientService.handleClientChange(detail.client.id);
-                    }
-                }
-            },
-            onClientUpdated: function(detail) {
-                // Mettre à jour le label du client dans la liste
-                if (window.$ && typeof $.fn.select2 !== 'undefined') {
-                    const clientSelect = $('#devis_client');
-                    const currentValue = clientSelect.val();
-                    
-                    if (currentValue == detail.client.id) {
-                        // Mettre à jour l'option existante
-                        clientSelect.find(`option[value="${detail.client.id}"]`).text(detail.client.label);
-                        clientSelect.trigger('change.select2');
-                    }
-                }
-            }
-        });
-        
-        // Attacher automatiquement aux boutons de la page devis
-        clientModalService.attachToDevisPage();
-    }
+    // Les services de modales sont initialisés dans edit.html.twig
+    // pour éviter toute duplication
     
 })();
 </script>

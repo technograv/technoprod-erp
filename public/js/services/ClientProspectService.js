@@ -28,6 +28,7 @@ class ClientProspectService {
         this.currentClient = null;
         this.currentContacts = [];
         this.currentAddresses = [];
+        this.skipAddressAutoSelection = false; // Flag pour empêcher la sélection automatique d'adresse
         
         this.log('🚀 ClientProspectService initialisé', this.config);
     }
@@ -521,6 +522,65 @@ class ClientProspectService {
     }
     
     /**
+     * Popule les sélecteurs de contacts SANS sélectionner les défauts automatiquement
+     */
+    populateContactsWithoutDefaults() {
+        this.log('📝 PopulateContactsWithoutDefaults appelée avec', this.currentContacts.length, 'contacts');
+        
+        // Support pour les deux types de sélecteurs (création et édition)
+        let contactLivraisonSelect = document.querySelector(this.config.selectors.contactLivraisonSelect);
+        let contactFacturationSelect = document.querySelector(this.config.selectors.contactFacturationSelect);
+        
+        // Si on ne trouve pas les sélecteurs par défaut, essayer les sélecteurs Symfony
+        if (!contactLivraisonSelect && this.config.mode === 'edit') {
+            contactLivraisonSelect = document.querySelector('#devis_contactLivraison');
+        }
+        if (!contactFacturationSelect && this.config.mode === 'edit') {
+            contactFacturationSelect = document.querySelector('#devis_contactFacturation');
+        }
+        
+        if (!contactLivraisonSelect || !contactFacturationSelect) {
+            this.log('⚠️ Sélecteurs de contacts non trouvés pour rechargement');
+            return;
+        }
+        
+        // Sauvegarder les sélections actuelles AVANT de vider
+        const currentLivraisonValue = contactLivraisonSelect.value;
+        const currentFacturationValue = contactFacturationSelect.value;
+        
+        this.log('📝 Sauvegarde sélections actuelles:', {
+            livraison: currentLivraisonValue,
+            facturation: currentFacturationValue
+        });
+        
+        // Vider les sélecteurs
+        contactLivraisonSelect.innerHTML = '<option value="">Choisir un contact...</option>';
+        contactFacturationSelect.innerHTML = '<option value="">Choisir un contact...</option>';
+        
+        // Ajouter les contacts SANS sélection automatique par défaut
+        this.currentContacts.forEach(contact => {
+            const label = this.formatContactLabel(contact);
+            
+            const optionLivraison = new Option(label, contact.id);
+            const optionFacturation = new Option(label, contact.id);
+            
+            // IMPORTANT: Ne PAS sélectionner automatiquement les contacts par défaut
+            // Garder seulement les sélections qui étaient déjà faites
+            if (contact.id == currentLivraisonValue) {
+                optionLivraison.selected = true;
+            }
+            if (contact.id == currentFacturationValue) {
+                optionFacturation.selected = true;
+            }
+            
+            contactLivraisonSelect.appendChild(optionLivraison);
+            contactFacturationSelect.appendChild(optionFacturation);
+        });
+        
+        this.log('📝 Contacts rechargés avec préservation des sélections');
+    }
+    
+    /**
      * Popule les sélecteurs d'adresses
      */
     populateAddresses() {
@@ -557,8 +617,8 @@ class ClientProspectService {
     handleContactChange(type, contactId) {
         this.log(`📞 Changement contact ${type}:`, contactId);
         
-        // Trouver le contact et sélectionner son adresse automatiquement
-        if (contactId) {
+        // Trouver le contact et sélectionner son adresse automatiquement (sauf si désactivé)
+        if (contactId && !this.skipAddressAutoSelection) {
             const contact = this.currentContacts.find(c => c.id == contactId);
             if (contact && contact.adresse_id) {
                 const addressSelect = document.querySelector(
@@ -573,9 +633,30 @@ class ClientProspectService {
                     this.log(`📍 Adresse ${type} sélectionnée automatiquement:`, contact.adresse_id);
                 }
             }
+        } else if (this.skipAddressAutoSelection) {
+            this.log(`📍 Sélection automatique d'adresse désactivée temporairement`);
+        }
+        
+        // Synchroniser l'email d'envoi automatique si c'est le contact de livraison (par défaut)
+        if (contactId && type === 'livraison') {
+            this.syncContactEmail(contactId);
         }
         
         this.updateEditButtons();
+    }
+    
+    /**
+     * Synchronise l'email d'envoi automatique avec le contact sélectionné
+     */
+    syncContactEmail(contactId) {
+        this.log(`📧 Synchronisation email pour contact:`, contactId);
+        
+        // Appeler la fonction globale si elle existe
+        if (typeof window.syncContactEmail === 'function') {
+            window.syncContactEmail(contactId);
+        } else {
+            this.log(`⚠️ Fonction syncContactEmail non disponible`);
+        }
     }
     
     /**
@@ -584,6 +665,71 @@ class ClientProspectService {
     handleAddressChange(type, addressId) {
         this.log(`📍 Changement adresse ${type}:`, addressId);
         this.updateEditButtons();
+    }
+    
+    /**
+     * Recharge uniquement les adresses sans affecter les contacts sélectionnés
+     */
+    async reloadAddressesOnly(clientId) {
+        this.log('📍 Rechargement adresses uniquement pour client:', clientId);
+        
+        if (!clientId) {
+            this.currentAddresses = [];
+            this.populateAddresses();
+            return;
+        }
+        
+        try {
+            // Recharger seulement les adresses
+            await this.loadClientAddresses(clientId);
+            
+            // Repeupler seulement les adresses (sans toucher aux contacts)
+            this.populateAddresses();
+            
+            this.log('✅ Adresses rechargées sans affecter les contacts');
+        } catch (error) {
+            this.error('Erreur lors du rechargement des adresses:', error);
+        }
+    }
+    
+    /**
+     * Recharge uniquement les contacts sans affecter les adresses sélectionnées
+     */
+    async reloadContactsOnly(clientId) {
+        this.log('📞 Rechargement contacts uniquement pour client:', clientId);
+        
+        if (!clientId) {
+            this.currentContacts = [];
+            this.populateContactsWithoutDefaults();
+            return;
+        }
+        
+        try {
+            // IMPORTANT: Désactiver temporairement la sélection automatique d'adresse
+            this.skipAddressAutoSelection = true;
+            
+            // Recharger seulement les contacts
+            await this.loadClientContacts(clientId);
+            
+            // Mettre à jour window.clientContacts pour la synchronisation email
+            window.clientContacts = this.currentContacts;
+            this.log('📧 window.clientContacts mis à jour:', window.clientContacts.length, 'contacts');
+            
+            // Repeupler seulement les contacts (sans sélection automatique par défaut)
+            this.populateContactsWithoutDefaults();
+            
+            // Réactiver la sélection automatique d'adresse après un délai
+            setTimeout(() => {
+                this.skipAddressAutoSelection = false;
+                this.log('📍 Sélection automatique d\'adresse réactivée');
+            }, 1000);
+            
+            this.log('✅ Contacts rechargés sans affecter les adresses');
+        } catch (error) {
+            this.error('Erreur lors du rechargement des contacts:', error);
+            // Réactiver en cas d'erreur aussi
+            this.skipAddressAutoSelection = false;
+        }
     }
     
     /**

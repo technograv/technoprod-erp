@@ -92,12 +92,18 @@
         function handleAddressCancelClose() {
             console.log('🔙 Fermeture modale adresse sans sauvegarde');
             
-            // Vérifier si on vient vraiment d'une modale contact
+            // CORRECTION: Vérifier si on vient vraiment d'une modale contact ET si l'événement est récent
             const lastContactEvent = window.lastContactEditEvent;
             const fromContact = lastContactEvent && (lastContactEvent.fromModal === true);
             
+            // Vérifier si l'événement n'est pas trop ancien (protection contre les événements parasites)
+            const eventAge = lastContactEvent?.timestamp ? (Date.now() - lastContactEvent.timestamp) : Infinity;
+            const isRecentEvent = eventAge < 10000; // 10 secondes max
+            
             console.log('🔍 Source d\'ouverture:', {
                 fromContact: fromContact,
+                eventAge: eventAge,
+                isRecentEvent: isRecentEvent,
                 lastContactEvent: lastContactEvent
             });
             
@@ -107,8 +113,8 @@
                 modal.hide();
             }
             
-            // Rouvrir la modale contact seulement si on vient d'une modale contact
-            if (fromContact) {
+            // CORRECTION: Rouvrir la modale contact seulement si on vient VRAIMENT d'une modale contact récente
+            if (fromContact && isRecentEvent) {
                 setTimeout(() => {
                     console.log('🔄 Réouverture modale contact:', lastContactEvent.contactId);
                     const contactService = new ContactModalService({ debug: true });
@@ -119,7 +125,11 @@
                     }
                 }, 300);
             } else {
-                console.log('✅ Fermeture simple - pas de retour vers modale contact');
+                console.log('✅ Fermeture simple - pas de retour vers modale contact (événement trop ancien ou direct)');
+                // Nettoyer l'événement si trop ancien
+                if (!isRecentEvent) {
+                    window.lastContactEditEvent = null;
+                }
             }
         }
         
@@ -136,8 +146,19 @@
             modalElement.addEventListener('hidden.bs.modal', function(e) {
                 console.log('🔔 Modale adresse fermée (toutes méthodes)');
                 
-                // Réinitialiser le flag
+                // CORRECTION: Vérifier si la fermeture est due à une validation réussie
+                const isSuccessClose = window.addressEditSuccess === true;
+                console.log('🔍 Type de fermeture:', { isSuccessClose: isSuccessClose });
+                
+                // Réinitialiser les flags
                 window.editAddressInProgress = false;
+                window.addressEditSuccess = false;
+                
+                // IMPORTANT: Si c'est une fermeture après validation réussie, ne pas retourner à la modale contact
+                if (isSuccessClose) {
+                    console.log('✅ Fermeture après validation - nettoyage des événements contact parasites');
+                    window.lastContactEditEvent = null; // Nettoyer pour éviter les réouvertures parasites
+                }
                 
                 // Nettoyage simple des backdrops
                 setTimeout(() => {
@@ -198,10 +219,13 @@ function submitAddressForm() {
                 }
             }));
             
+            // CORRECTION: Marquer que la fermeture est due à une validation réussie
+            window.addressEditSuccess = true;
+            
             // Fermeture normale de la modale adresse
             const modal = bootstrap.Modal.getInstance(document.querySelector('.modal'));
             if (modal) {
-                console.log('🔒 Fermeture modale adresse (EDIT)');
+                console.log('🔒 Fermeture modale adresse après validation réussie (EDIT)');
                 modal.hide();
             }
         } else {
