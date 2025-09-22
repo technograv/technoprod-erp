@@ -1,0 +1,231 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <title>Test Debug DevisContactService</title>
+    <style>
+        body { font-family: monospace; padding: 20px; background: #1e1e1e; color: #00ff00; }
+        h1 { color: #ff0000; }
+        .test { margin: 20px 0; padding: 10px; border: 1px solid #00ff00; }
+        button { background: #333; color: #00ff00; border: 1px solid #00ff00; padding: 10px; cursor: pointer; margin: 5px; }
+        button:hover { background: #444; }
+        pre { background: #000; padding: 10px; overflow: auto; }
+        .error { color: #ff0000; }
+        .success { color: #00ff00; }
+        .warning { color: #ffaa00; }
+    </style>
+</head>
+<body>
+    <h1>🔴 TEST DEBUG - DEVIS CONTACT SERVICE</h1>
+    
+    <div class="test">
+        <h2>1. Simulateur DOM</h2>
+        <p>Cette page simule l'environnement des pages devis</p>
+        
+        <!-- Simuler les éléments DOM -->
+        <div style="display:none;">
+            <!-- Mode CREATE -->
+            <select id="prospect">
+                <option value="">-- Choisir --</option>
+                <option value="2">Client Test #2</option>
+                <option value="57">Client Test #57</option>
+            </select>
+            <input type="hidden" id="client_field" value="">
+            
+            <!-- Mode EDIT -->
+            <select id="devis_client">
+                <option value="">-- Choisir --</option>
+                <option value="2">Client Test #2</option>
+                <option value="57">Client Test #57</option>
+            </select>
+            
+            <!-- Contacts -->
+            <select id="contact_defaut"></select>
+            <select id="devis_contactLivraison"></select>
+            <select id="contact_facturation"></select>
+            <select id="devis_contactFacturation"></select>
+            
+            <!-- Adresses -->
+            <select id="adresse_livraison_select"></select>
+            <select id="adresse_facturation_select"></select>
+            
+            <!-- Email -->
+            <input type="email" id="email_envoi_automatique">
+            <input type="email" id="devis_emailEnvoiAutomatique">
+        </div>
+    </div>
+    
+    <div class="test">
+        <h2>2. Actions de test</h2>
+        <button onclick="testInit()">🚀 Initialiser Service</button>
+        <button onclick="testClientChange(2)">👤 Test Client #2</button>
+        <button onclick="testClientChange(57)">👤 Test Client #57</button>
+        <button onclick="showState()">📊 Afficher État</button>
+        <button onclick="clearConsole()">🗑️ Clear Console</button>
+        <button onclick="exportLogs()">💾 Export Logs</button>
+    </div>
+    
+    <div class="test">
+        <h2>3. État du service</h2>
+        <pre id="state">En attente d'initialisation...</pre>
+    </div>
+    
+    <div class="test">
+        <h2>4. Console</h2>
+        <pre id="console"></pre>
+    </div>
+    
+    <!-- Scripts -->
+    <script src="/js/services/DebugLogger.js"></script>
+    <script src="/js/services/DevisContactService.js"></script>
+    
+    <script>
+        // Console custom
+        const customConsole = document.getElementById('console');
+        const originalLog = console.log;
+        const originalError = console.error;
+        const originalWarn = console.warn;
+        
+        function addToConsole(msg, type = 'log') {
+            const time = new Date().toLocaleTimeString();
+            const className = type === 'error' ? 'error' : type === 'warn' ? 'warning' : 'success';
+            customConsole.innerHTML += `<span class="${className}">[${time}] ${msg}</span>\n`;
+            customConsole.scrollTop = customConsole.scrollHeight;
+        }
+        
+        console.log = function(...args) {
+            originalLog.apply(console, args);
+            addToConsole(args.join(' '), 'log');
+        };
+        
+        console.error = function(...args) {
+            originalError.apply(console, args);
+            addToConsole(args.join(' '), 'error');
+        };
+        
+        console.warn = function(...args) {
+            originalWarn.apply(console, args);
+            addToConsole(args.join(' '), 'warn');
+        };
+        
+        // Variables globales
+        let service = null;
+        
+        // Test d'initialisation
+        function testInit() {
+            console.log('===== INITIALISATION DU SERVICE =====');
+            
+            // Créer le logger global
+            window.globalDebugLogger = new DebugLogger('TEST', true);
+            window.globalDebugLogger.critical('🔴 TEST INIT DÉMARRÉ');
+            
+            // Vérifier les éléments DOM
+            console.log('Vérification DOM:');
+            console.log('- prospect:', !!document.getElementById('prospect'));
+            console.log('- devis_client:', !!document.getElementById('devis_client'));
+            console.log('- contact_defaut:', !!document.getElementById('contact_defaut'));
+            console.log('- contact_facturation:', !!document.getElementById('contact_facturation'));
+            
+            try {
+                // Créer le service
+                service = new DevisContactService({
+                    debug: true
+                });
+                
+                window.devisContactService = service;
+                
+                console.log('✅ Service créé avec succès');
+                
+                // Tester le sélecteur
+                const selector = service.getClientSelector();
+                if (selector) {
+                    console.log('✅ Sélecteur trouvé:', selector.id);
+                } else {
+                    console.error('❌ Aucun sélecteur trouvé!');
+                }
+                
+                showState();
+                
+            } catch (error) {
+                console.error('❌ ERREUR:', error.message);
+                console.error(error.stack);
+            }
+        }
+        
+        // Test changement client
+        function testClientChange(clientId) {
+            if (!service) {
+                console.error('Service non initialisé! Cliquez sur "Initialiser Service" d\'abord');
+                return;
+            }
+            
+            console.log(`===== TEST CHANGEMENT CLIENT #${clientId} =====`);
+            
+            // Simuler la sélection
+            const prospect = document.getElementById('prospect');
+            const devisClient = document.getElementById('devis_client');
+            
+            if (prospect) prospect.value = clientId;
+            if (devisClient) devisClient.value = clientId;
+            
+            // Déclencher le changement
+            service.handleClientChange(clientId);
+            
+            // Attendre et afficher l'état
+            setTimeout(showState, 2000);
+        }
+        
+        // Afficher l'état
+        function showState() {
+            if (!service) {
+                document.getElementById('state').textContent = 'Service non initialisé';
+                return;
+            }
+            
+            const state = {
+                initialized: service.isInitialized,
+                currentContext: service.currentContext,
+                mode: service.getMode(),
+                clientSelector: service.getClientSelector()?.id,
+                clientValue: service.getClientSelector()?.value,
+                contacts: {
+                    livraison: document.getElementById('contact_defaut')?.value || 
+                              document.getElementById('devis_contactLivraison')?.value,
+                    facturation: document.getElementById('contact_facturation')?.value ||
+                                document.getElementById('devis_contactFacturation')?.value
+                },
+                addresses: {
+                    livraison: document.getElementById('adresse_livraison_select')?.value,
+                    facturation: document.getElementById('adresse_facturation_select')?.value
+                },
+                email: document.getElementById('email_envoi_automatique')?.value ||
+                      document.getElementById('devis_emailEnvoiAutomatique')?.value
+            };
+            
+            document.getElementById('state').textContent = JSON.stringify(state, null, 2);
+        }
+        
+        // Clear console
+        function clearConsole() {
+            customConsole.innerHTML = '';
+            console.log('Console cleared');
+        }
+        
+        // Export logs
+        function exportLogs() {
+            if (window.debugLoggers) {
+                Object.values(window.debugLoggers).forEach(logger => {
+                    logger.export();
+                });
+                console.log('Logs exportés');
+            }
+        }
+        
+        // Auto-test au chargement
+        window.addEventListener('DOMContentLoaded', function() {
+            console.log('===== PAGE DE TEST CHARGÉE =====');
+            console.log('Cliquez sur "Initialiser Service" pour commencer');
+        });
+    </script>
+</body>
+</html>

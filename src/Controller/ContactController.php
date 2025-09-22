@@ -85,6 +85,7 @@ class ContactController extends AbstractController
                         'message' => 'Contact créé avec succès',
                         'contact' => [
                             'id' => $contact->getId(),
+                            'clientId' => $contact->getClient()->getId(), // ✅ AJOUT du clientId manquant
                             'label' => ($contact->getPrenom() ? $contact->getPrenom() . ' ' : '') . $contact->getNom(),
                             'prenom' => $contact->getPrenom(),
                             'nom' => $contact->getNom(),
@@ -184,6 +185,7 @@ class ContactController extends AbstractController
                         'message' => 'Contact modifié avec succès',
                         'contact' => [
                             'id' => $contact->getId(),
+                            'clientId' => $contact->getClient()->getId(), // ✅ AJOUT du clientId manquant
                             'label' => ($contact->getPrenom() ? $contact->getPrenom() . ' ' : '') . $contact->getNom(),
                             'prenom' => $contact->getPrenom(),
                             'nom' => $contact->getNom(),
@@ -215,6 +217,37 @@ class ContactController extends AbstractController
             'contact' => $contact,
             'client' => $client,
             'adresses' => $adresses
+        ]);
+    }
+
+    #[Route('/contact/{id}/default-address', name: 'app_contact_default_address', methods: ['GET'])]
+    public function getDefaultAddress(Contact $contact): Response
+    {
+        $address = $contact->getAdresse();
+        
+        if ($address) {
+            // Créer un label pour l'adresse
+            $label = sprintf('%s - %s %s',
+                $address->getLigne1() ?? '',
+                $address->getCodePostal() ?? '',
+                $address->getVille() ?? ''
+            );
+            
+            return $this->json([
+                'success' => true,
+                'address' => [
+                    'id' => $address->getId(),
+                    'label' => trim($label),
+                    'ligne1' => $address->getLigne1(),
+                    'codePostal' => $address->getCodePostal(),
+                    'ville' => $address->getVille()
+                ]
+            ]);
+        }
+        
+        return $this->json([
+            'success' => false,
+            'message' => 'Aucune adresse associée à ce contact'
         ]);
     }
 }

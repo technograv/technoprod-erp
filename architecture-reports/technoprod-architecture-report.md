@@ -1,0 +1,123 @@
+# 📊 Rapport d'Architecture TechnoProd
+
+## 📈 Statistiques Générales
+
+- **Entités :** 61
+- **Controllers Web :** 26
+- **Controllers Admin :** 15
+- **Services :** 44
+- **Repositories :** 61
+- **Formulaires :** 14
+- **Routes :** 302
+- **Dépendances :** 224
+
+## 🏗️ Architecture Détaillée
+
+### 📊 Entités Principales
+
+- **ContactFacturation** : 4 propriétés, 0 relations
+- **CommuneFrancaise** : 8 propriétés, 0 relations
+- **FraisPort** : 8 propriétés, 0 relations
+- **ExerciceComptable** : 8 propriétés, 0 relations
+- **FormeJuridique** : 6 propriétés, 0 relations
+- **AdresseFacturation** : 1 propriétés, 0 relations
+- **ClientLog** : 4 propriétés, 0 relations
+- **Consent** : 6 propriétés, 0 relations
+- **AttributionSecteur** : 4 propriétés, 0 relations
+- **DocumentTemplate** : 5 propriétés, 0 relations
+- **Alerte** : 8 propriétés, 0 relations
+- **Prospect** : 18 propriétés, 0 relations
+- **MethodeExpedition** : 8 propriétés, 0 relations
+- **CommuneGeometryCache** : 8 propriétés, 0 relations
+- **UserPermission** : 4 propriétés, 0 relations
+- **AlerteUtilisateur** : 1 propriétés, 0 relations
+- **DevisVersion** : 7 propriétés, 0 relations
+- **ParametresEnseigne** : 18 propriétés, 0 relations
+- **UserSocieteRole** : 4 propriétés, 0 relations
+- **ProductImage** : 8 propriétés, 0 relations
+- **DevisElement** : 15 propriétés, 0 relations
+- **UserPreferences** : 11 propriétés, 0 relations
+- **ExclusionSecteur** : 4 propriétés, 0 relations
+- **DevisLog** : 4 propriétés, 0 relations
+- **User** : 16 propriétés, 0 relations
+- **EcritureComptable** : 12 propriétés, 0 relations
+- **ContactLivraison** : 6 propriétés, 0 relations
+- **LayoutElement** : 3 propriétés, 0 relations
+- **Unite** : 9 propriétés, 0 relations
+- **FactureItem** : 9 propriétés, 0 relations
+- **Tag** : 7 propriétés, 0 relations
+- **JournalComptable** : 10 propriétés, 0 relations
+- **TauxTVA** : 22 propriétés, 0 relations
+- **DocumentIntegrity** : 17 propriétés, 0 relations
+- **Societe** : 18 propriétés, 0 relations
+- **ComptePCG** : 11 propriétés, 0 relations
+- **AuditTrail** : 15 propriétés, 0 relations
+- **GroupeUtilisateur** : 5 propriétés, 0 relations
+- **LigneEcriture** : 16 propriétés, 0 relations
+- **TypeSecteur** : 7 propriétés, 0 relations
+- **FraisBancaire** : 6 propriétés, 0 relations
+- **DocumentNumerotation** : 4 propriétés, 0 relations
+- **ModeleDocument** : 9 propriétés, 0 relations
+- **Secteur** : 5 propriétés, 0 relations
+- **Banque** : 23 propriétés, 0 relations
+- **Adresse** : 1 propriétés, 0 relations
+- **PalierFraisPort** : 4 propriétés, 0 relations
+- **Facture** : 11 propriétés, 0 relations
+- **Produit** : 10 propriétés, 0 relations
+- **AdresseLivraison** : 8 propriétés, 0 relations
+- **Civilite** : 7 propriétés, 0 relations
+- **Transporteur** : 18 propriétés, 0 relations
+- **ModePaiement** : 11 propriétés, 0 relations
+- **Contact** : 11 propriétés, 0 relations
+- **CommandeItem** : 11 propriétés, 0 relations
+- **Client** : 13 propriétés, 0 relations
+- **DevisItem** : 10 propriétés, 0 relations
+- **Devis** : 32 propriétés, 0 relations
+- **Commande** : 8 propriétés, 0 relations
+- **ModeReglement** : 10 propriétés, 0 relations
+- **DivisionAdministrative** : 17 propriétés, 0 relations
+
+### 🎮 Controllers
+
+- **AdminController** (Web) : 2 actions
+- **PublicApiController** (Api) : 2 actions
+- **ClientController** (Web) : 17 actions
+- **FactureController** (Web) : 8 actions
+- **SecteurController** (Web) : 13 actions
+- **HomeController** (Web) : 1 actions
+- **SecurityController** (Web) : 2 actions
+- **CommandeController** (Web) : 6 actions
+- **TestSecteurController** (Web) : 1 actions
+- **DevisElementController** (Web) : 6 actions
+- **WorkflowController** (Web) : 21 actions
+- **DevisItemController** (Web) : 4 actions
+- **RoleSwitchController** (Web) : 3 actions
+- **PublicController** (Web) : 1 actions
+- **GdprController** (Web) : 11 actions
+- **DevisController** (Web) : 25 actions
+- **ApiController** (Web) : 3 actions
+- **UserPreferencesController** (Web) : 6 actions
+- **SystemController** (Admin) : 11 actions
+- **ConfigurationController** (Admin) : 28 actions
+- **SecteurController** (Admin) : 5 actions
+- **LogisticsController** (Admin) : 20 actions
+- **CatalogController** (Admin) : 13 actions
+- **UserManagementController** (Admin) : 14 actions
+- **AlerteController** (Admin) : 6 actions
+- **SocieteController** (Admin) : 11 actions
+- **DashboardController** (Admin) : 1 actions
+- **PerformanceController** (Admin) : 7 actions
+- **DebugController** (Admin) : 5 actions
+- **GroupeController** (Admin) : 6 actions
+- **ThemeController** (Admin) : 14 actions
+- **ParametresController** (Admin) : 3 actions
+- **AbstractAdminController** (Admin) : 0 actions
+- **GoogleOAuthController** (Web) : 2 actions
+- **ProduitController** (Web) : 1 actions
+- **ProspectController** (Web) : 7 actions
+- **ProductImageController** (Web) : 5 actions
+- **TestDebugController** (Web) : 1 actions
+- **ThemeController** (Web) : 4 actions
+- **ContactController** (Web) : 3 actions
+- **AdresseController** (Web) : 2 actions
+- **TenantController** (Web) : 6 actions

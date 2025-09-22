@@ -1,9 +1,9 @@
 {#
-    Template réutilisable pour la sélection et gestion Client/Prospect v2
-    Utilise le service JavaScript ClientProspectService
+    Template réutilisable pour la sélection et gestion Client v2
+    Utilise le service JavaScript DevisContactService
     
     Variables attendues :
-    - prospects : Liste des clients/prospects
+    - prospects : Liste des clients
     - show_header : Afficher l'en-tête de section (défaut: true)
     - selected_client : Client pré-sélectionné (optionnel)
     - mode : 'create' ou 'edit' (défaut: 'create')
@@ -15,13 +15,13 @@
 <div class="form-section">
     {% if show_header %}
     <div class="form-section-header">
-        <i class="fas fa-user-tie me-2"></i>Client / Prospect
+        <i class="fas fa-user-tie me-2"></i>Client
     </div>
     {% endif %}
     <div class="form-section-body">
-        <!-- Sélection Client/Prospect -->
+        <!-- Sélection Client -->
         <div class="client-selector-container">
-            <label for="prospect" class="form-label">Sélectionner un client/prospect *</label>
+            <label for="prospect" class="form-label">Sélectionner un client *</label>
             <div class="d-flex align-items-center gap-2">
                 {% if mode == 'edit' and form is defined %}
                     {# Mode édition : utiliser le champ Symfony avec classes Select2 #}
@@ -30,15 +30,15 @@
                             'class': 'form-select select2-autocomplete', 
                             'id': 'prospect', 
                             'style': 'flex-grow: 1;',
-                            'data-placeholder': 'Choisir un client/prospect...'
+                            'data-placeholder': 'Choisir un client...'
                         }
                     }) }}
                 {% else %}
                     {# Mode création : champ caché pour synchroniser avec le formulaire #}
                     <input type="hidden" id="client_field" name="client" value="{{ selected_client.id|default('') }}">
                     
-                    <select class="form-select select2-autocomplete" id="prospect" name="prospect" style="flex-grow: 1;" data-placeholder="Choisir un client/prospect...">
-                        <option value="">Choisir un client/prospect...</option>
+                    <select class="form-select select2-autocomplete" id="prospect" name="prospect" style="flex-grow: 1;" data-placeholder="Choisir un client...">
+                        <option value="">Choisir un client...</option>
                         {% for prospect in prospects %}
                             <option value="{{ prospect.id }}" 
                                     {{ (selected_client|default(null) and selected_client.id == prospect.id) ? 'selected' : '' }}>
@@ -171,16 +171,16 @@
 <script src="/js/services/AddressModalService.js"></script>
 <script src="/js/services/ContactModalService.js"></script>
 <script src="/js/services/ClientModalService.js"></script>
-<script src="/js/services/ClientProspectService.js"></script>
+<script src="/js/services/DevisContactService.js"></script>
 
 <script>
-// Initialisation du service ClientProspectService
+// Initialisation du service DevisContactService
 (function() {
     'use strict';
     
     let clientService = null;
     
-    function initClientProspectService() {
+    function initDevisContactService() {
         // Configuration du service selon le mode
         const mode = '{{ mode }}';
         const config = {
@@ -203,15 +203,15 @@
         };
         
         // Créer et initialiser le service
-        clientService = new ClientProspectService(config);
+        clientService = new DevisContactService(config);
         
         if (clientService.init()) {
-            console.log('✅ ClientProspectService initialisé avec succès');
+            console.log('✅ DevisContactService initialisé avec succès');
             
             // Initialiser Select2 pour tous les champs avec autocomplétion
             initializeSelect2Fields();
         } else {
-            console.error('❌ Échec de l\'initialisation du ClientProspectService');
+            console.error('❌ Échec de l\'initialisation du DevisContactService');
         }
     }
     
@@ -239,9 +239,9 @@
     
     // Initialiser quand le DOM est prêt
     if (document.readyState === 'loading') {
-        document.addEventListener('DOMContentLoaded', initClientProspectService);
+        document.addEventListener('DOMContentLoaded', initDevisContactService);
     } else {
-        initClientProspectService();
+        initDevisContactService();
     }
     
     // Nettoyer avant déchargement de la page
@@ -392,7 +392,7 @@
     // GESTION DES MODALES DE CLIENT
     // ==========================================
     
-    // Note: ClientProspectService gère déjà l'édition des clients
+    // Note: DevisContactService gère déjà l'édition des clients
     // Pas besoin d'initialiser ClientModalService séparément car cela créerait
     // des event listeners en double sur le même bouton
 })();

@@ -154,9 +154,18 @@
 
 
 function submitAddressForm() {
+    console.log('🚀 submitAddressForm appelé - DÉBUT');
+    
     const form = document.getElementById('address-form');
     const formData = new FormData(form);
     const submitBtn = document.getElementById('save-address-btn');
+    
+    console.log('🔍 Éléments trouvés:', {
+        form: !!form,
+        submitBtn: !!submitBtn,
+        formAction: form?.action,
+        formMethod: form?.method
+    });
     
     // Validation côté client
     const nom = (formData.get('nom') || '').trim();
@@ -164,10 +173,20 @@ function submitAddressForm() {
     const codePostal = (formData.get('codePostal') || '').trim();
     const ville = (formData.get('ville') || '').trim();
     
+    console.log('📋 Données du formulaire:', {
+        nom: nom,
+        ligne1: ligne1,
+        codePostal: codePostal,
+        ville: ville
+    });
+    
     if (!nom || !ligne1 || !codePostal || !ville) {
+        console.log('❌ Validation échouée - champs manquants');
         alert('Veuillez remplir tous les champs obligatoires');
         return;
     }
+    
+    console.log('✅ Validation réussie, début soumission...');
     
     // Désactiver le bouton pendant la soumission
     submitBtn.disabled = true;
@@ -177,6 +196,8 @@ function submitAddressForm() {
     const clientId = document.querySelector('#address-form').dataset.clientId || '{{ client.id }}';
     const modalUrl = `/adresse/modal/new/${clientId}`;
     
+    console.log('📤 Envoi vers:', modalUrl, 'avec clientId:', clientId);
+    
     fetch(modalUrl, {
         method: 'POST',
         body: formData,
@@ -184,9 +205,28 @@ function submitAddressForm() {
             'X-Requested-With': 'XMLHttpRequest'
         }
     })
-    .then(response => response.json())
+    .then(response => {
+        console.log('📡 Réponse reçue:', {
+            status: response.status,
+            statusText: response.statusText,
+            ok: response.ok,
+            headers: Object.fromEntries(response.headers.entries())
+        });
+        
+        if (!response.ok) {
+            return response.text().then(text => {
+                console.error('❌ Erreur réponse détail:', text);
+                throw new Error(`HTTP ${response.status}: ${response.statusText} - ${text}`);
+            });
+        }
+        return response.json();
+    })
     .then(data => {
+        console.log('📊 Données reçues:', data);
+        
         if (data.success) {
+            console.log('✅ Adresse créée avec succès:', data.adresse);
+            
             // Émettre un événement pour notifier la page parent
             window.dispatchEvent(new CustomEvent('addressCreated', {
                 detail: { 
@@ -194,22 +234,49 @@ function submitAddressForm() {
                     message: data.message
                 }
             }));
+            console.log('📢 Événement addressCreated émis');
             
             // Fermeture normale de la modale adresse
-            const modal = bootstrap.Modal.getInstance(document.querySelector('.modal'));
-            if (modal) {
-                console.log('🔒 Fermeture modale adresse (NEW)');
-                modal.hide();
+            const modalElement = document.querySelector('.modal.show');
+            console.log('🔍 Recherche modale visible:', !!modalElement);
+            
+            if (modalElement) {
+                const modal = bootstrap.Modal.getInstance(modalElement);
+                console.log('🔍 Instance Bootstrap trouvée:', !!modal);
+                
+                if (modal) {
+                    console.log('🔒 Fermeture modale adresse (NEW)');
+                    modal.hide();
+                } else {
+                    console.log('🔒 Fermeture modale manuelle (NEW)');
+                    // Fermeture manuelle si l'instance Bootstrap n'est pas trouvée
+                    modalElement.classList.remove('show');
+                    modalElement.style.display = 'none';
+                    modalElement.setAttribute('aria-hidden', 'true');
+                    
+                    // Supprimer les backdrops
+                    const backdrops = document.querySelectorAll('.modal-backdrop');
+                    backdrops.forEach(backdrop => backdrop.remove());
+                    
+                    // Restaurer le body
+                    document.body.classList.remove('modal-open');
+                    document.body.style.removeProperty('padding-right');
+                    document.body.style.removeProperty('overflow');
+                }
+            } else {
+                console.log('❌ Aucune modale visible trouvée');
             }
         } else {
+            console.log('❌ Création échouée:', data.message);
             alert(data.message || 'Erreur lors de la création de l\'adresse');
         }
     })
     .catch(error => {
-        console.error('Erreur:', error);
+        console.error('❌ Erreur fetch:', error);
         alert('Erreur lors de la création de l\'adresse');
     })
     .finally(() => {
+        console.log('🔄 Réactivation du bouton');
         // Réactiver le bouton
         submitBtn.disabled = false;
         submitBtn.innerHTML = '<i class="fas fa-plus me-1"></i>Ajouter l\'adresse';

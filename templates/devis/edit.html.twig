@@ -1069,10 +1069,12 @@
 <script src="https://cdn.quilljs.com/1.3.6/quill.min.js"></script>
 <!-- Services de modales -->
 <script src="/js/services/ModalService.js"></script>
+<script src="/js/services/MultiModalNavigationService.js"></script>
 <script src="/js/services/AddressModalService.js"></script>
+<script src="/js/services/DebugLogger.js"></script>
 <script src="/js/services/ContactModalService.js"></script>
 <script src="/js/services/ClientModalService.js"></script>
-<script src="/js/services/ClientProspectService.js"></script>
+<script src="/js/services/DevisContactService.js"></script>
 
 <script>
 (function() {
@@ -2169,7 +2171,7 @@ function initContactAddressSynchronization() {
         mutations.forEach(function(mutation) {
             if (mutation.type === 'attributes' && mutation.attributeName === 'value') {
                 const clientId = clientHiddenField.value;
-                // DÉSACTIVÉ - Remplacé par ClientProspectService unifié
+                // DÉSACTIVÉ - Remplacé par DevisContactService unifié
                 // if (clientId) {
                 //     loadClientContactsAndAddresses(clientId);
                 // } else {
@@ -2184,7 +2186,7 @@ function initContactAddressSynchronization() {
     // Écouter aussi les événements manuels sur le select client
     clientHiddenField.addEventListener('change', function() {
         const clientId = this.value;
-        // DÉSACTIVÉ - Remplacé par ClientProspectService unifié
+        // DÉSACTIVÉ - Remplacé par DevisContactService unifié
         // if (clientId) {
         //     loadClientContactsAndAddresses(clientId);
         // } else {
@@ -2245,7 +2247,7 @@ function initContactAddressSynchronization() {
         });
     }
 
-    // DÉSACTIVÉ - Ancien système remplacé par ClientProspectService unifié
+    // DÉSACTIVÉ - Ancien système remplacé par DevisContactService unifié
     // Charger les données initiales si un client est sélectionné
     // if (clientHiddenField.value) {
     //     loadClientContactsAndAddresses(clientHiddenField.value);
@@ -2441,8 +2443,32 @@ function syncContactAddress(contactId, adresseSelect) {
     }
 }
 
-function syncContactEmail(contactId) {
-    console.log('🔧 syncContactEmail appelée avec contactId:', contactId);
+function syncContactEmail(contactId, forceSync = false) {
+    // ⚠️ DÉSACTIVÉ : DevisContactService gère maintenant cette logique
+    if (window.devisContactServiceActive) {
+        console.log('🛑 syncContactEmail() désactivé - DevisContactService actif');
+        return;
+    }
+    
+    console.log('🔧 syncContactEmail appelée avec contactId:', contactId, 'forceSync:', forceSync);
+    
+    // 🛡️ PROTECTION GLOBALE: Ne pas synchroniser pendant la création d'un contact de facturation
+    if (window.lastContactAction && window.lastContactAction.source === 'facturation' && !forceSync) {
+        console.log('🚫 Synchronisation email bloquée - Création contact facturation en cours');
+        return;
+    }
+    
+    // ⚠️ PROTECTION: Ne synchroniser l'email QUE si c'est le contact de LIVRAISON qui change
+    // SAUF si on force la synchronisation (forceSync = true)
+    if (!forceSync) {
+        const livraisonSelect = document.getElementById('devis_contactLivraison');
+        const isLivraisonContact = livraisonSelect && livraisonSelect.value == contactId;
+        
+        if (!isLivraisonContact) {
+            console.log('🚫 Synchronisation email ignorée - Ce n\'est pas le contact de livraison');
+            return;
+        }
+    }
     
     // Utiliser les données déjà chargées pour synchroniser l'email
     if (!window.clientContacts) {
@@ -2466,7 +2492,7 @@ function syncContactEmail(contactId) {
         console.log('❌ Contact non trouvé pour ID:', contactId);
         console.log('📋 Contacts disponibles:', window.clientContacts.map(c => ({id: c.id, nom: c.nom, email: c.email})));
         emailDisplayField.value = '';
-        updateHiddenEmailField('');
+        // updateHiddenEmailField(''); // Fonction supprimée car non nécessaire
         return;
     }
     
@@ -2483,6 +2509,12 @@ function syncContactEmail(contactId) {
 }
 
 function clearContactsAndAddresses() {
+    // ⚠️ DÉSACTIVÉ : DevisContactService gère maintenant cette logique
+    if (window.devisContactServiceActive) {
+        console.log('🛑 clearContactsAndAddresses() désactivé - DevisContactService actif');
+        return;
+    }
+    
     const selects = [
         'devis_contactFacturation',
         'devis_contactLivraison', 
@@ -3232,8 +3264,8 @@ document.addEventListener('DOMContentLoaded', function() {
                     const newOption = new Option(detail.client.label, detail.client.id, true, true);
                     clientSelect.append(newOption).trigger('change');
                     
-                    if (window.clientProspectService) {
-                        window.clientProspectService.handleClientChange(detail.client.id);
+                    if (window.devisContactService) {
+                        window.devisContactService.handleClientChange(detail.client.id);
                     }
                 }
             },
@@ -3268,9 +3300,9 @@ document.addEventListener('DOMContentLoaded', function() {
                 
                 const clientSelect = document.getElementById('devis_client');
                 const clientId = clientSelect?.value;
-                if (clientId && window.clientProspectService) {
+                if (clientId && window.devisContactService) {
                     // Recharger les contacts d'abord
-                    window.clientProspectService.handleClientChange(clientId);
+                    window.devisContactService.handleClientChange(clientId);
                     
                     // Attendre que les contacts soient chargés puis sélectionner et fermer
                     setTimeout(() => {
@@ -3325,9 +3357,9 @@ document.addEventListener('DOMContentLoaded', function() {
                 
                 const clientSelect = document.getElementById('devis_client');
                 const clientId = clientSelect?.value;
-                if (clientId && window.clientProspectService && detail.contact) {
+                if (clientId && window.devisContactService && detail.contact) {
                     // Recharger SEULEMENT les contacts (pas les adresses)
-                    window.clientProspectService.reloadContactsOnly(clientId).then(() => {
+                    window.devisContactService.reloadContactsOnly(clientId).then(() => {
                         const contactId = detail.contact.id;
                         console.log('📞 [EDIT] Tentative de re-sélection du contact ID:', contactId);
                         
@@ -3378,13 +3410,15 @@ document.addEventListener('DOMContentLoaded', function() {
                 }
             }
         });
+        
+        // DevisContactService déjà initialisé dans client_edit_selector.html.twig
+        
         contactModalService.attachToDevisPage();
         console.log('✅ ContactModalService initialisé');
     }
     
-    // PRÉVENTION: Initialiser les événements de navigation inter-modales (ne pas nettoyer ici)
-    // window.lastContactEditEvent = null; // COMMENTÉ - on garde les événements existants pour la navigation
-    console.log('🧹 [EDIT] Conservation des événements de navigation inter-modales existants');
+    // Le service centralisé MultiModalNavigationService gère maintenant la navigation
+    console.log('🧹 [EDIT] Navigation multi-modale gérée par le service centralisé');
     
     // Initialiser AddressModalService
     if (window.AddressModalService) {
@@ -3395,9 +3429,9 @@ document.addEventListener('DOMContentLoaded', function() {
                 
                 const clientSelect = document.getElementById('devis_client');
                 const clientId = clientSelect?.value;
-                if (clientId && window.clientProspectService) {
+                if (clientId && window.devisContactService) {
                     // Recharger SEULEMENT les adresses (pas les contacts) - version asynchrone
-                    window.clientProspectService.reloadAddressesOnly(clientId).then(() => {
+                    window.devisContactService.reloadAddressesOnly(clientId).then(() => {
                         // Sélectionner automatiquement la nouvelle adresse
                         if (detail.adresse && detail.adresse.id) {
                             const livraisonSelect = document.getElementById('adresse_livraison_select');
@@ -3415,22 +3449,25 @@ document.addEventListener('DOMContentLoaded', function() {
                             }
                         }
                         
-                        // NE PAS fermer la modale ici - la modale d'adresse gère sa propre fermeture et navigation
-                        console.log('📍 [EDIT] Adresse sélectionnée - la modale se ferme automatiquement');
+                        // Fermer la modale après sélection (géré par le service centralisé maintenant)
+                        if (addressModalService.modalService) {
+                            addressModalService.modalService.closeModal();
+                            console.log('📍 [EDIT] Adresse sélectionnée et modale fermée');
+                        }
                     });
                 }
             },
             onAddressUpdated: function(detail) {
                 console.log('📍 [EDIT] Adresse modifiée, rechargement puis re-sélection...', detail);
                 
-                // NE PAS effacer lastContactEditEvent ici - nécessaire pour la navigation multi-modale
-                // window.lastContactEditEvent = null; // COMMENTÉ - laissé à la modale d'adresse
+                // Service centralisé gère maintenant lastContactEditEvent automatiquement
+                // Plus besoin de gérer manuellement la navigation ici
                 
                 const clientSelect = document.getElementById('devis_client');
                 const clientId = clientSelect?.value;
-                if (clientId && window.clientProspectService && detail.adresse) {
+                if (clientId && window.devisContactService && detail.adresse) {
                     // Recharger SEULEMENT les adresses (pas les contacts) - version asynchrone
-                    window.clientProspectService.reloadAddressesOnly(clientId).then(() => {
+                    window.devisContactService.reloadAddressesOnly(clientId).then(() => {
                         const addressId = detail.adresse.id;
                         console.log('📍 [EDIT] Tentative de re-sélection de l\'adresse ID:', addressId);
                         
@@ -3458,8 +3495,12 @@ document.addEventListener('DOMContentLoaded', function() {
                             }
                         }
                         
-                        // NE PAS fermer la modale ici - la modale d'adresse gère sa propre fermeture et navigation
-                        console.log('📍 [EDIT] Adresse re-sélectionnée - la modale se ferme automatiquement');
+                        // Fermer la modale après re-sélection (géré par le service centralisé)
+                        if (addressModalService && addressModalService.modalService) {
+                            console.log('📍 [EDIT] Fermeture modale d\'adresse après re-sélection');
+                            addressModalService.modalService.closeModal();
+                            console.log('📍 [EDIT] Adresse rechargée, re-sélectionnée et modale fermée');
+                        }
                     });
                 }
             }
@@ -3494,6 +3535,740 @@ document.addEventListener('DOMContentLoaded', function() {
         }
         
     }, 2000);
+    
+    // =================================================================
+    // MARQUAGE SOURCE POUR BOUTONS D'ADRESSE
+    // =================================================================
+    
+    // Marquer la source quand on clique sur les boutons d'adresse ET de contact
+    setTimeout(() => {
+        // Boutons d'adresse
+        document.getElementById('add-address-livraison-btn')?.addEventListener('click', function() {
+            console.log('🎯 Marquage source adresse: livraison');
+            window.lastAddressAction = { source: 'livraison' };
+            window.lastContactAction = { source: 'livraison' };
+        }, true); // true = capture phase, pour s'exécuter AVANT les autres handlers
+        
+        document.getElementById('add-address-facturation-btn')?.addEventListener('click', function() {
+            console.log('🎯 Marquage source adresse: facturation');
+            window.lastAddressAction = { source: 'facturation' };
+            window.lastContactAction = { source: 'facturation' };
+        }, true); // true = capture phase
+        
+        // Boutons de contact
+        document.getElementById('add-contact-btn')?.addEventListener('click', function() {
+            console.log('🎯 Marquage source contact: livraison (contact en charge du projet)');
+            window.lastContactAction = { source: 'livraison' };
+            window.lastAddressAction = { source: 'livraison' }; // Par défaut si on va vers adresse
+        }, true);
+        
+        document.getElementById('add-contact-facturation-btn')?.addEventListener('click', function() {
+            console.log('🎯 Marquage source contact: facturation');
+            window.lastContactAction = { source: 'facturation' };
+            window.lastAddressAction = { source: 'facturation' }; // Par défaut si on va vers adresse
+        }, true);
+    }, 100);
+    
+    // =================================================================
+    // EVENT LISTENERS POUR MISE À JOUR DYNAMIQUE APRÈS CRÉATION/MODIFICATION
+    // =================================================================
+    
+    // Écouter la création de nouveaux contacts
+    window.addEventListener('contactCreated', function(event) {
+        // 🛑 DÉSACTIVÉ - DevisContactService gère maintenant les contacts
+        if (window.devisContactServiceActive) {
+            console.log('🛑 Event listener edit.html.twig désactivé - DevisContactService actif');
+            return;
+        }
+        
+        console.log('📢 Contact créé détecté:', event.detail);
+        
+        if (!event.detail || !event.detail.contact) {
+            console.error('❌ Détails du contact manquants');
+            return;
+        }
+        
+        const newContact = event.detail.contact;
+        const clientId = $('#devis_client').val();
+        
+        // 🔧 FIX: Si clientId est undefined dans la réponse, l'assigner depuis le client actuel AVANT la vérification
+        if (!newContact.clientId) {
+            console.log('🔧 clientId manquant dans la réponse, assignation depuis client actuel');
+            newContact.clientId = clientId;
+        }
+        
+        // Vérifier que le contact appartient au bon client (conversion en string pour comparaison)
+        if (String(newContact.clientId) != String(clientId)) {
+            console.log('⚠️ Contact créé pour un autre client, ignoré', {
+                contactClientId: newContact.clientId,
+                expectedClientId: clientId,
+                contactClientIdType: typeof newContact.clientId,
+                expectedClientIdType: typeof clientId
+            });
+            return;
+        }
+        
+        console.log('✅ Contact vérifié pour le bon client:', {
+            contactClientId: newContact.clientId,
+            expectedClientId: clientId
+        });
+        
+        // Ajouter le contact à la liste globale
+        if (!window.clientContacts) {
+            window.clientContacts = [];
+        }
+        
+        // Vérifier si le contact existe déjà
+        const existingIndex = window.clientContacts.findIndex(c => c.id == newContact.id);
+        if (existingIndex === -1) {
+            window.clientContacts.push(newContact);
+            console.log('✅ Contact ajouté à la liste globale');
+        } else {
+            window.clientContacts[existingIndex] = newContact;
+            console.log('✅ Contact mis à jour dans la liste globale');
+        }
+        
+        // EMPÊCHER DevisContactService de tout écraser pour les contacts aussi
+        if (window.devisContactService) {
+            console.log('🛑 Désactivation temporaire DevisContactService pour contrôler la sélection de contact');
+            if (!window.devisContactService._originalHandlers) {
+                window.devisContactService._originalHandlers = {
+                    reloadAddresses: window.devisContactService.reloadAddresses,
+                    handleAddressChange: window.devisContactService.handleAddressChange,
+                    reloadContacts: window.devisContactService.reloadContacts,
+                    populateContacts: window.devisContactService.populateContacts,
+                    handleClientChange: window.devisContactService.handleClientChange
+                };
+            }
+            // Désactiver temporairement TOUTES les fonctions de contact
+            window.devisContactService.reloadContacts = () => { console.log('🛑 reloadContacts désactivé temporairement pour contact'); };
+            window.devisContactService.populateContacts = () => { console.log('🛑 populateContacts désactivé temporairement pour contact'); };
+            window.devisContactService.handleClientChange = () => { console.log('🛑 handleClientChange désactivé temporairement pour contact'); };
+        }
+        
+        // Recharger les dropdowns de contacts MANUELLEMENT
+        fetch(`/client/${clientId}/contacts`)
+            .then(response => response.json())
+            .then(contacts => {
+                const livraisonSelect = document.getElementById('devis_contactLivraison');
+                const facturationSelect = document.getElementById('devis_contactFacturation');
+                
+                // Sauvegarder les sélections actuelles (contacts ET adresses)
+                const currentLivraison = livraisonSelect?.value;
+                const currentFacturation = facturationSelect?.value;
+                const currentLivraisonAddress = document.getElementById('adresse_livraison_select')?.value;
+                const currentFacturationAddress = document.getElementById('adresse_facturation_select')?.value;
+                
+                // Repeupler les dropdowns
+                [livraisonSelect, facturationSelect].forEach(select => {
+                    if (select) {
+                        select.innerHTML = '<option value="">Sélectionner...</option>';
+                        contacts.forEach(contact => {
+                            const option = document.createElement('option');
+                            option.value = contact.id;
+                            option.textContent = contact.prenom ? `${contact.prenom} ${contact.nom}` : contact.nom;
+                            select.appendChild(option);
+                        });
+                    }
+                });
+                
+                // Attendre un peu que les dropdowns soient rechargés, puis appliquer la sélection intelligente
+                setTimeout(() => {
+                    // Déterminer où placer le contact selon la source
+                    const contactSource = window.lastContactAction?.source;
+                    console.log('🎯 Placement contact selon source:', contactSource);
+                    
+                    // 🔒 PROTECTION: Variables pour préservation email (scope global)
+                    const currentEmail = document.getElementById('devis_emailEnvoiAutomatique')?.value;
+                    const shouldPreserveEmail = contactSource === 'facturation' && currentLivraison && currentEmail;
+                    
+                    if (contactSource === 'facturation') {
+                        
+                        // Sélectionner UNIQUEMENT dans facturation
+                        if (facturationSelect) {
+                            // Désactiver temporairement la propagation des événements
+                            const originalDispatch = facturationSelect.dispatchEvent;
+                            facturationSelect.dispatchEvent = () => { console.log('🛑 Event facturation bloqué'); return true; };
+                            
+                            facturationSelect.value = newContact.id;
+                            console.log('✅ Contact placé dans FACTURATION uniquement');
+                            
+                            // Réactiver après un délai
+                            setTimeout(() => {
+                                facturationSelect.dispatchEvent = originalDispatch;
+                            }, 500);
+                        }
+                        
+                        // 🔒 PROTECTION: Restaurer l'email du contact de livraison si nécessaire
+                        if (shouldPreserveEmail) {
+                            setTimeout(() => {
+                                console.log('🔒 Restauration email livraison:', currentEmail);
+                                document.getElementById('devis_emailEnvoiAutomatique').value = currentEmail;
+                            }, 300);
+                        }
+                        
+                        // Restaurer livraison si elle avait une valeur (sans déclencher d'événements)
+                        if (livraisonSelect && currentLivraison) {
+                            const originalDispatch = livraisonSelect.dispatchEvent;
+                            livraisonSelect.dispatchEvent = () => { console.log('🛑 Event livraison bloqué'); return true; };
+                            livraisonSelect.value = currentLivraison;
+                            setTimeout(() => {
+                                livraisonSelect.dispatchEvent = originalDispatch;
+                            }, 500);
+                        }
+                    } else if (contactSource === 'livraison') {
+                        // Sélectionner UNIQUEMENT dans livraison (contact en charge du projet)
+                        if (livraisonSelect) {
+                            livraisonSelect.value = newContact.id;
+                            console.log('✅ Contact placé dans LIVRAISON uniquement');
+                            
+                            // Déclencher l'événement change pour la synchronisation email
+                            livraisonSelect.dispatchEvent(new Event('change'));
+                            
+                            // Synchroniser l'email pour livraison
+                            setTimeout(() => {
+                                if (typeof syncContactEmail === 'function') {
+                                    console.log('📧 Force sync email pour nouveau contact livraison:', newContact.id);
+                                    syncContactEmail(newContact.id);
+                                }
+                            }, 200);
+                        }
+                        // Restaurer facturation si elle avait une valeur (sans déclencher d'événements)
+                        if (facturationSelect && currentFacturation) {
+                            const originalDispatch = facturationSelect.dispatchEvent;
+                            facturationSelect.dispatchEvent = () => { console.log('🛑 Event facturation bloqué'); return true; };
+                            facturationSelect.value = currentFacturation;
+                            setTimeout(() => {
+                                facturationSelect.dispatchEvent = originalDispatch;
+                            }, 500);
+                        }
+                    } else {
+                        // Comportement par défaut basé sur les flags (si aucune source)
+                        console.log('⚠️ Aucune source de contact définie, utilisation des flags par défaut');
+                        if (newContact.isFacturationDefault && facturationSelect) {
+                            facturationSelect.value = newContact.id;
+                        }
+                        if (newContact.isLivraisonDefault && livraisonSelect) {
+                            livraisonSelect.value = newContact.id;
+                            setTimeout(() => {
+                                if (typeof syncContactEmail === 'function') {
+                                    syncContactEmail(newContact.id);
+                                }
+                            }, 200);
+                        }
+                    }
+                    
+                    // Ajouter le nouveau contact à window.clientContacts pour l'email
+                    if (!window.clientContacts) {
+                        window.clientContacts = [];
+                    }
+                    const existingIndex = window.clientContacts.findIndex(c => c.id == newContact.id);
+                    if (existingIndex === -1) {
+                        window.clientContacts.push(newContact);
+                        console.log('✅ Nouveau contact ajouté à window.clientContacts:', newContact.id);
+                    } else {
+                        window.clientContacts[existingIndex] = newContact;
+                        console.log('✅ Contact mis à jour dans window.clientContacts:', newContact.id);
+                    }
+                    
+                    // Nettoyer l'action contact
+                    window.lastContactAction = null;
+                    
+                    // Réactiver DevisContactService après nos sélections intelligentes
+                    setTimeout(() => {
+                        if (window.devisContactService && window.devisContactService._originalHandlers) {
+                            console.log('🔄 Réactivation DevisContactService après sélection de contact');
+                            window.devisContactService.reloadAddresses = window.devisContactService._originalHandlers.reloadAddresses;
+                            window.devisContactService.reloadContacts = window.devisContactService._originalHandlers.reloadContacts;
+                            window.devisContactService.handleAddressChange = window.devisContactService._originalHandlers.handleAddressChange;
+                            window.devisContactService.populateContacts = window.devisContactService._originalHandlers.populateContacts;
+                            window.devisContactService.handleClientChange = window.devisContactService._originalHandlers.handleClientChange;
+                            if (window.devisContactService._originalHandlers.populateAddresses) {
+                                window.devisContactService.populateAddresses = window.devisContactService._originalHandlers.populateAddresses;
+                            }
+                            delete window.devisContactService._originalHandlers;
+                            console.log('✅ DevisContactService réactivé');
+                        }
+                        
+                        // AJOUT: Réactiver aussi depuis le disabling préventif si présent
+                        if (window.devisContactService && window.devisContactService._originalFunctions) {
+                            console.log('🔄 Réactivation DevisContactService depuis disabling préventif');
+                            window.devisContactService.reloadAddresses = window.devisContactService._originalFunctions.reloadAddresses;
+                            window.devisContactService.reloadContacts = window.devisContactService._originalFunctions.reloadContacts;
+                            window.devisContactService.handleAddressChange = window.devisContactService._originalFunctions.handleAddressChange;
+                            window.devisContactService.populateContacts = window.devisContactService._originalFunctions.populateContacts;
+                            window.devisContactService.handleClientChange = window.devisContactService._originalFunctions.handleClientChange;
+                            if (window.devisContactService._originalFunctions.populateAddresses) {
+                                window.devisContactService.populateAddresses = window.devisContactService._originalFunctions.populateAddresses;
+                            }
+                            delete window.devisContactService._originalFunctions;
+                            console.log('✅ DevisContactService réactivé depuis disabling préventif');
+                            
+                            // 🔄 RÉACTIVATION: Restaurer les event listeners de changement de contact
+                            const livraisonSelect = document.getElementById('devis_contactLivraison');
+                            const facturationSelect = document.getElementById('devis_contactFacturation');
+                            
+                            if (livraisonSelect && livraisonSelect._originalOnChange) {
+                                livraisonSelect.onchange = livraisonSelect._originalOnChange;
+                                delete livraisonSelect._originalOnChange;
+                                console.log('🔄 Event listener contact livraison réactivé');
+                            }
+                            if (facturationSelect && facturationSelect._originalOnChange) {
+                                facturationSelect.onchange = facturationSelect._originalOnChange;
+                                delete facturationSelect._originalOnChange;
+                                console.log('🔄 Event listener contact facturation réactivé');
+                            }
+                            
+                            // 🔄 RÉACTIVATION ADRESSES: Restaurer les event listeners de changement d'adresse
+                            const livraisonAddressSelect = document.getElementById('adresse_livraison_select');
+                            const facturationAddressSelect = document.getElementById('adresse_facturation_select');
+                            
+                            if (livraisonAddressSelect && livraisonAddressSelect._originalOnChange) {
+                                livraisonAddressSelect.onchange = livraisonAddressSelect._originalOnChange;
+                                delete livraisonAddressSelect._originalOnChange;
+                                console.log('🔄 Event listener adresse livraison réactivé');
+                            }
+                            if (facturationAddressSelect && facturationAddressSelect._originalOnChange) {
+                                facturationAddressSelect.onchange = facturationAddressSelect._originalOnChange;
+                                delete facturationAddressSelect._originalOnChange;
+                                console.log('🔄 Event listener adresse facturation réactivé');
+                            }
+                        }
+                        
+                        // 🛡️ PROTECTION FINALE: Vérifier et restaurer les valeurs correctes après réactivation
+                        setTimeout(() => {
+                            console.log('🛡️ Vérification finale des valeurs après réactivation DevisContactService');
+                            
+                            const livraisonSelect = document.getElementById('devis_contactLivraison');
+                            const facturationSelect = document.getElementById('devis_contactFacturation');
+                            const emailField = document.getElementById('devis_emailEnvoiAutomatique');
+                            const livraisonAddressSelect = document.getElementById('adresse_livraison_select');
+                            const facturationAddressSelect = document.getElementById('adresse_facturation_select');
+                            
+                            // Sauvegarder les valeurs actuelles
+                            const currentLivraisonValue = livraisonSelect?.value;
+                            const currentFacturationValue = facturationSelect?.value;
+                            const currentEmailValue = emailField?.value;
+                            const currentLivraisonAddressValue = livraisonAddressSelect?.value;
+                            const currentFacturationAddressValue = facturationAddressSelect?.value;
+                            
+                            console.log('🔍 État actuel après réactivation:', {
+                                livraison: currentLivraisonValue,
+                                facturation: currentFacturationValue,
+                                email: currentEmailValue,
+                                livraisonAddress: currentLivraisonAddressValue,
+                                facturationAddress: currentFacturationAddressValue,
+                                contactSource: contactSource,
+                                newContactId: newContact.id
+                            });
+                            
+                            // Vérifier si DevisContactService a écrasé nos sélections
+                            let needsCorrection = false;
+                            
+                            if (contactSource === 'facturation') {
+                                // Pour contact facturation: vérifier que livraison n'a pas été écrasé
+                                if (currentLivraison && currentLivraisonValue != currentLivraison) {
+                                    console.log('⚠️ Contact livraison écrasé, restauration:', currentLivraison);
+                                    if (livraisonSelect) {
+                                        livraisonSelect.value = currentLivraison;
+                                        needsCorrection = true;
+                                    }
+                                }
+                                // Vérifier que l'email de livraison n'a pas été écrasé
+                                if (shouldPreserveEmail && currentEmail && currentEmailValue != currentEmail) {
+                                    console.log('⚠️ Email livraison écrasé, restauration:', currentEmail);
+                                    if (emailField) {
+                                        emailField.value = currentEmail;
+                                        needsCorrection = true;
+                                    }
+                                }
+                                // Vérifier que le contact facturation est bien sélectionné
+                                if (currentFacturationValue != newContact.id) {
+                                    console.log('⚠️ Contact facturation non sélectionné, correction:', newContact.id);
+                                    if (facturationSelect) {
+                                        facturationSelect.value = newContact.id;
+                                        needsCorrection = true;
+                                    }
+                                }
+                                
+                                // 📍 PROTECTION ADRESSES: Vérifier que l'adresse de livraison n'a pas été écrasée
+                                if (currentLivraisonAddress && currentLivraisonAddressValue != currentLivraisonAddress) {
+                                    console.log('⚠️ Adresse livraison écrasée, restauration:', currentLivraisonAddress);
+                                    if (livraisonAddressSelect) {
+                                        livraisonAddressSelect.value = currentLivraisonAddress;
+                                        needsCorrection = true;
+                                    }
+                                }
+                            } else if (contactSource === 'livraison') {
+                                // Pour contact livraison: vérifier que facturation n'a pas été écrasé
+                                if (currentFacturation && currentFacturationValue != currentFacturation) {
+                                    console.log('⚠️ Contact facturation écrasé, restauration:', currentFacturation);
+                                    if (facturationSelect) {
+                                        facturationSelect.value = currentFacturation;
+                                        needsCorrection = true;
+                                    }
+                                }
+                                // Vérifier que le contact livraison est bien sélectionné
+                                if (currentLivraisonValue != newContact.id) {
+                                    console.log('⚠️ Contact livraison non sélectionné, correction:', newContact.id);
+                                    if (livraisonSelect) {
+                                        livraisonSelect.value = newContact.id;
+                                        needsCorrection = true;
+                                    }
+                                }
+                                // Vérifier que l'email du nouveau contact livraison est synchronisé
+                                if (newContact.email && currentEmailValue != newContact.email) {
+                                    console.log('⚠️ Email livraison non synchronisé, correction:', newContact.email);
+                                    if (emailField) {
+                                        emailField.value = newContact.email;
+                                        needsCorrection = true;
+                                    }
+                                }
+                                
+                                // 📍 PROTECTION ADRESSES: Vérifier que l'adresse de facturation n'a pas été écrasée
+                                if (currentFacturationAddress && currentFacturationAddressValue != currentFacturationAddress) {
+                                    console.log('⚠️ Adresse facturation écrasée, restauration:', currentFacturationAddress);
+                                    if (facturationAddressSelect) {
+                                        facturationAddressSelect.value = currentFacturationAddress;
+                                        needsCorrection = true;
+                                    }
+                                }
+                            }
+                            
+                            if (needsCorrection) {
+                                console.log('🔧 Corrections appliquées après réactivation DevisContactService');
+                            } else {
+                                console.log('✅ Aucune correction nécessaire, valeurs préservées correctement');
+                            }
+                        }, 1500);
+                    }, 1000);
+                }, 500);
+            })
+            .catch(error => {
+                console.error('Erreur rechargement contacts:', error);
+                
+                // Réactiver DevisContactService même en cas d'erreur
+                if (window.devisContactService && window.devisContactService._originalHandlers) {
+                    console.log('🔄 Réactivation DevisContactService (après erreur contact)');
+                    window.devisContactService.reloadAddresses = window.devisContactService._originalHandlers.reloadAddresses;
+                    window.devisContactService.reloadContacts = window.devisContactService._originalHandlers.reloadContacts;
+                    window.devisContactService.handleAddressChange = window.devisContactService._originalHandlers.handleAddressChange;
+                    window.devisContactService.populateContacts = window.devisContactService._originalHandlers.populateContacts;
+                    window.devisContactService.handleClientChange = window.devisContactService._originalHandlers.handleClientChange;
+                    if (window.devisContactService._originalHandlers.populateAddresses) {
+                        window.devisContactService.populateAddresses = window.devisContactService._originalHandlers.populateAddresses;
+                    }
+                    delete window.devisContactService._originalHandlers;
+                }
+                
+                // AJOUT: Réactiver aussi depuis le disabling préventif si présent (erreur)
+                if (window.devisContactService && window.devisContactService._originalFunctions) {
+                    console.log('🔄 Réactivation DevisContactService depuis disabling préventif (après erreur)');
+                    window.devisContactService.reloadAddresses = window.devisContactService._originalFunctions.reloadAddresses;
+                    window.devisContactService.reloadContacts = window.devisContactService._originalFunctions.reloadContacts;
+                    window.devisContactService.handleAddressChange = window.devisContactService._originalFunctions.handleAddressChange;
+                    window.devisContactService.populateContacts = window.devisContactService._originalFunctions.populateContacts;
+                    window.devisContactService.handleClientChange = window.devisContactService._originalFunctions.handleClientChange;
+                    if (window.devisContactService._originalFunctions.populateAddresses) {
+                        window.devisContactService.populateAddresses = window.devisContactService._originalFunctions.populateAddresses;
+                    }
+                    delete window.devisContactService._originalFunctions;
+                    console.log('✅ DevisContactService réactivé depuis disabling préventif (après erreur)');
+                    
+                    // 🔄 RÉACTIVATION: Restaurer les event listeners de changement de contact (erreur)
+                    const livraisonSelect = document.getElementById('devis_contactLivraison');
+                    const facturationSelect = document.getElementById('devis_contactFacturation');
+                    
+                    if (livraisonSelect && livraisonSelect._originalOnChange) {
+                        livraisonSelect.onchange = livraisonSelect._originalOnChange;
+                        delete livraisonSelect._originalOnChange;
+                        console.log('🔄 Event listener contact livraison réactivé (erreur)');
+                    }
+                    if (facturationSelect && facturationSelect._originalOnChange) {
+                        facturationSelect.onchange = facturationSelect._originalOnChange;
+                        delete facturationSelect._originalOnChange;
+                        console.log('🔄 Event listener contact facturation réactivé (erreur)');
+                    }
+                }
+            });
+    });
+    
+    // Écouter la modification de contacts
+    window.addEventListener('contactUpdated', function(event) {
+        console.log('📢 Contact modifié détecté:', event.detail);
+        
+        if (!event.detail || !event.detail.contact) {
+            console.error('❌ Détails du contact manquants');
+            return;
+        }
+        
+        const updatedContact = event.detail.contact;
+        const clientId = $('#devis_client').val();
+        
+        // Mettre à jour le contact dans la liste globale
+        if (window.clientContacts) {
+            const index = window.clientContacts.findIndex(c => c.id == updatedContact.id);
+            if (index !== -1) {
+                window.clientContacts[index] = updatedContact;
+                console.log('✅ Contact mis à jour dans la liste globale');
+                
+                // Recharger les dropdowns pour refléter les changements
+                if (window.devisContactService) {
+                    window.devisContactService.reloadContacts(clientId);
+                }
+                
+                // Si le contact modifié est sélectionné, mettre à jour l'email
+                const selectedFacturation = $('#devis_contactFacturation').val();
+                const selectedLivraison = $('#devis_contactLivraison').val();
+                
+                if (updatedContact.id == selectedFacturation || updatedContact.id == selectedLivraison) {
+                    if (updatedContact.email) {
+                        $('#devis_emailEnvoiAutomatique').val(updatedContact.email);
+                        console.log('✅ Email mis à jour:', updatedContact.email);
+                    }
+                }
+            }
+        }
+    });
+    
+    // Écouter la création de nouvelles adresses
+    window.addEventListener('addressCreated', function(event) {
+        console.log('📢 Adresse créée détectée:', event.detail);
+        
+        const clientId = $('#devis_client').val();
+        
+        // EMPÊCHER DevisContactService de tout écraser
+        if (window.devisContactService) {
+            console.log('🛑 Désactivation temporaire DevisContactService pour garder le contrôle');
+            if (!window.devisContactService._originalHandlers) {
+                window.devisContactService._originalHandlers = {
+                    reloadAddresses: window.devisContactService.reloadAddresses,
+                    handleAddressChange: window.devisContactService.handleAddressChange,
+                    reloadContacts: window.devisContactService.reloadContacts,
+                    populateAddresses: window.devisContactService.populateAddresses,
+                    populateContacts: window.devisContactService.populateContacts,
+                    handleClientChange: window.devisContactService.handleClientChange
+                };
+            }
+            // Désactiver temporairement TOUTES les fonctions qui peuvent écraser nos sélections
+            window.devisContactService.reloadAddresses = () => { console.log('🛑 reloadAddresses désactivé temporairement'); };
+            window.devisContactService.reloadContacts = () => { console.log('🛑 reloadContacts désactivé temporairement'); };
+            window.devisContactService.handleAddressChange = () => { console.log('🛑 handleAddressChange désactivé temporairement'); };
+            window.devisContactService.populateContacts = () => { console.log('🛑 populateContacts désactivé temporairement'); };
+            window.devisContactService.handleClientChange = () => { console.log('🛑 handleClientChange désactivé temporairement'); };
+            if (window.devisContactService.populateAddresses) {
+                window.devisContactService.populateAddresses = () => { console.log('🛑 populateAddresses désactivé temporairement'); };
+            }
+        }
+        
+        // Recharger manuellement les dropdowns pour garder le contrôle total
+        if (event.detail && event.detail.adresse) {
+            const newAddress = event.detail.adresse;
+            
+            console.log('🎯 Gestion manuelle de la nouvelle adresse:', newAddress.id);
+            console.log('🔍 Source de création adresse:', window.lastAddressAction?.source);
+            console.log('🔍 Source de création contact:', window.lastContactAction?.source);
+            console.log('🔍 État complet lastAddressAction:', window.lastAddressAction);
+            console.log('🔍 État complet lastContactAction:', window.lastContactAction);
+            
+            // Recharger les options des deux dropdowns
+            fetch(`/client/${clientId}/addresses`)
+                .then(response => response.json())
+                .then(addresses => {
+                    const livraisonSelect = document.getElementById('adresse_livraison_select');
+                    const facturationSelect = document.getElementById('adresse_facturation_select');
+                    
+                    // Sauvegarder les sélections actuelles
+                    const currentLivraison = livraisonSelect?.value;
+                    const currentFacturation = facturationSelect?.value;
+                    
+                    // Repeupler les dropdowns
+                    [livraisonSelect, facturationSelect].forEach(select => {
+                        if (select) {
+                            select.innerHTML = '<option value="">Choisir une adresse...</option>';
+                            addresses.forEach(address => {
+                                const option = document.createElement('option');
+                                option.value = address.id;
+                                option.textContent = address.label;
+                                select.appendChild(option);
+                            });
+                        }
+                    });
+                    
+                    // Gérer la sélection intelligente
+                    const sourceDropdown = window.lastAddressAction?.source || window.lastContactAction?.source;
+                    
+                    if (sourceDropdown === 'livraison') {
+                        // Sélectionner UNIQUEMENT dans livraison
+                        if (livraisonSelect) {
+                            livraisonSelect.value = newAddress.id;
+                            console.log('✅ Adresse sélectionnée dans LIVRAISON uniquement');
+                        }
+                        // Restaurer facturation si elle avait une valeur
+                        if (facturationSelect && currentFacturation) {
+                            facturationSelect.value = currentFacturation;
+                        }
+                    } else if (sourceDropdown === 'facturation') {
+                        // Sélectionner UNIQUEMENT dans facturation
+                        if (facturationSelect) {
+                            facturationSelect.value = newAddress.id;
+                            console.log('✅ Adresse sélectionnée dans FACTURATION uniquement');
+                        }
+                        // Restaurer livraison si elle avait une valeur
+                        if (livraisonSelect && currentLivraison) {
+                            livraisonSelect.value = currentLivraison;
+                        }
+                    } else {
+                        // Comportement par défaut basé sur les flags (rare)
+                        if (newAddress.isLivraisonDefault && livraisonSelect) {
+                            livraisonSelect.value = newAddress.id;
+                        }
+                        if (newAddress.isFacturationDefault && facturationSelect) {
+                            facturationSelect.value = newAddress.id;
+                        }
+                    }
+                    
+                    // Nettoyer l'action
+                    window.lastAddressAction = null;
+                    
+                    // Réactiver DevisContactService après nos sélections intelligentes
+                    setTimeout(() => {
+                        if (window.devisContactService && window.devisContactService._originalHandlers) {
+                            console.log('🔄 Réactivation DevisContactService après sélections intelligentes');
+                            
+                            // 🛡️ PROTECTION FINALE: Capturer les valeurs avant réactivation
+                            const livraisonSelectAddr = document.getElementById('adresse_livraison_select');
+                            const facturationSelectAddr = document.getElementById('adresse_facturation_select');
+                            const finalLivraisonAddr = livraisonSelectAddr?.value;
+                            const finalFacturationAddr = facturationSelectAddr?.value;
+                            
+                            console.log('🛡️ Valeurs d\'adresse avant réactivation:', {
+                                livraison: finalLivraisonAddr,
+                                facturation: finalFacturationAddr
+                            });
+                            
+                            window.devisContactService.reloadAddresses = window.devisContactService._originalHandlers.reloadAddresses;
+                            window.devisContactService.reloadContacts = window.devisContactService._originalHandlers.reloadContacts;
+                            window.devisContactService.handleAddressChange = window.devisContactService._originalHandlers.handleAddressChange;
+                            window.devisContactService.populateContacts = window.devisContactService._originalHandlers.populateContacts;
+                            window.devisContactService.handleClientChange = window.devisContactService._originalHandlers.handleClientChange;
+                            if (window.devisContactService._originalHandlers.populateAddresses) {
+                                window.devisContactService.populateAddresses = window.devisContactService._originalHandlers.populateAddresses;
+                            }
+                            delete window.devisContactService._originalHandlers;
+                            console.log('✅ DevisContactService réactivé');
+                            
+                            // 🛡️ VÉRIFICATION POST-RÉACTIVATION: Restaurer si écrasé
+                            setTimeout(() => {
+                                const currentLivraisonAddr = livraisonSelectAddr?.value;
+                                const currentFacturationAddr = facturationSelectAddr?.value;
+                                
+                                console.log('🔍 Vérification post-réactivation adresses:', {
+                                    livraisonAvant: finalLivraisonAddr,
+                                    livraisonApres: currentLivraisonAddr,
+                                    facturationAvant: finalFacturationAddr,
+                                    facturationApres: currentFacturationAddr,
+                                    preCreateValues: window.preCreateValues
+                                });
+                                
+                                // 🛡️ PROTECTION ABSOLUE: Utiliser les valeurs capturées au début si disponibles
+                                if (sourceDropdown === 'facturation') {
+                                    const originalLivraisonAddr = window.preCreateValues?.livraisonAddress || finalLivraisonAddr;
+                                    
+                                    if (originalLivraisonAddr && currentLivraisonAddr !== originalLivraisonAddr) {
+                                        console.log('⚠️ Adresse livraison à restaurer:', {
+                                            original: originalLivraisonAddr,
+                                            current: currentLivraisonAddr,
+                                            source: window.preCreateValues ? 'preCreate' : 'final'
+                                        });
+                                        
+                                        if (livraisonSelectAddr) {
+                                            livraisonSelectAddr.value = originalLivraisonAddr;
+                                            console.log('✅ Adresse livraison restaurée');
+                                        }
+                                    }
+                                    
+                                    // Nettoyer les valeurs sauvegardées
+                                    if (window.preCreateValues) {
+                                        delete window.preCreateValues;
+                                        console.log('🧹 Valeurs pre-create nettoyées');
+                                    }
+                                }
+                                
+                                if (sourceDropdown === 'livraison') {
+                                    const originalFacturationAddr = window.preCreateValues?.facturationAddress || finalFacturationAddr;
+                                    
+                                    if (originalFacturationAddr && currentFacturationAddr !== originalFacturationAddr) {
+                                        console.log('⚠️ Adresse facturation à restaurer:', {
+                                            original: originalFacturationAddr,
+                                            current: currentFacturationAddr,
+                                            source: window.preCreateValues ? 'preCreate' : 'final'
+                                        });
+                                        
+                                        if (facturationSelectAddr) {
+                                            facturationSelectAddr.value = originalFacturationAddr;
+                                            console.log('✅ Adresse facturation restaurée');
+                                        }
+                                    }
+                                    
+                                    // Nettoyer les valeurs sauvegardées
+                                    if (window.preCreateValues) {
+                                        delete window.preCreateValues;
+                                        console.log('🧹 Valeurs pre-create nettoyées (livraison)');
+                                    }
+                                }
+                            }, 500);
+                        }
+                    }, 1000); // Délai pour s'assurer que nos sélections sont bien appliquées
+                })
+                .catch(error => {
+                    console.error('Erreur rechargement adresses:', error);
+                    
+                    // Réactiver DevisContactService même en cas d'erreur
+                    if (window.devisContactService && window.devisContactService._originalHandlers) {
+                        console.log('🔄 Réactivation DevisContactService (après erreur)');
+                        window.devisContactService.reloadAddresses = window.devisContactService._originalHandlers.reloadAddresses;
+                        window.devisContactService.reloadContacts = window.devisContactService._originalHandlers.reloadContacts;
+                        window.devisContactService.handleAddressChange = window.devisContactService._originalHandlers.handleAddressChange;
+                        window.devisContactService.populateContacts = window.devisContactService._originalHandlers.populateContacts;
+                        window.devisContactService.handleClientChange = window.devisContactService._originalHandlers.handleClientChange;
+                        if (window.devisContactService._originalHandlers.populateAddresses) {
+                            window.devisContactService.populateAddresses = window.devisContactService._originalHandlers.populateAddresses;
+                        }
+                        delete window.devisContactService._originalHandlers;
+                    }
+                });
+        }
+    });
+    
+    // Écouter la modification d'adresses
+    window.addEventListener('addressUpdated', function(event) {
+        console.log('📢 Adresse modifiée détectée:', event.detail);
+        
+        const clientId = $('#devis_client').val();
+        
+        // Simplement recharger les dropdowns sans changer les sélections
+        // Les valeurs sélectionnées seront préservées
+        const currentLivraisonValue = $('#adresse_livraison_select').val();
+        const currentFacturationValue = $('#adresse_facturation_select').val();
+        
+        if (window.devisContactService) {
+            // Recharger via DevisContactService
+            window.devisContactService.reloadAddresses(clientId);
+            
+            // Le DevisContactService devrait préserver les sélections, mais au cas où :
+            setTimeout(() => {
+                if (currentLivraisonValue) {
+                    $('#adresse_livraison_select').val(currentLivraisonValue);
+                }
+                if (currentFacturationValue) {
+                    $('#adresse_facturation_select').val(currentFacturationValue);
+                }
+            }, 500);
+        } else {
+            console.error('❌ DevisContactService non disponible');
+        }
+    });
 });
 
 // Variables globales pour l'éditeur WYSIWYG

@@ -1,0 +1,242 @@
+{#
+    Template réutilisable pour la gestion Client en mode création
+    Utilise le service JavaScript DevisContactService unifié
+    
+    Variables attendues :
+    - prospects : Liste des clients
+    - selected_client : Client pré-sélectionné (optionnel, défaut: null)
+    - show_header : Afficher l'en-tête de section (défaut: true)
+#}
+
+{% set show_header = show_header ?? true %}
+{% set selected_client = selected_client ?? null %}
+
+<!-- Section unifiée Client, Commercial, Adresses et contacts -->
+<div class="form-section" id="client-selection">
+    {% if show_header %}
+    <div class="form-section-header">
+        <h5 class="mb-0"><i class="fas fa-address-card me-2"></i>Client et contacts</h5>
+    </div>
+    {% endif %}
+    <div class="form-section-body">
+        <!-- Client -->
+        <div class="row mb-3">
+            <div class="col-md-12">
+                <label for="client_selector" class="form-label">Client *</label>
+                <div class="d-flex align-items-center gap-2">
+                    <!-- Champ caché pour synchroniser avec le formulaire -->
+                    <input type="hidden" id="client_field" name="client" value="{{ selected_client ? selected_client.id : '' }}">
+                    
+                    <!-- Sélecteur principal -->
+                    <select class="form-select client-select" id="client_selector" name="client_selector" style="flex-grow: 1;" data-placeholder="Choisir un client...">
+                        <option value="">Choisir un client...</option>
+                        {% for client in prospects %}
+                            {% set contacts = [] %}
+                            {% set addresses = [] %}
+                            {% set defaultContactFacturation = null %}
+                            {% set defaultContactLivraison = null %}
+                            {% set projects = [] %}
+                            {% for contact in client.contacts %}
+                                {% set contacts = contacts|merge([{
+                                    'id': contact.id,
+                                    'prenom': contact.prenom,
+                                    'nom': contact.nom,
+                                    'fonction': contact.fonction,
+                                    'email': contact.email,
+                                    'isFacturationDefault': contact.isFacturationDefault,
+                                    'isLivraisonDefault': contact.isLivraisonDefault
+                                }]) %}
+                                {% if contact.isFacturationDefault %}
+                                    {% set defaultContactFacturation = contact.id %}
+                                {% endif %}
+                                {% if contact.isLivraisonDefault %}
+                                    {% set defaultContactLivraison = contact.id %}
+                                {% endif %}
+                            {% endfor %}
+                            {% for adresse in client.adresses %}
+                                {% set addresses = addresses|merge([{
+                                    'id': adresse.id,
+                                    'ligne1': adresse.ligne1,
+                                    'codePostal': adresse.codePostal,
+                                    'ville': adresse.ville
+                                }]) %}
+                            {% endfor %}
+                            <option value="{{ client.id }}" 
+                                    {{ (selected_client and selected_client.id == client.id) ? 'selected' : '' }}
+                                    data-contacts="{{ contacts|json_encode|e('html_attr') }}"
+                                    data-addresses="{{ addresses|json_encode|e('html_attr') }}"
+                                    data-projects="{{ projects|json_encode|e('html_attr') }}"
+                                    data-default-facturation="{{ defaultContactFacturation }}"
+                                    data-default-livraison="{{ defaultContactLivraison }}">
+{% if client.formeJuridique and client.formeJuridique.templateFormulaire == 'personne_morale' %}
+                                {# Entreprise : toujours afficher forme juridique + dénomination sociale #}
+                                {{ client.formeJuridique.nom }}{% if client.nomEntreprise %} {{ client.nomEntreprise }}{% else %} [Dénomination manquante]{% endif %}
+                            {% elseif client.formeJuridique and client.formeJuridique.templateFormulaire == 'personne_physique' %}
+                                {# Particulier : forme juridique + prénom nom #}
+                                {{ client.formeJuridique.nom }}{% if client.prenom %} {{ client.prenom }}{% endif %}{% if client.nom %} {{ client.nom }}{% endif %}
+                            {% else %}
+                                {# Cas de fallback si pas de forme juridique définie #}
+                                {% if client.nomEntreprise %}
+                                    {{ client.nomEntreprise }}
+                                {% elseif client.prenom or client.nom %}
+                                    {{ client.prenom|default('') }} {{ client.nom|default('') }}
+                                {% else %}
+                                    Client #{{ client.id }}
+                                {% endif %}
+                            {% endif %}
+                            </option>
+                        {% endfor %}
+                    </select>
+                    
+                    <!-- Boutons d'action client -->
+                    <button type="button" class="btn btn-success btn-sm" id="add-client-btn" 
+                            title="Ajouter un nouveau client">
+                        <i class="fas fa-plus"></i>
+                    </button>
+                    <button type="button" class="btn btn-primary btn-sm" id="edit-client-btn" 
+                            title="Modifier le client sélectionné" 
+                            style="{{ selected_client ? '' : 'display: none;' }}">
+                        <i class="fas fa-edit"></i>
+                    </button>
+                </div>
+            </div>
+        </div>
+        
+        <!-- Section contacts et adresses (apparaît après sélection client) -->
+        <div id="contact-selection" class="contact-section" style="display: none;">
+            <hr class="my-4">
+            <div class="row">
+                <!-- Contact de livraison -->
+                <div class="col-md-6">
+                    <label for="contact_defaut" class="form-label">Contact en charge du projet</label>
+                    <div class="d-flex align-items-center gap-2 mb-3">
+                        <select class="form-select contact-select" id="contact_defaut" name="contact_defaut" style="flex-grow: 1;">
+                            <option value="">Choisir un contact...</option>
+                        </select>
+                        
+                        <!-- Boutons d'action contact livraison -->
+                        <button type="button" class="btn btn-success btn-sm" 
+                                data-action="create-contact" 
+                                data-target="livraison"
+                                data-client-id=""
+                                title="Ajouter un nouveau contact">
+                            <i class="fas fa-plus"></i>
+                        </button>
+                        <button type="button" class="btn btn-primary btn-sm" 
+                                data-action="edit-contact"
+                                data-target="livraison"
+                                title="Modifier le contact sélectionné" 
+                                style="display: none;">
+                            <i class="fas fa-edit"></i>
+                        </button>
+                    </div>
+                    
+                    <!-- Menu déroulant des adresses de livraison -->
+                    <label for="adresse_livraison_select" class="form-label">Adresse de livraison</label>
+                    <div class="d-flex align-items-center gap-2">
+                        <select class="form-select" id="adresse_livraison_select" name="adresse_livraison_select" style="flex-grow: 1;">
+                            <option value="">Choisir une adresse...</option>
+                        </select>
+                        
+                        <!-- Boutons d'action adresse livraison -->
+                        <button type="button" class="btn btn-success btn-sm" 
+                                data-action="create-address" 
+                                data-target="livraison"
+                                data-client-id=""
+                                title="Ajouter une nouvelle adresse">
+                            <i class="fas fa-plus"></i>
+                        </button>
+                        <button type="button" class="btn btn-primary btn-sm" 
+                                data-action="edit-address"
+                                data-target="livraison"
+                                title="Modifier l'adresse sélectionnée" style="display: none;">
+                            <i class="fas fa-edit"></i>
+                        </button>
+                    </div>
+                    
+                    <!-- Affichage de l'adresse sélectionnée pour livraison -->
+                    <div id="projet-address-display" class="address-display mt-3" style="display: none;">
+                        <div class="current-address">
+                            <strong>Adresse sélectionnée :</strong><br>
+                            <span id="projet-address-text"></span>
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- Contact de facturation -->
+                <div class="col-md-6">
+                    <label for="contact_facturation" class="form-label">Contact de facturation</label>
+                    <div class="d-flex align-items-center gap-2 mb-3">
+                        <select class="form-select contact-select" id="contact_facturation" name="contact_facturation" style="flex-grow: 1;">
+                            <option value="">Choisir un contact...</option>
+                        </select>
+                        
+                        <!-- Boutons d'action contact facturation -->
+                        <button type="button" class="btn btn-success btn-sm" 
+                                data-action="create-contact" 
+                                data-target="facturation"
+                                data-client-id=""
+                                title="Ajouter un nouveau contact de facturation">
+                            <i class="fas fa-plus"></i>
+                        </button>
+                        <button type="button" class="btn btn-primary btn-sm" 
+                                data-action="edit-contact"
+                                data-target="facturation"
+                                title="Modifier le contact sélectionné"
+                                style="display: none;">
+                            <i class="fas fa-edit"></i>
+                        </button>
+                    </div>
+                    
+                    <!-- Menu déroulant des adresses de facturation -->
+                    <label for="adresse_facturation_select" class="form-label">Adresse de facturation</label>
+                    <div class="d-flex align-items-center gap-2">
+                        <select class="form-select" id="adresse_facturation_select" name="adresse_facturation_select" style="flex-grow: 1;">
+                            <option value="">Choisir une adresse...</option>
+                        </select>
+                        
+                        <!-- Boutons d'action adresse facturation -->
+                        <button type="button" class="btn btn-success btn-sm" 
+                                data-action="create-address" 
+                                data-target="facturation"
+                                data-client-id=""
+                                title="Ajouter une nouvelle adresse">
+                            <i class="fas fa-plus"></i>
+                        </button>
+                        <button type="button" class="btn btn-primary btn-sm" 
+                                data-action="edit-address"
+                                data-target="facturation"
+                                title="Modifier l'adresse sélectionnée" style="display: none;">
+                            <i class="fas fa-edit"></i>
+                        </button>
+                    </div>
+                    
+                    <!-- Affichage de l'adresse sélectionnée pour facturation -->
+                    <div id="facturation-address-display" class="address-display mt-3" style="display: none;">
+                        <div class="current-address">
+                            <strong>Adresse sélectionnée :</strong><br>
+                            <span id="facturation-address-text"></span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- Email d'envoi automatique -->
+            <div class="row mt-3">
+                <div class="col-md-12">
+                    <div class="mb-3">
+                        <label for="email_envoi_automatique" class="form-label">Email d'envoi automatique</label>
+                        <input type="email" class="form-control" id="email_envoi_automatique" name="email_envoi_automatique" 
+                               placeholder="email@example.com">
+                        <small class="text-muted">
+                            <i class="fas fa-paper-plane me-1"></i>Ce devis sera envoyé automatiquement à cette adresse
+                        </small>
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+    </div>
+</div>
+
+<!-- Template intégré Client + Contacts/Adresses -->

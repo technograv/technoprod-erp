@@ -161,60 +161,19 @@
     </button>
 </div>
 
-<!-- Charger les services nécessaires si pas déjà chargés -->
-<script>
-// Fonction globale pour charger les services requis
-window.loadRequiredServices = async function() {
-    console.log('🔧 Chargement des services requis...');
-    
-    // Charger ModalService d'abord si pas présent
-    if (!window.ModalService) {
-        console.log('📥 Chargement ModalService...');
-        await new Promise((resolve) => {
-            const modalScript = document.createElement('script');
-            modalScript.src = '/js/services/ModalService.js';
-            modalScript.onload = () => {
-                console.log('✅ ModalService chargé');
-                resolve();
-            };
-            modalScript.onerror = () => {
-                console.error('❌ Erreur chargement ModalService');
-                resolve(); // Continuer même en cas d'erreur
-            };
-            document.head.appendChild(modalScript);
-        });
-    }
-
-    // Puis AddressModalService si pas présent
-    if (!window.AddressModalService) {
-        console.log('📥 Chargement AddressModalService...');
-        await new Promise((resolve) => {
-            const script = document.createElement('script');
-            script.src = '/js/services/AddressModalService.js';
-            script.onload = () => {
-                console.log('✅ AddressModalService chargé');
-                resolve();
-            };
-            script.onerror = () => {
-                console.error('❌ Erreur chargement AddressModalService');
-                resolve(); // Continuer même en cas d'erreur
-            };
-            document.head.appendChild(script);
-        });
-    }
-    
-    console.log('✅ Tous les services sont disponibles');
-    return true;
-};
-</script>
+<!-- Inclusion directe des services JavaScript (comme /devis/new) -->
+<script src="/js/services/ModalDebugService.js"></script>
+<script src="/js/services/ModalService.js"></script>
+<script src="/js/services/MultiModalNavigationService.js"></script>
+<script src="/js/services/AddressModalService.js"></script>
+<script src="/js/services/ContactModalService.js"></script>
 
 <script>
 // Exécuter immédiatement (pas d'attente DOMContentLoaded car modal chargée via AJAX)
-(async function initContactModal() {
+(function initContactModal() {
     console.log('🚀 Initialisation modale contact edit - début');
     
-    // Charger les services requis avant d'initialiser les fonctionnalités
-    await window.loadRequiredServices();
+    // Services déjà chargés de manière synchrone (comme /devis/new)
     
     // Attendre un petit délai pour que le DOM soit prêt
     setTimeout(function() {
@@ -257,9 +216,7 @@ window.loadRequiredServices = async function() {
             });
         }
     }, 100);
-})().catch(error => {
-    console.error('❌ Erreur lors de l\'initialisation de la modale contact:', error);
-});
+})();
 
 function initAddressButtons() {
     console.log('🔧 initAddressButtons (EDIT) - début initialisation');
@@ -367,38 +324,16 @@ function initAddressButtons() {
             console.log('🔍 ClientId trouvé (EDIT):', clientId);
             console.log('🔍 AddressModalService disponible (EDIT):', !!window.AddressModalService);
             
-            if (clientId && window.AddressModalService) {
-                console.log('🔗 Fermeture modale contact et ouverture modale adresse (NEW)');
+            if (clientId && window.MultiModalNavigationService) {
+                console.log('🔗 Navigation Contact → Adresse via service centralisé');
                 
-                // Stocker les informations pour le retour
-                window.lastContactEditEvent = {
+                // Utiliser le service centralisé de navigation
+                MultiModalNavigationService.navigateToAddress({
                     mode: 'edit',
                     contactId: '{{ contact.id }}',
                     clientId: '{{ contact.client.id }}',
-                    fromModal: true // Indique qu'on vient d'une modale contact
-                };
-                console.log('💾 Stockage info contact pour retour (ADD):', window.lastContactEditEvent);
-                
-                // Fermer la modale contact
-                const modal = bootstrap.Modal.getInstance(document.querySelector('.modal'));
-                if (modal) {
-                    console.log('✅ Instance modal trouvée, fermeture...');
-                    modal.hide();
-                } else {
-                    console.log('❌ Aucune instance modal trouvée');
-                }
-                
-                // Attendre que la fermeture soit complète avant d'ouvrir la nouvelle modale
-                setTimeout(() => {
-                    console.log('⏰ Timeout écoulé, création du service adresse...');
-                    try {
-                        const addressService = new AddressModalService({ debug: true });
-                        console.log('✅ Service adresse créé, appel createAddress...');
-                        addressService.createAddress(clientId);
-                    } catch (error) {
-                        console.error('❌ Erreur création service adresse:', error);
-                    }
-                }, 300);
+                    noReturn: true // Flag pour indiquer de ne pas rouvrir après
+                }, 'create', clientId);
             } else {
                 console.log('❌ Conditions non remplies (EDIT):', {
                     clientId: !!clientId,
@@ -703,55 +638,21 @@ function saveContactBeforeAddressModal(addressId) {
 }
 
 function openAddressModalAfterSave(addressId) {
-    console.log('🔗 Fermeture modale contact et ouverture modale adresse (EDIT) pour:', addressId);
-    console.log('🔍 Vérification services disponibles...');
-    console.log('🔍 window.ModalService:', !!window.ModalService);
-    console.log('🔍 window.AddressModalService:', !!window.AddressModalService);
+    console.log('🔗 Navigation Contact → Adresse (EDIT) via service centralisé pour:', addressId);
     
-    // Stocker les informations pour le retour
-    window.lastContactEditEvent = {
-        mode: 'edit',
-        contactId: '{{ contact.id }}',
-        clientId: '{{ contact.client.id }}',
-        fromModal: true // Indique qu'on vient d'une modale contact
-    };
-    console.log('💾 Stockage info contact pour retour:', window.lastContactEditEvent);
-    
-    // Fermer la modale contact
-    const modal = bootstrap.Modal.getInstance(document.querySelector('.modal'));
-    if (modal) {
-        console.log('✅ Instance modal trouvée, fermeture...');
-        modal.hide();
+    // Utiliser le service centralisé de navigation
+    if (window.MultiModalNavigationService) {
+        MultiModalNavigationService.navigateToAddress({
+            mode: 'edit',
+            contactId: '{{ contact.id }}',
+            clientId: '{{ contact.client.id }}',
+            noReturn: true // Flag pour indiquer de ne pas rouvrir après
+        }, 'edit', addressId);
     } else {
-        console.log('❌ Aucune instance modal trouvée');
+        console.error('❌ MultiModalNavigationService non disponible');
+        alert('Erreur: Service de navigation non disponible. Veuillez réessayer.');
+        window.editAddressInProgress = false;
     }
-    
-    // Attendre que la fermeture soit complète avant d'ouvrir la nouvelle modale
-    setTimeout(() => {
-        console.log('⏰ Timeout écoulé, création du service adresse...');
-        console.log('🔍 Vérification finale services...');
-        console.log('🔍 window.ModalService après timeout:', !!window.ModalService);
-        console.log('🔍 window.AddressModalService après timeout:', !!window.AddressModalService);
-        
-        if (!window.AddressModalService) {
-            console.error('❌ AddressModalService non disponible après timeout');
-            alert('Erreur: Service d\'adresse non disponible. Veuillez réessayer.');
-            return;
-        }
-        
-        try {
-            console.log('🏗️ Création du service AddressModalService...');
-            const addressService = new AddressModalService({ debug: true });
-            console.log('✅ Service adresse créé avec succès');
-            console.log('📞 Appel editAddress avec addressId:', addressId);
-            const result = addressService.editAddress(addressId);
-            console.log('📞 Résultat editAddress:', result);
-        } catch (error) {
-            console.error('❌ Erreur création/utilisation service adresse:', error);
-            console.error('❌ Stack trace:', error.stack);
-            alert('Erreur lors de l\'ouverture de la modale d\'adresse: ' + error.message);
-        }
-    }, 500); // Augmenté à 500ms pour laisser plus de temps
 }
 
 function submitContactForm() {

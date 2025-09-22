@@ -256,11 +256,12 @@
 
                 <!-- Section 2: Client/Prospect -->
                 <!-- Section Client / Prospect -->
-                {% include 'devis/partials/client_selector_v2.html.twig' with {
+                {% include 'devis/partials/client_new_selector.html.twig' with {
                     'prospects': prospects,
-                    'show_header': true,
-                    'mode': 'create'
+                    'show_header': true
                 } %}
+
+                <!-- Section Contacts et Adresses maintenant intégrée dans client_new_selector.html.twig -->
 
                 <!-- Menu projets existants (apparaît après sélection client) -->
                 <div id="projects-selection" class="projects-dropdown" style="display: none; margin-top: 1rem;">
@@ -530,8 +531,22 @@
     <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/js/select2.min.js"></script>
     <script src="/js/services/PostalAutocompleteService.js"></script>
+    <script src="/js/services/DebugLogger.js"></script>
+    <script src="/js/services/ModalService.js"></script>
+    <script src="/js/services/DevisContactService.js"></script>
     <script>
     document.addEventListener('DOMContentLoaded', function() {
+        // Initialiser le DevisContactService
+        console.log('🚀 Initialisation du DevisContactService...');
+        try {
+            window.devisContactService = new DevisContactService({
+                debug: true
+            });
+            console.log('✅ DevisContactService initialisé avec succès');
+        } catch (error) {
+            console.error('❌ Erreur initialisation DevisContactService:', error);
+        }
+        
         // Initialiser l'autocomplétion des adresses au chargement de la page
         setupAddressAutocomplete();
         
@@ -625,14 +640,14 @@
         });
 
         // Initialisation Select2 avec auto-focus (méthode simplifiée)
-        $('#prospect').select2AutoFocus({
+        $('#client_selector').select2AutoFocus({
             theme: 'bootstrap-5',
-            placeholder: 'Choisir un client/prospect...',
+            placeholder: 'Choisir un client...',
             allowClear: true
         });
         
         // Corriger l'autocomplétion après TAB - ouvrir automatiquement le dropdown
-        $('#prospect').on('select2:focus', function(e) {
+        $('#client_selector').on('select2:focus', function(e) {
             $(this).select2('open');
         });
         
@@ -640,26 +655,28 @@
         $('#delai_livraison').on('keydown', function(e) {
             if (e.key === 'Tab' && !e.shiftKey) {
                 setTimeout(function() {
-                    $('#prospect').select2('open');
+                    $('#client_selector').select2('open');
                 }, 100);
             }
         });
 
-        $('#contact_defaut').select2AutoFocus({
-            theme: 'bootstrap-5',
-            placeholder: 'Sélectionner un contact...'
-        });
+        // Contact défaut : select simple (pas Select2 - uniformisation avec /edit)
+        // $('#contact_defaut').select2AutoFocus({
+        //     theme: 'bootstrap-5',
+        //     placeholder: 'Sélectionner un contact...'
+        // });
 
         $('#projet_existant').select2AutoFocus({
             theme: 'bootstrap-5',
             placeholder: 'Sélectionner un projet...'
         });
 
-        $('#contact_facturation').select2AutoFocus({
-            theme: 'bootstrap-5',
-            placeholder: 'Choisir un contact...',
-            allowClear: true
-        });
+        // Contact facturation : select simple (pas Select2 - uniformisation avec /edit)
+        // $('#contact_facturation').select2AutoFocus({
+        //     theme: 'bootstrap-5',
+        //     placeholder: 'Choisir un contact...',
+        //     allowClear: true
+        // });
 
         // Fonction pour filtrer les contacts et adresses selon le client sélectionné
         function filterContactsAndAddresses(clientId) {
@@ -706,10 +723,10 @@
         }
 
 
-        // Gestion de la sélection de prospect
-        $('#prospect').on('change', function() {
+        // Gestion de la sélection de client
+        $('#client_selector').on('change', function() {
             const selectedOption = $(this).find('option:selected');
-            const prospectName = selectedOption.text();
+            const clientName = selectedOption.text();
             const contacts = selectedOption.data('contacts') || [];
             const projects = selectedOption.data('projects') || [];
             const defaultFacturationId = selectedOption.data('default-facturation');
@@ -719,7 +736,7 @@
             currentContacts = contacts;
 
             // Mise à jour du résumé
-            $('#summary-client').text(prospectName || 'Non sélectionné');
+            $('#summary-client').text(clientName || 'Non sélectionné');
             
             // Gestion des contacts - Contact en charge du projet
             const contactSelect = $('#contact_defaut');
@@ -1124,9 +1141,9 @@
         // Fonction pour réinitialiser à l'adresse originale (supprimée car plus de bouton)
 
 
-        // Cette mise à jour est maintenant gérée dans le handler principal du prospect
-        // Réinitialiser les adresses quand le prospect change
-        $('#prospect').on('change', function() {
+        // Cette mise à jour est maintenant gérée dans le handler principal du client
+        // Réinitialiser les adresses quand le client change
+        $('#client_selector').on('change', function() {
             // Réinitialiser les adresses
             originalAddresses = {};
             $('#adresse-contact-projet, #adresse-contact-facturation').hide();

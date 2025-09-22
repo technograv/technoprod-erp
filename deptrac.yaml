@@ -1,0 +1,150 @@
+# Configuration Deptrac pour TechnoProd
+# Analyse des dépendances architecturales et validation des règles métier
+
+deptrac:
+  paths:
+    - src
+  exclude_files:
+    - '#src/Kernel\.php#'
+    
+  layers:
+    # Couche Entity - Modèle de données
+    - name: Entity
+      collectors:
+        - type: className
+          regex: ^App\\Entity\\.*
+
+    # Couche Repository - Accès aux données  
+    - name: Repository
+      collectors:
+        - type: className
+          regex: ^App\\Repository\\.*
+
+    # Couche Service - Logique métier
+    - name: Service
+      collectors:
+        - type: className
+          regex: ^App\\Service\\.*
+
+    # Couche Controller Web - Interface utilisateur
+    - name: Controller
+      collectors:
+        - type: className
+          regex: ^App\\Controller\\.*
+        - type: className
+          regex: ^App\\Controller\\Api\\.*
+
+    # Couche Admin - Administration système
+    - name: Admin
+      collectors:
+        - type: className
+          regex: ^App\\Controller\\Admin\\.*
+        - type: className
+          regex: ^App\\Service\\Admin\\.*
+
+    # Couche Form - Formulaires Symfony
+    - name: Form
+      collectors:
+        - type: className
+          regex: ^App\\Form\\.*
+
+    # Couche Security - Sécurité et authentification
+    - name: Security
+      collectors:
+        - type: className
+          regex: ^App\\Security\\.*
+
+    # Couche EventListener - Écouteurs d'événements
+    - name: EventListener
+      collectors:
+        - type: className
+          regex: ^App\\EventListener\\.*
+
+    # Couche Command - Commandes CLI
+    - name: Command
+      collectors:
+        - type: className
+          regex: ^App\\Command\\.*
+
+    # Couche Twig - Extensions Twig
+    - name: Twig
+      collectors:
+        - type: className
+          regex: ^App\\Twig\\.*
+
+  ruleset:
+    # Les Controllers peuvent utiliser les Services, Forms et Entities
+    Controller:
+      - Service
+      - Form
+      - Entity
+      - Security
+      - Repository
+
+    # Les Controllers Admin peuvent utiliser tout sauf les controllers web
+    Admin:
+      - Service
+      - Form
+      - Entity
+      - Security
+      - Repository
+
+    # Les Services peuvent utiliser les Repositories et Entities
+    Service:
+      - Repository
+      - Entity
+      - EventListener
+
+    # Les Repositories ne peuvent utiliser que les Entities
+    Repository:
+      - Entity
+
+    # Les Forms peuvent utiliser les Entities
+    Form:
+      - Entity
+
+    # Les EventListeners peuvent utiliser les Services et Entities
+    EventListener:
+      - Service
+      - Entity
+      - Repository
+
+    # Les Commands peuvent utiliser tout (utilitaires système)
+    Command:
+      - Service
+      - Repository
+      - Entity
+      - Form
+
+    # Les Extensions Twig peuvent utiliser les Services
+    Twig:
+      - Service
+      - Entity
+
+  formatters:
+    # Génération d'un graphique DOT
+    graphviz:
+      groups:
+        Entity:
+          fillcolor: lightyellow
+          style: filled
+        Repository:
+          fillcolor: lightpink
+          style: filled
+        Service:
+          fillcolor: lightgreen
+          style: filled
+        Controller:
+          fillcolor: lightblue
+          style: filled
+        Admin:
+          fillcolor: lightcyan
+          style: filled
+        Form:
+          fillcolor: lavender
+          style: filled
+        Security:
+          fillcolor: lightcoral
+          style: filled
+
+  skip_violations: []

@@ -1,6 +1,6 @@
 {#
-    Template réutilisable pour la gestion Client/Prospect en mode édition v2
-    Utilise le service JavaScript ClientProspectService unifié
+    Template réutilisable pour la gestion Client en mode édition v2
+    Utilise le service JavaScript DevisContactService unifié
     
     Variables attendues :
     - form : Le formulaire Symfony
@@ -19,7 +19,7 @@
         <!-- Client / Prospect et Commercial en premier -->
         <div class="row mb-3">
             <div class="col-md-6">
-                <label for="devis_client" class="form-label">Client / Prospect</label>
+                <label for="devis_client" class="form-label">Client</label>
                 <div class="d-flex align-items-center gap-2">
                     {{ form_widget(form.client, {
                         'attr': {'class': 'form-control form-select client-select', 'style': 'flex-grow: 1;', 'tabindex': '5'}
@@ -59,11 +59,16 @@
                         }) }}
                         
                         <!-- Boutons d'action contact livraison -->
-                        <button type="button" class="btn btn-success btn-sm" id="add-contact-btn" 
+                        <button type="button" class="btn btn-success btn-sm" 
+                                data-action="create-contact" 
+                                data-target="livraison"
+                                data-client-id="{{ devis.client ? devis.client.id : '' }}"
                                 title="Ajouter un nouveau contact">
                             <i class="fas fa-plus"></i>
                         </button>
-                        <button type="button" class="btn btn-primary btn-sm" id="edit-contact-livraison-btn" 
+                        <button type="button" class="btn btn-primary btn-sm" 
+                                data-action="edit-contact"
+                                data-target="livraison"
                                 title="Modifier le contact sélectionné" 
                                 style="{{ devis.contactLivraison ? '' : 'display: none;' }}">
                             <i class="fas fa-edit"></i>
@@ -81,11 +86,16 @@
                         </select>
                         
                         <!-- Boutons d'action adresse livraison -->
-                        <button type="button" class="btn btn-success btn-sm" id="add-address-livraison-btn" 
+                        <button type="button" class="btn btn-success btn-sm" 
+                                data-action="create-address" 
+                                data-target="livraison"
+                                data-client-id="{{ devis.client ? devis.client.id : '' }}"
                                 title="Ajouter une nouvelle adresse">
                             <i class="fas fa-plus"></i>
                         </button>
-                        <button type="button" class="btn btn-primary btn-sm" id="edit-address-livraison-btn" 
+                        <button type="button" class="btn btn-primary btn-sm" 
+                                data-action="edit-address"
+                                data-target="livraison"
                                 title="Modifier l'adresse sélectionnée" style="display: none;">
                             <i class="fas fa-edit"></i>
                         </button>
@@ -137,11 +147,16 @@
                         }) }}
                         
                         <!-- Boutons d'action contact facturation -->
-                        <button type="button" class="btn btn-success btn-sm" id="add-contact-facturation-btn" 
+                        <button type="button" class="btn btn-success btn-sm" 
+                                data-action="create-contact" 
+                                data-target="facturation"
+                                data-client-id="{{ devis.client ? devis.client.id : '' }}"
                                 title="Ajouter un nouveau contact">
                             <i class="fas fa-plus"></i>
                         </button>
-                        <button type="button" class="btn btn-primary btn-sm" id="edit-contact-facturation-btn" 
+                        <button type="button" class="btn btn-primary btn-sm" 
+                                data-action="edit-contact"
+                                data-target="facturation"
                                 title="Modifier le contact sélectionné"
                                 style="{{ devis.contactFacturation ? '' : 'display: none;' }}">
                             <i class="fas fa-edit"></i>
@@ -159,11 +174,16 @@
                         </select>
                         
                         <!-- Boutons d'action adresse facturation -->
-                        <button type="button" class="btn btn-success btn-sm" id="add-address-facturation-btn" 
+                        <button type="button" class="btn btn-success btn-sm" 
+                                data-action="create-address" 
+                                data-target="facturation"
+                                data-client-id="{{ devis.client ? devis.client.id : '' }}"
                                 title="Ajouter une nouvelle adresse">
                             <i class="fas fa-plus"></i>
                         </button>
-                        <button type="button" class="btn btn-primary btn-sm" id="edit-address-facturation-btn" 
+                        <button type="button" class="btn btn-primary btn-sm" 
+                                data-action="edit-address"
+                                data-target="facturation"
                                 title="Modifier l'adresse sélectionnée" style="display: none;">
                             <i class="fas fa-edit"></i>
                         </button>
@@ -234,6 +254,9 @@
 
 <!-- Les services JavaScript sont inclus dans le template principal -->
 
+<!-- Système de debug -->
+<!-- Scripts inclus dans le template principal edit.html.twig -->
+
 <script>
 // Initialisation du service ClientProspectService pour l'édition
 (function() {
@@ -242,56 +265,38 @@
     let clientService = null;
     
     function initClientProspectServiceEdit() {
-        // Configuration du service pour le mode édition
-        const config = {
-            debug: true,
-            mode: 'edit',
-            disableModalButtons: true, // IMPORTANT: Ne pas gérer les boutons de modales
-            selectors: {
-                clientSelect: '#devis_client',  // ID Symfony correct pour le champ client
-                contactLivraisonSelect: '#devis_contactLivraison',  // Vrais IDs Symfony 
-                contactFacturationSelect: '#devis_contactFacturation', // Vrais IDs Symfony
-                adresseLivraisonSelect: '#adresse_livraison_select',
-                adresseFacturationSelect: '#adresse_facturation_select',
-                contactSelection: '#contact-selection',
-                editClientBtn: '#edit-client-btn',
-                editContactLivraisonBtn: '#edit-contact-livraison-btn',
-                editContactFacturationBtn: '#edit-contact-facturation-btn',
-                editAddressLivraisonBtn: '#edit-address-livraison-btn',
-                editAddressFacturationBtn: '#edit-address-facturation-btn'
-            }
+        console.log('🚀 Initialisation DevisContactService pour /devis/edit');
+        
+        // Créer un logger global pour debug rapide
+        window.globalDebugLogger = new DebugLogger('GLOBAL-EDIT', true);
+        window.globalDebugLogger.critical('🔴 PAGE /devis/edit CHARGÉE - DEBUG ACTIVÉ');
+        
+        // Debug des éléments DOM
+        window.globalDebugLogger.warn('📍 ÉLÉMENTS DOM DISPONIBLES:');
+        window.globalDebugLogger.info('devis_client:', document.getElementById('devis_client'));
+        window.globalDebugLogger.info('devis_contactLivraison:', document.getElementById('devis_contactLivraison'));
+        window.globalDebugLogger.info('devis_contactFacturation:', document.getElementById('devis_contactFacturation'));
+        
+        // Créer le vrai DevisContactService
+        window.devisContactService = new DevisContactService({
+            debug: true
+        });
+        
+        // Créer un service de compatibilité pour les anciennes références
+        window.clientProspectService = {
+            currentClient: null,
+            currentContacts: [],
+            currentAddresses: [],
+            reloadContactsOnly: () => Promise.resolve(),
+            reloadAddressesOnly: () => Promise.resolve(),
+            populateContacts: () => {},
+            populateAddresses: () => {},
+            handleClientChange: () => {},
+            destroy: () => window.devisContactService?.destroy()
         };
         
-        // Créer et initialiser le service
-        console.log('🔍 [CLIENT_EDIT_SELECTOR] Création de ClientProspectService avec config:', config);
-        clientService = new ClientProspectService(config);
-        
-        // Rendre le service accessible globalement pour les autres services
-        window.clientProspectService = clientService;
-        
-        console.log('🔍 [CLIENT_EDIT_SELECTOR] Appel de clientService.init()...');
-        if (clientService.init()) {
-            console.log('✅ [CLIENT_EDIT_SELECTOR] ClientProspectService initialisé pour l\'édition');
-            
-            // PATCH TEMPORAIRE: Désactiver les boutons de ClientProspectService
-            // car il ne respecte pas le flag disableModalButtons
-            console.log('🛑 [PATCH] Suppression des event listeners ajoutés par ClientProspectService...');
-            const addClientBtn = document.getElementById('add-client-btn');
-            if (addClientBtn) {
-                const newBtn = addClientBtn.cloneNode(true);
-                addClientBtn.parentNode.replaceChild(newBtn, addClientBtn);
-                console.log('🛑 [PATCH] Event listeners du bouton add-client-btn supprimés');
-            }
-            
-            // Initialiser avec le client sélectionné si il y en a un
-            const clientSelect = document.querySelector('#devis_client');
-            if (clientSelect?.value) {
-                console.log('🔄 Initialisation avec client:', clientSelect.value);
-                clientService.handleClientChange(clientSelect.value);
-            }
-        } else {
-            console.error('❌ Échec de l\'initialisation du ClientProspectService');
-        }
+        console.log('✅ DevisContactService v2.0 initialisé pour l\'édition');
+        return true;
     }
     
     function setupAddressToFormSync() {
@@ -356,7 +361,7 @@
             const clientSelect = $('#devis_client');
             if (clientSelect.length && !clientSelect.hasClass('select2-hidden-accessible')) {
                 clientSelect.select2({
-                    placeholder: 'Choisir un client/prospect...',
+                    placeholder: 'Choisir un client...',
                     allowClear: true,
                     language: 'fr',
                     width: '100%',

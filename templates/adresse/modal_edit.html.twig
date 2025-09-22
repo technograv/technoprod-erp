@@ -223,10 +223,24 @@ function submitAddressForm() {
             window.addressEditSuccess = true;
             
             // Fermeture normale de la modale adresse
-            const modal = bootstrap.Modal.getInstance(document.querySelector('.modal'));
-            if (modal) {
-                console.log('🔒 Fermeture modale adresse après validation réussie (EDIT)');
-                modal.hide();
+            // Chercher spécifiquement la modale adresse visible
+            const visibleModal = document.querySelector('.modal.show');
+            if (visibleModal) {
+                const modal = bootstrap.Modal.getInstance(visibleModal);
+                if (modal) {
+                    console.log('🔒 Fermeture modale adresse après validation réussie (EDIT)');
+                    modal.hide();
+                } else {
+                    // Fallback : fermeture manuelle
+                    console.log('⚠️ Instance Bootstrap non trouvée, fermeture manuelle');
+                    visibleModal.classList.remove('show');
+                    visibleModal.style.display = 'none';
+                    document.body.classList.remove('modal-open');
+                    // Supprimer les backdrops
+                    document.querySelectorAll('.modal-backdrop').forEach(b => b.remove());
+                }
+            } else {
+                console.error('❌ Aucune modale visible trouvée pour fermeture');
             }
         } else {
             alert(data.message || 'Erreur lors de la modification de l\'adresse');

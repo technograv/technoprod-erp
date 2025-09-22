@@ -1,0 +1,215 @@
+{% extends 'base.html.twig' %}
+
+{% block title %}Test Debug Devis{% endblock %}
+
+{% block body %}
+<div class="container mt-5">
+    <h1 class="text-danger">🔴 PAGE DE TEST DEBUG - DEVIS CONTACTS</h1>
+    
+    <div class="alert alert-warning">
+        <h4>Instructions de Debug:</h4>
+        <ol>
+            <li>Ouvrez la console du navigateur (F12)</li>
+            <li>Cliquez sur le bouton "🐛 Debug" en bas à droite</li>
+            <li>Testez la sélection d'un client</li>
+            <li>Observez les logs dans le panneau de debug</li>
+        </ol>
+    </div>
+    
+    <div class="row">
+        <div class="col-md-8">
+            <div class="card">
+                <div class="card-body">
+                    <h3>Test Sélecteur Client</h3>
+                    
+                    <!-- Test mode CREATE -->
+                    <div class="mb-4">
+                        <h5>Mode CREATE (#client_selector)</h5>
+                        <select id="client_selector" class="form-select">
+                            <option value="">-- Sélectionner un client --</option>
+                            {% for client in clients %}
+                                <option value="{{ client.id }}">{{ client.nom }}</option>
+                            {% endfor %}
+                        </select>
+                    </div>
+                    
+                    <!-- Test mode EDIT -->
+                    <div class="mb-4">
+                        <h5>Mode EDIT (#devis_client)</h5>
+                        <select id="devis_client" class="form-select">
+                            <option value="">-- Sélectionner un client --</option>
+                            {% for client in clients %}
+                                <option value="{{ client.id }}">{{ client.nom }}</option>
+                            {% endfor %}
+                        </select>
+                    </div>
+                    
+                    <!-- Sélecteurs de contacts -->
+                    <div class="row">
+                        <div class="col-md-6">
+                            <h5>Contact Livraison</h5>
+                            <select id="contact_defaut" class="form-select">
+                                <option value="">-- Vide --</option>
+                            </select>
+                        </div>
+                        <div class="col-md-6">
+                            <h5>Contact Facturation</h5>
+                            <select id="contact_facturation" class="form-select">
+                                <option value="">-- Vide --</option>
+                            </select>
+                        </div>
+                    </div>
+                    
+                    <!-- Sélecteurs d'adresses -->
+                    <div class="row mt-3">
+                        <div class="col-md-6">
+                            <h5>Adresse Livraison</h5>
+                            <select id="adresse_livraison_select" class="form-select">
+                                <option value="">-- Vide --</option>
+                            </select>
+                        </div>
+                        <div class="col-md-6">
+                            <h5>Adresse Facturation</h5>
+                            <select id="adresse_facturation_select" class="form-select">
+                                <option value="">-- Vide --</option>
+                            </select>
+                        </div>
+                    </div>
+                    
+                    <!-- Email -->
+                    <div class="mt-3">
+                        <h5>Email auto</h5>
+                        <input type="email" id="email_envoi_automatique" class="form-control" placeholder="email@example.com">
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        <div class="col-md-4">
+            <div class="card bg-dark text-white">
+                <div class="card-body">
+                    <h5>Actions de test</h5>
+                    <button class="btn btn-primary btn-sm mb-2" onclick="testAPI(57)">Test API Client 57</button><br>
+                    <button class="btn btn-warning btn-sm mb-2" onclick="forceReload()">Force Reload</button><br>
+                    <button class="btn btn-danger btn-sm mb-2" onclick="clearAll()">Clear All</button><br>
+                    <button class="btn btn-success btn-sm mb-2" onclick="exportLogs()">Export Logs</button>
+                </div>
+            </div>
+            
+            <div class="card mt-3">
+                <div class="card-body">
+                    <h5>État du service</h5>
+                    <pre id="service-state" style="font-size: 11px;">En attente...</pre>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Scripts de debug -->
+<script src="/js/services/DebugLogger.js"></script>
+<script src="/js/services/ModalService.js"></script>
+<script src="/js/services/DevisContactService.js"></script>
+
+<script>
+// Initialisation immédiate
+console.log('====================================');
+console.log('PAGE DE TEST DEBUG CHARGÉE');
+console.log('====================================');
+
+// Logger global
+window.globalDebugLogger = new DebugLogger('TEST-PAGE', true);
+window.globalDebugLogger.critical('🔴 PAGE TEST DEBUG INITIALISÉE');
+
+// Service DevisContact
+let service = null;
+
+function initService() {
+    window.globalDebugLogger.info('Initialisation du service...');
+    
+    // Test si les sélecteurs existent
+    const selectors = {
+        client_selector: document.getElementById('client_selector'),
+        devis_client: document.getElementById('devis_client'),
+        contact_defaut: document.getElementById('contact_defaut'),
+        contact_facturation: document.getElementById('contact_facturation')
+    };
+    
+    window.globalDebugLogger.info('Sélecteurs trouvés:', {
+        client_selector: !!selectors.client_selector,
+        devis_client: !!selectors.devis_client,
+        contact_defaut: !!selectors.contact_defaut,
+        contact_facturation: !!selectors.contact_facturation
+    });
+    
+    // Créer le service
+    service = new DevisContactService({
+        debug: true
+    });
+    
+    window.devisContactService = service;
+    updateServiceState();
+}
+
+function updateServiceState() {
+    const state = {
+        initialized: service?.isInitialized,
+        currentContext: service?.currentContext,
+        mode: service?.getMode(),
+        clientSelector: service?.getClientSelector()?.id
+    };
+    document.getElementById('service-state').textContent = JSON.stringify(state, null, 2);
+}
+
+// Actions de test
+function testAPI(clientId) {
+    window.globalDebugLogger.warn(`TEST API CLIENT ${clientId}`);
+    
+    fetch(`/client/${clientId}/contacts`)
+        .then(r => {
+            window.globalDebugLogger.info(`API Response: ${r.status}`);
+            return r.json();
+        })
+        .then(data => {
+            window.globalDebugLogger.success('API Data:', data);
+        })
+        .catch(err => {
+            window.globalDebugLogger.error('API Error:', err);
+        });
+}
+
+function forceReload() {
+    const clientId = document.getElementById('client_selector').value || 
+                     document.getElementById('devis_client').value;
+    if (clientId && service) {
+        window.globalDebugLogger.warn(`FORCE RELOAD CLIENT ${clientId}`);
+        service.handleClientChange(clientId);
+    }
+}
+
+function clearAll() {
+    window.globalDebugLogger.warn('CLEAR ALL');
+    if (service) {
+        service.clearContactsAndAddresses();
+    }
+}
+
+function exportLogs() {
+    if (window.debugLoggers) {
+        Object.values(window.debugLoggers).forEach(logger => {
+            logger.export();
+        });
+    }
+}
+
+// Auto-init au chargement
+if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', initService);
+} else {
+    initService();
+}
+
+// Mise à jour périodique de l'état
+setInterval(updateServiceState, 1000);
+</script>
+{% endblock %}

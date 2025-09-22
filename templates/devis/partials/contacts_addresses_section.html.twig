@@ -1,0 +1,146 @@
+{#
+    Section contacts et adresses pour les devis
+    Compatible avec l'ancien JavaScript ET le nouveau DevisContactService
+#}
+
+<!-- Menu contacts (apparaît après sélection client) -->
+<div id="contact-selection" class="contact-dropdown" style="display: none;">
+    <div class="form-section">
+        <div class="form-section-header">
+            <i class="fas fa-users me-2"></i>Contacts et adresses
+        </div>
+        <div class="form-section-body">
+            <div class="row">
+                <!-- Contact de livraison -->
+                <div class="col-md-6">
+                    <label for="contact_defaut" class="form-label">Contact en charge du projet</label>
+                    <div class="d-flex align-items-center gap-2 mb-3">
+                        <select class="form-select contact-select" id="contact_defaut" name="contact_defaut" style="flex-grow: 1;">
+                            <option value="">Choisir un contact...</option>
+                        </select>
+                        
+                        <!-- Boutons d'action contact livraison -->
+                        <button type="button" class="btn btn-success btn-sm" 
+                                data-action="create-contact" 
+                                data-target="livraison"
+                                data-client-id=""
+                                title="Ajouter un nouveau contact">
+                            <i class="fas fa-plus"></i>
+                        </button>
+                        <button type="button" class="btn btn-primary btn-sm" 
+                                data-action="edit-contact"
+                                data-target="livraison"
+                                title="Modifier le contact sélectionné" 
+                                style="display: none;">
+                            <i class="fas fa-edit"></i>
+                        </button>
+                    </div>
+                    
+                    <!-- Menu déroulant des adresses de livraison -->
+                    <label for="adresse_livraison_select" class="form-label">Adresse de livraison</label>
+                    <div class="d-flex align-items-center gap-2">
+                        <select class="form-select" id="adresse_livraison_select" name="adresse_livraison_select" style="flex-grow: 1;">
+                            <option value="">Choisir une adresse...</option>
+                        </select>
+                        
+                        <!-- Boutons d'action adresse livraison -->
+                        <button type="button" class="btn btn-success btn-sm" 
+                                data-action="create-address" 
+                                data-target="livraison"
+                                data-client-id=""
+                                title="Ajouter une nouvelle adresse">
+                            <i class="fas fa-plus"></i>
+                        </button>
+                        <button type="button" class="btn btn-primary btn-sm" 
+                                data-action="edit-address"
+                                data-target="livraison"
+                                title="Modifier l'adresse sélectionnée" style="display: none;">
+                            <i class="fas fa-edit"></i>
+                        </button>
+                    </div>
+                    
+                    <!-- Affichage de l'adresse sélectionnée pour livraison -->
+                    <div id="projet-address-display" class="address-display mt-3" style="display: none;">
+                        <div class="current-address">
+                            <strong>Adresse sélectionnée :</strong><br>
+                            <span id="projet-address-text"></span>
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- Contact de facturation -->
+                <div class="col-md-6">
+                    <label for="contact_facturation" class="form-label">Contact de facturation</label>
+                    <div class="d-flex align-items-center gap-2 mb-3">
+                        <select class="form-select contact-select" id="contact_facturation" name="contact_facturation" style="flex-grow: 1;">
+                            <option value="">Choisir un contact...</option>
+                        </select>
+                        
+                        <!-- Boutons d'action contact facturation -->
+                        <button type="button" class="btn btn-success btn-sm" 
+                                data-action="create-contact" 
+                                data-target="facturation"
+                                data-client-id=""
+                                title="Ajouter un nouveau contact de facturation">
+                            <i class="fas fa-plus"></i>
+                        </button>
+                        <button type="button" class="btn btn-primary btn-sm" 
+                                data-action="edit-contact"
+                                data-target="facturation"
+                                title="Modifier le contact sélectionné"
+                                style="display: none;">
+                            <i class="fas fa-edit"></i>
+                        </button>
+                    </div>
+                    
+                    <!-- Menu déroulant des adresses de facturation -->
+                    <label for="adresse_facturation_select" class="form-label">Adresse de facturation</label>
+                    <div class="d-flex align-items-center gap-2">
+                        <select class="form-select" id="adresse_facturation_select" name="adresse_facturation_select" style="flex-grow: 1;">
+                            <option value="">Choisir une adresse...</option>
+                        </select>
+                        
+                        <!-- Boutons d'action adresse facturation -->
+                        <button type="button" class="btn btn-success btn-sm" 
+                                data-action="create-address" 
+                                data-target="facturation"
+                                data-client-id=""
+                                title="Ajouter une nouvelle adresse">
+                            <i class="fas fa-plus"></i>
+                        </button>
+                        <button type="button" class="btn btn-primary btn-sm" 
+                                data-action="edit-address"
+                                data-target="facturation"
+                                title="Modifier l'adresse sélectionnée" style="display: none;">
+                            <i class="fas fa-edit"></i>
+                        </button>
+                    </div>
+                    
+                    <!-- Affichage de l'adresse sélectionnée pour facturation -->
+                    <div id="facturation-address-display" class="address-display mt-3" style="display: none;">
+                        <div class="current-address">
+                            <strong>Adresse sélectionnée :</strong><br>
+                            <span id="facturation-address-text"></span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- Email d'envoi automatique -->
+            <div class="row mt-3">
+                <div class="col-md-12">
+                    <div class="mb-3">
+                        <label for="email_envoi_automatique" class="form-label">Email d'envoi automatique</label>
+                        <input type="email" class="form-control" id="email_envoi_automatique" name="email_envoi_automatique" 
+                               placeholder="email@example.com">
+                        <small class="text-muted">
+                            <i class="fas fa-paper-plane me-1"></i>Ce devis sera envoyé automatiquement à cette adresse
+                        </small>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Section contacts et adresses - Template propre sans debug -->

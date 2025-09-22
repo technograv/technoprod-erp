@@ -88,7 +88,7 @@ class ClientModalService {
         
         const url = `/client/modal/new`;
         this.log('🔧 Ouverture modale création client de type:', type);
-        this.modalService.openModal(url, 'Ajouter un ' + (type === 'prospect' ? 'prospect' : 'client'));
+        this.modalService.openModal(url, 'Ajouter un client');
     }
     
     /**
