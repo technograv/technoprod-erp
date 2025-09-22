@@ -977,25 +977,113 @@ class DevisContactService {
     /**
      * Gère le retour de création d'adresse
      */
-    handleAddressCreated(detail) {
+    async handleAddressCreated(detail) {
         const address = detail.adresse;
         this.log('✅ Adresse créée', address);
         
-        // Fermer la modale et recharger les données
-        this.closeModal('address-modal');
-        this.reloadAddressesForClient(this.getClientId());
+        try {
+            // Fermer la modale
+            this.closeModal('address-modal');
+            
+            // Bloquer temporairement les autres services
+            this.blockConflictingServices();
+            
+            // Recharger les adresses pour avoir la nouvelle dans la liste
+            const clientId = this.getClientId();
+            if (clientId) {
+                this.logger.info('🔄 Rechargement des adresses après création...');
+                await this.reloadAddressesForClient(clientId);
+                
+                // Attendre un peu pour que le DOM se mette à jour
+                await new Promise(resolve => setTimeout(resolve, 100));
+            }
+            
+            // Sélectionner automatiquement la nouvelle adresse dans le bon contexte
+            if (this.currentContext && address.id) {
+                this.logger.info(`🎯 Sélection automatique de la nouvelle adresse ${address.id} dans ${this.currentContext}`);
+                
+                const addressSelector = this.getAddressSelector(this.currentContext);
+                if (addressSelector) {
+                    // Vérifier que l'option existe dans le sélecteur
+                    const optionExists = Array.from(addressSelector.options).some(opt => opt.value == address.id);
+                    
+                    if (optionExists) {
+                        addressSelector.value = address.id;
+                        addressSelector.dispatchEvent(new Event('change'));
+                        this.logger.success(`✅ Nouvelle adresse ${address.id} sélectionnée automatiquement dans ${this.currentContext}`);
+                    } else {
+                        this.logger.error(`❌ Nouvelle adresse ${address.id} non trouvée dans les options après rechargement`);
+                    }
+                } else {
+                    this.logger.error(`❌ Sélecteur d'adresse ${this.currentContext} non trouvé`);
+                }
+            } else {
+                this.logger.warn('⚠️ Pas de contexte défini ou adresse sans ID - pas de sélection automatique');
+            }
+            
+        } catch (error) {
+            this.error('Erreur lors du traitement de création adresse', error);
+        } finally {
+            // Nettoyer le contexte et restaurer les services
+            this.currentContext = null;
+            setTimeout(() => this.unblockConflictingServices(), 2000);
+        }
     }
     
     /**
      * Gère le retour de modification d'adresse
      */
-    handleAddressUpdated(detail) {
+    async handleAddressUpdated(detail) {
         const address = detail.adresse;
         this.log('✅ Adresse modifiée', address);
         
-        // Fermer la modale et recharger les données
-        this.closeModal('address-modal');
-        this.reloadAddressesForClient(this.getClientId());
+        try {
+            // Fermer la modale
+            this.closeModal('address-modal');
+            
+            // Bloquer temporairement les autres services
+            this.blockConflictingServices();
+            
+            // Recharger les adresses pour avoir les données mises à jour
+            const clientId = this.getClientId();
+            if (clientId) {
+                this.logger.info('🔄 Rechargement des adresses après modification...');
+                await this.reloadAddressesForClient(clientId);
+                
+                // Attendre un peu pour que le DOM se mette à jour
+                await new Promise(resolve => setTimeout(resolve, 100));
+            }
+            
+            // Garder l'adresse modifiée sélectionnée dans le bon contexte
+            if (this.currentContext && address.id) {
+                this.logger.info(`🎯 Maintien de la sélection de l'adresse modifiée ${address.id} dans ${this.currentContext}`);
+                
+                const addressSelector = this.getAddressSelector(this.currentContext);
+                if (addressSelector) {
+                    // Vérifier que l'option existe dans le sélecteur
+                    const optionExists = Array.from(addressSelector.options).some(opt => opt.value == address.id);
+                    
+                    if (optionExists) {
+                        addressSelector.value = address.id;
+                        addressSelector.dispatchEvent(new Event('change'));
+                        this.logger.success(`✅ Adresse modifiée ${address.id} maintenue sélectionnée dans ${this.currentContext}`);
+                    } else {
+                        this.logger.error(`❌ Adresse modifiée ${address.id} non trouvée dans les options après rechargement`);
+                    }
+                } else {
+                    this.logger.error(`❌ Sélecteur d'adresse ${this.currentContext} non trouvé`);
+                }
+            } else {
+                this.logger.warn('⚠️ Pas de contexte défini ou adresse sans ID - pas de maintien de sélection');
+            }
+            
+        } catch (error) {
+            this.error('Erreur lors du traitement de modification adresse', error);
+        } finally {
+            // Nettoyer le contexte et restaurer les services
+            this.currentContext = null;
+            setTimeout(() => this.unblockConflictingServices(), 2000);
+        }
     }
     
     // =====================================
@@ -1318,6 +1406,10 @@ class DevisContactService {
      * Ouvre une modale d'adresse
      */
     openAddressModal(mode, id, target) {
+        // Stocker le contexte pour la synchronisation après création/modification
+        this.currentContext = target;
+        this.logger.info(`🎯 Context défini: ${target} pour ${mode} adresse ${id}`);
+        
         const url = mode === 'create' 
             ? `/adresse/modal/new/${id}`
             : `/adresse/modal/edit/${id}`;
