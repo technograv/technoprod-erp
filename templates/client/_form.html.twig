@@ -54,29 +54,11 @@
                     {{ form_errors(form.modePaiement) }}
                 </div>
                 
-                <div class="row">
-                    <div class="col-md-6">
-                        <div class="mb-3">
-                            {{ form_label(form.delaiPaiement, null, {'label_attr': {'class': 'form-label'}}) }}
-                            {{ form_widget(form.delaiPaiement, {'attr': {'class': 'form-control'}}) }}
-                            {{ form_errors(form.delaiPaiement) }}
-                        </div>
-                    </div>
-                    <div class="col-md-6">
-                        <div class="mb-3">
-                            {{ form_label(form.tauxTva, null, {'label_attr': {'class': 'form-label'}}) }}
-                            {{ form_widget(form.tauxTva, {'attr': {'class': 'form-control'}}) }}
-                            {{ form_errors(form.tauxTva) }}
-                        </div>
-                    </div>
-                </div>
-                
                 <div class="mb-3">
-                    <div class="form-check">
-                        {{ form_widget(form.assujettiTva, {'attr': {'class': 'form-check-input'}}) }}
-                        {{ form_label(form.assujettiTva, null, {'label_attr': {'class': 'form-check-label'}}) }}
-                    </div>
-                    {{ form_errors(form.assujettiTva) }}
+                    {{ form_label(form.modeReglement, null, {'label_attr': {'class': 'form-label'}}) }}
+                    {{ form_widget(form.modeReglement, {'attr': {'class': 'form-select'}}) }}
+                    {{ form_errors(form.modeReglement) }}
+                    <div class="form-text">{{ form.modeReglement.vars.help }}</div>
                 </div>
                 
                 <div class="mb-3">

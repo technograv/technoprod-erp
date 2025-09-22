@@ -292,7 +292,17 @@ class ModalService {
         if (window.$ && typeof $.fn.select2 !== 'undefined') {
             $(container).find('select.form-select').each(function() {
                 if (!$(this).hasClass('select2-hidden-accessible')) {
-                    $(this).select2();
+                    // Configuration Select2 pour modales Bootstrap
+                    $(this).select2({
+                        dropdownParent: $(this).closest('.modal'),
+                        width: '100%',
+                        theme: 'bootstrap-5',
+                        // Fixes spécifiques pour Firefox
+                        dropdownAutoWidth: false,
+                        escapeMarkup: function (markup) { 
+                            return markup; 
+                        }
+                    });
                 }
             });
         }

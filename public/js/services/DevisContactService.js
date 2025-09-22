@@ -817,13 +817,40 @@ class DevisContactService {
             // Bloquer temporairement les autres services
             this.blockConflictingServices();
             
-            // Sélection chirurgicale dans le bon champ uniquement
-            if (this.currentContext) {
-                await this.selectContactInField(this.currentContext, contact.id);
+            // IMPORTANT: Recharger les contacts AVANT de sélectionner le nouveau
+            const clientId = this.getClientId();
+            if (clientId) {
+                this.logger.info('🔄 Rechargement des contacts après création...');
+                await this.reloadContactsForClient(clientId);
                 
-                // Synchroniser l'email si contact de livraison
-                if (this.currentContext === 'livraison' && contact.email) {
-                    this.syncEmail(contact.email);
+                // Attendre un peu pour que le DOM se mette à jour
+                await new Promise(resolve => setTimeout(resolve, 100));
+            }
+            
+            // Sélection du nouveau contact créé
+            if (this.currentContext) {
+                this.logger.info(`🎯 Sélection du nouveau contact ${contact.id} dans ${this.currentContext}`);
+                
+                // Sélectionner le contact dans le dropdown approprié
+                const selector = this.getContactSelector(this.currentContext);
+                if (selector) {
+                    // Vérifier que l'option existe maintenant
+                    const optionExists = Array.from(selector.options).some(opt => opt.value == contact.id);
+                    
+                    if (optionExists) {
+                        selector.value = contact.id;
+                        selector.dispatchEvent(new Event('change'));
+                        this.logger.success(`✅ Contact ${contact.id} sélectionné dans ${this.currentContext}`);
+                        
+                        // Synchroniser l'email si contact de livraison
+                        if (this.currentContext === 'livraison' && contact.email) {
+                            this.syncContactEmail(contact);
+                        }
+                    } else {
+                        this.logger.error(`❌ Option ${contact.id} non trouvée dans le sélecteur après rechargement`);
+                    }
+                } else {
+                    this.logger.error(`❌ Sélecteur ${this.currentContext} non trouvé`);
                 }
             }
             
@@ -839,13 +866,112 @@ class DevisContactService {
     /**
      * Gère le retour de modification de contact
      */
-    handleContactUpdated(detail) {
+    async handleContactUpdated(detail) {
         const contact = detail.contact;
         this.log('✅ Contact modifié', contact);
         
-        // Fermer la modale et recharger les données
-        this.closeModal('contact-modal');
-        this.reloadContactsForClient(this.getClientId());
+        try {
+            // Fermer la modale
+            this.closeModal('contact-modal');
+            
+            // Bloquer temporairement les autres services
+            this.blockConflictingServices();
+            
+            // Recharger BOTH contacts ET adresses car l'adresse du contact peut avoir changé
+            const clientId = this.getClientId();
+            if (clientId) {
+                this.logger.info('🔄 Rechargement des contacts et adresses après modification...');
+                await Promise.all([
+                    this.reloadContactsForClient(clientId),
+                    this.reloadAddressesForClient(clientId)
+                ]);
+                
+                // Attendre un peu pour que le DOM se mette à jour
+                await new Promise(resolve => setTimeout(resolve, 100));
+            }
+            
+            // IMPORTANT: Mettre à jour les données de contact avec les données fraîches
+            if (this.currentContacts && contact) {
+                const contactIndex = this.currentContacts.findIndex(c => c.id == contact.id);
+                if (contactIndex !== -1) {
+                    this.currentContacts[contactIndex] = contact;
+                    this.logger.info('✅ Données contact mises à jour avec les données fraîches');
+                } else {
+                    this.logger.info('ℹ️ Contact non trouvé dans currentContacts - sera ajouté lors du rechargement');
+                }
+            }
+            
+            // Synchroniser le contact modifié s'il correspond au contexte
+            if (this.currentContext) {
+                this.logger.info(`🎯 Synchronisation du contact modifié ${contact.id} pour ${this.currentContext}`);
+                
+                const selector = this.getContactSelector(this.currentContext);
+                
+                // Cas 1: Le contact était déjà sélectionné - re-synchroniser
+                if (selector && selector.value == contact.id) {
+                    this.logger.info('🔄 Contact déjà sélectionné - re-synchronisation...');
+                    
+                    // Utiliser la même logique que handleContactChange pour cohérence
+                    // Synchroniser l'email UNIQUEMENT pour le contact de livraison
+                    if (this.currentContext === 'livraison' && contact.email) {
+                        this.logger.info('📧 Synchronisation forcée de l\'email modifié');
+                        this.syncContactEmail(contact);
+                    } else {
+                        this.logger.info('📧 Email non synchronisé (contact facturation - règle métier)');
+                    }
+                    
+                    // Synchroniser l'adresse pour TOUS les types de contact (livraison ET facturation)
+                    if (contact.adresse_id) {
+                        this.logger.info(`📍 Synchronisation forcée de la nouvelle adresse ${contact.adresse_id} pour ${this.currentContext}`);
+                        this.syncContactAddress(this.currentContext, contact.adresse_id);
+                    } else {
+                        this.logger.warn(`⚠️ Contact ${contact.id} n'a pas d'adresse associée`);
+                    }
+                }
+                // Cas 2: Sélectionner le contact modifié dans le bon contexte
+                else if (selector) {
+                    this.logger.info(`🎯 Sélection du contact modifié ${contact.id} dans ${this.currentContext}`);
+                    
+                    // Vérifier que l'option existe dans le sélecteur
+                    const optionExists = Array.from(selector.options).some(opt => opt.value == contact.id);
+                    
+                    if (optionExists) {
+                        selector.value = contact.id;
+                        selector.dispatchEvent(new Event('change'));
+                        this.logger.success(`✅ Contact ${contact.id} sélectionné dans ${this.currentContext}`);
+                        
+                        // IMPORTANT: Forcer la synchronisation avec les données fraîches du contact modifié
+                        // car this.currentContacts peut ne pas encore avoir la nouvelle adresse
+                        this.logger.info('🔄 Synchronisation forcée avec données fraîches du contact modifié...');
+                        
+                        // Synchroniser l'email UNIQUEMENT pour le contact de livraison
+                        if (this.currentContext === 'livraison' && contact.email) {
+                            this.logger.info('📧 Synchronisation forcée de l\'email modifié (fraîches)');
+                            this.syncContactEmail(contact);
+                        } else {
+                            this.logger.info('📧 Email non synchronisé (contact facturation - règle métier)');
+                        }
+                        
+                        // Synchroniser l'adresse pour TOUS les types de contact avec données fraîches
+                        if (contact.adresse_id) {
+                            this.logger.info(`📍 Synchronisation forcée de la nouvelle adresse ${contact.adresse_id} (fraîches) pour ${this.currentContext}`);
+                            this.syncContactAddress(this.currentContext, contact.adresse_id);
+                        } else {
+                            this.logger.warn(`⚠️ Contact modifié ${contact.id} n'a pas d'adresse associée`);
+                        }
+                    } else {
+                        this.logger.error(`❌ Contact ${contact.id} non trouvé dans les options après rechargement`);
+                    }
+                }
+            }
+            
+        } catch (error) {
+            this.error('Erreur lors du traitement de modification contact', error);
+        } finally {
+            // Nettoyer le contexte et restaurer les services
+            this.currentContext = null;
+            setTimeout(() => this.unblockConflictingServices(), 2000);
+        }
     }
     
     /**
@@ -877,28 +1003,6 @@ class DevisContactService {
     // =====================================
     
     /**
-     * Sélectionne un contact uniquement dans le champ spécifié
-     */
-    async selectContactInField(target, contactId) {
-        this.log(`🎯 Sélection chirurgicale: ${target} = ${contactId}`);
-        
-        const selector = this.getContactSelector(target);
-        if (!selector) {
-            this.log('❌ Sélecteur non trouvé pour', target);
-            return;
-        }
-        
-        // Sélectionner le contact
-        selector.value = contactId;
-        selector.dispatchEvent(new Event('change'));
-        
-        // Charger l'adresse par défaut du contact
-        await this.loadContactDefaultAddress(contactId, target);
-        
-        this.log(`✅ Contact ${contactId} sélectionné dans ${target}`);
-    }
-    
-    /**
      * Synchronise l'email d'envoi automatique
      */
     syncEmail(email) {
@@ -906,27 +1010,6 @@ class DevisContactService {
         if (emailField && email) {
             emailField.value = email;
             this.log(`📧 Email synchronisé: ${email}`);
-        }
-    }
-    
-    /**
-     * Charge l'adresse par défaut d'un contact
-     */
-    async loadContactDefaultAddress(contactId, target) {
-        try {
-            const response = await fetch(`/contact/${contactId}/default-address`);
-            const data = await response.json();
-            
-            if (data.success && data.address) {
-                const addressSelector = this.getAddressSelector(target);
-                if (addressSelector) {
-                    addressSelector.value = data.address.id;
-                    addressSelector.dispatchEvent(new Event('change'));
-                    this.log(`📍 Adresse par défaut chargée pour ${target}`);
-                }
-            }
-        } catch (error) {
-            this.log('⚠️ Erreur chargement adresse par défaut', error);
         }
     }
     
@@ -1216,6 +1299,10 @@ class DevisContactService {
      * Ouvre une modale de contact
      */
     openContactModal(mode, id, target) {
+        // Stocker le contexte pour la synchronisation après modification
+        this.currentContext = target;
+        this.logger.info(`🎯 Context défini: ${target} pour ${mode} contact ${id}`);
+        
         const url = mode === 'create' 
             ? `/contact/modal/new/${id}?type=${target}`
             : `/contact/modal/edit/${id}`;

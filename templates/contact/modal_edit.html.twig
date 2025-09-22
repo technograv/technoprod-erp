@@ -28,6 +28,50 @@
     z-index: 1070 !important;
 }
 
+/* Fix spécifique pour Select2 dans modale contact */
+.select2-dropdown {
+    z-index: 9999 !important;
+}
+
+/* S'assurer que le dropdown Select2 s'affiche dans la modale */
+.modal .select2-container .select2-dropdown {
+    z-index: 1070 !important;
+}
+
+/* Firefox specific fixes pour Select2 dans modales */
+@-moz-document url-prefix() {
+    .modal .select2-dropdown {
+        z-index: 1070 !important;
+        position: fixed !important;
+    }
+    
+    .modal .select2-container--open .select2-dropdown {
+        z-index: 1070 !important;
+        position: fixed !important;
+    }
+    
+    /* Forcer l'affichage du dropdown sur Firefox */
+    .select2-dropdown {
+        display: block !important;
+        opacity: 1 !important;
+        visibility: visible !important;
+    }
+    
+    /* Fix pour la position du dropdown sur Firefox */
+    .modal .select2-dropdown {
+        top: auto !important;
+        left: auto !important;
+        transform: none !important;
+    }
+    
+    /* Classe spécifique pour Firefox Select2 */
+    .firefox-select2-dropdown {
+        z-index: 9999 !important;
+        position: fixed !important;
+        display: block !important;
+    }
+}
+
 
 /* Gestion des modales empilées - adresse par-dessus contact */
 .modal {
@@ -195,6 +239,36 @@
         const currentAddressId = document.getElementById('contact-adresse').value;
         reloadAddresses(currentAddressId);
         
+        // Fix spécifique Firefox : reconfigurer Select2 après un délai
+        if (navigator.userAgent.toLowerCase().indexOf('firefox') > -1) {
+            setTimeout(() => {
+                const addressSelect = document.getElementById('contact-adresse');
+                if (addressSelect && window.$ && $(addressSelect).hasClass('select2-hidden-accessible')) {
+                    console.log('🔧 Firefox détecté - reconfiguration Select2...');
+                    
+                    const $select = $(addressSelect);
+                    const currentValue = $select.val();
+                    
+                    // Détruire et recréer avec configuration Firefox-friendly
+                    $select.select2('destroy');
+                    $select.select2({
+                        dropdownParent: $select.closest('.modal'),
+                        width: '100%',
+                        theme: 'bootstrap-5',
+                        dropdownAutoWidth: false,
+                        dropdownCssClass: 'firefox-select2-dropdown'
+                    });
+                    
+                    // Restaurer la valeur
+                    if (currentValue) {
+                        $select.val(currentValue).trigger('change');
+                    }
+                    
+                    console.log('✅ Select2 reconfiguré pour Firefox');
+                }
+            }, 200);
+        }
+        
         // Initialiser le formatage des numéros de téléphone
         setupPhoneFormatting();
         
@@ -297,13 +371,16 @@ function initAddressButtons() {
         // Ajouter le nouvel event listener
         addressSelect.addEventListener('change', handleAddressChange);
         
-        // Event listener aussi pour Select2
+        
+        // Event listener pour Select2 SEULEMENT s'il existe déjà
         if (window.$ && $(addressSelect).hasClass('select2-hidden-accessible')) {
             console.log('✅ Select2 détecté, ajout event listener select2:select (EDIT)');
             $(addressSelect).off('select2:select select2:unselect').on('select2:select select2:unselect', function(e) {
                 console.log('🔧 Select2 event déclenché (EDIT):', e.type, 'valeur:', this.value);
                 handleAddressChange.call(this);
             });
+        } else {
+            console.log('ℹ️ Select simple utilisé (pas de Select2) - utilisation du change natif seulement');
         }
         
         // Test initial de l'état
@@ -491,74 +568,22 @@ function reloadAddresses(selectedAddressId = null) {
                 addressSelect.appendChild(option);
             }
             
-            // 🔧 Mettre à jour Select2 si présent
+            // 🔧 Mettre à jour Select2 SEULEMENT s'il existe déjà
             if (window.$ && $(addressSelect).hasClass('select2-hidden-accessible')) {
-                console.log('🔧 Rafraîchissement Select2 (EDIT) pour', addressSelect.id, 'avec selectedAddressId:', selectedAddressId);
-                console.log('🔍 Options disponibles AVANT:', Array.from(addressSelect.options).map(o => ({value: o.value, text: o.text})));
+                console.log('🔧 Rafraîchissement Select2 existant (EDIT) pour', addressSelect.id);
                 
                 try {
                     const $select = $(addressSelect);
                     
-                    // Forcer la reconstruction complète de Select2
-                    console.log('🔄 Destruction et reconstruction Select2...');
-                    $select.select2('destroy');
+                    // Re-sélectionner l'adresse si nécessaire
+                    if (selectedAddressId) {
+                        console.log('🎯 Sélection adresse:', selectedAddressId);
+                        $select.val(selectedAddressId).trigger('change');
+                    }
                     
-                    // Réinitialiser avec configuration simple
-                    $select.select2({
-                        dropdownParent: $select.closest('.modal'),
-                        width: '100%',
-                        theme: 'bootstrap-5',
-                        dropdownAutoWidth: true
-                    });
-                    
-                    // Attendre que Select2 soit complètement initialisé
-                    setTimeout(() => {
-                        console.log('🔍 Options disponibles APRÈS reconstruction:', Array.from(addressSelect.options).map(o => ({value: o.value, text: o.text})));
-                        
-                        // Re-sélectionner après reconstruction
-                        if (selectedAddressId) {
-                            console.log('🎯 Sélection différée:', selectedAddressId);
-                            $select.val(selectedAddressId).trigger('change');
-                            
-                            // Vérification finale
-                            setTimeout(() => {
-                                const finalValue = $select.val();
-                                const selectedText = $select.find('option:selected').text();
-                                console.log('✅ Valeur finale confirmée:', finalValue, 'texte:', selectedText);
-                                
-                                // Test clique pour voir si ça s'ouvre
-                                const $container = $select.siblings('.select2-container');
-                                console.log('🔍 Container Select2 trouvé:', !!$container.length);
-                                if ($container.length) {
-                                    console.log('🔍 Container visible:', $container.is(':visible'));
-                                    console.log('🔍 Container CSS:', $container.attr('style'));
-                                    console.log('🔍 Z-index container:', $container.css('z-index'));
-                                    console.log('🔍 Données Select2:', $select.select2('data'));
-                                    
-                                    // Ajouter un listener de test pour le clic
-                                    $container.off('click.debug').on('click.debug', function(e) {
-                                        console.log('🖱️ CLIC détecté sur container Select2:', e.target);
-                                        console.log('🔍 État Select2 après clic:', $select.select2('isOpen'));
-                                        
-                                        setTimeout(() => {
-                                            const $dropdown = $('.select2-dropdown');
-                                            console.log('📋 Dropdown trouvé:', !!$dropdown.length);
-                                            if ($dropdown.length) {
-                                                console.log('📋 Dropdown visible:', $dropdown.is(':visible'));
-                                                console.log('📋 Dropdown CSS:', $dropdown.attr('style'));
-                                                console.log('📋 Dropdown Z-index:', $dropdown.css('z-index'));
-                                                console.log('📋 Dropdown position:', $dropdown.offset());
-                                            }
-                                        }, 50);
-                                    });
-                                }
-                            }, 100);
-                        }
-                    }, 100);
-                    
-                    console.log('✅ Select2 (EDIT) reconstruction lancée');
+                    console.log('✅ Select2 (EDIT) mis à jour');
                 } catch (e) {
-                    console.error('❌ Erreur reconstruction Select2 (EDIT):', e);
+                    console.error('❌ Erreur mise à jour Select2 (EDIT):', e);
                 }
             }
             

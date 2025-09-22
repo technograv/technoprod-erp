@@ -94,7 +94,8 @@ class ContactController extends AbstractController
                             'mobile' => $contact->getTelephoneMobile(),
                             'fonction' => $contact->getFonction(),
                             'isFacturationDefault' => $contact->isFacturationDefault(),
-                            'isLivraisonDefault' => $contact->isLivraisonDefault()
+                            'isLivraisonDefault' => $contact->isLivraisonDefault(),
+                            'adresse_id' => $contact->getAdresse() ? $contact->getAdresse()->getId() : null
                         ]
                     ]);
                 }
@@ -194,7 +195,8 @@ class ContactController extends AbstractController
                             'mobile' => $contact->getTelephoneMobile(),
                             'fonction' => $contact->getFonction(),
                             'isFacturationDefault' => $contact->isFacturationDefault(),
-                            'isLivraisonDefault' => $contact->isLivraisonDefault()
+                            'isLivraisonDefault' => $contact->isLivraisonDefault(),
+                            'adresse_id' => $contact->getAdresse() ? $contact->getAdresse()->getId() : null
                         ]
                     ]);
                 }

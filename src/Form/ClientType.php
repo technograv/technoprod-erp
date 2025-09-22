@@ -5,6 +5,7 @@ namespace App\Form;
 use App\Entity\Client;
 use App\Entity\Contact;
 use App\Entity\FormeJuridique;
+use App\Entity\ModeReglement;
 use App\Form\ContactType;
 use Symfony\Bridge\Doctrine\Form\Type\EntityType;
 use Symfony\Component\Form\AbstractType;
@@ -143,20 +144,21 @@ class ClientType extends AbstractType
                 'required' => false,
                 'placeholder' => 'Choisir...'
             ])
-            ->add('delaiPaiement', IntegerType::class, [
-                'label' => 'Délai de paiement (jours)',
+            ->add('modeReglement', EntityType::class, [
+                'label' => 'Mode de règlement',
+                'class' => ModeReglement::class,
+                'choice_label' => 'nom',
+                'query_builder' => function(\Doctrine\ORM\EntityRepository $er) {
+                    return $er->createQueryBuilder('mr')
+                        ->where('mr.actif = :actif')
+                        ->setParameter('actif', true)
+                        ->orderBy('mr.ordre', 'ASC')
+                        ->addOrderBy('mr.nom', 'ASC');
+                },
                 'required' => false,
-                'attr' => ['min' => 0, 'max' => 365, 'placeholder' => '30']
-            ])
-            ->add('tauxTva', NumberType::class, [
-                'label' => 'Taux TVA (%)',
-                'required' => false,
-                'scale' => 2,
-                'attr' => ['step' => '0.01', 'min' => 0, 'max' => 100, 'placeholder' => '20.00']
-            ])
-            ->add('assujettiTva', CheckboxType::class, [
-                'label' => 'Assujetti à la TVA',
-                'required' => false
+                'placeholder' => 'Sélectionner un mode de règlement...',
+                'attr' => ['class' => 'mode-reglement-select'],
+                'help' => 'Le mode de règlement détermine les délais et conditions de paiement'
             ])
             ->add('conditionsTarifs', ChoiceType::class, [
                 'label' => 'Conditions tarifaires',

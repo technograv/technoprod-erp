@@ -55,14 +55,9 @@ class Client
     #[ORM\Column(length: 50, nullable: true)]
     private ?string $modePaiement = null;
 
-    #[ORM\Column(nullable: true)]
-    private ?int $delaiPaiement = 30; // en jours
-
-    #[ORM\Column(type: Types::DECIMAL, precision: 5, scale: 2, nullable: true)]
-    private ?string $tauxTva = '20.00';
-
-    #[ORM\Column(nullable: true)]
-    private ?bool $assujettiTva = true;
+    #[ORM\ManyToOne(targetEntity: ModeReglement::class)]
+    #[ORM\JoinColumn(nullable: true)]
+    private ?ModeReglement $modeReglement = null;
 
     #[ORM\Column(length: 50, nullable: true)]
     private ?string $conditionsTarifs = null;
@@ -312,37 +307,24 @@ class Client
         return $this;
     }
 
+    public function getModeReglement(): ?ModeReglement
+    {
+        return $this->modeReglement;
+    }
+
+    public function setModeReglement(?ModeReglement $modeReglement): static
+    {
+        $this->modeReglement = $modeReglement;
+        return $this;
+    }
+
+    /**
+     * Méthode de compatibilité pour récupérer le délai de paiement
+     * depuis le mode de règlement associé
+     */
     public function getDelaiPaiement(): ?int
     {
-        return $this->delaiPaiement;
-    }
-
-    public function setDelaiPaiement(?int $delaiPaiement): static
-    {
-        $this->delaiPaiement = $delaiPaiement;
-        return $this;
-    }
-
-    public function getTauxTva(): ?string
-    {
-        return $this->tauxTva;
-    }
-
-    public function setTauxTva(?string $tauxTva): static
-    {
-        $this->tauxTva = $tauxTva;
-        return $this;
-    }
-
-    public function isAssujettiTva(): ?bool
-    {
-        return $this->assujettiTva;
-    }
-
-    public function setAssujettiTva(?bool $assujettiTva): static
-    {
-        $this->assujettiTva = $assujettiTva;
-        return $this;
+        return $this->modeReglement?->getNombreJours();
     }
 
     public function getNotes(): ?string

@@ -2,12 +2,7 @@
     <h5 class="modal-title">
         <i class="fas fa-user-plus me-2"></i>Ajouter un contact pour {{ client.nomEntreprise ?: (client.prenom ~ ' ' ~ client.nom) }}
     </h5>
-    <div class="d-flex gap-2">
-        <button type="button" class="btn btn-sm btn-warning" onclick="window.modalDebugService?.generateReport()" title="Debug Modal">
-            🔍
-        </button>
-        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
-    </div>
+    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
 </div>
 
 <style>
@@ -33,6 +28,39 @@
     z-index: 1070 !important;
 }
 
+/* Firefox specific fixes pour Select2 dans modales */
+@-moz-document url-prefix() {
+    .modal .select2-dropdown {
+        z-index: 1070 !important;
+        position: fixed !important;
+    }
+    
+    .modal .select2-container--open .select2-dropdown {
+        z-index: 1070 !important;
+        position: fixed !important;
+    }
+    
+    /* Forcer l'affichage du dropdown sur Firefox */
+    .select2-dropdown {
+        display: block !important;
+        opacity: 1 !important;
+        visibility: visible !important;
+    }
+    
+    /* Fix pour la position du dropdown sur Firefox */
+    .modal .select2-dropdown {
+        top: auto !important;
+        left: auto !important;
+        transform: none !important;
+    }
+    
+    /* Classe spécifique pour Firefox Select2 */
+    .firefox-select2-dropdown {
+        z-index: 9999 !important;
+        position: fixed !important;
+        display: block !important;
+    }
+}
 
 /* Gestion des modales empilées - adresse par-dessus contact */
 .modal {
@@ -231,6 +259,7 @@ function initAddressButtons() {
         
         // Ajouter le nouvel event listener
         addressSelect.addEventListener('change', handleAddressChange);
+        
         
         // Event listener aussi pour Select2
         if (window.$ && $(addressSelect).hasClass('select2-hidden-accessible')) {

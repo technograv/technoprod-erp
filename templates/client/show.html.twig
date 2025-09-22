@@ -537,11 +537,20 @@
                             <div class="row">
                                 <div class="col-md-6">
                                     <div class="info-row">
-                                        <div class="info-label">Délai de paiement :</div>
-                                        <div class="info-value">{{ client.delaiPaiement ? client.delaiPaiement ~ ' jours' : 'Non défini' }}</div>
+                                        <div class="info-label">Mode de règlement :</div>
+                                        <div class="info-value">
+                                            {% if client.modeReglement %}
+                                                {{ client.modeReglement.nom }}
+                                                {% if client.modeReglement.nombreJours %}
+                                                    ({{ client.modeReglement.nombreJours }} jours)
+                                                {% endif %}
+                                            {% else %}
+                                                Non défini
+                                            {% endif %}
+                                        </div>
                                     </div>
                                     <div class="info-row">
-                                        <div class="info-label">Mode de règlement :</div>
+                                        <div class="info-label">Mode de paiement :</div>
                                         <div class="info-value">{{ client.modePaiement|capitalize|default('Non défini') }}</div>
                                     </div>
                                     <div class="info-row">
@@ -551,10 +560,10 @@
                                 </div>
                                 <div class="col-md-6">
                                     <div class="info-row">
-                                        <div class="info-label">Assujetti TVA :</div>
+                                        <div class="info-label">TVA :</div>
                                         <div class="info-value">
-                                            <span class="badge bg-{{ client.assujettiTva ? 'success' : 'secondary' }}">
-                                                {{ client.assujettiTva ? 'Oui' : 'Non' }}
+                                            <span class="badge bg-info">
+                                                Gérée par produit
                                             </span>
                                         </div>
                                     </div>
