@@ -844,6 +844,7 @@ class DevisContactService {
                         // Synchroniser l'email si contact de livraison
                         if (this.currentContext === 'livraison' && contact.email) {
                             this.syncContactEmail(contact);
+                            this.logger.info(`📧 Email synchronisé pour livraison: ${contact.email}`);
                         }
                     } else {
                         this.logger.error(`❌ Option ${contact.id} non trouvée dans le sélecteur après rechargement`);
@@ -1023,8 +1024,9 @@ class DevisContactService {
         } catch (error) {
             this.error('Erreur lors du traitement de création adresse', error);
         } finally {
-            // Nettoyer le contexte et restaurer les services
-            this.currentContext = null;
+            // ⚠️ NE PAS nettoyer le contexte ici car on va rouvrir la modale contact
+            // Le contexte sera nettoyé après la création du contact
+            this.logger.info('🔄 Contexte conservé après création adresse:', this.currentContext);
             setTimeout(() => this.unblockConflictingServices(), 2000);
         }
     }

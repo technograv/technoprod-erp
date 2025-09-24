@@ -182,7 +182,7 @@
             fromModal: false // Par défaut, pas depuis une modale
         };
         console.log('💾 Auto-stockage info contact à l\'ouverture (NEW):', window.lastContactEditEvent);
-        
+
         // Gérer les boutons d'adresse à chaque fois (au cas où ils seraient recréés)
         initAddressButtons();
         
@@ -401,8 +401,17 @@ function initAddressButtons() {
                     return;
                 }
 
+                // ✅ SAUVEGARDER les données du formulaire contact avant rechargement
+                const formData = preserveContactFormData();
+
                 // Recharger les adresses avec l'adresse créée/modifiée
                 reloadAddresses(event.detail.adresse.id);
+
+                // ✅ RESTAURER les données du formulaire contact après rechargement
+                setTimeout(() => {
+                    restoreContactFormData(formData);
+                    console.log('📋 Données du formulaire contact restaurées après création adresse');
+                }, 200);
 
                 console.log('✅ Navigation simplifiée terminée');
             }, 500);
@@ -435,6 +444,53 @@ function initAddressButtons() {
 }
 
 // Note: initAddressButtons() est appelée conditionnellement dans setTimeout() pour éviter les duplications
+
+// ✅ NOUVELLES FONCTIONS : Préservation des données du formulaire contact
+function preserveContactFormData() {
+    console.log('💾 Sauvegarde des données du formulaire contact...');
+
+    const formData = {
+        nom: document.getElementById('contact-nom')?.value || '',
+        prenom: document.getElementById('contact-prenom')?.value || '',
+        email: document.getElementById('contact-email')?.value || '',
+        fonction: document.getElementById('contact-fonction')?.value || '',
+        telephone: document.getElementById('contact-telephone')?.value || '',
+        mobile: document.getElementById('contact-mobile')?.value || '',
+        adresse: document.getElementById('contact-adresse')?.value || ''
+    };
+
+    console.log('💾 Données sauvegardées:', formData);
+    return formData;
+}
+
+function restoreContactFormData(formData) {
+    if (!formData) {
+        console.log('⚠️ Aucune donnée à restaurer');
+        return;
+    }
+
+    console.log('🔄 Restauration des données du formulaire contact:', formData);
+
+    // Restaurer tous les champs sauf l'adresse (qui vient d'être mise à jour)
+    const fields = [
+        { id: 'contact-nom', value: formData.nom },
+        { id: 'contact-prenom', value: formData.prenom },
+        { id: 'contact-email', value: formData.email },
+        { id: 'contact-fonction', value: formData.fonction },
+        { id: 'contact-telephone', value: formData.telephone },
+        { id: 'contact-mobile', value: formData.mobile }
+    ];
+
+    fields.forEach(field => {
+        const element = document.getElementById(field.id);
+        if (element && field.value) {
+            element.value = field.value;
+            console.log('✅ Restauré', field.id, ':', field.value);
+        }
+    });
+
+    console.log('✅ Restauration terminée');
+}
 
 // Fonction séparée pour gérer le changement d'adresse
 function handleAddressChange() {
