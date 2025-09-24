@@ -89,4 +89,13 @@ final class AdminController extends AbstractController
     {
         return $this->redirectToRoute('app_admin_dashboard');
     }
+
+    /**
+     * Page de test pour le DragDropService
+     */
+    #[Route('/test-dragdrop', name: 'app_test_dragdrop', methods: ['GET'])]
+    public function testDragDrop(): Response
+    {
+        return $this->render('test_dragdrop.html.twig');
+    }
 }

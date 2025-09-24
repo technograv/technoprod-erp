@@ -13,7 +13,7 @@
         <table class="table table-hover" id="modesReglementTable">
             <thead class="table-dark">
                 <tr>
-                    <th>Ordre</th>
+                    <th width="50"><i class="fas fa-arrows-alt" title="Glisser pour réordonner"></i></th>
                     <th>Code</th>
                     <th>Nom</th>
                     <th>Type Règlement</th>
@@ -25,11 +25,14 @@
                     <th>Actions</th>
                 </tr>
             </thead>
-            <tbody>
+            <tbody id="sortable-modes">
                 {% for mode in modes_reglement %}
-                <tr data-id="{{ mode.id }}">
-                    <td>
-                        <span class="badge bg-secondary">{{ mode.ordre }}</span>
+                <tr data-id="{{ mode.id }}" class="sortable-item">
+                    <td class="text-center">
+                        <div class="drag-handle">
+                            <i class="fas fa-grip-vertical text-muted"></i>
+                        </div>
+                        <small class="d-block text-muted" style="font-size: 0.7rem;">{{ mode.ordre }}</small>
                     </td>
                     <td>
                         <code class="small">{{ mode.code }}</code>
@@ -204,22 +207,18 @@
 
                     <div class="row">
                         <div class="col-md-6">
-                            <div class="mb-3">
-                                <label for="mode-ordre" class="form-label">Ordre d'affichage</label>
-                                <input type="number" class="form-control" id="mode-ordre" 
-                                       min="1" value="1" step="1" required>
-                                <div class="form-text">Position dans les menus déroulants</div>
+                            <div class="form-check form-switch">
+                                <input class="form-check-input" type="checkbox" id="mode-defaut">
+                                <label class="form-check-label" for="mode-defaut">
+                                    <strong>Mode par défaut</strong>
+                                </label>
+                                <div class="form-text">Sélectionné automatiquement</div>
                             </div>
                         </div>
                         <div class="col-md-6">
-                            <div class="mt-4">
-                                <div class="form-check form-switch">
-                                    <input class="form-check-input" type="checkbox" id="mode-defaut">
-                                    <label class="form-check-label" for="mode-defaut">
-                                        <strong>Mode par défaut</strong>
-                                    </label>
-                                    <div class="form-text">Sélectionné automatiquement</div>
-                                </div>
+                            <div class="alert alert-info small mb-0">
+                                <i class="fas fa-info-circle me-1"></i>
+                                <strong>Ordre automatique :</strong> Utilisez le glisser-déposer dans la liste pour réorganiser les modes.
                             </div>
                         </div>
                     </div>
@@ -245,8 +244,17 @@
 </div>
 
 
+<!-- SortableJS requis -->
+<script src="https://cdn.jsdelivr.net/npm/sortablejs@1.15.0/Sortable.min.js"></script>
+
 <script>
+// Variable globale pour l'instance drag & drop
+let dragDropInstance = null;
+
 function initModesReglementEvents() {
+    // Initialiser le drag & drop
+    initSortable();
+    
     // Gestion du bouton "Nouveau"
     const newButton = document.querySelector('[data-bs-target="#modeReglementModal"]');
     if (newButton) {
@@ -268,8 +276,7 @@ function initModesReglementEvents() {
             document.getElementById('mode-type-reglement').value = this.dataset.typereglement || '';
             document.getElementById('mode-nombre-jours').value = this.dataset.nombrejours || '';
             document.getElementById('mode-jour-reglement').value = this.dataset.jourreglement || '';
-            document.getElementById('mode-paiement-id').value = this.dataset.modepaiementid || '';
-            document.getElementById('mode-ordre').value = this.dataset.ordre;
+            document.getElementById('mode-mode-paiement').value = this.dataset.modepaiementid || '';
             document.getElementById('mode-note').value = this.dataset.note || '';
             document.getElementById('mode-defaut').checked = this.dataset.defaut === 'true';
             document.getElementById('mode-actif').checked = this.dataset.actif === 'true';
@@ -294,8 +301,7 @@ function initModesReglementEvents() {
             type_reglement: document.getElementById('mode-type-reglement').value,
             nombre_jours: document.getElementById('mode-nombre-jours').value ? parseInt(document.getElementById('mode-nombre-jours').value) : null,
             jour_reglement: document.getElementById('mode-jour-reglement').value ? parseInt(document.getElementById('mode-jour-reglement').value) : null,
-            mode_paiement_id: document.getElementById('mode-paiement-id').value || null,
-            ordre: parseInt(document.getElementById('mode-ordre').value),
+            mode_paiement_id: document.getElementById('mode-mode-paiement').value || null,
             note: document.getElementById('mode-note').value,
             defaut: document.getElementById('mode-defaut').checked,
             actif: document.getElementById('mode-actif').checked
@@ -386,6 +392,77 @@ function initModesReglementEvents() {
     });
 }
 
+// Fonction d'initialisation du drag & drop avec le service unifié
+function initSortable() {
+    console.log('🚀 Initialisation du drag & drop modes de règlement');
+    
+    // Vérifier que l'élément DOM existe
+    const sortableContainer = document.getElementById('sortable-modes');
+    if (!sortableContainer) {
+        console.error('❌ Container #sortable-modes non trouvé, retry dans 200ms...');
+        setTimeout(initSortable, 200);
+        return;
+    }
+    
+    // Plus besoin du DragDropService - on utilise directement SortableJS comme les devis
+    
+    // Vérifier que SortableJS est disponible
+    if (typeof Sortable === 'undefined') {
+        console.error('❌ SortableJS non disponible, retry dans 100ms...');
+        setTimeout(initSortable, 100);
+        return;
+    }
+    
+    console.log('✅ Tous les prérequis sont disponibles, initialisation...');
+    
+    // Utiliser la même configuration que les devis pour un rendu identique
+    dragDropInstance = new Sortable(document.getElementById('sortable-modes'), {
+        handle: '.drag-handle',
+        animation: 150,
+        ghostClass: 'sortable-ghost', 
+        chosenClass: 'sortable-chosen',
+        dragClass: 'sortable-drag',
+        filter: '.thead, .table-dark',
+        preventOnFilter: false,
+        onEnd: async function(evt) {
+            // Récupérer l'ordre actuel des éléments
+            const items = Array.from(document.getElementById('sortable-modes').querySelectorAll('.sortable-item'));
+            const itemIds = items.map(item => parseInt(item.dataset.id)).filter(id => !isNaN(id));
+            
+            console.log('🔄 Nouvel ordre:', itemIds);
+            
+            try {
+                const response = await fetch('/admin/modes-reglement/reorder', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({ order: itemIds })
+                });
+
+                const data = await response.json();
+                
+                if (data.success) {
+                    // Mettre à jour les numéros d'ordre affichés
+                    const orderElements = document.getElementById('sortable-modes').querySelectorAll('small');
+                    orderElements.forEach((element, index) => {
+                        element.textContent = index + 1;
+                    });
+                    
+                    // Afficher un message de succès (optionnel - style devis)
+                    console.log('✅ Ordre mis à jour avec succès');
+                } else {
+                    console.error('Erreur:', data.error);
+                    location.reload(); // Restaurer l'ordre correct
+                }
+            } catch (error) {
+                console.error('Erreur lors de la mise à jour de l\'ordre:', error);
+                location.reload(); // Restaurer l'ordre correct
+            }
+        }
+    });
+}
+
 // Initialisation pour AJAX loading
 if (document.readyState === 'loading') {
     document.addEventListener('DOMContentLoaded', initModesReglementEvents);
@@ -398,5 +475,37 @@ window.initModesReglement = function() {
     setTimeout(initModesReglementEvents, 100);
 };
 </script>
+
+<style>
+/* Styles drag & drop identiques aux devis pour un rendu ergonomique */
+.sortable-ghost {
+    opacity: 0.4;
+}
+
+.sortable-chosen {
+    background-color: #e3f2fd !important;
+}
+
+.drag-handle {
+    width: 20px;
+    cursor: move;
+    user-select: none;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.sortable-item {
+    transition: all 0.2s;
+}
+
+.sortable-item:hover {
+    box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+}
+
+.drag-handle:hover {
+    color: #007bff;
+}
+</style>
 
 {# Fin du template AJAX #}

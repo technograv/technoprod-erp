@@ -1,0 +1,180 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Test DragDropService</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+</head>
+<body>
+    <div class="container mt-5">
+        <h1>Test du DragDropService</h1>
+        <p>Page de test pour vérifier le fonctionnement du service de drag & drop unifié.</p>
+        
+        <div class="card">
+            <div class="card-header">
+                <h5>Liste des modes de règlement (test)</h5>
+            </div>
+            <div class="card-body">
+                <table class="table">
+                    <thead>
+                        <tr>
+                            <th width="50"><i class="fas fa-arrows-alt" title="Glisser pour réordonner"></i></th>
+                            <th>Nom</th>
+                            <th>Ordre</th>
+                        </tr>
+                    </thead>
+                    <tbody id="test-sortable">
+                        <tr data-id="1" class="sortable-item">
+                            <td class="text-center">
+                                <div class="drag-handle">
+                                    <i class="fas fa-grip-vertical text-muted"></i>
+                                </div>
+                            </td>
+                            <td>Comptant</td>
+                            <td><span class="order-display">1</span></td>
+                        </tr>
+                        <tr data-id="2" class="sortable-item">
+                            <td class="text-center">
+                                <div class="drag-handle">
+                                    <i class="fas fa-grip-vertical text-muted"></i>
+                                </div>
+                            </td>
+                            <td>30 jours net</td>
+                            <td><span class="order-display">2</span></td>
+                        </tr>
+                        <tr data-id="3" class="sortable-item">
+                            <td class="text-center">
+                                <div class="drag-handle">
+                                    <i class="fas fa-grip-vertical text-muted"></i>
+                                </div>
+                            </td>
+                            <td>Fin de mois</td>
+                            <td><span class="order-display">3</span></td>
+                        </tr>
+                        <tr data-id="4" class="sortable-item">
+                            <td class="text-center">
+                                <div class="drag-handle">
+                                    <i class="fas fa-grip-vertical text-muted"></i>
+                                </div>
+                            </td>
+                            <td>Chèque</td>
+                            <td><span class="order-display">4</span></td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+        </div>
+        
+        <div class="alert alert-info mt-4">
+            <h6>Instructions :</h6>
+            <ul>
+                <li>Essayez de faire glisser les lignes en utilisant les poignées <i class="fas fa-grip-vertical"></i></li>
+                <li>Les numéros d'ordre doivent se mettre à jour automatiquement</li>
+                <li>Un message de succès doit s'afficher après chaque déplacement</li>
+                <li><strong>✨ Nouveau :</strong> Une zone verte doit apparaître pour indiquer où l'élément sera déposé</li>
+            </ul>
+        </div>
+
+        <div class="row mt-4">
+            <div class="col-md-6">
+                <div class="card">
+                    <div class="card-header">
+                        <h6>Fonctionnalités testées :</h6>
+                    </div>
+                    <div class="card-body">
+                        <ul class="list-unstyled">
+                            <li>✅ Drag & drop avec poignées</li>
+                            <li>✅ Mise à jour automatique des ordres</li>
+                            <li>✅ Notifications de succès</li>
+                            <li>✅ Indicateur de zone de drop (vert)</li>
+                            <li>✅ Animation pulse de l'indicateur</li>
+                            <li>✅ Opacité réduite des autres éléments</li>
+                        </ul>
+                    </div>
+                </div>
+            </div>
+            <div class="col-md-6">
+                <div class="card">
+                    <div class="card-header">
+                        <h6>Options de configuration :</h6>
+                    </div>
+                    <div class="card-body">
+                        <div class="form-check">
+                            <input class="form-check-input" type="checkbox" id="toggleIndicator" checked>
+                            <label class="form-check-label" for="toggleIndicator">
+                                Afficher l'indicateur de drop
+                            </label>
+                        </div>
+                        <small class="text-muted">Décochez pour désactiver la zone verte</small>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script src="/js/services/DragDropService.js"></script>
+    <script>
+        document.addEventListener('DOMContentLoaded', function() {
+            console.log('🧪 Test DragDropService - Initialisation');
+            
+            // Vérifier que le service est disponible
+            if (!window.dragDropService) {
+                console.error('❌ DragDropService non disponible');
+                return;
+            }
+            
+            console.log('✅ DragDropService disponible');
+            
+            let testInstance;
+            
+            // Fonction pour initialiser le drag & drop
+            function initDragDrop(showIndicator = true) {
+                // Détruire l'instance existante si nécessaire
+                if (testInstance) {
+                    window.dragDropService.destroy(document.getElementById('test-sortable'));
+                }
+                
+                // Initialiser le drag & drop de test
+                testInstance = window.dragDropService.init('#test-sortable', {
+                    itemSelector: '.sortable-item',
+                    datasetKey: 'id',
+                    numericIds: true,
+                    showDropIndicator: showIndicator, // Nouvelle option
+                    onReorder: (itemIds) => {
+                        console.log('🔄 Nouvel ordre:', itemIds);
+                        
+                        // Simuler une API call
+                        setTimeout(() => {
+                            // Mettre à jour l'affichage des ordres
+                            window.dragDropService.updateOrderDisplay(
+                                document.getElementById('test-sortable'),
+                                '.order-display'
+                            );
+                            
+                            // Afficher un message de succès
+                            window.dragDropService.showSuccess('Ordre mis à jour (simulation)');
+                        }, 300);
+                    }
+                });
+            }
+            
+            // Initialiser avec indicateur activé par défaut
+            initDragDrop(true);
+            
+            // Gérer le toggle de l'indicateur
+            document.getElementById('toggleIndicator').addEventListener('change', function() {
+                console.log('🎛️ Toggle indicateur:', this.checked);
+                initDragDrop(this.checked);
+            });
+            
+            if (testInstance) {
+                console.log('✅ Test DragDropService initialisé avec succès');
+            } else {
+                console.error('❌ Échec de l\'initialisation du test');
+            }
+        });
+    </script>
+</body>
+</html>

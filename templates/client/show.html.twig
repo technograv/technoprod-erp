@@ -344,16 +344,6 @@
                             </div>
                             <div class="col-md-4">
                                 <div class="info-row">
-                                    <div class="info-label">Assujetti TVA :</div>
-                                    <div class="info-value">
-                                        <span class="badge bg-{{ client.assujettiTva ? 'success' : 'secondary' }}">
-                                            {{ client.assujettiTva ? 'Oui' : 'Non' }}
-                                        </span>
-                                    </div>
-                                </div>
-                            </div>
-                            <div class="col-md-4">
-                                <div class="info-row">
                                     <div class="info-label">Date création :</div>
                                     <div class="info-value">{{ client.createdAt ? client.createdAt|date('d/m/Y') : 'Non renseignée' }}</div>
                                 </div>

@@ -281,6 +281,28 @@ final class ConfigurationController extends AbstractController
         }
     }
 
+    #[Route('/modes-paiement/reorder', name: 'app_admin_modes_paiement_reorder', methods: ['POST'])]
+    public function reorderModesPaiement(Request $request): JsonResponse
+    {
+        try {
+            $data = json_decode($request->getContent(), true);
+            $order = $data['order'] ?? [];
+
+            foreach ($order as $index => $id) {
+                $mode = $this->entityManager->getRepository(ModePaiement::class)->find($id);
+                if ($mode) {
+                    $mode->setOrdre($index + 1);
+                }
+            }
+
+            $this->entityManager->flush();
+
+            return $this->json(['success' => true, 'message' => 'Ordre mis à jour avec succès']);
+        } catch (\Exception $e) {
+            return $this->json(['success' => false, 'error' => 'Erreur lors de la mise à jour: ' . $e->getMessage()], 500);
+        }
+    }
+
     // ================================
     // MODES REGLEMENT
     // ================================
@@ -313,17 +335,30 @@ final class ConfigurationController extends AbstractController
             }
 
             $mode = new ModeReglement();
+            $mode->setCode($data['code']);
             $mode->setNom($data['nom']);
-            $mode->setDescription($data['description'] ?? '');
-            $mode->setDelaiJours($data['delai_jours'] ?? 0);
+            $mode->setTypeReglement($data['type_reglement']);
+            $mode->setNombreJours($data['nombre_jours']);
+            $mode->setJourReglement($data['jour_reglement']);
+            $mode->setNote($data['note'] ?? '');
             $mode->setActif($data['actif'] ?? true);
+            $mode->setModeParDefaut($data['defaut'] ?? false);
             
-            // Gestion de l'ordre
-            if (isset($data['ordre'])) {
-                $newOrdre = intval($data['ordre']);
-                $mode->setOrdre($newOrdre);
-                $repository = $this->entityManager->getRepository(ModeReglement::class);
-                $repository->reorganizeOrdres($mode, $newOrdre);
+            // Attribuer automatiquement le prochain ordre disponible
+            $maxOrdre = $this->entityManager
+                ->getRepository(ModeReglement::class)
+                ->createQueryBuilder('m')
+                ->select('MAX(m.ordre)')
+                ->getQuery()
+                ->getSingleScalarResult();
+            $mode->setOrdre(($maxOrdre ?? 0) + 1);
+            
+            // Gérer le mode de paiement
+            if (!empty($data['mode_paiement_id'])) {
+                $modePaiement = $this->entityManager->getRepository(ModePaiement::class)->find($data['mode_paiement_id']);
+                if ($modePaiement) {
+                    $mode->setModePaiement($modePaiement);
+                }
             }
             
             $this->entityManager->persist($mode);
@@ -334,8 +369,8 @@ final class ConfigurationController extends AbstractController
                 'message' => 'Mode de règlement créé avec succès',
                 'mode' => [
                     'id' => $mode->getId(),
+                    'code' => $mode->getCode(),
                     'nom' => $mode->getNom(),
-                    'delai_jours' => $mode->getDelaiJours(),
                     'ordre' => $mode->getOrdre(),
                     'actif' => $mode->isActif()
                 ]
@@ -351,25 +386,38 @@ final class ConfigurationController extends AbstractController
         try {
             $data = json_decode($request->getContent(), true);
             
+            if (isset($data['code'])) {
+                $mode->setCode($data['code']);
+            }
             if (isset($data['nom'])) {
                 $mode->setNom($data['nom']);
             }
-            if (isset($data['description'])) {
-                $mode->setDescription($data['description']);
+            if (isset($data['type_reglement'])) {
+                $mode->setTypeReglement($data['type_reglement']);
             }
-            if (isset($data['delai_jours'])) {
-                $mode->setDelaiJours(intval($data['delai_jours']));
+            if (isset($data['nombre_jours'])) {
+                $mode->setNombreJours($data['nombre_jours']);
+            }
+            if (isset($data['jour_reglement'])) {
+                $mode->setJourReglement($data['jour_reglement']);
+            }
+            if (isset($data['note'])) {
+                $mode->setNote($data['note']);
             }
             if (isset($data['actif'])) {
                 $mode->setActif($data['actif']);
             }
+            if (isset($data['defaut'])) {
+                $mode->setModeParDefaut($data['defaut']);
+            }
             
-            // Gestion de l'ordre
-            if (isset($data['ordre'])) {
-                $newOrdre = intval($data['ordre']);
-                $mode->setOrdre($newOrdre);
-                $repository = $this->entityManager->getRepository(ModeReglement::class);
-                $repository->reorganizeOrdres($mode, $newOrdre);
+            // Gérer le mode de paiement
+            if (isset($data['mode_paiement_id'])) {
+                $modePaiement = null;
+                if (!empty($data['mode_paiement_id'])) {
+                    $modePaiement = $this->entityManager->getRepository(ModePaiement::class)->find($data['mode_paiement_id']);
+                }
+                $mode->setModePaiement($modePaiement);
             }
 
             $this->entityManager->flush();
@@ -400,6 +448,35 @@ final class ConfigurationController extends AbstractController
             return $this->json(['message' => 'Mode de règlement supprimé avec succès']);
         } catch (\Exception $e) {
             return $this->json(['error' => 'Erreur lors de la suppression: ' . $e->getMessage()], 500);
+        }
+    }
+
+    #[Route('/modes-reglement/reorder', name: 'app_admin_modes_reglement_reorder', methods: ['POST'])]
+    public function reorderModesReglement(Request $request): JsonResponse
+    {
+        try {
+            $data = json_decode($request->getContent(), true);
+            
+            if (!isset($data['order']) || !is_array($data['order'])) {
+                return $this->json(['error' => 'Ordre invalide'], 400);
+            }
+
+            $repository = $this->entityManager->getRepository(ModeReglement::class);
+            
+            foreach ($data['order'] as $index => $id) {
+                $mode = $repository->find($id);
+                if ($mode) {
+                    $mode->setOrdre($index + 1); // L'ordre commence à 1
+                    $this->entityManager->persist($mode);
+                }
+            }
+            
+            $this->entityManager->flush();
+
+            return $this->json(['success' => true, 'message' => 'Ordre mis à jour avec succès']);
+            
+        } catch (\Exception $e) {
+            return $this->json(['error' => 'Erreur lors de la mise à jour: ' . $e->getMessage()], 500);
         }
     }
 

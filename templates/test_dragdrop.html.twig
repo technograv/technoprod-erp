@@ -1,0 +1,114 @@
+{% extends 'base.html.twig' %}
+
+{% block title %}Test DragDrop Table - TechnoProd{% endblock %}
+
+{% block body %}
+<div class="container mt-4">
+    <h1>Test Drag & Drop Service - Table Context</h1>
+    <div class="alert alert-info">
+        <strong>Test de l'indicateur de zone de drop dans les tableaux</strong><br>
+        Glissez les lignes et vérifiez que l'indicateur vert s'affiche sur toute la largeur de la ligne.
+    </div>
+
+    <div class="card">
+        <div class="card-header">
+            <h5>Modes de Règlement (Test)</h5>
+        </div>
+        <div class="card-body">
+            <table class="table">
+                <thead>
+                    <tr>
+                        <th width="50"><i class="fas fa-arrows-alt" title="Glisser pour réordonner"></i></th>
+                        <th>Code</th>
+                        <th>Nom</th>
+                        <th>Type</th>
+                        <th>Statut</th>
+                    </tr>
+                </thead>
+                <tbody id="test-sortable">
+                    <tr data-id="1" class="sortable-item">
+                        <td class="text-center">
+                            <div class="drag-handle">
+                                <i class="fas fa-grip-vertical text-muted"></i>
+                            </div>
+                        </td>
+                        <td><code>COMP</code></td>
+                        <td>Comptant</td>
+                        <td><span class="badge bg-success">Immédiat</span></td>
+                        <td><span class="badge bg-success">Actif</span></td>
+                    </tr>
+                    <tr data-id="2" class="sortable-item">
+                        <td class="text-center">
+                            <div class="drag-handle">
+                                <i class="fas fa-grip-vertical text-muted"></i>
+                            </div>
+                        </td>
+                        <td><code>30J</code></td>
+                        <td>30 jours net</td>
+                        <td><span class="badge bg-primary">Différé</span></td>
+                        <td><span class="badge bg-success">Actif</span></td>
+                    </tr>
+                    <tr data-id="3" class="sortable-item">
+                        <td class="text-center">
+                            <div class="drag-handle">
+                                <i class="fas fa-grip-vertical text-muted"></i>
+                            </div>
+                        </td>
+                        <td><code>FDM</code></td>
+                        <td>Fin de mois</td>
+                        <td><span class="badge bg-info">Mensuel</span></td>
+                        <td><span class="badge bg-success">Actif</span></td>
+                    </tr>
+                    <tr data-id="4" class="sortable-item">
+                        <td class="text-center">
+                            <div class="drag-handle">
+                                <i class="fas fa-grip-vertical text-muted"></i>
+                            </div>
+                        </td>
+                        <td><code>CHQ</code></td>
+                        <td>Chèque</td>
+                        <td><span class="badge bg-warning">Physique</span></td>
+                        <td><span class="badge bg-secondary">Inactif</span></td>
+                    </tr>
+                </tbody>
+            </table>
+        </div>
+    </div>
+
+    <div class="alert alert-success mt-4">
+        <h6>Points de test :</h6>
+        <ul>
+            <li>✅ Glissez une ligne : l'indicateur vert doit apparaître</li>
+            <li>✅ L'indicateur doit couvrir TOUTE la largeur du tableau (5 colonnes)</li>
+            <li>✅ L'indicateur doit avoir l'animation pulse</li>
+            <li>✅ Position précise selon la position de la souris (au-dessus/en-dessous)</li>
+        </ul>
+    </div>
+</div>
+
+<script src="/js/services/DragDropService.js"></script>
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    console.log('🧪 Test DragDrop - Table Context');
+    
+    if (!window.dragDropService) {
+        console.error('❌ DragDropService non disponible');
+        return;
+    }
+    
+    const testInstance = window.dragDropService.init('#test-sortable', {
+        itemSelector: '.sortable-item',
+        datasetKey: 'id',
+        numericIds: true,
+        onReorder: (itemIds) => {
+            console.log('🔄 Nouvel ordre:', itemIds);
+            window.dragDropService.showSuccess('Test réussi - Ordre : ' + itemIds.join(', '));
+        }
+    });
+    
+    if (testInstance) {
+        console.log('✅ Test DragDropService initialisé');
+    }
+});
+</script>
+{% endblock %}
