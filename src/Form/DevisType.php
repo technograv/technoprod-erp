@@ -7,6 +7,7 @@ use App\Entity\Contact;
 use App\Entity\Devis;
 use App\Entity\Client;
 use App\Entity\User;
+use App\Entity\ModeReglement;
 use Symfony\Bridge\Doctrine\Form\Type\EntityType;
 use Symfony\Component\Form\AbstractType;
 use Symfony\Component\Form\Extension\Core\Type\ChoiceType;
@@ -128,17 +129,11 @@ class DevisType extends AbstractType
                 'required' => false,
                 'attr' => ['class' => 'form-control']
             ])
-            ->add('tiersModeReglement', ChoiceType::class, [
+            ->add('modeReglement', EntityType::class, [
+                'class' => ModeReglement::class,
+                'choice_label' => 'nom',
+                'placeholder' => 'Choisir un mode de règlement',
                 'label' => 'Mode de règlement',
-                'choices' => [
-                    'Virement bancaire' => 'virement',
-                    'Carte bancaire' => 'carte',
-                    'Chèque' => 'cheque',
-                    'Espèces' => 'especes',
-                    'PayPal' => 'paypal',
-                    'Stripe' => 'stripe'
-                ],
-                'placeholder' => 'Mode de règlement',
                 'required' => false,
                 'attr' => ['class' => 'form-select']
             ])

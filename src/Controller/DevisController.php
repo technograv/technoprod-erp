@@ -13,8 +13,10 @@ use App\Repository\DevisVersionRepository;
 use App\Entity\Client;
 use App\Entity\Contact;
 use App\Entity\Adresse;
+use App\Entity\ModeReglement;
 use App\Repository\ProduitRepository;
 use App\Repository\TauxTVARepository;
+use App\Repository\ModeReglementRepository;
 use Doctrine\ORM\EntityManagerInterface;
 use Symfony\Bundle\FrameworkBundle\Controller\AbstractController;
 use Symfony\Component\HttpFoundation\JsonResponse;
@@ -74,7 +76,7 @@ final class DevisController extends AbstractController
     }
 
     #[Route('/new', name: 'app_devis_new', methods: ['GET', 'POST'])]
-    public function new(Request $request, EntityManagerInterface $entityManager, ClientRepository $clientRepository, DocumentNumerotationService $numerotationService, DevisLoggerService $loggerService): Response
+    public function new(Request $request, EntityManagerInterface $entityManager, ClientRepository $clientRepository, ModeReglementRepository $modeReglementRepository, DocumentNumerotationService $numerotationService, DevisLoggerService $loggerService): Response
     {
         $devis = new Devis();
         
@@ -150,6 +152,7 @@ final class DevisController extends AbstractController
             $contactDefaut = $request->request->get('contact_defaut');
             $projetExistant = $request->request->get('projet_existant');
             $contactFacturation = $request->request->get('contact_facturation');
+            $emailEnvoiAutomatique = $request->request->get('email_envoi_automatique');
             
             // Récupération des adresses modifiées pour le projet
             $adresseProjetLigne1 = $request->request->get('adresse_projet_ligne1');
@@ -221,6 +224,14 @@ final class DevisController extends AbstractController
             
             $devis->setNotesClient($notePublique);
             $devis->setNotesInternes($notePrivee);
+
+            // Définir l'email d'envoi automatique et le modèle de document
+            if ($emailEnvoiAutomatique) {
+                $devis->setEmailEnvoiAutomatique($emailEnvoiAutomatique);
+            }
+            if ($modeleDocument) {
+                $devis->setModeleDocument($modeleDocument);
+            }
             
             // Pré-remplir les informations tiers depuis le prospect
             $devis->setTiersCivilite($prospect->getCivilite());
@@ -320,13 +331,14 @@ final class DevisController extends AbstractController
         
         // Récupérer tous les prospects pour le sélecteur avec leurs contacts, adresses et formes juridiques
         $prospects = $entityManager->createQuery('
-            SELECT c, contacts, adresse, fj, contactFacturationDefault, contactLivraisonDefault
+            SELECT c, contacts, adresse, fj, contactFacturationDefault, contactLivraisonDefault, modeReg
             FROM App\Entity\Client c
             LEFT JOIN c.contacts contacts
             LEFT JOIN contacts.adresse adresse
             LEFT JOIN c.formeJuridique fj
             LEFT JOIN c.contactFacturationDefault contactFacturationDefault
             LEFT JOIN c.contactLivraisonDefault contactLivraisonDefault
+            LEFT JOIN c.modeReglement modeReg
             ORDER BY c.nomEntreprise ASC, contactFacturationDefault.nom ASC
         ')->getResult();
 
@@ -334,11 +346,15 @@ final class DevisController extends AbstractController
         $formesJuridiques = $entityManager->getRepository(\App\Entity\FormeJuridique::class)
             ->findBy(['actif' => true], ['ordre' => 'ASC']);
 
+        // Récupérer tous les modes de règlement pour le formulaire
+        $modesReglement = $modeReglementRepository->findBy(['actif' => true], ['nom' => 'ASC']);
+
         return $this->render('devis/new.html.twig', [
             'devis' => $devis,
             'prospects' => $prospects,
             'next_devis_number' => $nextDevisNumber,
             'formes_juridiques' => $formesJuridiques,
+            'modes_reglement' => $modesReglement,
         ]);
     }
 

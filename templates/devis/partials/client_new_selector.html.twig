@@ -61,13 +61,14 @@
                                     'ville': adresse.ville
                                 }]) %}
                             {% endfor %}
-                            <option value="{{ client.id }}" 
+                            <option value="{{ client.id }}"
                                     {{ (selected_client and selected_client.id == client.id) ? 'selected' : '' }}
                                     data-contacts="{{ contacts|json_encode|e('html_attr') }}"
                                     data-addresses="{{ addresses|json_encode|e('html_attr') }}"
                                     data-projects="{{ projects|json_encode|e('html_attr') }}"
                                     data-default-facturation="{{ defaultContactFacturation }}"
-                                    data-default-livraison="{{ defaultContactLivraison }}">
+                                    data-default-livraison="{{ defaultContactLivraison }}"
+                                    data-mode-reglement="{{ client.modeReglement ? client.modeReglement.id : '' }}">
 {% if client.formeJuridique and client.formeJuridique.templateFormulaire == 'personne_morale' %}
                                 {# Entreprise : toujours afficher forme juridique + dénomination sociale #}
                                 {{ client.formeJuridique.nom }}{% if client.nomEntreprise %} {{ client.nomEntreprise }}{% else %} [Dénomination manquante]{% endif %}
@@ -221,16 +222,35 @@
                 </div>
             </div>
             
-            <!-- Email d'envoi automatique -->
+            <!-- Méthode d'expédition et Email d'envoi automatique -->
             <div class="row mt-3">
-                <div class="col-md-12">
+                <div class="col-md-4">
+                    <div class="mb-3">
+                        <label for="methode_expedition" class="form-label">Méthode d'expédition</label>
+                        <select class="form-select" id="methode_expedition" name="methode_expedition">
+                            <option value="livraison">Livraison</option>
+                            <option value="chantier">Sur chantier</option>
+                            <option value="retrait">Retrait en magasin</option>
+                            <option value="transporteur">Transporteur</option>
+                        </select>
+                    </div>
+                </div>
+                <div class="col-md-4">
                     <div class="mb-3">
                         <label for="email_envoi_automatique" class="form-label">Email d'envoi automatique</label>
-                        <input type="email" class="form-control" id="email_envoi_automatique" name="email_envoi_automatique" 
+                        <input type="email" class="form-control" id="email_envoi_automatique" name="email_envoi_automatique"
                                placeholder="email@example.com">
-                        <small class="text-muted">
-                            <i class="fas fa-paper-plane me-1"></i>Ce devis sera envoyé automatiquement à cette adresse
-                        </small>
+                    </div>
+                </div>
+                <div class="col-md-4">
+                    <div class="mb-3">
+                        <label for="modele_document" class="form-label">Modèle de document</label>
+                        <select class="form-select" id="modele_document" name="modele_document">
+                            <option value="standard">Modèle standard</option>
+                            <option value="moderne">Modèle moderne</option>
+                            <option value="classique">Modèle classique</option>
+                            <option value="personnalise">Modèle personnalisé</option>
+                        </select>
                     </div>
                 </div>
             </div>

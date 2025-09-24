@@ -477,14 +477,6 @@ final class ClientController extends AbstractController
                     $client->setNotes($data['notes']);
                 }
                 
-                // Assujetti TVA
-                $oldAssujettiTva = $client->isAssujettiTva();
-                $newAssujettiTva = isset($data['assujetti_tva']);
-                if ($oldAssujettiTva !== $newAssujettiTva) {
-                    $clientChanges['assujetti_tva'] = ['old' => $oldAssujettiTva, 'new' => $newAssujettiTva];
-                }
-                $client->setAssujettiTva($newAssujettiTva);
-                
                 // Famille (pas de log spécifique car champ technique)
                 if (isset($data['famille'])) $client->setFamille($data['famille']);
             
@@ -739,9 +731,6 @@ final class ClientController extends AbstractController
                             break;
                         case 'notes':
                             $clientLogger->logNotesChanged($client, $change['old'], $change['new']);
-                            break;
-                        case 'assujetti_tva':
-                            $clientLogger->logAssujettiTvaChanged($client, $change['old'], $change['new']);
                             break;
                     }
                 }

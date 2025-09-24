@@ -327,23 +327,6 @@ class ClientLoggerService
     }
 
     /**
-     * Log la modification de l'assujettissement TVA
-     */
-    public function logAssujettiTvaChanged(Client $client, ?bool $oldValue, ?bool $newValue, ?User $user = null): ClientLog
-    {
-        $oldLabel = $oldValue ? 'Assujetti TVA' : 'Non assujetti TVA';
-        $newLabel = $newValue ? 'Assujetti TVA' : 'Non assujetti TVA';
-        
-        $details = sprintf(
-            'Assujettissement TVA modifié %s → %s',
-            $oldLabel,
-            $newLabel
-        );
-        
-        return $this->log($client, 'Informations générales modifiées', $details, $user);
-    }
-
-    /**
      * Log la modification des notes
      */
     public function logNotesChanged(Client $client, ?string $oldValue, ?string $newValue, ?User $user = null): ClientLog
