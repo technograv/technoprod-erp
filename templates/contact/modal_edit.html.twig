@@ -372,16 +372,8 @@ function initAddressButtons() {
         addressSelect.addEventListener('change', handleAddressChange);
         
         
-        // Event listener pour Select2 SEULEMENT s'il existe déjà
-        if (window.$ && $(addressSelect).hasClass('select2-hidden-accessible')) {
-            console.log('✅ Select2 détecté, ajout event listener select2:select (EDIT)');
-            $(addressSelect).off('select2:select select2:unselect').on('select2:select select2:unselect', function(e) {
-                console.log('🔧 Select2 event déclenché (EDIT):', e.type, 'valeur:', this.value);
-                handleAddressChange.call(this);
-            });
-        } else {
-            console.log('ℹ️ Select simple utilisé (pas de Select2) - utilisation du change natif seulement');
-        }
+        // Plus besoin d'event listener Select2 car les adresses utilisent des selects normaux
+        console.log('✅ Event listener standard attaché pour select normal');
         
         // Test initial de l'état
         console.log('🔍 État initial du bouton (EDIT):', {

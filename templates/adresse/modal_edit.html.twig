@@ -154,18 +154,37 @@
                 window.editAddressInProgress = false;
                 window.addressEditSuccess = false;
                 
-                // IMPORTANT: Si c'est une fermeture après validation réussie, ne pas retourner à la modale contact
+                // IMPORTANT: Si c'est une fermeture après validation réussie, ne rien faire de spécial
+                // L'événement addressUpdated est géré par la modale contact
                 if (isSuccessClose) {
-                    console.log('✅ Fermeture après validation - nettoyage des événements contact parasites');
-                    window.lastContactEditEvent = null; // Nettoyer pour éviter les réouvertures parasites
+                    console.log('✅ Fermeture après validation - laisser les événements gérer le retour');
                 }
                 
-                // Nettoyage simple des backdrops
+                // Nettoyage simple des backdrops (identique à modal_new.html.twig)
                 setTimeout(() => {
-                    const backdrops = document.querySelectorAll('.modal-backdrop');
-                    if (backdrops.length > 0) {
-                        console.log('🧹 Nettoyage', backdrops.length, 'backdrops');
-                        backdrops.forEach(backdrop => backdrop.remove());
+                    const allBackdrops = document.querySelectorAll('.modal-backdrop');
+                    const openModals = document.querySelectorAll('.modal.show');
+
+                    console.log('🔍 État après fermeture:', {
+                        backdrops: allBackdrops.length,
+                        modalstOuvertes: openModals.length
+                    });
+
+                    // Si il y a plus de backdrops que de modales ouvertes, supprimer le surplus
+                    if (allBackdrops.length > openModals.length) {
+                        const backdropsToRemove = allBackdrops.length - openModals.length;
+                        for (let i = 0; i < backdropsToRemove; i++) {
+                            const lastBackdrop = allBackdrops[allBackdrops.length - 1 - i];
+                            if (lastBackdrop) {
+                                console.log('🧹 Suppression backdrop surplus');
+                                lastBackdrop.remove();
+                            }
+                        }
+                    }
+
+                    // Restaurer le body SEULEMENT si aucune modale n'est ouverte
+                    if (openModals.length === 0) {
+                        console.log('🔄 Restauration body (aucune modale ouverte)');
                         document.body.classList.remove('modal-open');
                         document.body.style.removeProperty('padding-right');
                         document.body.style.removeProperty('overflow');
@@ -178,21 +197,31 @@
 
 
 function submitAddressForm() {
+    // ⚠️ PROTECTION CONTRE DOUBLE SOUMISSION
+    if (window.addressFormSubmitting) {
+        console.log('⚠️ Soumission déjà en cours, appel ignoré');
+        return;
+    }
+    window.addressFormSubmitting = true;
+
     const form = document.getElementById('address-form');
     const formData = new FormData(form);
     const submitBtn = document.getElementById('save-address-btn');
-    
+
     // Validation côté client
     const nom = (formData.get('nom') || '').trim();
     const ligne1 = (formData.get('ligne1') || '').trim();
     const codePostal = (formData.get('codePostal') || '').trim();
     const ville = (formData.get('ville') || '').trim();
-    
+
     if (!nom || !ligne1 || !codePostal || !ville) {
         alert('Veuillez remplir tous les champs obligatoires');
+        window.addressFormSubmitting = false; // Réinitialiser le flag
         return;
     }
-    
+
+    console.log('🚀 submitAddressForm EDIT - soumission unique en cours');
+
     // Désactiver le bouton pendant la soumission
     submitBtn.disabled = true;
     submitBtn.innerHTML = '<i class="fas fa-spinner fa-spin me-1"></i>Modification...';
@@ -221,26 +250,61 @@ function submitAddressForm() {
             
             // CORRECTION: Marquer que la fermeture est due à une validation réussie
             window.addressEditSuccess = true;
-            
-            // Fermeture normale de la modale adresse
-            // Chercher spécifiquement la modale adresse visible
-            const visibleModal = document.querySelector('.modal.show');
-            if (visibleModal) {
-                const modal = bootstrap.Modal.getInstance(visibleModal);
+
+            // ✅ COPIE EXACTE DE LA LOGIQUE modal_new.html.twig
+            console.log('🔒 Fermeture de la modale adresse uniquement...');
+
+            // Trouver spécifiquement la modale d'adresse (pas toutes les modales visibles)
+            const addressModal = document.getElementById('address-modal') ||
+                                 document.querySelector('.modal[data-type="address"]') ||
+                                 document.querySelector('.modal.show'); // Fallback
+
+            if (addressModal) {
+                console.log('🎯 Modale d\'adresse trouvée:', addressModal.id || 'sans ID');
+
+                const modal = bootstrap.Modal.getInstance(addressModal);
                 if (modal) {
-                    console.log('🔒 Fermeture modale adresse après validation réussie (EDIT)');
+                    console.log('🔒 Fermeture via Bootstrap Modal (EDIT)');
                     modal.hide();
                 } else {
-                    // Fallback : fermeture manuelle
-                    console.log('⚠️ Instance Bootstrap non trouvée, fermeture manuelle');
-                    visibleModal.classList.remove('show');
-                    visibleModal.style.display = 'none';
-                    document.body.classList.remove('modal-open');
-                    // Supprimer les backdrops
-                    document.querySelectorAll('.modal-backdrop').forEach(b => b.remove());
+                    console.log('🔒 Fermeture manuelle de la modale d\'adresse (EDIT)');
+                    addressModal.classList.remove('show');
+                    addressModal.style.display = 'none';
+                    addressModal.setAttribute('aria-hidden', 'true');
                 }
+
+                // ⚠️ NE PAS supprimer TOUS les backdrops - seulement le dernier
+                setTimeout(() => {
+                    const allBackdrops = document.querySelectorAll('.modal-backdrop');
+                    const openModals = document.querySelectorAll('.modal.show');
+
+                    console.log('🔍 État après fermeture (EDIT):', {
+                        backdrops: allBackdrops.length,
+                        modalstOuvertes: openModals.length
+                    });
+
+                    // Si il y a plus de backdrops que de modales ouvertes, supprimer le surplus
+                    if (allBackdrops.length > openModals.length) {
+                        const backdropsToRemove = allBackdrops.length - openModals.length;
+                        for (let i = 0; i < backdropsToRemove; i++) {
+                            const lastBackdrop = allBackdrops[allBackdrops.length - 1 - i];
+                            if (lastBackdrop) {
+                                console.log('🧹 Suppression backdrop surplus (EDIT)');
+                                lastBackdrop.remove();
+                            }
+                        }
+                    }
+
+                    // Restaurer le body SEULEMENT si aucune modale n'est ouverte
+                    if (openModals.length === 0) {
+                        console.log('🔄 Restauration body (aucune modale ouverte) (EDIT)');
+                        document.body.classList.remove('modal-open');
+                        document.body.style.removeProperty('padding-right');
+                        document.body.style.removeProperty('overflow');
+                    }
+                }, 100);
             } else {
-                console.error('❌ Aucune modale visible trouvée pour fermeture');
+                console.error('❌ Aucune modale d\'adresse trouvée (EDIT)');
             }
         } else {
             alert(data.message || 'Erreur lors de la modification de l\'adresse');
@@ -254,6 +318,10 @@ function submitAddressForm() {
         // Réactiver le bouton
         submitBtn.disabled = false;
         submitBtn.innerHTML = '<i class="fas fa-save me-1"></i>Modifier l\'adresse';
+
+        // ⚠️ RÉINITIALISER LE FLAG DE PROTECTION
+        window.addressFormSubmitting = false;
+        console.log('🔄 Flag de protection réinitialisé');
     });
 }
 </script>

@@ -127,4 +127,61 @@ class AdresseController extends AbstractController
             'adresse' => $adresse
         ]);
     }
+    
+    #[Route('/api/create', name: 'app_adresse_api_create', methods: ['POST'])]
+    public function apiCreate(Request $request, EntityManagerInterface $entityManager): Response
+    {
+        try {
+            $data = json_decode($request->getContent(), true);
+            
+            // Récupérer le client
+            $clientId = $data['client'] ?? null;
+            if (!$clientId) {
+                return $this->json(['success' => false, 'message' => 'Client requis'], 400);
+            }
+            
+            $client = $entityManager->getRepository(Client::class)->find($clientId);
+            if (!$client) {
+                return $this->json(['success' => false, 'message' => 'Client non trouvé'], 404);
+            }
+            
+            // Créer l'adresse
+            $adresse = new Adresse();
+            $adresse->setClient($client);
+            $adresse->setType($data['type'] ?? 'autre');
+            $adresse->setLigne1($data['ligne1'] ?? '');
+            $adresse->setLigne2($data['ligne2'] ?? '');
+            $adresse->setCodePostal($data['codePostal'] ?? '');
+            $adresse->setVille($data['ville'] ?? '');
+            $adresse->setPays($data['pays'] ?? 'France');
+            
+            // Générer le label d'affichage
+            $displayLabel = $adresse->getLigne1();
+            if ($adresse->getLigne2()) {
+                $displayLabel .= ', ' . $adresse->getLigne2();
+            }
+            $displayLabel .= ', ' . $adresse->getCodePostal() . ' ' . $adresse->getVille();
+            $adresse->setDisplayLabel($displayLabel);
+            
+            $entityManager->persist($adresse);
+            $entityManager->flush();
+            
+            return $this->json([
+                'success' => true,
+                'address' => [
+                    'id' => $adresse->getId(),
+                    'label' => $adresse->getDisplayLabel(),
+                    'ligne1' => $adresse->getLigne1(),
+                    'codePostal' => $adresse->getCodePostal(),
+                    'ville' => $adresse->getVille()
+                ]
+            ]);
+            
+        } catch (\Exception $e) {
+            return $this->json([
+                'success' => false,
+                'message' => 'Erreur lors de la création de l\'adresse: ' . $e->getMessage()
+            ], 500);
+        }
+    }
 }

@@ -14,13 +14,12 @@ class DevisContactService {
      */
     constructor(config = {}) {
         this.config = {
-            debug: config.debug || true, // FORCE DEBUG ON
+            debug: config.debug || false, // Debug désactivé par défaut
             ...config
         };
-        
-        // Initialiser le logger
-        this.logger = new DebugLogger('DevisContactService', true);
-        this.logger.critical('🔴 DÉMARRAGE SERVICE - DEBUG FORCÉ ACTIVÉ');
+
+        // Initialiser le logger seulement si debug activé
+        this.logger = new DebugLogger('DevisContactService', this.config.debug);
         
         // État du service
         this.currentContext = null; // 'livraison' ou 'facturation'

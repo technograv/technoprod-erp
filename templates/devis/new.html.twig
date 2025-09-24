@@ -533,9 +533,48 @@
     <script src="/js/services/PostalAutocompleteService.js"></script>
     <script src="/js/services/DebugLogger.js"></script>
     <script src="/js/services/ModalService.js"></script>
+    <script src="/js/services/ClientModalService.js"></script>
+    <script src="/js/services/ContactModalService.js"></script>
+    <script src="/js/services/AddressModalService.js"></script>
+    <script src="/js/services/NestedModalService.js"></script>
+    <script src="/js/services/DevisModalIntegration.js"></script>
     <script src="/js/services/DevisContactService.js"></script>
     <script>
     document.addEventListener('DOMContentLoaded', function() {
+        // Initialiser le système de modales imbriquées
+        console.log('🚀 Initialisation du DevisModalIntegration...');
+        try {
+            window.devisModalIntegration = new DevisModalIntegration({
+                debug: false
+            });
+            console.log('✅ DevisModalIntegration initialisé avec succès');
+        } catch (error) {
+            console.error('❌ Erreur initialisation DevisModalIntegration:', error);
+        }
+        
+        // Initialiser le NestedModalService pour la gestion des modales imbriquées
+        console.log('🚀 Initialisation du NestedModalService...');
+        try {
+            window.nestedModalService = new NestedModalService({
+                debug: false,
+                autoSelectCreated: true,
+                refreshOnComplete: false
+            });
+            
+            // Attacher aux éléments de la page
+            window.nestedModalService.attachToDevisPage({
+                clientSelect: 'client_selector',
+                contactFacturationSelect: 'contact_facturation', 
+                contactLivraisonSelect: 'contact_defaut',
+                addressFacturationSelect: 'adresse_facturation',
+                addressLivraisonSelect: 'adresse_livraison'
+            });
+            
+            console.log('✅ NestedModalService initialisé avec succès');
+        } catch (error) {
+            console.error('❌ Erreur initialisation NestedModalService:', error);
+        }
+        
         // Initialiser le DevisContactService
         console.log('🚀 Initialisation du DevisContactService...');
         try {

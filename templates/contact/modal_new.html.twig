@@ -5,61 +5,11 @@
     <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
 </div>
 
+<!-- Plus de styles Select2 nécessaires : les adresses utilisent maintenant des selects normaux -->
 <style>
-/* Fix pour Select2 dans les modals - AGRESSIF */
-.modal .select2-container {
-    z-index: 9999 !important;
-}
-.modal .select2-dropdown {
-    z-index: 10000 !important;
-}
-.select2-container--open .select2-dropdown {
-    z-index: 10001 !important;
-}
-
-/* Forcer le dropdown Select2 au-dessus de la modale mais dans la modale */
-.modal .select2-dropdown {
-    z-index: 1070 !important;
-}
-.modal .select2-container--bootstrap-5 .select2-dropdown {
-    z-index: 1070 !important;
-}
-.modal .select2-container--open .select2-dropdown {
-    z-index: 1070 !important;
-}
-
-/* Firefox specific fixes pour Select2 dans modales */
-@-moz-document url-prefix() {
-    .modal .select2-dropdown {
-        z-index: 1070 !important;
-        position: fixed !important;
-    }
-    
-    .modal .select2-container--open .select2-dropdown {
-        z-index: 1070 !important;
-        position: fixed !important;
-    }
-    
-    /* Forcer l'affichage du dropdown sur Firefox */
-    .select2-dropdown {
-        display: block !important;
-        opacity: 1 !important;
-        visibility: visible !important;
-    }
-    
-    /* Fix pour la position du dropdown sur Firefox */
-    .modal .select2-dropdown {
-        top: auto !important;
-        left: auto !important;
-        transform: none !important;
-    }
-    
-    /* Classe spécifique pour Firefox Select2 */
-    .firefox-select2-dropdown {
-        z-index: 9999 !important;
-        position: fixed !important;
-        display: block !important;
-    }
+/* Styles simples pour les selects normaux dans les modales */
+.modal .form-select {
+    border-radius: 0.375rem;
 }
 
 /* Gestion des modales empilées - adresse par-dessus contact */
@@ -141,12 +91,14 @@
                             {% endif %}
                         </select>
                         <!-- Boutons d'action adresse -->
-                        <button type="button" class="btn btn-success btn-sm" id="add-address-btn" 
-                                title="Ajouter une nouvelle adresse" data-client-id="{{ client.id }}">
+                        <button type="button" id="add-address-btn" class="btn btn-success btn-sm btn-add-address-from-contact"
+                                title="Ajouter une nouvelle adresse" data-client-id="{{ client.id }}"
+                                data-from-modal="true">
                             <i class="fas fa-plus"></i>
                         </button>
-                        <button type="button" class="btn btn-primary btn-sm" id="edit-address-btn" 
-                                title="Modifier l'adresse sélectionnée" style="display: none;">
+                        <button type="button" id="edit-address-btn" class="btn btn-primary btn-sm btn-edit-address-from-contact"
+                                title="Modifier l'adresse sélectionnée" style="display: none;"
+                                data-from-modal="true">
                             <i class="fas fa-edit"></i>
                         </button>
                     </div>
@@ -196,7 +148,28 @@
     console.log('🚀 Initialisation modal contact - début');
     
     // Services déjà chargés de manière synchrone (comme /devis/new)
-    
+
+    // ⚠️ DÉSACTIVER LES SERVICES CONFLICTUELS POUR ÉVITER LES EVENT LISTENERS MULTIPLES
+    console.log('🛡️ Désactivation des services conflictuels...');
+
+    // Désactiver temporairement les services qui peuvent aussi gérer les adresses
+    window._conflictingServicesDisabled = {
+        multiModalNavigationService: window.multiModalNavigationService,
+        devisContactServiceActive: window.devisContactServiceActive
+    };
+
+    // Désactiver MultiModalNavigationService
+    if (window.multiModalNavigationService) {
+        window.multiModalNavigationService.disabled = true;
+        console.log('🚫 MultiModalNavigationService désactivé');
+    }
+
+    // Désactiver DevisContactService
+    if (window.devisContactServiceActive) {
+        window.devisContactServiceActive = false;
+        console.log('🚫 DevisContactService désactivé');
+    }
+
     // Attendre un petit délai pour que le DOM soit prêt
     setTimeout(function() {
         console.log('🔧 DOM prêt, initialisation des boutons et rechargement adresses');
@@ -210,7 +183,7 @@
         };
         console.log('💾 Auto-stockage info contact à l\'ouverture (NEW):', window.lastContactEditEvent);
         
-        // Gérer les boutons d'adresse
+        // Gérer les boutons d'adresse à chaque fois (au cas où ils seraient recréés)
         initAddressButtons();
         
         // Charger les adresses depuis l'API pour s'assurer qu'elles sont à jour
@@ -261,14 +234,8 @@ function initAddressButtons() {
         addressSelect.addEventListener('change', handleAddressChange);
         
         
-        // Event listener aussi pour Select2
-        if (window.$ && $(addressSelect).hasClass('select2-hidden-accessible')) {
-            console.log('✅ Select2 détecté, ajout event listener select2:select (NEW)');
-            $(addressSelect).off('select2:select select2:unselect').on('select2:select select2:unselect', function(e) {
-                console.log('🔧 Select2 event déclenché (NEW):', e.type, 'valeur:', this.value);
-                handleAddressChange.call(this);
-            });
-        }
+        // Plus besoin d'event listener Select2 car les adresses utilisent des selects normaux
+        console.log('✅ Event listener standard attaché pour select normal');
         
         // Test initial de l'état
         console.log('🔍 État initial du bouton (NEW):', {
@@ -284,67 +251,104 @@ function initAddressButtons() {
     // Utiliser AddressModalService pour gérer la navigation multi-modale
     
     if (window.AddressModalService && addBtn && editBtn) {
-        console.log('🔧 Configuration AddressModalService pour modal contact NEW');
-        
+        console.log('🔧 Configuration AddressModalService EXCLUSIF pour modal contact NEW');
+
+        // ✅ UTILISER UN SEUL SERVICE MAÎTRE : AddressModalService
         const addressModalService = new AddressModalService({
             debug: true
         });
-        
+
+        console.log('✅ AddressModalService sera le SEUL service actif pour les adresses');
+
         // Attacher aux boutons de cette modale avec logique spéciale pour "nouveau contact"
         
         // Pour le bouton "ajouter adresse", créer un event listener personnalisé
         if (addBtn) {
-            addBtn.addEventListener('click', function() {
-                console.log('🔗 Clic Nouvelle Adresse depuis modal contact NEW');
-                
-                // Pour nouveau contact, sauvegarder d'abord en brouillon avant d'aller vers l'adresse
-                const form = document.getElementById('contact-form');
-                const formData = new FormData(form);
-                
-                // Validation côté client
-                const nom = (formData.get('nom') || '').trim();
-                
-                if (!nom) {
-                    alert('Veuillez renseigner au moins le nom du contact avant d\'ajouter une adresse');
+            // Supprimer d'éventuels anciens event listeners
+            const newAddBtn = addBtn.cloneNode(true);
+            addBtn.parentNode.replaceChild(newAddBtn, addBtn);
+
+            newAddBtn.addEventListener('click', function() {
+                // Empêcher les clics multiples
+                if (newAddBtn.disabled) {
+                    console.log('⚠️ Bouton désactivé, clic ignoré');
                     return;
                 }
-                
-                console.log('💾 Sauvegarde automatique du contact avant navigation vers adresse...');
-                
-                // Sauvegarder le contact en premier
-                saveContactBeforeAddressNavigation('{{ client.id }}');
+
+                console.log('🔗 Clic Nouvelle Adresse depuis modal contact NEW');
+
+                // ✅ MARQUER LA NAVIGATION INTER-MODALE
+                window.lastContactEditEvent.fromModal = true;
+                console.log('🎯 Navigation inter-modale activée:', window.lastContactEditEvent);
+
+                // Désactiver temporairement le bouton
+                newAddBtn.disabled = true;
+                const originalText = newAddBtn.innerHTML;
+                newAddBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i>';
+
+                // Ouvrir la modale d'adresse en utilisant l'instance locale
+                console.log('✅ Ouverture modale adresse via AddressModalService local');
+
+                try {
+                    addressModalService.createAddress('{{ client.id }}');
+                } catch (error) {
+                    console.error('❌ Erreur ouverture modale adresse:', error);
+                }
+
+                // Réactiver le bouton après un délai
+                setTimeout(() => {
+                    newAddBtn.disabled = false;
+                    newAddBtn.innerHTML = originalText;
+                }, 2000);
             });
         }
         
         // Pour le bouton "modifier adresse", sauvegarder aussi le contact d'abord
         if (editBtn) {
-            editBtn.addEventListener('click', function() {
+            // Supprimer d'éventuels anciens event listeners
+            const newEditBtn = editBtn.cloneNode(true);
+            editBtn.parentNode.replaceChild(newEditBtn, editBtn);
+
+            newEditBtn.addEventListener('click', function() {
                 console.log('🔗 Clic Modifier Adresse depuis modal contact NEW');
-                
+
                 const addressSelect = document.getElementById('contact-adresse');
                 const addressId = addressSelect?.value;
-                
+
                 if (!addressId) {
                     alert('Veuillez d\'abord sélectionner une adresse à modifier');
                     return;
                 }
-                
-                // Pour nouveau contact, sauvegarder d'abord avant de modifier l'adresse
-                const form = document.getElementById('contact-form');
-                const formData = new FormData(form);
-                
-                // Validation côté client
-                const nom = (formData.get('nom') || '').trim();
-                
-                if (!nom) {
-                    alert('Veuillez renseigner au moins le nom du contact avant de modifier une adresse');
+
+                // Empêcher les clics multiples
+                if (newEditBtn.disabled) {
+                    console.log('⚠️ Bouton désactivé, clic ignoré');
                     return;
                 }
-                
-                console.log('💾 Sauvegarde automatique du contact avant navigation vers modification adresse...');
-                
-                // Sauvegarder le contact puis naviguer vers l'édition d'adresse
-                saveContactBeforeAddressEdit('{{ client.id }}', addressId);
+
+                // ✅ MARQUER LA NAVIGATION INTER-MODALE
+                window.lastContactEditEvent.fromModal = true;
+                console.log('🎯 Navigation inter-modale activée pour édition:', window.lastContactEditEvent);
+
+                // Désactiver temporairement le bouton
+                newEditBtn.disabled = true;
+                const originalText = newEditBtn.innerHTML;
+                newEditBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i>';
+
+                // ✅ ÉDITION DIRECTE (comme pour création) - pas de sauvegarde contact
+                console.log('✅ Ouverture modale édition adresse via AddressModalService local');
+
+                try {
+                    addressModalService.editAddress(addressId);
+                } catch (error) {
+                    console.error('❌ Erreur ouverture modale édition adresse:', error);
+                }
+
+                // Réactiver le bouton après un délai
+                setTimeout(() => {
+                    newEditBtn.disabled = false;
+                    newEditBtn.innerHTML = originalText;
+                }, 2000);
             });
         }
         
@@ -352,25 +356,121 @@ function initAddressButtons() {
     } else {
         console.log('❌ AddressModalService ou boutons non disponibles');
     }
+
+    // 🔄 FONCTION DE NETTOYAGE : Restaurer les services à la fermeture de la modale
+    const originalCleanup = function() {
+        console.log('🔄 Restauration des services conflictuels...');
+
+        // Restaurer MultiModalNavigationService
+        if (window._conflictingServicesDisabled?.multiModalNavigationService && window.multiModalNavigationService) {
+            window.multiModalNavigationService.disabled = false;
+            console.log('✅ MultiModalNavigationService restauré');
+        }
+
+        // Restaurer DevisContactService
+        if (window._conflictingServicesDisabled?.devisContactServiceActive) {
+            window.devisContactServiceActive = true;
+            console.log('✅ DevisContactService restauré');
+        }
+
+        // Nettoyer la sauvegarde
+        delete window._conflictingServicesDisabled;
+    };
+
+    // 🔄 SYSTÈME DE NAVIGATION SIMPLIFIÉ : Écouter le retour depuis la modale adresse
+    const handleAddressAction = function(event, action) {
+        console.log(`✅ Adresse ${action} détectée dans modale contact:`, event.detail);
+
+        // Vérifier si l'événement vient bien d'une navigation depuis cette modale
+        const lastEvent = window.lastContactEditEvent;
+        if (lastEvent && lastEvent.fromModal) {
+            console.log(`🔄 Navigation de retour validée après ${action} - rechargement adresses et présélection`);
+
+            // ⚠️ EMPÊCHER LE DevisContactService de traiter cet événement
+            event.stopImmediatePropagation();
+            console.log('🛡️ Propagation stoppée pour empêcher les conflits');
+
+            // Délai pour permettre à la modale adresse de se fermer complètement
+            setTimeout(() => {
+                console.log('⏰ Rechargement des adresses et présélection...');
+
+                // Vérifier que les éléments existent encore avant de recharger
+                const addressSelect = document.getElementById('contact-adresse');
+                if (!addressSelect) {
+                    console.log('❌ Modale contact fermée, annulation rechargement');
+                    return;
+                }
+
+                // Recharger les adresses avec l'adresse créée/modifiée
+                reloadAddresses(event.detail.adresse.id);
+
+                console.log('✅ Navigation simplifiée terminée');
+            }, 500);
+        } else {
+            console.log(`ℹ️ Événement address${action.charAt(0).toUpperCase() + action.slice(1)} ignoré - pas de navigation en cours`);
+        }
+    };
+
+    const handleAddressCreated = (event) => handleAddressAction(event, 'created');
+    const handleAddressUpdated = (event) => handleAddressAction(event, 'updated');
+
+    // Attacher les event listeners pour le retour d'adresse (création ET modification)
+    // ⚠️ UTILISER LA PHASE DE CAPTURE pour être traités AVANT le DevisContactService
+    window.addEventListener('addressCreated', handleAddressCreated, true);
+    window.addEventListener('addressUpdated', handleAddressUpdated, true);
+
+    // Attacher le nettoyage à la fermeture de la modale
+    window.addEventListener('beforeunload', originalCleanup);
+
+    // Détecter la fermeture de la modale Bootstrap
+    document.addEventListener('hidden.bs.modal', function(event) {
+        // Vérifier si c'est bien notre modale qui se ferme
+        if (event.target.querySelector('#contact-form')) {
+            // Nettoyer les event listeners personnalisés (avec le même paramètre capture)
+            window.removeEventListener('addressCreated', handleAddressCreated, true);
+            window.removeEventListener('addressUpdated', handleAddressUpdated, true);
+            originalCleanup();
+        }
+    });
 }
+
+// Note: initAddressButtons() est appelée conditionnellement dans setTimeout() pour éviter les duplications
 
 // Fonction séparée pour gérer le changement d'adresse
 function handleAddressChange() {
     const editBtn = document.getElementById('edit-address-btn');
     const shouldShow = this.value ? 'inline-block' : 'none';
-    
-    console.log('🔧 handleAddressChange appelé (NEW):', { 
-        addressValue: this.value, 
+
+    console.log('🔧 handleAddressChange appelé (NEW):', {
+        addressValue: this.value,
         shouldShow: shouldShow,
         buttonFound: !!editBtn,
         currentDisplay: editBtn ? editBtn.style.display : 'N/A'
     });
-    
+
     if (editBtn) {
         editBtn.style.display = shouldShow;
-        console.log('✅ Bouton edit mis à jour (NEW):', editBtn.style.display);
+        // Force refresh de l'affichage
+        if (this.value) {
+            editBtn.style.visibility = 'visible';
+            editBtn.style.opacity = '1';
+        } else {
+            editBtn.style.visibility = 'hidden';
+            editBtn.style.opacity = '0';
+        }
+        console.log('✅ Bouton edit mis à jour (NEW):', editBtn.style.display, 'visibility:', editBtn.style.visibility);
     } else {
         console.log('❌ EditBtn introuvable lors du changement (NEW)');
+        // Essayer de le retrouver après un délai
+        setTimeout(() => {
+            const laterEditBtn = document.getElementById('edit-address-btn');
+            if (laterEditBtn && this.value) {
+                laterEditBtn.style.display = 'inline-block';
+                laterEditBtn.style.visibility = 'visible';
+                laterEditBtn.style.opacity = '1';
+                console.log('✅ Bouton edit retrouvé et affiché après délai');
+            }
+        }, 100);
     }
 }
 
@@ -440,54 +540,14 @@ function reloadAddresses(selectedAddressId = null) {
                 addressSelect.appendChild(option);
             }
             
-            // 🔧 Mettre à jour Select2 si présent
-            if (window.$ && $(addressSelect).hasClass('select2-hidden-accessible')) {
-                console.log('🔧 Rafraîchissement Select2 pour', addressSelect.id, 'avec selectedAddressId:', selectedAddressId);
-                try {
-                    const $select = $(addressSelect);
-                    
-                    // D'abord, sélectionner la bonne option dans le DOM natif
-                    if (selectedAddressId) {
-                        console.log('🎯 Pré-sélection option:', selectedAddressId);
-                        addressSelect.value = selectedAddressId;
-                    }
-                    
-                    // Ensuite, forcer la reconstruction complète de Select2
-                    console.log('🔄 Destruction et reconstruction Select2...');
-                    $select.select2('destroy');
-                    
-                    // Réinitialiser avec configuration simple
-                    $select.select2({
-                        dropdownParent: $select.closest('.modal'),
-                        width: '100%',
-                        theme: 'bootstrap-5',
-                        dropdownAutoWidth: true
-                    });
-                    
-                    // Re-sélectionner après reconstruction
-                    if (selectedAddressId) {
-                        console.log('🎯 Post-sélection Select2:', selectedAddressId);
-                        $select.val(selectedAddressId).trigger('change');
-                        
-                        // Vérification et re-sélection différée si nécessaire
-                        setTimeout(() => {
-                            const currentVal = $select.val();
-                            console.log('🔍 Vérification sélection différée:', currentVal, 'vs', selectedAddressId);
-                            if (currentVal != selectedAddressId) {
-                                console.log('🔄 Re-sélection forcée car valeur incorrecte');
-                                $select.val(selectedAddressId).trigger('change');
-                                
-                                // Aussi forcer la sélection native
-                                addressSelect.value = selectedAddressId;
-                                addressSelect.dispatchEvent(new Event('change'));
-                            }
-                        }, 500);
-                    }
-                    
-                    console.log('✅ Select2 reconstruit avec succès, valeur finale:', $select.val());
-                } catch (e) {
-                    console.error('❌ Erreur reconstruction Select2:', e);
-                }
+            // 🔧 Sélectionner l'adresse si spécifiée (select normal)
+            if (selectedAddressId) {
+                console.log('🎯 Sélection adresse:', selectedAddressId);
+                addressSelect.value = selectedAddressId;
+
+                // Déclencher l'événement change pour mettre à jour l'UI
+                addressSelect.dispatchEvent(new Event('change'));
+                console.log('✅ Adresse sélectionnée et event change déclenché');
             }
             
             // Mettre à jour le bouton d'édition
@@ -503,6 +563,10 @@ function reloadAddresses(selectedAddressId = null) {
             } else {
                 console.log('❌ Bouton edit-address-btn introuvable (NEW)');
             }
+
+            // Réattacher les event listeners après rechargement (au cas où ils auraient été perdus)
+            console.log('🔧 Réattachement des event listeners après reloadAddresses');
+            initAddressButtons();
         })
         .catch(error => {
             console.error('Erreur rechargement adresses:', error);
@@ -734,8 +798,9 @@ function saveContactBeforeAddressNavigation(clientId) {
 // ==================================
 // SAUVEGARDE AUTOMATIQUE AVANT MODIFICATION D'ADRESSE
 // ==================================
+// Note: Cette fonction n'est plus utilisée - édition d'adresse directe maintenant
 
-function saveContactBeforeAddressEdit(clientId, addressId) {
+function saveContactBeforeAddressEdit_DEPRECATED(clientId, addressId) {
     console.log('💾 Début sauvegarde contact avant navigation vers modification adresse');
     
     const form = document.getElementById('contact-form');

@@ -361,7 +361,7 @@ class MultiModalNavigationService {
      */
     static navigateToAddress(contactInfo, action, addressId = null) {
         if (!window.multiModalNavigationService) {
-            window.multiModalNavigationService = new MultiModalNavigationService({ debug: true });
+            window.multiModalNavigationService = new MultiModalNavigationService({ debug: false });
         }
         
         window.multiModalNavigationService.navigateFromContactToAddress(contactInfo, action, addressId);
@@ -382,7 +382,7 @@ class MultiModalNavigationService {
 window.MultiModalNavigationService = MultiModalNavigationService;
 
 // Initialiser automatiquement une instance globale
-window.multiModalNavigationService = new MultiModalNavigationService({ debug: true });
+window.multiModalNavigationService = new MultiModalNavigationService({ debug: false });
 
 // Nettoyer les backdrops orphelins à l'initialisation
 window.multiModalNavigationService.cleanupOrphanedBackdrops();

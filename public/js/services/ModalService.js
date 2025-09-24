@@ -288,10 +288,20 @@ class ModalService {
             }
         });
         
-        // Initialiser Select2 si présent
+        // Initialiser Select2 UNIQUEMENT pour les sélecteurs de clients (pas les adresses/contacts)
         if (window.$ && typeof $.fn.select2 !== 'undefined') {
+            // Ne transformer en Select2 QUE les selects de clients (beaucoup d'options + recherche nécessaire)
             $(container).find('select.form-select').each(function() {
-                if (!$(this).hasClass('select2-hidden-accessible')) {
+                const selectId = this.id;
+                const isClientSelector = selectId && (
+                    selectId.includes('client') ||
+                    selectId.includes('prospect') ||
+                    selectId === 'devis_client' ||
+                    selectId === 'client_selector'
+                );
+
+                if (isClientSelector && !$(this).hasClass('select2-hidden-accessible')) {
+                    console.log('🔧 [ModalService] Transformation Select2 pour:', selectId);
                     // Configuration Select2 pour modales Bootstrap
                     $(this).select2({
                         dropdownParent: $(this).closest('.modal'),
@@ -299,10 +309,12 @@ class ModalService {
                         theme: 'bootstrap-5',
                         // Fixes spécifiques pour Firefox
                         dropdownAutoWidth: false,
-                        escapeMarkup: function (markup) { 
-                            return markup; 
+                        escapeMarkup: function (markup) {
+                            return markup;
                         }
                     });
+                } else if (!isClientSelector) {
+                    console.log('✅ [ModalService] Select normal conservé pour:', selectId || 'sans ID');
                 }
             });
         }

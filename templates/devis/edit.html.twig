@@ -1069,11 +1069,12 @@
 <script src="https://cdn.quilljs.com/1.3.6/quill.min.js"></script>
 <!-- Services de modales -->
 <script src="/js/services/ModalService.js"></script>
-<script src="/js/services/MultiModalNavigationService.js"></script>
-<script src="/js/services/AddressModalService.js"></script>
-<script src="/js/services/DebugLogger.js"></script>
-<script src="/js/services/ContactModalService.js"></script>
 <script src="/js/services/ClientModalService.js"></script>
+<script src="/js/services/ContactModalService.js"></script>
+<script src="/js/services/AddressModalService.js"></script>
+<script src="/js/services/NestedModalService.js"></script>
+<script src="/js/services/DevisModalIntegration.js"></script>
+<script src="/js/services/DebugLogger.js"></script>
 <script src="/js/services/DevisContactService.js"></script>
 
 <script>
@@ -3240,6 +3241,29 @@ document.addEventListener('DOMContentLoaded', function() {
     
     console.log('🚀 Initialisation des services de modales...');
     
+    // Initialiser le système de modales imbriquées avec le nouveau NestedModalService
+    console.log('🚀 Initialisation du NestedModalService...');
+    try {
+        window.nestedModalService = new NestedModalService({
+            debug: false,
+            autoSelectCreated: true,
+            refreshOnComplete: false
+        });
+        
+        // Attacher aux éléments de la page d'édition
+        window.nestedModalService.attachToDevisPage({
+            clientSelect: 'devis_client',
+            contactFacturationSelect: 'devis_contactFacturation',
+            contactLivraisonSelect: 'devis_contactLivraison',
+            addressFacturationSelect: 'devis_adresseFacturation',
+            addressLivraisonSelect: 'devis_adresseLivraison'
+        });
+        
+        console.log('✅ NestedModalService initialisé avec succès');
+    } catch (error) {
+        console.error('❌ Erreur initialisation NestedModalService:', error);
+    }
+    
     // Vérifier d'abord le bouton avant initialisation
     const addClientBtn = document.getElementById('add-client-btn');
     if (addClientBtn) {
@@ -3256,7 +3280,7 @@ document.addEventListener('DOMContentLoaded', function() {
     if (window.ClientModalService && !window.clientModalServiceInstance) {
         console.log('📍 [EDIT.HTML.TWIG] Création de ClientModalService...');
         window.clientModalServiceInstance = new ClientModalService({
-            debug: true,
+            debug: false,
             onClientCreated: function(detail) {
                 console.log('📍 [EDIT.HTML.TWIG] ClientModalService.onClientCreated appelé');
                 if (window.$ && typeof $.fn.select2 !== 'undefined') {
@@ -3294,7 +3318,7 @@ document.addEventListener('DOMContentLoaded', function() {
     // Initialiser ContactModalService
     if (window.ContactModalService) {
         const contactModalService = new ContactModalService({
-            debug: true,
+            debug: false,
             onContactCreated: function(detail) {
                 console.log('📞 [EDIT] Contact créé, rechargement puis fermeture...');
                 
@@ -3423,7 +3447,7 @@ document.addEventListener('DOMContentLoaded', function() {
     // Initialiser AddressModalService
     if (window.AddressModalService) {
         const addressModalService = new AddressModalService({
-            debug: true,
+            debug: false,
             onAddressCreated: function(detail) {
                 console.log('📍 [EDIT] Adresse créée, rechargement puis fermeture...', detail);
                 

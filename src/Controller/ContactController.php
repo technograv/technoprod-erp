@@ -252,4 +252,95 @@ class ContactController extends AbstractController
             'message' => 'Aucune adresse associée à ce contact'
         ]);
     }
+    
+    #[Route('/api/create', name: 'app_contact_api_create', methods: ['POST'])]
+    public function apiCreate(Request $request, EntityManagerInterface $entityManager): Response
+    {
+        try {
+            $data = json_decode($request->getContent(), true);
+            
+            // Récupérer le client
+            $clientId = $data['client'] ?? null;
+            if (!$clientId) {
+                return $this->json(['success' => false, 'message' => 'Client requis'], 400);
+            }
+            
+            $client = $entityManager->getRepository(Client::class)->find($clientId);
+            if (!$client) {
+                return $this->json(['success' => false, 'message' => 'Client non trouvé'], 404);
+            }
+            
+            // Créer le contact
+            $contact = new Contact();
+            $contact->setClient($client);
+            $contact->setCivilite($data['civilite'] ?? '');
+            $contact->setPrenom($data['prenom'] ?? '');
+            $contact->setNom($data['nom'] ?? '');
+            $contact->setEmail($data['email'] ?? '');
+            $contact->setFonction($data['fonction'] ?? '');
+            $contact->setTelephone($data['telephoneFixe'] ?? '');
+            $contact->setMobile($data['mobile'] ?? '');
+            
+            // Gérer l'adresse si fournie
+            if (!empty($data['adresseId'])) {
+                $adresse = $entityManager->getRepository(Adresse::class)->find($data['adresseId']);
+                if ($adresse && $adresse->getClient() === $client) {
+                    $contact->setAdresse($adresse);
+                }
+            }
+            
+            // Gérer les flags par défaut
+            if ($data['defautFacturation'] ?? false) {
+                $contact->setDefautFacturation(true);
+                // Retirer le flag des autres contacts
+                foreach ($client->getContacts() as $existingContact) {
+                    if ($existingContact !== $contact) {
+                        $existingContact->setDefautFacturation(false);
+                    }
+                }
+            }
+            
+            if ($data['defautLivraison'] ?? false) {
+                $contact->setDefautLivraison(true);
+                // Retirer le flag des autres contacts
+                foreach ($client->getContacts() as $existingContact) {
+                    if ($existingContact !== $contact) {
+                        $existingContact->setDefautLivraison(false);
+                    }
+                }
+            }
+            
+            $entityManager->persist($contact);
+            $entityManager->flush();
+            
+            // Déclencher l'événement de création
+            $event = new CustomEvent('contactCreated', [
+                'contact' => [
+                    'id' => $contact->getId(),
+                    'label' => $contact->getPrenom() . ' ' . $contact->getNom(),
+                    'prenom' => $contact->getPrenom(),
+                    'nom' => $contact->getNom(),
+                    'email' => $contact->getEmail()
+                ],
+                'message' => 'Contact créé avec succès'
+            ]);
+            
+            return $this->json([
+                'success' => true,
+                'contact' => [
+                    'id' => $contact->getId(),
+                    'label' => $contact->getPrenom() . ' ' . $contact->getNom(),
+                    'prenom' => $contact->getPrenom(),
+                    'nom' => $contact->getNom(),
+                    'email' => $contact->getEmail()
+                ]
+            ]);
+            
+        } catch (\Exception $e) {
+            return $this->json([
+                'success' => false,
+                'message' => 'Erreur lors de la création du contact: ' . $e->getMessage()
+            ], 500);
+        }
+    }
 }

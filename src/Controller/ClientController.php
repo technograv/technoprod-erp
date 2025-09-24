@@ -1275,55 +1275,71 @@ final class ClientController extends AbstractController
     public function modalEdit(Client $client, Request $request, EntityManagerInterface $entityManager): Response
     {
         if ($request->isMethod('POST')) {
-            // Traitement des données du formulaire POST
-            $nom = $request->request->get('nom');
-            $prenom = $request->request->get('prenom');
-            $nomEntreprise = $request->request->get('nomEntreprise');
-            $email = $request->request->get('email');
-            $telephone = $request->request->get('telephone');
-            $notes = $request->request->get('notes');
-            $formeJuridiqueId = $request->request->get('formeJuridique');
+            try {
+                // Traitement des données du formulaire POST
+                $nom = $request->request->get('nom');
+                $nomEntreprise = $request->request->get('nomEntreprise');
+                $notes = $request->request->get('notes');
+                $formeJuridiqueId = $request->request->get('formeJuridique');
 
-            if ($nom || $nomEntreprise) {
-                // Mettre à jour les données sur Client
-                $client->setNomEntreprise($nomEntreprise);
-                $client->setNotes($notes);
-                
-                // Gérer la forme juridique
-                if ($formeJuridiqueId) {
-                    $formeJuridique = $entityManager->getRepository(FormeJuridique::class)->find($formeJuridiqueId);
-                    if ($formeJuridique) {
-                        $client->setFormeJuridique($formeJuridique);
+                if ($nom || $nomEntreprise) {
+                    // Mettre à jour les données sur Client (seulement les champs qui existent)
+                    if ($nomEntreprise) {
+                        $client->setNomEntreprise($nomEntreprise);
                     }
+
+                    if ($notes !== null) {
+                        $client->setNotes($notes);
+                    }
+
+                    // Gérer la forme juridique
+                    if ($formeJuridiqueId) {
+                        $formeJuridique = $entityManager->getRepository(FormeJuridique::class)->find($formeJuridiqueId);
+                        if ($formeJuridique) {
+                            $client->setFormeJuridique($formeJuridique);
+                        }
+                    }
+
+                    // Pour les particuliers, mettre à jour le contact par défaut
+                    if ($nom && !$nomEntreprise) {
+                        $contactDefault = $client->getContactFacturationDefault();
+                        if ($contactDefault) {
+                            $nomCompletParts = explode(' ', trim($nom), 2);
+                            if (count($nomCompletParts) === 2) {
+                                $contactDefault->setPrenom($nomCompletParts[0]);
+                                $contactDefault->setNom($nomCompletParts[1]);
+                            } else {
+                                $contactDefault->setPrenom('');
+                                $contactDefault->setNom($nom);
+                            }
+                        }
+                    }
+
+                    $entityManager->flush();
+
+                    if ($request->isXmlHttpRequest()) {
+                        return $this->json([
+                            'success' => true,
+                            'message' => 'Client modifié avec succès',
+                            'client' => [
+                                'id' => $client->getId(),
+                                'label' => $client->getNomEntreprise() ?: 'Client modifié',
+                                'nomEntreprise' => $client->getNomEntreprise(),
+                                'code' => $client->getCode()
+                            ]
+                        ]);
+                    }
+
+                    return $this->redirectToRoute('app_client_edit', ['id' => $client->getId()]);
                 }
-
-                // Mettre à jour le contact de facturation par défaut avec nom/prénom/email/telephone
-                $contact = $client->getContactFacturationDefault();
-                if ($contact && ($nom || $prenom || $email || $telephone)) {
-                    if ($nom) $contact->setNom($nom);
-                    if ($prenom) $contact->setPrenom($prenom);
-                    if ($email) $contact->setEmail($email);
-                    if ($telephone) $contact->setTelephone($telephone);
-                }
-
-                $entityManager->flush();
-
+            } catch (\Exception $e) {
                 if ($request->isXmlHttpRequest()) {
                     return $this->json([
-                        'success' => true,
-                        'message' => 'Client modifié avec succès',
-                        'client' => [
-                            'id' => $client->getId(),
-                            'label' => $client->getNomComplet(), // Utiliser la méthode complète formatée
-                            'nom' => $client->getNom(),
-                            'nomEntreprise' => $client->getNomEntreprise(),
-                            'email' => $client->getEmail(),
-                            'code' => $client->getCode()
-                        ]
-                    ]);
+                        'success' => false,
+                        'message' => 'Erreur lors de la modification: ' . $e->getMessage()
+                    ], 500);
                 }
-
-                return $this->redirectToRoute('app_client_edit', ['id' => $client->getId()]);
+                throw $e;
             }
 
             if ($request->isXmlHttpRequest()) {
@@ -1368,5 +1384,61 @@ final class ClientController extends AbstractController
         }
         
         return $prefix . $year . str_pad($nextNumber, 4, '0', STR_PAD_LEFT);
+    }
+    
+    #[Route('/api/client/{id}/data', name: 'app_client_api_data', methods: ['GET'])]
+    public function getClientData(Client $client): JsonResponse
+    {
+        // Récupérer les contacts du client
+        $contacts = [];
+        foreach ($client->getContacts() as $contact) {
+            $contacts[] = [
+                'id' => $contact->getId(),
+                'prenom' => $contact->getPrenom(),
+                'nom' => $contact->getNom(),
+                'email' => $contact->getEmail(),
+                'telephone' => $contact->getTelephone(),
+                'mobile' => $contact->getMobile(),
+                'fonction' => $contact->getFonction(),
+                'isDefaultLivraison' => $contact->isContactLivraisonDefaut(),
+                'isDefaultFacturation' => $contact->isContactFacturationDefaut()
+            ];
+        }
+        
+        // Récupérer les adresses du client
+        $addresses = [];
+        foreach ($client->getAdresses() as $adresse) {
+            $addresses[] = [
+                'id' => $adresse->getId(),
+                'ligne1' => $adresse->getLigne1(),
+                'ligne2' => $adresse->getLigne2(),
+                'codePostal' => $adresse->getCodePostal(),
+                'ville' => $adresse->getVille(),
+                'isDefaultLivraison' => $adresse->isAdresseLivraisonDefaut(),
+                'isDefaultFacturation' => $adresse->isAdresseFacturationDefaut()
+            ];
+        }
+        
+        // Trouver les defaults
+        $defaultContactLivraison = $client->getContactLivraisonDefault();
+        $defaultContactFacturation = $client->getContactFacturationDefault();
+        $defaultAddressLivraison = $client->getAdresseLivraisonDefault();
+        $defaultAddressFacturation = $client->getAdresseFacturationDefault();
+        
+        return $this->json([
+            'success' => true,
+            'client' => [
+                'id' => $client->getId(),
+                'nom' => $client->getNom(),
+                'nomEntreprise' => $client->getNomEntreprise(),
+                'label' => $client->getNomComplet()
+            ],
+            'contacts' => $contacts,
+            'addresses' => $addresses,
+            'defaultContactLivraison' => $defaultContactLivraison?->getId(),
+            'defaultContactFacturation' => $defaultContactFacturation?->getId(),
+            'defaultAddressLivraison' => $defaultAddressLivraison?->getId(),
+            'defaultAddressFacturation' => $defaultAddressFacturation?->getId()
+        ]);
     }
 }

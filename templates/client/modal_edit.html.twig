@@ -42,56 +42,24 @@
     </div>
     
     <!-- Dénomination (selon le type) -->
-    {% if client.formeJuridique and client.formeJuridique.templateFormulaire == 'personne_morale' %}
-        <!-- Pour les entreprises -->
-        <div class="row">
-            <div class="col-12">
-                <div class="mb-3">
-                    <label class="form-label">Dénomination sociale <span class="text-danger">*</span></label>
-                    <input type="text" class="form-control" name="nomEntreprise" id="client-nom-entreprise" 
-                           value="{{ client.nomEntreprise }}" placeholder="Nom de l'entreprise, raison sociale...">
-                </div>
+    <!-- Pour les entreprises -->
+    <div class="row" id="entreprise-section" style="display: {{ client.formeJuridique and client.formeJuridique.templateFormulaire == 'personne_morale' ? '' : 'none' }}">
+        <div class="col-12">
+            <div class="mb-3">
+                <label class="form-label">Dénomination sociale <span class="text-danger">*</span></label>
+                <input type="text" class="form-control" name="nomEntreprise" id="client-nom-entreprise"
+                       value="{{ client.nomEntreprise }}" placeholder="Nom de l'entreprise, raison sociale...">
             </div>
         </div>
-    {% else %}
-        <!-- Pour les particuliers -->
-        <div class="row">
-            <div class="col-md-6">
-                <div class="mb-3">
-                    <label class="form-label">Prénom <span class="text-danger">*</span></label>
-                    <input type="text" class="form-control" name="prenom" id="client-prenom" 
-                           value="{{ client.prenom }}" placeholder="Prénom">
-                </div>
-            </div>
-            <div class="col-md-6">
-                <div class="mb-3">
-                    <label class="form-label">Nom <span class="text-danger">*</span></label>
-                    <input type="text" class="form-control" name="nom" id="client-nom" 
-                           value="{{ client.nom }}" placeholder="Nom de famille">
-                </div>
-            </div>
-        </div>
-    {% endif %}
-        
-        <!-- Email et téléphone uniquement pour les particuliers -->
-        {% if client.formeJuridique and client.formeJuridique.templateFormulaire == 'personne_physique' %}
-            <div class="row">
-                <div class="col-md-6">
-                    <div class="mb-3">
-                        <label class="form-label">Email</label>
-                        <input type="email" class="form-control" name="email" id="client-email" 
-                               value="{{ client.email }}">
-                    </div>
-                </div>
-                <div class="col-md-6">
-                    <div class="mb-3">
-                        <label class="form-label">Téléphone</label>
-                        <input type="tel" class="form-control" name="telephone" id="client-telephone" 
-                               value="{{ client.telephone }}">
-                    </div>
-                </div>
-            </div>
-        {% endif %}
+    </div>
+
+    <!-- Pour les particuliers - Section vide -->
+    <div class="row" id="particulier-section" style="display: {{ client.formeJuridique and client.formeJuridique.templateFormulaire == 'personne_morale' ? 'none' : '' }}">
+        <!-- Rien à afficher pour les particuliers -->
+    </div>
+
+    <!-- Champ nom caché pour éviter l'erreur de validation -->
+    <input type="hidden" name="nom" value="particulier">
     
     <!-- Notes et observations -->
     <div class="row">
@@ -150,8 +118,20 @@
         function updateFormFields() {
             const selectedOption = formeJuridiqueSelect.options[formeJuridiqueSelect.selectedIndex];
             const templateType = selectedOption ? selectedOption.getAttribute('data-template') : null;
-            
-            // Mise à jour dynamique des champs selon la forme juridique
+
+            // Trouver les sections à masquer/afficher
+            const entrepriseSection = document.getElementById('entreprise-section');
+            const particulierSection = document.getElementById('particulier-section');
+
+            if (templateType === 'personne_morale') {
+                // Afficher le champ dénomination sociale
+                if (entrepriseSection) entrepriseSection.style.display = '';
+                if (particulierSection) particulierSection.style.display = 'none';
+            } else {
+                // Afficher l'info pour particuliers
+                if (entrepriseSection) entrepriseSection.style.display = 'none';
+                if (particulierSection) particulierSection.style.display = '';
+            }
         }
     }, 100);
 })();
@@ -160,13 +140,13 @@ function submitClientForm() {
     const form = document.getElementById('client-form');
     const formData = new FormData(form);
     const submitBtn = document.getElementById('save-client-btn');
-    
+
     // Validation côté client
     const nomEntreprise = (formData.get('nomEntreprise') || '').trim();
     const nom = (formData.get('nom') || '').trim();
-    
+
     if (!nomEntreprise && !nom) {
-        alert('Veuillez renseigner au moins le nom de l\'entreprise ou le nom de la personne');
+        alert('Veuillez renseigner le nom de l\'entreprise ou le nom complet de la personne');
         return;
     }
     
