@@ -139,8 +139,13 @@ class Devis
     #[ORM\Column(length: 100, nullable: true)]
     private ?string $tiersVille = null;
     
-    #[ORM\Column(length: 50, nullable: true)]
-    private ?string $tiersModeReglement = null;
+    // OBSOLETE - Remplacé par la relation vers ModeReglement
+    // #[ORM\Column(length: 50, nullable: true)]
+    // private ?string $tiersModeReglement = null;
+
+    #[ORM\ManyToOne(targetEntity: ModeReglement::class)]
+    #[ORM\JoinColumn(nullable: true)]
+    private ?ModeReglement $modeReglement = null;
 
     // Champs tiers pour l'adresse de livraison
     #[ORM\Column(length: 200, nullable: true)]
@@ -893,14 +898,27 @@ class Devis
         return $this;
     }
 
+    // OBSOLETE - Remplacé par getModeReglement()
     public function getTiersModeReglement(): ?string
     {
-        return $this->tiersModeReglement;
+        return $this->modeReglement?->getNom();
     }
 
+    // OBSOLETE - Remplacé par setModeReglement()
     public function setTiersModeReglement(?string $tiersModeReglement): static
     {
-        $this->tiersModeReglement = $tiersModeReglement;
+        // Ne fait plus rien - utiliser setModeReglement() directement
+        return $this;
+    }
+
+    public function getModeReglement(): ?ModeReglement
+    {
+        return $this->modeReglement;
+    }
+
+    public function setModeReglement(?ModeReglement $modeReglement): static
+    {
+        $this->modeReglement = $modeReglement;
         return $this;
     }
 

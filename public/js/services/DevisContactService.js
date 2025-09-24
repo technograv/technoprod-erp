@@ -1081,8 +1081,9 @@ class DevisContactService {
         } catch (error) {
             this.error('Erreur lors du traitement de modification adresse', error);
         } finally {
-            // Nettoyer le contexte et restaurer les services
-            this.currentContext = null;
+            // ⚠️ NE PAS nettoyer le contexte ici car on va rouvrir la modale contact
+            // Le contexte sera nettoyé après la création du contact
+            this.logger.info('🔄 Contexte conservé après modification adresse:', this.currentContext);
             setTimeout(() => this.unblockConflictingServices(), 2000);
         }
     }
