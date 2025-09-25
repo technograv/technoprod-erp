@@ -999,23 +999,21 @@ final class ClientController extends AbstractController
                 return $this->json(['success' => false, 'message' => 'Adresse non trouvée']);
             }
             
-            // Vérifier si l'adresse peut être supprimée (pas utilisée par un contact, pas la seule adresse)
+            // Vérifier si l'adresse peut être supprimée (pas utilisée par un contact actif, pas la seule adresse)
             $isUsed = false;
-            foreach ($client->getContacts() as $contact) {
+            foreach ($client->getContactsActifs() as $contact) {
                 if ($contact->getAdresse() && $contact->getAdresse()->getId() === $adresse->getId()) {
                     $isUsed = true;
                     break;
                 }
             }
-            
+
             if ($isUsed) {
-                return $this->json(['success' => false, 'message' => 'Impossible de supprimer une adresse utilisée par un contact']);
+                return $this->json(['success' => false, 'message' => 'Impossible de supprimer une adresse utilisée par un contact actif']);
             }
-            
-            // Compter seulement les adresses non supprimées
-            $activeAddresses = $client->getAdresses()->filter(function($addr) {
-                return !$addr->isDeleted();
-            });
+
+            // Compter seulement les adresses actives
+            $activeAddresses = $client->getAdressesActives();
             
             if ($activeAddresses->count() <= 1) {
                 return $this->json(['success' => false, 'message' => 'Impossible de supprimer la seule adresse']);
