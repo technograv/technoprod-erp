@@ -52,9 +52,6 @@ class Client
     #[ORM\Column(length: 50, nullable: true)]
     private ?string $regimeComptable = null;
 
-    #[ORM\Column(length: 50, nullable: true)]
-    private ?string $modePaiement = null;
-
     #[ORM\ManyToOne(targetEntity: ModeReglement::class)]
     #[ORM\JoinColumn(nullable: true)]
     private ?ModeReglement $modeReglement = null;
@@ -293,17 +290,6 @@ class Client
     public function setRegimeComptable(?string $regimeComptable): static
     {
         $this->regimeComptable = $regimeComptable;
-        return $this;
-    }
-
-    public function getModePaiement(): ?string
-    {
-        return $this->modePaiement;
-    }
-
-    public function setModePaiement(?string $modePaiement): static
-    {
-        $this->modePaiement = $modePaiement;
         return $this;
     }
 
@@ -565,6 +551,16 @@ class Client
         return $this->contacts;
     }
 
+    /**
+     * @return Collection<int, Contact>
+     */
+    public function getContactsActifs(): Collection
+    {
+        return $this->contacts->filter(function(Contact $contact) {
+            return $contact->isActif();
+        });
+    }
+
     public function addContact(Contact $contact): static
     {
         if (!$this->contacts->contains($contact)) {
@@ -590,6 +586,16 @@ class Client
     public function getAdresses(): Collection
     {
         return $this->adresses;
+    }
+
+    /**
+     * @return Collection<int, Adresse>
+     */
+    public function getAdressesActives(): Collection
+    {
+        return $this->adresses->filter(function(Adresse $adresse) {
+            return $adresse->isActif();
+        });
     }
 
     public function addAdresse(Adresse $adresse): static

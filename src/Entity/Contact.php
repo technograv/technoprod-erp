@@ -49,6 +49,9 @@ class Contact
     #[ORM\Column]
     private bool $isLivraisonDefault = false;
 
+    #[ORM\Column(options: ['default' => true])]
+    private bool $actif = true;
+
     #[ORM\Column]
     private ?\DateTimeImmutable $createdAt = null;
 
@@ -251,6 +254,17 @@ class Contact
     public function setCreatedAt(\DateTimeImmutable $createdAt): static
     {
         $this->createdAt = $createdAt;
+        return $this;
+    }
+
+    public function isActif(): bool
+    {
+        return $this->actif ?? true;
+    }
+
+    public function setActif(bool $actif): static
+    {
+        $this->actif = $actif;
         return $this;
     }
 

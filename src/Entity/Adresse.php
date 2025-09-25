@@ -304,4 +304,22 @@ class Adresse
         $this->deletedAt = null;
         return $this;
     }
+
+    /**
+     * Compatibility methods with Contact entity approach
+     */
+    public function isActif(): bool
+    {
+        return $this->deletedAt === null;
+    }
+
+    public function setActif(bool $actif): static
+    {
+        if (!$actif && $this->deletedAt === null) {
+            $this->softDelete();
+        } elseif ($actif && $this->deletedAt !== null) {
+            $this->restore();
+        }
+        return $this;
+    }
 }

@@ -129,8 +129,21 @@ class ClientLoggerService
             'Contact supprimé %s',
             $contactName
         );
-        
+
         return $this->log($client, 'Contact modifié', $details, $user);
+    }
+
+    /**
+     * Log l'archivage d'un contact
+     */
+    public function logContactArchived(Client $client, string $contactName, ?User $user = null): ClientLog
+    {
+        $details = sprintf(
+            'Contact archivé %s',
+            $contactName
+        );
+
+        return $this->log($client, 'Contact archivé', $details, $user);
     }
 
     /**
@@ -285,30 +298,16 @@ class ClientLoggerService
     }
 
     /**
-     * Log la modification du délai de paiement
+     * Log la modification du mode de règlement
      */
-    public function logDelaiPaiementChanged(Client $client, ?int $oldValue, ?int $newValue, ?User $user = null): ClientLog
+    public function logModeReglementChanged(Client $client, ?string $oldValue, ?string $newValue, ?User $user = null): ClientLog
     {
         $details = sprintf(
-            'Délai de paiement modifié %d → %d jours',
-            $oldValue ?: 30,
-            $newValue ?: 30
-        );
-        
-        return $this->log($client, 'Informations générales modifiées', $details, $user);
-    }
-
-    /**
-     * Log la modification du mode de paiement
-     */
-    public function logModePaiementChanged(Client $client, ?string $oldValue, ?string $newValue, ?User $user = null): ClientLog
-    {
-        $details = sprintf(
-            'Mode de paiement modifié %s → %s',
+            'Mode de règlement modifié %s → %s',
             $oldValue ?: 'Non défini',
             $newValue ?: 'Non défini'
         );
-        
+
         return $this->log($client, 'Informations générales modifiées', $details, $user);
     }
 

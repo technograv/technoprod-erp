@@ -339,7 +339,7 @@
                             <div class="col-md-4">
                                 <div class="info-row">
                                     <div class="info-label">Mode de règlement :</div>
-                                    <div class="info-value">{{ client.modePaiement|capitalize|default('Non défini') }}</div>
+                                    <div class="info-value">{{ client.modeReglement ? client.modeReglement.nom : 'Non défini' }}</div>
                                 </div>
                             </div>
                             <div class="col-md-4">
@@ -355,7 +355,7 @@
                     <div class="compact-section">
                         <h3 class="section-title"><i class="fas fa-users me-2"></i>Contacts</h3>
                         
-                        {% if client.contacts|length > 0 %}
+                        {% if client.contactsActifs|length > 0 %}
                             <div class="table-responsive">
                                 <table class="table table-contacts">
                                     <thead>
@@ -370,7 +370,7 @@
                                         </tr>
                                     </thead>
                                     <tbody>
-                                        {% for contact in client.contacts %}
+                                        {% for contact in client.contactsActifs %}
                                             <tr>
                                                 <td><strong>{{ contact.nom }}</strong></td>
                                                 <td>{{ contact.prenom }}</td>
@@ -540,8 +540,8 @@
                                         </div>
                                     </div>
                                     <div class="info-row">
-                                        <div class="info-label">Mode de paiement :</div>
-                                        <div class="info-value">{{ client.modePaiement|capitalize|default('Non défini') }}</div>
+                                        <div class="info-label">Mode de règlement :</div>
+                                        <div class="info-value">{{ client.modeReglement ? client.modeReglement.nom : 'Non défini' }}</div>
                                     </div>
                                     <div class="info-row">
                                         <div class="info-label">Conditions tarifaires :</div>
@@ -667,7 +667,7 @@
                 </a>
                 
                 {% set contactFactu = null %}
-                {% for contact in client.contacts %}
+                {% for contact in client.contactsActifs %}
                     {% if contact.isFacturationDefault %}
                         {% set contactFactu = contact %}
                     {% endif %}

@@ -381,7 +381,7 @@ class DevisContactService {
     async loadClientAddresses(clientId) {
         const url = `/client/${clientId}/addresses`;
         this.logger.info(`📡 API Call: GET ${url}`);
-        
+
         try {
             const response = await fetch(url, {
                 method: 'GET',
@@ -1178,25 +1178,25 @@ class DevisContactService {
      */
     populateAddressSelectors(addresses) {
         const selectors = this.getAddressSelectors();
-        
+
         selectors.forEach(({element, target}) => {
             if (element) {
                 const currentValue = element.value;
-                
+
                 // Vider et repeupler
                 element.innerHTML = '<option value="">Choisir une adresse...</option>';
                 addresses.forEach(address => {
                     const option = document.createElement('option');
                     option.value = address.id;
-                    option.textContent = this.formatAddressLabel(address);
+                    option.textContent = address.label || 'Adresse sans libellé';
                     element.appendChild(option);
                 });
-                
+
                 // Restaurer la valeur si elle existe encore
                 if (currentValue && addresses.find(a => a.id == currentValue)) {
                     element.value = currentValue;
                 }
-                
+
                 // Mettre à jour la visibilité des boutons
                 this.updateEditButtonVisibility('address', target, element.value);
             }
@@ -1351,7 +1351,7 @@ class DevisContactService {
      * Formate le libellé d'une adresse
      */
     formatAddressLabel(address) {
-        return address.label || 
+        return address.label ||
                `${address.ligne1 || ''} - ${address.codePostal || ''} ${address.ville || ''}`.trim();
     }
     

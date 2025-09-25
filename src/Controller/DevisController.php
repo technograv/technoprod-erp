@@ -153,29 +153,29 @@ final class DevisController extends AbstractController
             $projetExistant = $request->request->get('projet_existant');
             $contactFacturation = $request->request->get('contact_facturation');
             $emailEnvoiAutomatique = $request->request->get('email_envoi_automatique');
-            
+
             // Récupération des adresses modifiées pour le projet
             $adresseProjetLigne1 = $request->request->get('adresse_projet_ligne1');
             $adresseProjetCodePostal = $request->request->get('adresse_projet_code_postal');
             $adresseProjetVille = $request->request->get('adresse_projet_ville');
-            
+
             $adresseFacturationLigne1 = $request->request->get('adresse_facturation_ligne1');
             $adresseFacturationCodePostal = $request->request->get('adresse_facturation_code_postal');
             $adresseFacturationVille = $request->request->get('adresse_facturation_ville');
-            
+
             // Validation basique
             if (!$prospectId) {
                 $this->addFlash('error', 'Veuillez sélectionner un client/prospect.');
                 return $this->redirectToRoute('app_devis_new');
             }
-            
+
             // Trouver le prospect
             $prospect = $clientRepository->find($prospectId);
             if (!$prospect) {
                 $this->addFlash('error', 'Client/prospect introuvable.');
                 return $this->redirectToRoute('app_devis_new');
             }
-            
+
             // Configurer le devis avec le numéro généré par le service
             $devis->setClient($prospect);
             $numeroGenere = $numerotationService->genererProchainNumero('DE', 'Devis');

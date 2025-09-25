@@ -132,18 +132,6 @@ class ClientType extends AbstractType
                 'required' => false,
                 'placeholder' => 'Choisir...'
             ])
-            ->add('modePaiement', ChoiceType::class, [
-                'label' => 'Mode de paiement',
-                'choices' => [
-                    'Virement' => 'virement',
-                    'Chèque' => 'cheque',
-                    'Espèces' => 'especes',
-                    'Carte bancaire' => 'cb',
-                    'Prélèvement' => 'prelevement'
-                ],
-                'required' => false,
-                'placeholder' => 'Choisir...'
-            ])
             ->add('modeReglement', EntityType::class, [
                 'label' => 'Mode de règlement',
                 'class' => ModeReglement::class,

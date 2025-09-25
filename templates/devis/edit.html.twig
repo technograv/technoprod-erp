@@ -24,16 +24,7 @@
     </div>
 {% endif %}
 
-<!-- Titre avec espacement uniforme -->
-<div class="container-fluid" style="margin-top: 2rem;">
-    <div class="row">
-        <div class="col-12">
-            <h1 class="page-title mb-4">
-                <i class="fas fa-edit me-3"></i>Modifier Devis {{ devis.numeroDevis }}
-            </h1>
-        </div>
-    </div>
-</div>
+<!-- Le titre est maintenant dans la barre flottante uniquement -->
 
 <!-- Styles pour gestion des modales empilées -->
 <style>
@@ -4292,6 +4283,52 @@ document.addEventListener('DOMContentLoaded', function() {
         } else {
             console.error('❌ DevisContactService non disponible');
         }
+
+    // ==========================================
+    // MISE À JOUR NOM PROJET ET AUTOCOMPLÉTION
+    // ==========================================
+
+    // Mettre à jour le nom du projet dans la barre flottante en temps réel
+    const nomProjetField = document.querySelector('input[name="devis[nomProjet]"]');
+    const floatingProjectName = document.getElementById('floating-project-name');
+
+    if (nomProjetField && floatingProjectName) {
+        nomProjetField.addEventListener('input', function() {
+            const newName = this.value.trim();
+            floatingProjectName.textContent = newName || 'Projet sans nom';
+        });
+    }
+
+    // Initialiser l'autocomplétion avec notre service réutilisable
+    function initCommuneAutocomplete() {
+        const autocompleteService = new PostalAutocompleteService();
+
+        // Rechercher toutes les paires postal/ville avec data-target-*
+        document.querySelectorAll('.postal-autocomplete').forEach(postalInput => {
+            const villeId = postalInput.getAttribute('data-target-ville');
+            if (villeId && document.getElementById(villeId)) {
+                autocompleteService.init(postalInput.id, villeId);
+                console.log('✅ Autocomplétion configurée:', postalInput.id, '↔', villeId);
+            }
+        });
+
+        document.querySelectorAll('.ville-autocomplete').forEach(villeInput => {
+            const postalId = villeInput.getAttribute('data-target-postal');
+            if (postalId && document.getElementById(postalId)) {
+                // Si pas déjà configuré
+                const postalInput = document.getElementById(postalId);
+                if (!postalInput.hasAttribute('data-autocomplete-configured')) {
+                    autocompleteService.init(postalId, villeInput.id);
+                    postalInput.setAttribute('data-autocomplete-configured', 'true');
+                    console.log('✅ Autocomplétion configurée:', postalId, '↔', villeInput.id);
+                }
+            }
+        });
+    }
+
+    // Initialiser l'autocomplétion au chargement
+    initCommuneAutocomplete();
+
     });
 });
 
@@ -5690,52 +5727,7 @@ function hideImagePreview() {
     }
 }
 
-// Mettre à jour le nom du projet dans la barre flottante en temps réel
-document.addEventListener('DOMContentLoaded', function() {
-    const nomProjetField = document.querySelector('input[name="devis[nomProjet]"]');
-    const floatingProjectName = document.getElementById('floating-project-name');
-    
-    if (nomProjetField && floatingProjectName) {
-        nomProjetField.addEventListener('input', function() {
-            const newName = this.value.trim();
-            floatingProjectName.textContent = newName || 'Projet sans nom';
-        });
-    }
-    
-    // ==========================================
-    // AUTOCOMPLÉTION CODE POSTAL / VILLE
-    // ==========================================
-    
-    // Initialiser l'autocomplétion avec notre service réutilisable
-    function initCommuneAutocomplete() {
-        const autocompleteService = new PostalAutocompleteService();
-        
-        // Rechercher toutes les paires postal/ville avec data-target-*
-        document.querySelectorAll('.postal-autocomplete').forEach(postalInput => {
-            const villeId = postalInput.getAttribute('data-target-ville');
-            if (villeId && document.getElementById(villeId)) {
-                autocompleteService.init(postalInput.id, villeId);
-                console.log('✅ Autocomplétion configurée:', postalInput.id, '↔', villeId);
-            }
-        });
-        
-        document.querySelectorAll('.ville-autocomplete').forEach(villeInput => {
-            const postalId = villeInput.getAttribute('data-target-postal');
-            if (postalId && document.getElementById(postalId)) {
-                // Si pas déjà configuré
-                const postalInput = document.getElementById(postalId);
-                if (!postalInput.hasAttribute('data-autocomplete-configured')) {
-                    autocompleteService.init(postalId, villeInput.id);
-                    postalInput.setAttribute('data-autocomplete-configured', 'true');
-                    console.log('✅ Autocomplétion configurée:', postalId, '↔', villeInput.id);
-                }
-            }
-        });
-    }
-    
-    // Initialiser l'autocomplétion au chargement
-    initCommuneAutocomplete();
-});
+// Code d'autocomplétion maintenant intégré dans le DOMContentLoaded principal
 
 </script>
 

@@ -112,7 +112,7 @@ class ContactController extends AbstractController
         }
 
         // Récupérer les adresses du client pour le menu déroulant
-        $adresses = $client->getAdresses();
+        $adresses = $client->getAdressesActives();
 
         return $this->render('contact/modal_new.html.twig', [
             'client' => $client,
@@ -213,7 +213,7 @@ class ContactController extends AbstractController
         }
 
         // Récupérer les adresses du client pour le menu déroulant
-        $adresses = $client->getAdresses();
+        $adresses = $client->getAdressesActives();
 
         return $this->render('contact/modal_edit.html.twig', [
             'contact' => $contact,

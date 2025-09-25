@@ -7,7 +7,9 @@ use App\Entity\Adresse;
 use App\Entity\Contact;
 use App\Entity\CommuneFrancaise;
 use App\Entity\FormeJuridique;
+use App\Entity\ModeReglement;
 use App\Form\ClientType;
+use App\Repository\ModeReglementRepository;
 use App\Service\ClientLoggerService;
 use Doctrine\ORM\EntityManagerInterface;
 use Symfony\Bundle\FrameworkBundle\Controller\AbstractController;
@@ -333,7 +335,7 @@ final class ClientController extends AbstractController
             'civilite' => $client->getCivilite(),
             'nom' => $client->getNom(),
             'prenom' => $client->getPrenom(),
-            'modeReglement' => $client->getModePaiement(),
+            'modeReglement' => $client->getModeReglement()?->getId(),
             'adresse' => null,
             'codePostal' => null,
             'ville' => null
@@ -351,10 +353,16 @@ final class ClientController extends AbstractController
     }
 
     #[Route('/{id}/contacts', name: 'app_client_contacts', methods: ['GET'])]
-    public function getContacts(Client $client): JsonResponse
+    public function getContacts(Client $client, Request $request): JsonResponse
     {
+        $includeArchived = $request->query->getBoolean('include_archived', false);
+
         $contacts = [];
         foreach ($client->getContacts() as $contact) {
+            // Filtrer les contacts archivés sauf si demandé explicitement
+            if (!$contact->isActif() && !$includeArchived) {
+                continue;
+            }
             $label = trim(($contact->getCivilite() ?? '') . ' ' . ($contact->getPrenom() ?? '') . ' ' . ($contact->getNom() ?? ''));
             if (empty($label)) {
                 $label = $contact->getEmail() ?? 'Contact sans nom';
@@ -369,7 +377,8 @@ final class ClientController extends AbstractController
                 'fonction' => $contact->getFonction(),
                 'email' => $contact->getEmail(),
                 'is_facturation_default' => $contact->isFacturationDefault(),
-                'is_livraison_default' => $contact->isLivraisonDefault()
+                'is_livraison_default' => $contact->isLivraisonDefault(),
+                'actif' => $contact->isActif()
             ];
         }
 
@@ -380,19 +389,20 @@ final class ClientController extends AbstractController
     public function getAddresses(Client $client): JsonResponse
     {
         $addresses = [];
-        
-        // Retourner toutes les adresses du client (pas seulement celles liées aux contacts)
-        foreach ($client->getAdresses() as $adresse) {
+
+        // Retourner seulement les adresses actives du client
+        foreach ($client->getAdressesActives() as $adresse) {
             $addresses[] = [
                 'id' => $adresse->getId(),
                 'label' => $adresse->getDisplayLabel()
             ];
         }
+
         return $this->json($addresses);
     }
 
     #[Route('/{id}/edit', name: 'app_client_edit', methods: ['GET', 'POST'])]
-    public function edit(Request $request, Client $client, EntityManagerInterface $entityManager, ClientLoggerService $clientLogger): Response
+    public function edit(Request $request, Client $client, EntityManagerInterface $entityManager, ModeReglementRepository $modeReglementRepository, ClientLoggerService $clientLogger): Response
     {
         if ($request->isMethod('POST')) {
             // Traitement de la soumission du formulaire
@@ -440,23 +450,26 @@ final class ClientController extends AbstractController
                     }
                 }
                 
-                // Délai de paiement
-                $oldDelaiPaiement = $client->getDelaiPaiement();
-                if (isset($data['delai_paiement'])) {
-                    $newDelaiPaiement = (int)$data['delai_paiement'];
-                    if ($oldDelaiPaiement !== $newDelaiPaiement) {
-                        $clientChanges['delai_paiement'] = ['old' => $oldDelaiPaiement, 'new' => $newDelaiPaiement];
+                // Mode de règlement
+                $oldModeReglement = $client->getModeReglement();
+                if (isset($data['mode_reglement']) && !empty($data['mode_reglement'])) {
+                    $newModeReglement = $entityManager->getRepository(ModeReglement::class)->find($data['mode_reglement']);
+                    if ($newModeReglement && $oldModeReglement !== $newModeReglement) {
+                        $clientChanges['mode_reglement'] = [
+                            'old' => $oldModeReglement ? $oldModeReglement->getNom() : 'Aucun',
+                            'new' => $newModeReglement->getNom()
+                        ];
                     }
-                    $client->setDelaiPaiement($newDelaiPaiement);
-                }
-                
-                // Mode de paiement
-                $oldModePaiement = $client->getModePaiement();
-                if (isset($data['mode_paiement']) && $oldModePaiement !== $data['mode_paiement']) {
-                    $clientChanges['mode_paiement'] = ['old' => $oldModePaiement, 'new' => $data['mode_paiement']];
-                    $client->setModePaiement($data['mode_paiement']);
-                } elseif (isset($data['mode_paiement'])) {
-                    $client->setModePaiement($data['mode_paiement']);
+                    $client->setModeReglement($newModeReglement);
+                } elseif (isset($data['mode_reglement']) && empty($data['mode_reglement'])) {
+                    // Si le champ est vide, définir à null
+                    if ($oldModeReglement !== null) {
+                        $clientChanges['mode_reglement'] = [
+                            'old' => $oldModeReglement->getNom(),
+                            'new' => 'Aucun'
+                        ];
+                    }
+                    $client->setModeReglement(null);
                 }
                 
                 // Conditions tarifaires
@@ -720,11 +733,8 @@ final class ClientController extends AbstractController
                         case 'nom':
                             $clientLogger->logDenominationChanged($client, $change['old'], $change['new']);
                             break;
-                        case 'delai_paiement':
-                            $clientLogger->logDelaiPaiementChanged($client, $change['old'], $change['new']);
-                            break;
-                        case 'mode_paiement':
-                            $clientLogger->logModePaiementChanged($client, $change['old'], $change['new']);
+                        case 'mode_reglement':
+                            $clientLogger->logModeReglementChanged($client, $change['old'], $change['new']);
                             break;
                         case 'conditions_tarifs':
                             $clientLogger->logConditionsTarifsChanged($client, $change['old'], $change['new']);
@@ -781,10 +791,14 @@ final class ClientController extends AbstractController
         $isModal = $request->query->get('modal') === '1' || $request->headers->get('X-Requested-With') === 'XMLHttpRequest';
         
         $template = $isModal ? 'client/edit_modal.html.twig' : 'client/edit.html.twig';
-        
+
+        // Récupérer tous les modes de règlement pour le formulaire
+        $modesReglement = $modeReglementRepository->findBy(['actif' => true], ['nom' => 'ASC']);
+
         return $this->render($template, [
             'client' => $client,
             'isModal' => $isModal,
+            'modes_reglement' => $modesReglement,
         ]);
     }
 
@@ -943,29 +957,37 @@ final class ClientController extends AbstractController
                 return $this->json(['success' => false, 'message' => 'Contact non trouvé']);
             }
             
-            // Vérifier si le contact peut être supprimé (pas le seul contact, pas contact par défaut)
+            // Vérifier si le contact peut être archivé (pas contact par défaut)
             if ($contact->isFacturationDefault() || $contact->isLivraisonDefault()) {
-                return $this->json(['success' => false, 'message' => 'Impossible de supprimer un contact par défaut']);
+                return $this->json(['success' => false, 'message' => 'Impossible d\'archiver un contact par défaut. Veuillez d\'abord désigner un autre contact par défaut.']);
             }
-            
-            if ($client->getContacts()->count() <= 1) {
-                return $this->json(['success' => false, 'message' => 'Impossible de supprimer le seul contact']);
+
+            // Vérifier qu'il reste au moins un contact actif
+            $activeContacts = $client->getContacts()->filter(function($c) use ($contact) {
+                return $c !== $contact && $c->isActif();
+            });
+
+            if ($activeContacts->count() === 0) {
+                return $this->json(['success' => false, 'message' => 'Impossible d\'archiver le dernier contact actif']);
             }
-            
+
             $contactName = $contact->getNomComplet();
-            
-            $entityManager->remove($contact);
+
+            // Archiver au lieu de supprimer
+            $contact->setActif(false);
+            $entityManager->persist($contact);
             $entityManager->flush();
+
+            // Logger l'archivage
+            $clientLogger->logContactArchived($client, $contactName);
             
-            // Logger la suppression
-            $clientLogger->logContactDeleted($client, $contactName);
-            
-            return $this->json(['success' => true, 'message' => 'Contact supprimé avec succès']);
+            return $this->json(['success' => true, 'message' => 'Contact archivé avec succès']);
             
         } catch (\Exception $e) {
             return $this->json(['success' => false, 'message' => 'Erreur lors de la suppression : ' . $e->getMessage()]);
         }
     }
+
 
     #[Route('/{id}/address/{addressId}/delete', name: 'app_client_address_delete', methods: ['POST'])]
     public function deleteAddress(Client $client, int $addressId, EntityManagerInterface $entityManager, ClientLoggerService $clientLogger): JsonResponse
@@ -1394,9 +1416,9 @@ final class ClientController extends AbstractController
             ];
         }
         
-        // Récupérer les adresses du client
+        // Récupérer les adresses actives du client
         $addresses = [];
-        foreach ($client->getAdresses() as $adresse) {
+        foreach ($client->getAdressesActives() as $adresse) {
             $addresses[] = [
                 'id' => $adresse->getId(),
                 'ligne1' => $adresse->getLigne1(),
