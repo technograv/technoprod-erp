@@ -265,7 +265,7 @@
                 </div>
                 <div class="card-body">
                     <div class="d-grid gap-2">
-                        <a href="{{ path('app_devis_show', {'id': devis.id}) }}" class="btn btn-primary">
+                        <a href="{{ path('app_devis_show', {'id': devis.id}) }}#lignes" class="btn btn-primary">
                             <i class="fas fa-file-invoice me-2"></i>Voir le devis actuel
                         </a>
                         <a href="{{ path('app_devis_edit', {'id': devis.id}) }}" class="btn btn-outline-primary">
@@ -421,7 +421,10 @@
 <script src="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/js/select2.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/js/i18n/fr.js"></script>
 <script>
-let currentVersionId = null;
+// Déclarer la variable seulement si elle n'existe pas déjà
+if (typeof currentVersionId === 'undefined') {
+    var currentVersionId = null;
+}
 
 function duplicateFromVersion(versionId, versionLabel) {
     currentVersionId = versionId;
@@ -501,4 +504,5 @@ document.addEventListener('DOMContentLoaded', function() {
 });
 </script>
 {% endblock %}
+
 {% endblock %}

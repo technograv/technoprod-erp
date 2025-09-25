@@ -89,7 +89,7 @@
                     <a href="{{ path('app_devis_show', {'id': devis.id}) }}" class="btn btn-light">
                         <i class="fas fa-arrow-left"></i> Retour au devis
                     </a>
-                    <a href="{{ path('app_devis_versions', {'id': devis.id}) }}" class="btn btn-outline-light">
+                    <a href="{{ path('app_devis_show', {'id': devis.id}) }}#versions" class="btn btn-outline-light">
                         <i class="fas fa-history"></i> Historique
                     </a>
                 </div>
@@ -190,10 +190,12 @@
                     
                     {% set totalTvaLigne = totalHtLigne * tauxTva / 100 %}
                     
-                    {% if tauxTva not in tvaByTaux|keys %}
-                        {% set tvaByTaux = tvaByTaux|merge({(tauxTva): 0}) %}
+                    {% set tauxTvaKey = tauxTva|round(2)|number_format(1) %}
+                    {% if tauxTvaKey not in tvaByTaux|keys %}
+                        {% set tvaByTaux = tvaByTaux|merge({(tauxTvaKey): totalTvaLigne}) %}
+                    {% else %}
+                        {% set tvaByTaux = tvaByTaux|merge({(tauxTvaKey): (tvaByTaux[tauxTvaKey] + totalTvaLigne)}) %}
                     {% endif %}
-                    {% set tvaByTaux = tvaByTaux|merge({(tauxTva): (tvaByTaux[tauxTva] + totalTvaLigne)}) %}
                 {% endfor %}
                 
                 {% if items %}
@@ -267,17 +269,17 @@
             </div>
 
             <!-- Notes (version archivée) -->
-            {% if (devisData.notesClient is defined and devisData.notesClient) or (devisData.notesInternes is defined and devisData.notesInternes) %}
+            {% if (devisData.notesClient is defined and devisData.notesClient|trim) or (devisData.notesInternes is defined and devisData.notesInternes|trim) %}
             <div class="info-group">
                 <h6><i class="fas fa-sticky-note me-2"></i>Notes (version archivée)</h6>
                 <div class="row">
-                    {% if devisData.notesClient is defined and devisData.notesClient %}
+                    {% if devisData.notesClient is defined and devisData.notesClient|trim %}
                     <div class="col-md-6">
                         <h6 class="h6">Notes client :</h6>
                         <p class="mb-0">{{ devisData.notesClient|nl2br }}</p>
                     </div>
                     {% endif %}
-                    {% if devisData.notesInternes is defined and devisData.notesInternes %}
+                    {% if devisData.notesInternes is defined and devisData.notesInternes|trim %}
                     <div class="col-md-6">
                         <h6 class="h6">Notes internes :</h6>
                         <p class="mb-0">{{ devisData.notesInternes|nl2br }}</p>
@@ -333,13 +335,13 @@
             <div class="info-group">
                 <h6><i class="fas fa-exchange-alt me-2"></i>Comparaison</h6>
                 <div class="d-grid gap-2">
-                    <a href="{{ path('app_devis_show', {'id': devis.id}) }}" class="btn btn-primary">
+                    <a href="{{ path('app_devis_show', {'id': devis.id}) }}#lignes" class="btn btn-primary">
                         <i class="fas fa-eye me-2"></i>Voir la version actuelle
                     </a>
                     <button class="btn btn-outline-secondary" onclick="window.print()">
                         <i class="fas fa-print me-2"></i>Imprimer cette version
                     </button>
-                    <a href="{{ path('app_devis_versions', {'id': devis.id}) }}" class="btn btn-outline-info">
+                    <a href="{{ path('app_devis_show', {'id': devis.id}) }}#versions" class="btn btn-outline-info">
                         <i class="fas fa-list me-2"></i>Toutes les versions
                     </a>
                 </div>

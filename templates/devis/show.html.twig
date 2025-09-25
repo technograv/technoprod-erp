@@ -1040,9 +1040,17 @@ document.addEventListener('DOMContentLoaded', function() {
 });
 
 {% if devis.hasVersions %}
+let versionsLoaded = false;
+
 function loadVersions() {
+    // Éviter les chargements multiples
+    if (versionsLoaded) return;
+
     const versionsList = document.getElementById('versions-list');
-    
+    if (!versionsList) return;
+
+    versionsLoaded = true;
+
     fetch('{{ path("app_devis_api_versions", {"id": devis.id}) }}')
         .then(response => response.json())
         .then(versions => {
@@ -1116,6 +1124,7 @@ function loadVersions() {
         })
         .catch(error => {
             console.error('Erreur lors du chargement des versions:', error);
+            versionsLoaded = false; // Permettre de réessayer
             versionsList.innerHTML = `
                 <div class="alert alert-danger">
                     <i class="fas fa-exclamation-triangle me-2"></i>
@@ -1272,6 +1281,43 @@ document.addEventListener('DOMContentLoaded', function() {
             lignesTabPane.classList.add('show', 'active');
         }
         
+        // S'assurer qu'on reste en haut
+        window.scrollTo(0, 0);
+    }
+
+    // Activer automatiquement l'onglet Historique si fragment #versions
+    if (window.location.hash === '#versions') {
+        // Empêcher le scroll automatique du navigateur
+        history.replaceState(null, null, window.location.pathname + window.location.search);
+
+        // Activer l'onglet Historique
+        const versionsTab = document.getElementById('versions-tab');
+        const versionsTabPane = document.getElementById('versions');
+        const activeTab = document.querySelector('.nav-link.active');
+        const activeTabPane = document.querySelector('.tab-pane.show.active');
+
+        if (versionsTab && versionsTabPane) {
+            // Désactiver l'onglet actuel
+            if (activeTab) activeTab.classList.remove('active');
+            if (activeTabPane) {
+                activeTabPane.classList.remove('show', 'active');
+            }
+
+            // Activer l'onglet Historique
+            versionsTab.classList.add('active');
+            versionsTabPane.classList.add('show', 'active');
+
+            // Déclencher manuellement le chargement des versions
+            {% if devis.hasVersions %}
+            // Utiliser setTimeout pour s'assurer que la fonction existe
+            setTimeout(() => {
+                if (typeof loadVersions === 'function') {
+                    loadVersions();
+                }
+            }, 100);
+            {% endif %}
+        }
+
         // S'assurer qu'on reste en haut
         window.scrollTo(0, 0);
     }

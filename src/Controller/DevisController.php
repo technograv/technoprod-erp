@@ -1355,22 +1355,13 @@ final class DevisController extends AbstractController
     }
 
     /**
-     * Affiche l'historique des versions d'un devis
+     * Redirige vers l'onglet historique de la page principale du devis
      */
     #[Route('/{id}/versions', name: 'app_devis_versions', methods: ['GET'])]
-    public function versions(Devis $devis, DevisVersionRepository $versionRepository, EntityManagerInterface $entityManager): Response
+    public function versions(Devis $devis): Response
     {
-        $versions = $versionRepository->findVersionsByDevis($devis);
-        
-        // Récupérer tous les clients pour la modal de duplication
-        $clientsRepository = $entityManager->getRepository(Client::class);
-        $clients = $clientsRepository->findAll();
-
-        return $this->render('devis/versions.html.twig', [
-            'devis' => $devis,
-            'versions' => $versions,
-            'clients' => $clients,
-        ]);
+        $url = $this->generateUrl('app_devis_show', ['id' => $devis->getId()]) . '#versions';
+        return $this->redirect($url, 301);
     }
 
     /**
@@ -1478,7 +1469,9 @@ final class DevisController extends AbstractController
             return new JsonResponse(['success' => true, 'message' => 'Version créée avec succès']);
         }
         
-        return $this->redirectToRoute('app_devis_versions', ['id' => $devis->getId()]);
+        // Rediriger vers l'onglet historique de la page principale
+        $url = $this->generateUrl('app_devis_show', ['id' => $devis->getId()]) . '#versions';
+        return $this->redirect($url);
     }
 
     /**
