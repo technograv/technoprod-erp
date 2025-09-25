@@ -137,7 +137,7 @@ final class DevisController extends AbstractController
         // Traitement POST - sauvegarde du devis
         if ($request->isMethod('POST')) {
             // Récupérer les données du formulaire
-            $prospectId = $request->request->get('prospect');
+            $prospectId = $request->request->get('client');
             $dateCreation = $request->request->get('date_creation');
             $dateValidite = $request->request->get('date_validite');
             $conditionsReglement = $request->request->get('conditions_reglement');
