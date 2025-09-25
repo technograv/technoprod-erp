@@ -1063,6 +1063,7 @@
 <script src="/js/services/ContactModalService.js"></script>
 <script src="/js/services/AddressModalService.js"></script>
 <script src="/js/services/NestedModalService.js"></script>
+<script src="/js/services/MultiModalNavigationService.js"></script>
 <script src="/js/services/DevisModalIntegration.js"></script>
 <script src="/js/services/DebugLogger.js"></script>
 <script src="/js/services/DevisContactService.js"></script>
@@ -3368,12 +3369,13 @@ document.addEventListener('DOMContentLoaded', function() {
             },
             onContactUpdated: function(detail) {
                 console.log('📞 [EDIT] Contact modifié, rechargement puis re-sélection...', detail);
-                
+
                 const clientSelect = document.getElementById('devis_client');
                 const clientId = clientSelect?.value;
                 if (clientId && window.devisContactService && detail.contact) {
-                    // Recharger SEULEMENT les contacts (pas les adresses)
-                    window.devisContactService.reloadContactsOnly(clientId).then(() => {
+                    // Recharger les contacts via le service DevisContactService
+                    // La méthode handleClientChange recharge automatiquement les contacts et adresses
+                    window.devisContactService.handleClientChange(clientId).then(() => {
                         const contactId = detail.contact.id;
                         console.log('📞 [EDIT] Tentative de re-sélection du contact ID:', contactId);
                         
@@ -3431,9 +3433,29 @@ document.addEventListener('DOMContentLoaded', function() {
         console.log('✅ ContactModalService initialisé');
     }
     
-    // Le service centralisé MultiModalNavigationService gère maintenant la navigation
-    console.log('🧹 [EDIT] Navigation multi-modale gérée par le service centralisé');
-    
+    // Initialiser le NestedModalService pour la gestion des modales imbriquées
+    console.log('🚀 [EDIT] Initialisation du NestedModalService...');
+    try {
+        window.nestedModalService = new NestedModalService({
+            debug: false,
+            autoSelectCreated: true,
+            refreshOnComplete: false
+        });
+
+        // Attacher aux éléments de la page edit
+        window.nestedModalService.attachToDevisPage({
+            clientSelect: 'devis_client',
+            contactFacturationSelect: 'devis_contactFacturation',
+            contactLivraisonSelect: 'devis_contactLivraison',
+            addressFacturationSelect: 'adresse_facturation_select',
+            addressLivraisonSelect: 'adresse_livraison_select'
+        });
+
+        console.log('✅ [EDIT] NestedModalService initialisé avec succès');
+    } catch (error) {
+        console.error('❌ [EDIT] Erreur initialisation NestedModalService:', error);
+    }
+
     // Initialiser AddressModalService
     if (window.AddressModalService) {
         const addressModalService = new AddressModalService({
@@ -4028,7 +4050,7 @@ document.addEventListener('DOMContentLoaded', function() {
                 
                 // Recharger les dropdowns pour refléter les changements
                 if (window.devisContactService) {
-                    window.devisContactService.reloadContacts(clientId);
+                    window.devisContactService.handleClientChange(clientId);
                 }
                 
                 // Si le contact modifié est sélectionné, mettre à jour l'email

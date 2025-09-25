@@ -260,112 +260,189 @@
         <!-- Onglet Détails -->
         <div class="tab-pane fade show active" id="details" role="tabpanel">
             <div class="row p-4">
+                <!-- Colonne gauche : Client et Contacts -->
                 <div class="col-md-6">
+                    <!-- Informations client -->
                     <div class="info-group">
-                        <h6><i class="fas fa-building me-2"></i>Informations client</h6>
+                        <h6><i class="fas fa-building me-2 text-primary"></i>Informations client</h6>
                         {% if devis.client %}
                             <p class="mb-1"><strong><a href="{{ path('app_client_show', {'id': devis.client.id}) }}" class="text-decoration-none">
                                 {% if devis.client.formeJuridique and not devis.client.formeJuridique.isPersonnePhysique() %}{{ devis.client.formeJuridique.nom }} {% endif %}{{ devis.client.nomComplet }}
                             </a></strong></p>
                             <p class="mb-1"><small class="text-muted">Code : {{ devis.client.code }} • Créé le {{ devis.client.createdAt|date('d/m/Y') }}</small></p>
                             {% if devis.client.secteur %}
-                                <p class="mb-0">Secteur : {{ devis.client.secteur.nomSecteur }}</p>
+                                <p class="mb-0"><i class="fas fa-map-marker-alt me-1 text-muted"></i>Secteur : {{ devis.client.secteur.nomSecteur }}</p>
                             {% endif %}
+                        {% else %}
+                            <p class="text-muted mb-0">Aucun client associé</p>
                         {% endif %}
                     </div>
 
+                    <!-- Contact et adresse de livraison -->
                     <div class="info-group">
-                        <h6><i class="fas fa-user me-2"></i>Contact facturation</h6>
+                        <h6><i class="fas fa-truck me-2 text-success"></i>Contact et adresse de livraison</h6>
+                        {% if devis.contactLivraison %}
+                            <p class="mb-1"><strong>{{ devis.contactLivraison.nomComplet }}</strong></p>
+                            {% if devis.contactLivraison.fonction %}<p class="mb-2 text-muted">{{ devis.contactLivraison.fonction }}</p>{% endif %}
+
+                            <!-- Adresse de livraison -->
+                            {% if devis.adresseLivraison %}
+                                <div class="mt-2 p-2 bg-light rounded">
+                                    <small>{{ devis.adresseLivraison.adresseComplete|nl2br }}</small>
+                                    <!-- Coordonnées sous l'adresse -->
+                                    <div class="mt-2">
+                                        {% if devis.contactLivraison.email %}<small class="d-block"><i class="fas fa-envelope me-1 text-muted"></i><a href="mailto:{{ devis.contactLivraison.email }}">{{ devis.contactLivraison.email }}</a></small>{% endif %}
+                                        {% if devis.contactLivraison.telephone %}<small class="d-block"><i class="fas fa-phone me-1 text-muted"></i><a href="tel:{{ devis.contactLivraison.telephone }}">{{ devis.contactLivraison.telephone }}</a></small>{% endif %}
+                                        {% if devis.contactLivraison.telephoneMobile %}<small class="d-block"><i class="fas fa-mobile-alt me-1 text-muted"></i><a href="tel:{{ devis.contactLivraison.telephoneMobile }}">{{ devis.contactLivraison.telephoneMobile }}</a></small>{% endif %}
+                                    </div>
+                                </div>
+                            {% else %}
+                                <!-- Coordonnées sans adresse -->
+                                <div class="mt-2">
+                                    {% if devis.contactLivraison.email %}<p class="mb-1"><i class="fas fa-envelope me-1 text-muted"></i><a href="mailto:{{ devis.contactLivraison.email }}">{{ devis.contactLivraison.email }}</a></p>{% endif %}
+                                    {% if devis.contactLivraison.telephone %}<p class="mb-1"><i class="fas fa-phone me-1 text-muted"></i><a href="tel:{{ devis.contactLivraison.telephone }}">{{ devis.contactLivraison.telephone }}</a></p>{% endif %}
+                                    {% if devis.contactLivraison.telephoneMobile %}<p class="mb-0"><i class="fas fa-mobile-alt me-1 text-muted"></i><a href="tel:{{ devis.contactLivraison.telephoneMobile }}">{{ devis.contactLivraison.telephoneMobile }}</a></p>{% endif %}
+                                </div>
+                            {% endif %}
+                        {% else %}
+                            <p class="text-muted mb-0">Aucun contact de livraison</p>
+                        {% endif %}
+                    </div>
+
+                    <!-- Contact et adresse de facturation -->
+                    <div class="info-group">
+                        <h6><i class="fas fa-file-invoice me-2 text-info"></i>Contact et adresse de facturation</h6>
                         {% if devis.contactFacturation %}
                             <p class="mb-1"><strong>{{ devis.contactFacturation.nomComplet }}</strong></p>
-                            {% if devis.contactFacturation.fonction %}<p class="mb-1">{{ devis.contactFacturation.fonction }}</p>{% endif %}
-                            {% if devis.contactFacturation.email %}<p class="mb-1"><i class="fas fa-envelope me-1"></i> <a href="mailto:{{ devis.contactFacturation.email }}">{{ devis.contactFacturation.email }}</a></p>{% endif %}
-                            {% if devis.contactFacturation.telephone %}<p class="mb-0"><i class="fas fa-phone me-1"></i> <a href="tel:{{ devis.contactFacturation.telephone }}">{{ devis.contactFacturation.telephone }}</a></p>{% endif %}
+                            {% if devis.contactFacturation.fonction %}<p class="mb-2 text-muted">{{ devis.contactFacturation.fonction }}</p>{% endif %}
+
+                            <!-- Adresse de facturation -->
+                            {% if devis.adresseFacturation %}
+                                <div class="mt-2 p-2 bg-light rounded">
+                                    <small>{{ devis.adresseFacturation.adresseComplete|nl2br }}</small>
+                                    <!-- Coordonnées sous l'adresse -->
+                                    <div class="mt-2">
+                                        {% if devis.contactFacturation.email %}<small class="d-block"><i class="fas fa-envelope me-1 text-muted"></i><a href="mailto:{{ devis.contactFacturation.email }}">{{ devis.contactFacturation.email }}</a></small>{% endif %}
+                                        {% if devis.contactFacturation.telephone %}<small class="d-block"><i class="fas fa-phone me-1 text-muted"></i><a href="tel:{{ devis.contactFacturation.telephone }}">{{ devis.contactFacturation.telephone }}</a></small>{% endif %}
+                                        {% if devis.contactFacturation.telephoneMobile %}<small class="d-block"><i class="fas fa-mobile-alt me-1 text-muted"></i><a href="tel:{{ devis.contactFacturation.telephoneMobile }}">{{ devis.contactFacturation.telephoneMobile }}</a></small>{% endif %}
+                                    </div>
+                                </div>
+                            {% else %}
+                                <!-- Coordonnées sans adresse -->
+                                <div class="mt-2">
+                                    {% if devis.contactFacturation.email %}<p class="mb-1"><i class="fas fa-envelope me-1 text-muted"></i><a href="mailto:{{ devis.contactFacturation.email }}">{{ devis.contactFacturation.email }}</a></p>{% endif %}
+                                    {% if devis.contactFacturation.telephone %}<p class="mb-1"><i class="fas fa-phone me-1 text-muted"></i><a href="tel:{{ devis.contactFacturation.telephone }}">{{ devis.contactFacturation.telephone }}</a></p>{% endif %}
+                                    {% if devis.contactFacturation.telephoneMobile %}<p class="mb-0"><i class="fas fa-mobile-alt me-1 text-muted"></i><a href="tel:{{ devis.contactFacturation.telephoneMobile }}">{{ devis.contactFacturation.telephoneMobile }}</a></p>{% endif %}
+                                </div>
+                            {% endif %}
                         {% else %}
                             <p class="text-muted mb-0">Aucun contact de facturation</p>
                         {% endif %}
                     </div>
-
-                    {% if devis.contactLivraison %}
-                    <div class="info-group">
-                        <h6><i class="fas fa-truck me-2"></i>Contact livraison</h6>
-                        <p class="mb-1"><strong>{{ devis.contactLivraison.nomComplet }}</strong></p>
-                        {% if devis.contactLivraison.fonction %}<p class="mb-1">{{ devis.contactLivraison.fonction }}</p>{% endif %}
-                        {% if devis.contactLivraison.email %}<p class="mb-1"><i class="fas fa-envelope me-1"></i> <a href="mailto:{{ devis.contactLivraison.email }}">{{ devis.contactLivraison.email }}</a></p>{% endif %}
-                        {% if devis.contactLivraison.telephone %}<p class="mb-0"><i class="fas fa-phone me-1"></i> <a href="tel:{{ devis.contactLivraison.telephone }}">{{ devis.contactLivraison.telephone }}</a></p>{% endif %}
-                    </div>
-                    {% endif %}
                 </div>
 
+                <!-- Colonne droite : Commercial et Informations -->
                 <div class="col-md-6">
+                    <!-- Commercial -->
                     {% if devis.commercial %}
                     <div class="info-group">
-                        <h6><i class="fas fa-user-tie me-2"></i>Commercial</h6>
-                        <p class="mb-1"><strong>{{ devis.commercial.prenom }} {{ devis.commercial.nom }}</strong></p>
-                        {% if devis.commercial.email %}<p class="mb-0"><i class="fas fa-envelope me-1"></i> <a href="mailto:{{ devis.commercial.email }}">{{ devis.commercial.email }}</a></p>{% endif %}
+                        <h6><i class="fas fa-user-tie me-2 text-warning"></i>Commercial</h6>
+                        <p class="mb-0"><strong>{{ devis.commercial.prenom }} {{ devis.commercial.nom }}</strong></p>
                     </div>
                     {% endif %}
 
+                    <!-- Informations de livraison -->
                     <div class="info-group">
-                        <h6><i class="fas fa-calendar me-2"></i>Informations devis</h6>
+                        <h6><i class="fas fa-shipping-fast me-2 text-success"></i>Informations de livraison</h6>
                         <div class="row">
                             <div class="col-6">
-                                <p class="mb-2"><strong>Créé :</strong><br>{{ devis.dateCreation|date('d/m/Y') }}</p>
-                                <p class="mb-0"><strong>Validité :</strong><br>{{ devis.dateValidite|date('d/m/Y') }}</p>
+                                <p class="mb-1"><strong>Date de création :</strong><br><small>{{ devis.dateCreation|date('d/m/Y à H:i') }}</small></p>
+                                <p class="mb-1"><strong>Date de validité :</strong><br><small>{{ devis.dateValidite|date('d/m/Y') }}</small></p>
                             </div>
                             <div class="col-6">
                                 {% if devis.dateEnvoi %}
-                                    <p class="mb-2"><strong>Envoyé :</strong><br>{{ devis.dateEnvoi|date('d/m/Y') }}</p>
+                                    <p class="mb-1"><strong>Date d'envoi :</strong><br><small>{{ devis.dateEnvoi|date('d/m/Y à H:i') }}</small></p>
+                                    <!-- Lien d'accès client sous la date d'envoi -->
                                     {% if devis.urlAccesClient %}
-                                        <p class="mb-2"><strong>Lien client :</strong><br>
-                                            <a href="{{ devis.urlAccesClient }}" target="_blank" class="btn btn-sm btn-outline-primary">
-                                                <i class="fas fa-external-link-alt me-1"></i>Accès client
+                                        <p class="mb-1">
+                                            <a href="{{ devis.urlAccesClient }}" target="_blank" class="btn btn-sm btn-outline-success">
+                                                <i class="fas fa-pen-fancy me-1"></i>Signature électronique
                                             </a>
                                         </p>
                                     {% endif %}
                                 {% endif %}
-                                {% if devis.dateSignature %}<p class="mb-0"><strong>Signé :</strong><br>{{ devis.dateSignature|date('d/m/Y') }}</p>{% endif %}
+                                {% if devis.dateSignature %}
+                                    <p class="mb-1"><strong>Date de signature :</strong><br><small>{{ devis.dateSignature|date('d/m/Y à H:i') }}</small></p>
+                                {% endif %}
                             </div>
                         </div>
+                        {% if devis.delaiLivraison %}
+                            <p class="mb-0"><strong>Délai de livraison :</strong> {{ devis.delaiLivraison }}</p>
+                        {% endif %}
                     </div>
 
+                    <!-- Informations de paiement -->
                     <div class="info-group">
-                        <h6><i class="fas fa-calculator me-2"></i>Montants</h6>
-                        <div class="row text-center">
-                            <div class="col-4">
-                                <div class="h4 text-primary mb-1">{{ devis.totalHt }}€</div>
-                                <small class="text-muted">Total HT</small>
-                            </div>
-                            <div class="col-4">
-                                <div class="h4 text-info mb-1">{{ devis.totalTva }}€</div>
-                                <small class="text-muted">TVA</small>
-                            </div>
-                            <div class="col-4">
-                                <div class="h4 text-success mb-1">{{ devis.totalTtc }}€</div>
-                                <small class="text-muted">Total TTC</small>
+                        <h6><i class="fas fa-credit-card me-2 text-info"></i>Informations de paiement</h6>
+
+                        <!-- Mode de règlement -->
+                        {% if devis.modeReglement %}
+                            <p class="mb-2"><strong>Mode de règlement :</strong> {{ devis.modeReglement }}</p>
+                        {% endif %}
+
+                        <!-- Récapitulatif financier -->
+                        <div class="card border-0 bg-light">
+                            <div class="card-body p-3">
+                                <h6 class="card-title mb-3"><i class="fas fa-calculator me-1"></i>Récapitulatif financier</h6>
+
+                                <div class="row text-center mb-3">
+                                    <div class="col-4">
+                                        <div class="h5 text-primary mb-1">{{ devis.totalHt }}€</div>
+                                        <small class="text-muted">Total HT</small>
+                                    </div>
+                                    <div class="col-4">
+                                        <div class="h5 text-secondary mb-1">{{ devis.totalTva }}€</div>
+                                        <small class="text-muted">TVA</small>
+                                    </div>
+                                    <div class="col-4">
+                                        <div class="h5 text-success mb-1">{{ devis.totalTtc }}€</div>
+                                        <small class="text-muted">Total TTC</small>
+                                    </div>
+                                </div>
+
+                                {% if devis.remiseGlobalePercent or devis.remiseGlobaleMontant %}
+                                    <div class="border-top pt-2 mb-2">
+                                        <div class="d-flex justify-content-between">
+                                            <span><i class="fas fa-percent me-1 text-warning"></i>Remise globale :</span>
+                                            <span class="fw-bold">
+                                                {% if devis.remiseGlobalePercent %}{{ devis.remiseGlobalePercent }}%{% endif %}
+                                                {% if devis.remiseGlobaleMontant %} ({{ devis.remiseGlobaleMontant }}€){% endif %}
+                                            </span>
+                                        </div>
+                                    </div>
+                                {% endif %}
+
+                                {% if devis.acomptePercent or devis.acompteMontant %}
+                                    <div class="border-top pt-2">
+                                        <div class="d-flex justify-content-between mb-1">
+                                            <span><i class="fas fa-piggy-bank me-1 text-info"></i>Acompte demandé :</span>
+                                            <span class="fw-bold">
+                                                {% if devis.acomptePercent %}{{ devis.acomptePercent }}%{% endif %}
+                                                {% if devis.acompteMontant %} ({{ devis.acompteMontant }}€){% endif %}
+                                            </span>
+                                        </div>
+                                        <div class="d-flex justify-content-between">
+                                            <span class="text-muted">Montant de l'acompte :</span>
+                                            <span class="fw-bold text-success">{{ devis.calculateAcompte }}€</span>
+                                        </div>
+                                        <div class="d-flex justify-content-between">
+                                            <span class="text-muted">Solde à régler :</span>
+                                            <span class="fw-bold">{{ (devis.totalTtc - devis.calculateAcompte)|number_format(2, '.', '') }}€</span>
+                                        </div>
+                                    </div>
+                                {% endif %}
                             </div>
                         </div>
-
-                        {% if devis.remiseGlobalePercent or devis.remiseGlobaleMontant %}
-                            <hr>
-                            <div class="text-center">
-                                <p class="mb-0"><strong>Remise globale :</strong> 
-                                    {% if devis.remiseGlobalePercent %}{{ devis.remiseGlobalePercent }}%{% endif %}
-                                    {% if devis.remiseGlobaleMontant %} {{ devis.remiseGlobaleMontant }}€{% endif %}
-                                </p>
-                            </div>
-                        {% endif %}
-
-                        {% if devis.acomptePercent or devis.acompteMontant %}
-                            <hr>
-                            <div class="text-center">
-                                <p class="mb-0"><strong>Acompte :</strong> 
-                                    {% if devis.acomptePercent %}{{ devis.acomptePercent }}%{% endif %}
-                                    {% if devis.acompteMontant %}{{ devis.acompteMontant }}€{% endif %}
-                                    = {{ devis.calculateAcompte }}€
-                                </p>
-                            </div>
-                        {% endif %}
                     </div>
                 </div>
             </div>
