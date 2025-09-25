@@ -1019,11 +1019,13 @@ class Devis
     }
 
     /**
-     * Récupère le nombre de versions de ce devis
+     * Récupère le nombre de versions de ce devis (excluant la version actuelle)
      */
     public function getVersionCount(): int
     {
-        return $this->getVersions()->count();
+        $totalVersions = $this->getVersions()->count();
+        // On exclut la dernière version (version actuelle) de l'historique
+        return max(0, $totalVersions - 1);
     }
 
     /**
@@ -1046,7 +1048,8 @@ class Devis
      */
     public function hasVersions(): bool
     {
-        return $this->getVersionCount() > 0;
+        // Il faut au moins 2 versions total : 1 originale + 1 actuelle pour avoir de l'historique
+        return $this->getVersions()->count() > 1;
     }
 
     /**

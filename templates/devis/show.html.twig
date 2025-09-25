@@ -1040,16 +1040,19 @@ document.addEventListener('DOMContentLoaded', function() {
 });
 
 {% if devis.hasVersions %}
-let versionsLoaded = false;
+// Utiliser une structure qui évite les redéclarations
+window.devisVersionsManager = window.devisVersionsManager || {
+    versionsLoaded: false
+};
 
 function loadVersions() {
     // Éviter les chargements multiples
-    if (versionsLoaded) return;
+    if (window.devisVersionsManager.versionsLoaded) return;
 
     const versionsList = document.getElementById('versions-list');
     if (!versionsList) return;
 
-    versionsLoaded = true;
+    window.devisVersionsManager.versionsLoaded = true;
 
     fetch('{{ path("app_devis_api_versions", {"id": devis.id}) }}')
         .then(response => response.json())
@@ -1103,6 +1106,7 @@ function loadVersions() {
                                 </div>
                                 <div class="card-body">
                                     <p class="mb-2"><strong>Motif :</strong> ${version.modificationReason || 'Non spécifié'}</p>
+                                    <p class="mb-1 text-muted"><small>Version créée par ${version.modifiedBy} le ${version.createdAt}</small></p>
                                     <div class="d-flex gap-2">
                                         <a href="/devis/{{ devis.id }}/versions/${version.versionNumber}" 
                                            class="btn btn-outline-primary btn-sm">
@@ -1124,7 +1128,7 @@ function loadVersions() {
         })
         .catch(error => {
             console.error('Erreur lors du chargement des versions:', error);
-            versionsLoaded = false; // Permettre de réessayer
+            window.devisVersionsManager.versionsLoaded = false; // Permettre de réessayer
             versionsList.innerHTML = `
                 <div class="alert alert-danger">
                     <i class="fas fa-exclamation-triangle me-2"></i>

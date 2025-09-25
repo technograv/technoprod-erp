@@ -302,7 +302,10 @@ final class DevisController extends AbstractController
             
             // Log de la création du devis
             $loggerService->logCreated($devis);
-            
+
+            // Créer la version originale pour avoir un historique complet
+            $this->createInitialVersion($devis, $entityManager);
+
             // Créer 3 lignes produits par défaut pour améliorer l'UX
             for ($i = 1; $i <= 3; $i++) {
                 $element = new \App\Entity\DevisElement();
@@ -1327,11 +1330,11 @@ final class DevisController extends AbstractController
     {
         $version = new DevisVersion();
         $version->setDevis($devis);
-        
+
         $versionNumber = $devis->getNextVersionNumber();
         $version->setVersionNumber($versionNumber);
-        $version->setModifiedBy($this->getUser());
-        $version->setModificationReason($reason);
+        // Nouvelles métadonnées : on les met sur le devis actuel, pas sur l'ancienne version
+        // L'ancienne version n'a pas de métadonnées car elle existait déjà
         $version->setTotalTtcAtTime($stateData['devis_data']['totalTtc'] ?? '0.00');
         $version->setStatutAtTime($stateData['devis_data']['statut'] ?? 'brouillon');
 
@@ -1347,6 +1350,37 @@ final class DevisController extends AbstractController
 
         // Le snapshot contient l'état AVANT les modifications (= ancienne version)
         $version->setSnapshotData($stateData);
+
+        // Les métadonnées restent sur la version - elles décrivent "pourquoi cette version a été créée"
+        $version->setModifiedBy($this->getUser());
+        $version->setModificationReason($reason ?? 'Version créée');
+
+        $entityManager->persist($version);
+        $entityManager->flush();
+
+        return $version;
+    }
+
+    /**
+     * Crée la version initiale lors de la création du devis
+     */
+    private function createInitialVersion(Devis $devis, EntityManagerInterface $entityManager): DevisVersion
+    {
+        // S'assurer que les totaux sont calculés avant de sauvegarder
+        $devis->calculateTotals();
+
+        // Capturer l'état actuel du devis nouvellement créé
+        $currentState = $this->captureDevisState($devis);
+
+        $version = new DevisVersion();
+        $version->setDevis($devis);
+        $version->setVersionNumber(0);  // Version originale = 0
+        $version->setVersionLabel('Version originale');
+        $version->setModifiedBy($this->getUser());
+        $version->setModificationReason('Création du devis');
+        $version->setTotalTtcAtTime($devis->getTotalTtc());
+        $version->setStatutAtTime($devis->getStatut());
+        $version->setSnapshotData($currentState);
 
         $entityManager->persist($version);
         $entityManager->flush();
@@ -1396,8 +1430,11 @@ final class DevisController extends AbstractController
     #[Route('/{id}/api/versions', name: 'app_devis_api_versions', methods: ['GET'])]
     public function apiVersions(Devis $devis, DevisVersionRepository $versionRepository): JsonResponse
     {
-        $versions = $versionRepository->findVersionsByDevis($devis);
-        
+        $allVersions = $versionRepository->findVersionsByDevis($devis);
+
+        // Exclure la dernière version (version actuelle) de l'historique
+        $versions = array_slice($allVersions, 1);
+
         $result = [];
         foreach ($versions as $version) {
             $devisData = $version->getDevisData();

@@ -106,9 +106,9 @@
                 <h6><i class="fas fa-info-circle me-2"></i>Informations de la version</h6>
                 <div class="row">
                     <div class="col-md-6">
-                        <p class="mb-1"><strong>Créée le :</strong> {{ version.createdAt|date('d/m/Y à H:i') }}</p>
-                        <p class="mb-1"><strong>Par :</strong> {{ version.modifiedBy ? version.modifiedBy.nom ~ ' ' ~ version.modifiedBy.prenom : 'Inconnu' }}</p>
-                        <p class="mb-0"><strong>Motif :</strong> {{ version.modificationReason ?: 'Non spécifié' }}</p>
+                        <p class="mb-1"><strong>Version créée le :</strong> {{ version.createdAt|date('d/m/Y à H:i') }}</p>
+                        <p class="mb-1"><strong>Créée par :</strong> {{ version.modifiedBy ? version.modifiedBy.nom ~ ' ' ~ version.modifiedBy.prenom : 'Inconnu' }}</p>
+                        <p class="mb-0"><strong>Motif de création :</strong> {{ version.modificationReason ?: 'Non spécifié' }}</p>
                     </div>
                     <div class="col-md-6">
                         {% set devisData = version.devisData %}
