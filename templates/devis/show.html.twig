@@ -657,12 +657,27 @@
                                 <div class="timeline-content">
                                     <div class="d-flex justify-content-between align-items-start">
                                         <div>
-                                            <h6 class="mb-1">{{ log.formattedAction }}</h6>
-                                            {% if log.details %}
-                                                <p class="text-muted mb-2">{{ log.details }}</p>
-                                            {% endif %}
+                                            <h6 class="mb-1">
+                                                {% if log.action == 'sent' or log.action == 'resent' %}
+                                                    {# Pour les envois, afficher seulement l'action + email #}
+                                                    {% if log.details starts with 'à ' %}
+                                                        {{ log.formattedAction }} {{ log.details }}
+                                                    {% else %}
+                                                        {# Pour tous les autres formats, juste l'action #}
+                                                        {{ log.formattedAction }}
+                                                    {% endif %}
+                                                {% elseif log.action == 'created' %}
+                                                    {# Pour les créations, afficher seulement les détails #}
+                                                    {{ log.details }}
+                                                {% else %}
+                                                    {{ log.formattedAction }}
+                                                    {% if log.details %}
+                                                        {{ log.details }}
+                                                    {% endif %}
+                                                {% endif %}
+                                            </h6>
                                             <small class="text-muted">
-                                                <i class="fas fa-user me-1"></i>par {{ log.userName }} 
+                                                <i class="fas fa-user me-1"></i>Par {{ log.userName }}
                                                 le {{ log.createdAt|date('d/m/Y') }} à {{ log.createdAt|date('H:i') }}
                                             </small>
                                         </div>

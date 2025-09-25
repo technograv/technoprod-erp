@@ -51,13 +51,16 @@ class DevisLoggerService
      */
     public function logCreated(Devis $devis, ?User $user = null): DevisLog
     {
+        $clientNom = $devis->getClient()?->getNomEntreprise() ?? 'Non défini';
+        $contactNom = $devis->getContactFacturation()?->getNom();
+
         $details = sprintf(
-            'Devis %s créé pour le client %s - Montant TTC: %s€',
+            '%s créé pour %s%s',
             $devis->getNumeroDevis(),
-            $devis->getClient()?->getNom() ?? 'Non défini',
-            $devis->getTotalTtc()
+            $clientNom,
+            $contactNom ? ' (' . $contactNom . ')' : ''
         );
-        
+
         return $this->log($devis, 'created', $details, $user);
     }
 
@@ -93,12 +96,8 @@ class DevisLoggerService
      */
     public function logSent(Devis $devis, string $email, ?User $user = null): DevisLog
     {
-        $details = sprintf(
-            'Devis envoyé à %s - %s',
-            $email,
-            $devis->getDateEnvoi()?->format('d/m/Y H:i')
-        );
-        
+        $details = sprintf('à %s', $email);
+
         return $this->log($devis, 'sent', $details, $user);
     }
 
@@ -107,12 +106,8 @@ class DevisLoggerService
      */
     public function logResent(Devis $devis, string $email, ?User $user = null): DevisLog
     {
-        $details = sprintf(
-            'Devis renvoyé à %s - %s',
-            $email,
-            $devis->getDateEnvoi()?->format('d/m/Y H:i')
-        );
-        
+        $details = sprintf('à %s', $email);
+
         return $this->log($devis, 'resent', $details, $user);
     }
 
