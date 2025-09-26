@@ -1,0 +1,106 @@
+{# Styles CSS pour les éditeurs WYSIWYG des notes - Réutilisable #}
+<style>
+/* Styles pour les éditeurs WYSIWYG des notes - identique à new.html.twig */
+#toolbar-note-publique .ql-font .ql-picker,
+#toolbar-note-privee .ql-font .ql-picker {
+    min-width: 180px !important;
+    width: 180px !important;
+    max-width: 180px !important;
+}
+
+#toolbar-note-publique .ql-size .ql-picker,
+#toolbar-note-privee .ql-size .ql-picker {
+    min-width: 140px !important;
+    width: 140px !important;
+    max-width: 140px !important;
+}
+
+#toolbar-note-publique .ql-font .ql-picker-label,
+#toolbar-note-publique .ql-size .ql-picker-label,
+#toolbar-note-privee .ql-font .ql-picker-label,
+#toolbar-note-privee .ql-size .ql-picker-label {
+    width: 100% !important;
+    min-width: 100% !important;
+    padding: 4px 8px !important;
+    text-align: left !important;
+    white-space: nowrap !important;
+    overflow: hidden !important;
+    text-overflow: ellipsis !important;
+    box-sizing: border-box !important;
+}
+
+#toolbar-note-publique .ql-font .ql-picker-options,
+#toolbar-note-publique .ql-size .ql-picker-options,
+#toolbar-note-privee .ql-font .ql-picker-options,
+#toolbar-note-privee .ql-size .ql-picker-options {
+    min-width: 180px !important;
+    width: 180px !important;
+}
+
+/* Forcer la largeur avec une approche CSS plus agressive */
+#toolbar-note-publique span.ql-picker[class*="ql-font"],
+#toolbar-note-privee span.ql-picker[class*="ql-font"] {
+    width: 180px !important;
+    min-width: 180px !important;
+}
+
+#toolbar-note-publique span.ql-picker[class*="ql-size"],
+#toolbar-note-privee span.ql-picker[class*="ql-size"] {
+    width: 140px !important;
+    min-width: 140px !important;
+}
+
+/* Préserver les color pickers - taille normale */
+#toolbar-note-publique .ql-color .ql-picker,
+#toolbar-note-publique .ql-background .ql-picker,
+#toolbar-note-publique .ql-align .ql-picker,
+#toolbar-note-privee .ql-color .ql-picker,
+#toolbar-note-privee .ql-background .ql-picker,
+#toolbar-note-privee .ql-align .ql-picker {
+    min-width: 28px !important;
+    width: 28px !important;
+    max-width: 28px !important;
+}
+
+/* Prévisualisation des polices dans les selects */
+#toolbar-note-publique select.ql-font option[value="arial"],
+#toolbar-note-privee select.ql-font option[value="arial"] {
+    font-family: Arial, sans-serif;
+}
+
+#toolbar-note-publique select.ql-font option[value="helvetica"],
+#toolbar-note-privee select.ql-font option[value="helvetica"] {
+    font-family: Helvetica, sans-serif;
+}
+
+#toolbar-note-publique select.ql-font option[value="times"],
+#toolbar-note-privee select.ql-font option[value="times"] {
+    font-family: 'Times New Roman', serif;
+}
+
+#toolbar-note-publique select.ql-font option[value="georgia"],
+#toolbar-note-privee select.ql-font option[value="georgia"] {
+    font-family: Georgia, serif;
+}
+
+#toolbar-note-publique select.ql-font option[value="verdana"],
+#toolbar-note-privee select.ql-font option[value="verdana"] {
+    font-family: Verdana, sans-serif;
+}
+
+#toolbar-note-publique select.ql-font option[value="courier"],
+#toolbar-note-privee select.ql-font option[value="courier"] {
+    font-family: 'Courier New', monospace;
+}
+
+/* Assurer que les toolbars ont suffisamment d'espace */
+#toolbar-note-publique,
+#toolbar-note-privee {
+    display: flex !important;
+    flex-wrap: wrap !important;
+    align-items: center !important;
+    padding: 8px 12px !important;
+    gap: 6px !important;
+    min-height: 50px !important;
+}
+</style>

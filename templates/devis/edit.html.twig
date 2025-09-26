@@ -239,57 +239,6 @@
                             }) }}
                         </div>
                     </div>
-                    <div class="row">
-                        <div class="col-md-12">
-                            <div class="mb-3">
-                                <label for="notes_client_wysiwyg" class="form-label">Notes client</label>
-                                <!-- Toolbar pour l'éditeur (identique à celui des produits) -->
-                                <div id="notes-client-toolbar" style="border: 1px solid #ced4da; border-bottom: none; background: #f8f9fa;">
-                                    <select class="ql-font">
-                                        <option value="">Police par défaut</option>
-                                        <option value="arial">Arial</option>
-                                        <option value="helvetica">Helvetica</option>
-                                        <option value="times">Times New Roman</option>
-                                        <option value="georgia">Georgia</option>
-                                        <option value="verdana">Verdana</option>
-                                        <option value="courier">Courier New</option>
-                                    </select>
-                                    <select class="ql-size">
-                                        <option value="">Taille normale</option>
-                                        <option value="10px">10px</option>
-                                        <option value="12px">12px</option>
-                                        <option value="14px">14px</option>
-                                        <option value="16px">16px</option>
-                                        <option value="18px">18px</option>
-                                        <option value="20px">20px</option>
-                                        <option value="22px">22px</option>
-                                        <option value="24px">24px</option>
-                                    </select>
-                                    <button class="ql-bold"></button>
-                                    <button class="ql-italic"></button>
-                                    <button class="ql-underline"></button>
-                                    <button class="ql-strike"></button>
-                                    <button class="ql-header" value="1"></button>
-                                    <button class="ql-header" value="2"></button>
-                                    <button class="ql-list" value="ordered"></button>
-                                    <button class="ql-list" value="bullet"></button>
-                                    <button class="ql-indent" value="-1"></button>
-                                    <button class="ql-indent" value="+1"></button>
-                                    <select class="ql-color"></select>
-                                    <select class="ql-background"></select>
-                                    <select class="ql-align"></select>
-                                    <button class="ql-link"></button>
-                                    <button class="ql-image"></button>
-                                    <button class="ql-clean"></button>
-                                </div>
-                                <!-- Zone d'édition -->
-                                <div id="notes_client_wysiwyg" style="height: 150px; border: 1px solid #ced4da; border-top: none;">
-                                    {# Le contenu sera chargé par JavaScript #}
-                                </div>
-                                <!-- Le champ Symfony sera dans la section cachée -->
-                            </div>
-                        </div>
-                    </div>
                 </div>
             </div>
         </div>
@@ -316,6 +265,28 @@
         {{ form_widget(form.notesInternes) }}
     </div>
     
+    <!-- Section Notes publiques et privées -->
+    <div class="form-section mb-4">
+        <div class="form-section-header">
+            <i class="fas fa-sticky-note me-2"></i>
+            Notes et observations
+        </div>
+        <div class="form-section-body">
+            <!-- Inclusion du composant WYSIWYG réutilisable -->
+            {{ include("components/wysiwyg_notes.html.twig", {
+                "prefix": "edit",
+                "public_content": devis.notesClient|default(""),
+                "private_content": devis.notesInternes|default(""),
+                "public_field_name": "devis[notesClient]",
+                "private_field_name": "devis[notesInternes]"
+            }) }}
+
+            <!-- Champs cachés pour synchroniser avec le formulaire Symfony -->
+            <textarea name="devis[notesClient]" style="display: none;">{{ devis.notesClient|raw }}</textarea>
+            <textarea name="devis[notesInternes]" style="display: none;">{{ devis.notesInternes|raw }}</textarea>
+        </div>
+    </div>
+
     {{ form_rest(form) }}
     {{ form_end(form) }}
 </div>
@@ -523,6 +494,9 @@
     <link href="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/css/select2.min.css" rel="stylesheet">
     <link href="https://cdn.jsdelivr.net/npm/select2-bootstrap-5-theme@1.3.0/dist/select2-bootstrap-5-theme.min.css" rel="stylesheet">
     <link href="https://cdn.quilljs.com/1.3.6/quill.snow.css" rel="stylesheet">
+
+    <!-- Inclusion des styles WYSIWYG réutilisables -->
+    {{ include('components/wysiwyg_notes_styles.html.twig') }}
     <style>
         /* Espacement pour la barre flottante et uniformisation */
         body {
@@ -1057,6 +1031,7 @@
 <script src="/js/services/PostalAutocompleteService.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/sortablejs@1.15.0/Sortable.min.js"></script>
 <script src="https://cdn.quilljs.com/1.3.6/quill.min.js"></script>
+<script src="/js/components/WysiwygNotesManager.js"></script>
 <!-- Services de modales -->
 <script src="/js/services/ModalService.js"></script>
 <script src="/js/services/ClientModalService.js"></script>
@@ -1123,7 +1098,11 @@ async function init() {
             initClientAutocomplete();
             // Initialiser la synchronisation contact/adresse pour l'email
             initContactAddressSynchronization();
-            initQuillNotesClientEditor(); // Initialiser l'éditeur WYSIWYG des notes client
+            // Initialiser les éditeurs WYSIWYG avec le gestionnaire réutilisable
+            if (typeof WysiwygNotesManager !== 'undefined') {
+                window.wysiwygManager = new WysiwygNotesManager('edit', 'devis[notesClient]', 'devis[notesInternes]');
+                window.wysiwygManager.init();
+            }
 
             // Charger les contacts du client actuel pour la synchronisation email
             await loadInitialClientContacts();
@@ -4491,108 +4470,129 @@ function imageHandler() {
     showImageDimensionsModalForNotesClient();
 }
 
-// Fonction pour initialiser l'éditeur Quill des notes client directement dans le formulaire
-function initQuillNotesClientEditor() {
-    console.log('🎯 Initialisation éditeur WYSIWYG notes client...');
-    
-    // Vérifier que l'éditeur n'est pas déjà initialisé
-    if (quillNotesClientEditor) {
-        console.log('✅ Éditeur déjà initialisé');
-        return;
-    }
-    // Configuration des polices personnalisées (identique aux produits)
+// Variables globales pour les éditeurs de notes (édition)
+let quillNotePubliqueEdit = null;
+let quillNotePriveeEdit = null;
+
+// Fonction pour initialiser les éditeurs WYSIWYG des notes publiques et privées
+function initQuillEditorsNotes() {
+    console.log('🎯 Initialisation éditeurs WYSIWYG notes publiques et privées...');
+
+    // Configuration Quill (comme dans new.html.twig)
     const Font = Quill.import('formats/font');
     Font.whitelist = ['arial', 'helvetica', 'times', 'georgia', 'verdana', 'courier'];
     Quill.register(Font, true);
-    
-    // Configuration des tailles personnalisées (identique aux produits)
+
     const Size = Quill.import('formats/size');
     Size.whitelist = ['10px', '12px', '14px', '16px', '18px', '20px', '22px', '24px'];
     Quill.register(Size, true);
-    
-    // Initialiser Quill avec la toolbar existante
-    quillNotesClientEditor = new Quill('#notes_client_wysiwyg', {
+
+    // Options communes
+    const quillOptions = {
         theme: 'snow',
         modules: {
             toolbar: {
-                container: '#notes-client-toolbar',
                 handlers: {
                     'image': imageHandler
                 }
             }
-        },
-        placeholder: 'Notes visibles par le client...'
-    });
-    
-    // Charger le contenu existant depuis le champ caché (champ Symfony)
-    const hiddenField = document.querySelector('textarea[name="devis[notesClient]"]');
-    if (hiddenField && hiddenField.value) {
-        quillNotesClientEditor.root.innerHTML = hiddenField.value;
+        }
+    };
+
+    // Initialisation de l'éditeur pour note publique
+    const optionsNotePublique = {...quillOptions};
+    optionsNotePublique.modules.toolbar.container = '#toolbar-note-publique-edit';
+    optionsNotePublique.placeholder = '';
+
+    quillNotePubliqueEdit = new Quill('#editor-note-publique-edit', optionsNotePublique);
+
+    // Initialisation de l'éditeur pour note privée
+    const optionsNotePrivee = {...quillOptions};
+    optionsNotePrivee.modules.toolbar.container = '#toolbar-note-privee-edit';
+    optionsNotePrivee.placeholder = '';
+
+    quillNotePriveeEdit = new Quill('#editor-note-privee-edit', optionsNotePrivee);
+
+    // Charger le contenu existant depuis les champs cachés Symfony
+    const notesClientField = document.querySelector('textarea[name="devis[notesClient]"]');
+    const notesInternesField = document.querySelector('textarea[name="devis[notesInternes]"]');
+
+    if (notesClientField && notesClientField.value) {
+        quillNotePubliqueEdit.root.innerHTML = notesClientField.value;
     }
-    
-    // Synchroniser avec le champ caché à chaque modification
-    quillNotesClientEditor.on('text-change', function() {
-        const currentHiddenField = document.querySelector('textarea[name="devis[notesClient]"]');
-        if (currentHiddenField) {
-            currentHiddenField.value = quillNotesClientEditor.root.innerHTML;
-            console.log('🔄 Synchronisation WYSIWYG → Formulaire:', currentHiddenField.value.substring(0, 50) + '...');
+
+    if (notesInternesField && notesInternesField.value) {
+        quillNotePriveeEdit.root.innerHTML = notesInternesField.value;
+    }
+
+    // Synchronisation des éditeurs avec les champs cachés du formulaire
+    quillNotePubliqueEdit.on('text-change', function() {
+        const content = quillNotePubliqueEdit.root.innerHTML;
+        if (notesClientField) {
+            notesClientField.value = content === '<p><br></p>' ? '' : content;
         }
     });
-    
-    // Synchroniser avant soumission du formulaire
+
+    quillNotePriveeEdit.on('text-change', function() {
+        const content = quillNotePriveeEdit.root.innerHTML;
+        if (notesInternesField) {
+            notesInternesField.value = content === '<p><br></p>' ? '' : content;
+        }
+    });
+
+    // Validation avant soumission du formulaire
     const form = document.getElementById('devis-form');
     if (form) {
         form.addEventListener('submit', function() {
-            // Forcer la synchronisation avant soumission
-            const currentHiddenField = document.querySelector('textarea[name="devis[notesClient]"]');
-            if (currentHiddenField && quillNotesClientEditor) {
-                currentHiddenField.value = quillNotesClientEditor.root.innerHTML;
-                console.log('🔄 Synchronisation notes client avant soumission:', currentHiddenField.value.substring(0, 100) + '...');
+            // Synchroniser les contenus avant soumission
+            if (notesClientField && quillNotePubliqueEdit) {
+                const content = quillNotePubliqueEdit.root.innerHTML;
+                notesClientField.value = content === '<p><br></p>' ? '' : content;
+            }
+
+            if (notesInternesField && quillNotePriveeEdit) {
+                const content = quillNotePriveeEdit.root.innerHTML;
+                notesInternesField.value = content === '<p><br></p>' ? '' : content;
             }
         });
     }
-    
-    // Forcer la largeur des menus après initialisation (identique aux produits)
+
+    // Correction forcée des largeurs des dropdowns après initialisation (comme dans new.html.twig)
     setTimeout(() => {
-        console.log('🎨 Ajustement largeurs dropdowns notes client...');
-        
-        // Debug : voir tous les éléments dans la toolbar
-        const toolbar = document.querySelector('#notes-client-toolbar');
-        console.log('Toolbar trouvée:', toolbar);
-        if (toolbar) {
-            console.log('Contenu toolbar:', toolbar.innerHTML);
-            console.log('Éléments .ql-picker:', toolbar.querySelectorAll('.ql-picker'));
-            console.log('Éléments .ql-font:', toolbar.querySelectorAll('.ql-font'));
-            console.log('Éléments .ql-size:', toolbar.querySelectorAll('.ql-size'));
+        // Pour la note publique
+        const fontPickerPublique = document.querySelector('#toolbar-note-publique-edit .ql-font .ql-picker');
+        const sizePickerPublique = document.querySelector('#toolbar-note-publique-edit .ql-size .ql-picker');
+
+        if (fontPickerPublique) {
+            fontPickerPublique.style.width = '180px';
+            fontPickerPublique.style.minWidth = '180px';
+            fontPickerPublique.style.maxWidth = '180px';
         }
-        
-        // Cibler les bons éléments : les span.ql-picker-label qui sont visibles
-        let fontPicker = document.querySelector('#notes-client-toolbar .ql-font.ql-picker .ql-picker-label');
-        let sizePicker = document.querySelector('#notes-client-toolbar .ql-size.ql-picker .ql-picker-label');
-        
-        console.log('FontPicker trouvé:', fontPicker);
-        console.log('SizePicker trouvé:', sizePicker);
-        
-        if (fontPicker) {
-            fontPicker.style.width = '180px';
-            fontPicker.style.minWidth = '180px';
-            fontPicker.style.maxWidth = '180px';
-            console.log('✅ FontPicker largeur ajustée à 180px');
-        } else {
-            console.warn('❌ FontPicker non trouvé');
+
+        if (sizePickerPublique) {
+            sizePickerPublique.style.width = '140px';
+            sizePickerPublique.style.minWidth = '140px';
+            sizePickerPublique.style.maxWidth = '140px';
         }
-        
-        if (sizePicker) {
-            sizePicker.style.width = '140px';
-            sizePicker.style.minWidth = '140px';
-            sizePicker.style.maxWidth = '140px';
-            console.log('✅ SizePicker largeur ajustée à 140px');
-        } else {
-            console.warn('❌ SizePicker non trouvé');
+
+        // Pour la note privée
+        const fontPickerPrivee = document.querySelector('#toolbar-note-privee-edit .ql-font .ql-picker');
+        const sizePickerPrivee = document.querySelector('#toolbar-note-privee-edit .ql-size .ql-picker');
+
+        if (fontPickerPrivee) {
+            fontPickerPrivee.style.width = '180px';
+            fontPickerPrivee.style.minWidth = '180px';
+            fontPickerPrivee.style.maxWidth = '180px';
         }
-        
-        console.log('✅ Éditeur WYSIWYG notes client complètement initialisé !');
-    }, 500); // Augmenter le timeout à 500ms
+
+        if (sizePickerPrivee) {
+            sizePickerPrivee.style.width = '140px';
+            sizePickerPrivee.style.minWidth = '140px';
+            sizePickerPrivee.style.maxWidth = '140px';
+        }
+    }, 500);
+
+    console.log('✅ Éditeurs WYSIWYG notes complètement initialisés !');
 }
 
 // Initialiser Quill Editor
@@ -5265,6 +5265,154 @@ $(document).ready(function() {
 #notes-client-toolbar > * {
     position: relative !important;
     z-index: 1 !important;
+}
+
+/* Styles pour les sections de formulaire (comme dans new.html.twig) */
+.form-section {
+    background: white;
+    border-radius: 10px;
+    box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+    margin-bottom: 2rem;
+    border: 1px solid #e3e6f0;
+}
+
+.form-section-header {
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    color: white;
+    padding: 1rem 1.5rem;
+    border-radius: 10px 10px 0 0;
+    font-weight: 600;
+    font-size: 1.1rem;
+}
+
+.form-section-body {
+    padding: 2rem;
+}
+
+/* Styles pour les éditeurs WYSIWYG des notes */
+#toolbar-note-publique-edit .ql-picker-label,
+#toolbar-note-privee-edit .ql-picker-label {
+    white-space: nowrap !important;
+    overflow: hidden !important;
+    text-overflow: ellipsis !important;
+    min-width: 120px !important;
+    max-width: 150px !important;
+}
+
+#toolbar-note-publique-edit .ql-font .ql-picker-label,
+#toolbar-note-privee-edit .ql-font .ql-picker-label {
+    min-width: 140px !important;
+    max-width: 160px !important;
+}
+
+#toolbar-note-publique-edit .ql-size .ql-picker-label,
+#toolbar-note-privee-edit .ql-size .ql-picker-label {
+    min-width: 100px !important;
+    max-width: 120px !important;
+}
+
+/* Styles pour les éditeurs WYSIWYG des notes - identique à new.html.twig */
+#toolbar-note-publique-edit .ql-font .ql-picker,
+#toolbar-note-privee-edit .ql-font .ql-picker {
+    min-width: 180px !important;
+    width: 180px !important;
+    max-width: 180px !important;
+}
+
+#toolbar-note-publique-edit .ql-size .ql-picker,
+#toolbar-note-privee-edit .ql-size .ql-picker {
+    min-width: 140px !important;
+    width: 140px !important;
+    max-width: 140px !important;
+}
+
+#toolbar-note-publique-edit .ql-font .ql-picker-label,
+#toolbar-note-publique-edit .ql-size .ql-picker-label,
+#toolbar-note-privee-edit .ql-font .ql-picker-label,
+#toolbar-note-privee-edit .ql-size .ql-picker-label {
+    width: 100% !important;
+    min-width: 100% !important;
+    padding: 4px 8px !important;
+    text-align: left !important;
+    white-space: nowrap !important;
+    overflow: hidden !important;
+    text-overflow: ellipsis !important;
+    box-sizing: border-box !important;
+}
+
+#toolbar-note-publique-edit .ql-font .ql-picker-options,
+#toolbar-note-publique-edit .ql-size .ql-picker-options,
+#toolbar-note-privee-edit .ql-font .ql-picker-options,
+#toolbar-note-privee-edit .ql-size .ql-picker-options {
+    min-width: 180px !important;
+    width: 180px !important;
+}
+
+/* Forcer la largeur avec une approche CSS plus agressive */
+#toolbar-note-publique-edit span.ql-picker[class*="ql-font"],
+#toolbar-note-privee-edit span.ql-picker[class*="ql-font"] {
+    width: 180px !important;
+    min-width: 180px !important;
+}
+
+#toolbar-note-publique-edit span.ql-picker[class*="ql-size"],
+#toolbar-note-privee-edit span.ql-picker[class*="ql-size"] {
+    width: 140px !important;
+    min-width: 140px !important;
+}
+
+/* Préserver les color pickers - taille normale */
+#toolbar-note-publique-edit .ql-color .ql-picker,
+#toolbar-note-publique-edit .ql-background .ql-picker,
+#toolbar-note-publique-edit .ql-align .ql-picker,
+#toolbar-note-privee-edit .ql-color .ql-picker,
+#toolbar-note-privee-edit .ql-background .ql-picker,
+#toolbar-note-privee-edit .ql-align .ql-picker {
+    min-width: 28px !important;
+    width: 28px !important;
+    max-width: 28px !important;
+}
+
+/* Prévisualisation des polices dans les selects */
+#toolbar-note-publique-edit select.ql-font option[value="arial"],
+#toolbar-note-privee-edit select.ql-font option[value="arial"] {
+    font-family: Arial, sans-serif;
+}
+
+#toolbar-note-publique-edit select.ql-font option[value="helvetica"],
+#toolbar-note-privee-edit select.ql-font option[value="helvetica"] {
+    font-family: Helvetica, sans-serif;
+}
+
+#toolbar-note-publique-edit select.ql-font option[value="times"],
+#toolbar-note-privee-edit select.ql-font option[value="times"] {
+    font-family: 'Times New Roman', serif;
+}
+
+#toolbar-note-publique-edit select.ql-font option[value="georgia"],
+#toolbar-note-privee-edit select.ql-font option[value="georgia"] {
+    font-family: Georgia, serif;
+}
+
+#toolbar-note-publique-edit select.ql-font option[value="verdana"],
+#toolbar-note-privee-edit select.ql-font option[value="verdana"] {
+    font-family: Verdana, sans-serif;
+}
+
+#toolbar-note-publique-edit select.ql-font option[value="courier"],
+#toolbar-note-privee-edit select.ql-font option[value="courier"] {
+    font-family: 'Courier New', monospace;
+}
+
+/* Assurer que les toolbars ont suffisamment d'espace */
+#toolbar-note-publique-edit,
+#toolbar-note-privee-edit {
+    display: flex !important;
+    flex-wrap: wrap !important;
+    align-items: center !important;
+    padding: 8px 12px !important;
+    gap: 6px !important;
+    min-height: 50px !important;
 }
 
 </style>

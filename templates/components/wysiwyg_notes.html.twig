@@ -1,0 +1,128 @@
+{#
+    Composant WYSIWYG pour notes publiques et privées
+
+    Paramètres:
+    - prefix: string - Préfixe pour les IDs (ex: 'new', 'edit')
+    - public_content: string - Contenu initial de la note publique
+    - private_content: string - Contenu initial de la note privée
+    - public_field_name: string - Nom du champ pour la note publique
+    - private_field_name: string - Nom du champ pour la note privée
+#}
+
+<!-- Notes publiques -->
+<div class="mb-4">
+    <label for="note_{{ prefix }}_publique" class="form-label">
+        <i class="fas fa-eye me-1"></i>Note publique (visible par le client)
+    </label>
+            <!-- Toolbar WYSIWYG pour note publique -->
+            <div id="toolbar-note-publique" style="border: 1px solid #ced4da; border-bottom: none; background: #f8f9fa;">
+                <select class="ql-font">
+                    <option value="">Police par défaut</option>
+                    <option value="arial">Arial</option>
+                    <option value="helvetica">Helvetica</option>
+                    <option value="times">Times New Roman</option>
+                    <option value="georgia">Georgia</option>
+                    <option value="verdana">Verdana</option>
+                    <option value="courier">Courier New</option>
+                </select>
+                <select class="ql-size">
+                    <option value="">Taille normale</option>
+                    <option value="10px">10px</option>
+                    <option value="12px">12px</option>
+                    <option value="14px">14px</option>
+                    <option value="16px">16px</option>
+                    <option value="18px">18px</option>
+                    <option value="20px">20px</option>
+                    <option value="22px">22px</option>
+                    <option value="24px">24px</option>
+                </select>
+                <button class="ql-bold"></button>
+                <button class="ql-italic"></button>
+                <button class="ql-underline"></button>
+                <button class="ql-strike"></button>
+                <button class="ql-header" value="1"></button>
+                <button class="ql-header" value="2"></button>
+                <button class="ql-list" value="ordered"></button>
+                <button class="ql-list" value="bullet"></button>
+                <button class="ql-indent" value="-1"></button>
+                <button class="ql-indent" value="+1"></button>
+                <button class="ql-script" value="sub"></button>
+                <button class="ql-script" value="super"></button>
+                <button class="ql-align" value=""></button>
+                <button class="ql-align" value="center"></button>
+                <button class="ql-align" value="right"></button>
+                <button class="ql-align" value="justify"></button>
+                <button class="ql-direction" value="rtl"></button>
+                <select class="ql-color"></select>
+                <select class="ql-background"></select>
+                <button class="ql-link"></button>
+                <button class="ql-image"></button>
+                <button class="ql-video"></button>
+                <button class="ql-formula"></button>
+                <button class="ql-clean"></button>
+            </div>
+            <!-- Éditeur WYSIWYG pour note publique -->
+            <div id="editor-note-publique" class="border border-top-0" style="min-height: 120px;">
+            </div>
+    <!-- Champ caché pour synchroniser avec le formulaire -->
+    <input type="hidden" id="note-publique-{{ prefix }}" name="{{ public_field_name }}" value="{{ public_content|raw }}">
+</div>
+
+<!-- Notes privées -->
+<div class="private-notes">
+    <label for="note_{{ prefix }}_privee" class="form-label">
+        <i class="fas fa-eye-slash me-1"></i>Note privée (équipe interne uniquement)
+    </label>
+            <!-- Toolbar WYSIWYG pour note privée -->
+            <div id="toolbar-note-privee" style="border: 1px solid #ced4da; border-bottom: none; background: #f8f9fa;">
+                <select class="ql-font">
+                    <option value="">Police par défaut</option>
+                    <option value="arial">Arial</option>
+                    <option value="helvetica">Helvetica</option>
+                    <option value="times">Times New Roman</option>
+                    <option value="georgia">Georgia</option>
+                    <option value="verdana">Verdana</option>
+                    <option value="courier">Courier New</option>
+                </select>
+                <select class="ql-size">
+                    <option value="">Taille normale</option>
+                    <option value="10px">10px</option>
+                    <option value="12px">12px</option>
+                    <option value="14px">14px</option>
+                    <option value="16px">16px</option>
+                    <option value="18px">18px</option>
+                    <option value="20px">20px</option>
+                    <option value="22px">22px</option>
+                    <option value="24px">24px</option>
+                </select>
+                <button class="ql-bold"></button>
+                <button class="ql-italic"></button>
+                <button class="ql-underline"></button>
+                <button class="ql-strike"></button>
+                <button class="ql-header" value="1"></button>
+                <button class="ql-header" value="2"></button>
+                <button class="ql-list" value="ordered"></button>
+                <button class="ql-list" value="bullet"></button>
+                <button class="ql-indent" value="-1"></button>
+                <button class="ql-indent" value="+1"></button>
+                <button class="ql-script" value="sub"></button>
+                <button class="ql-script" value="super"></button>
+                <button class="ql-align" value=""></button>
+                <button class="ql-align" value="center"></button>
+                <button class="ql-align" value="right"></button>
+                <button class="ql-align" value="justify"></button>
+                <button class="ql-direction" value="rtl"></button>
+                <select class="ql-color"></select>
+                <select class="ql-background"></select>
+                <button class="ql-link"></button>
+                <button class="ql-image"></button>
+                <button class="ql-video"></button>
+                <button class="ql-formula"></button>
+                <button class="ql-clean"></button>
+            </div>
+            <!-- Éditeur WYSIWYG pour note privée -->
+            <div id="editor-note-privee" class="border border-top-0" style="min-height: 120px;">
+            </div>
+    <!-- Champ caché pour synchroniser avec le formulaire -->
+    <input type="hidden" id="note-privee-{{ prefix }}" name="{{ private_field_name }}" value="{{ private_content|raw }}">
+</div>

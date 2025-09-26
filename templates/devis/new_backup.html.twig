@@ -7,9 +7,6 @@
     <link href="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/css/select2.min.css" rel="stylesheet">
     <link href="https://cdn.jsdelivr.net/npm/select2-bootstrap-5-theme@1.3.0/dist/select2-bootstrap-5-theme.min.css" rel="stylesheet">
     <link href="https://cdn.quilljs.com/1.3.6/quill.snow.css" rel="stylesheet">
-
-    <!-- Inclusion des styles WYSIWYG réutilisables -->
-    {{ include('components/wysiwyg_notes_styles.html.twig') }}
     <style>
         .form-section {
             background: white;
@@ -308,14 +305,108 @@
                                    placeholder="Ex: Refonte site web, Impression plaquettes...">
                         </div>
                         
+                        <div class="mb-4">
+                            <label for="note_publique" class="form-label">
+                                <i class="fas fa-eye me-1"></i>Note publique (visible par le client)
+                            </label>
+                            <!-- Toolbar WYSIWYG pour note publique -->
+                            <div id="toolbar-note-publique" style="border: 1px solid #ced4da; border-bottom: none; background: #f8f9fa;">
+                                <select class="ql-font">
+                                    <option value="">Police par défaut</option>
+                                    <option value="arial">Arial</option>
+                                    <option value="helvetica">Helvetica</option>
+                                    <option value="times">Times New Roman</option>
+                                    <option value="georgia">Georgia</option>
+                                    <option value="verdana">Verdana</option>
+                                    <option value="courier">Courier New</option>
+                                </select>
+                                <select class="ql-size">
+                                    <option value="">Taille normale</option>
+                                    <option value="10px">10px</option>
+                                    <option value="12px">12px</option>
+                                    <option value="14px">14px</option>
+                                    <option value="16px">16px</option>
+                                    <option value="18px">18px</option>
+                                    <option value="20px">20px</option>
+                                    <option value="22px">22px</option>
+                                    <option value="24px">24px</option>
+                                </select>
+                                <button class="ql-bold"></button>
+                                <button class="ql-italic"></button>
+                                <button class="ql-underline"></button>
+                                <button class="ql-strike"></button>
+                                <button class="ql-header" value="1"></button>
+                                <button class="ql-header" value="2"></button>
+                                <button class="ql-list" value="ordered"></button>
+                                <button class="ql-list" value="bullet"></button>
+                                <button class="ql-indent" value="-1"></button>
+                                <button class="ql-indent" value="+1"></button>
+                                <select class="ql-color"></select>
+                                <select class="ql-background"></select>
+                                <select class="ql-align"></select>
+                                <button class="ql-link"></button>
+                                <button class="ql-image"></button>
+                                <button class="ql-clean"></button>
+                            </div>
+                            <!-- Éditeur WYSIWYG pour note publique -->
+                            <div id="editor-note-publique" class="border border-top-0" style="min-height: 120px;">
+                            </div>
+                            <!-- Champ caché pour synchroniser avec le formulaire -->
+                            <input type="hidden" id="note_publique" name="note_publique" value="">
+                        </div>
                         
-                        {{ include("components/wysiwyg_notes.html.twig", {
-                            "prefix": "new",
-                            "public_content": "",
-                            "private_content": "",
-                            "public_field_name": "note_publique",
-                            "private_field_name": "note_privee"
-                        }) }}
+                        <div class="private-notes">
+                            <label for="note_privee" class="form-label">
+                                <i class="fas fa-eye-slash me-1"></i>Note privée (équipe interne uniquement)
+                            </label>
+                            <!-- Toolbar WYSIWYG pour note privée -->
+                            <div id="toolbar-note-privee" style="border: 1px solid #ced4da; border-bottom: none; background: #f8f9fa;">
+                                <select class="ql-font">
+                                    <option value="">Police par défaut</option>
+                                    <option value="arial">Arial</option>
+                                    <option value="helvetica">Helvetica</option>
+                                    <option value="times">Times New Roman</option>
+                                    <option value="georgia">Georgia</option>
+                                    <option value="verdana">Verdana</option>
+                                    <option value="courier">Courier New</option>
+                                </select>
+                                <select class="ql-size">
+                                    <option value="">Taille normale</option>
+                                    <option value="10px">10px</option>
+                                    <option value="12px">12px</option>
+                                    <option value="14px">14px</option>
+                                    <option value="16px">16px</option>
+                                    <option value="18px">18px</option>
+                                    <option value="20px">20px</option>
+                                    <option value="22px">22px</option>
+                                    <option value="24px">24px</option>
+                                </select>
+                                <button class="ql-bold"></button>
+                                <button class="ql-italic"></button>
+                                <button class="ql-underline"></button>
+                                <button class="ql-strike"></button>
+                                <button class="ql-header" value="1"></button>
+                                <button class="ql-header" value="2"></button>
+                                <button class="ql-list" value="ordered"></button>
+                                <button class="ql-list" value="bullet"></button>
+                                <button class="ql-indent" value="-1"></button>
+                                <button class="ql-indent" value="+1"></button>
+                                <select class="ql-color"></select>
+                                <select class="ql-background"></select>
+                                <select class="ql-align"></select>
+                                <button class="ql-link"></button>
+                                <button class="ql-image"></button>
+                                <button class="ql-clean"></button>
+                            </div>
+                            <!-- Éditeur WYSIWYG pour note privée -->
+                            <div id="editor-note-privee" class="border border-top-0" style="min-height: 90px;">
+                            </div>
+                            <!-- Champ caché pour synchroniser avec le formulaire -->
+                            <input type="hidden" id="note_privee" name="note_privee" value="">
+                            <small class="text-muted">
+                                <i class="fas fa-lock me-1"></i>Cette note ne sera pas visible par le client
+                            </small>
+                        </div>
                     </div>
                 </div>
 
@@ -1019,13 +1110,439 @@
     });
     </script>
     <script src="https://cdn.quilljs.com/1.3.6/quill.min.js"></script>
-    <script src="/js/components/WysiwygNotesManager.js"></script>
+    <style>
+        /* Styles pour corriger la largeur des menus déroulants WYSIWYG */
+        #toolbar-note-publique .ql-font .ql-picker,
+        #toolbar-note-privee .ql-font .ql-picker {
+            min-width: 180px !important;
+            width: 180px !important;
+            max-width: 180px !important;
+        }
+        
+        #toolbar-note-publique .ql-size .ql-picker,
+        #toolbar-note-privee .ql-size .ql-picker {
+            min-width: 140px !important;
+            width: 140px !important;
+            max-width: 140px !important;
+        }
+        
+        #toolbar-note-publique .ql-font .ql-picker-label,
+        #toolbar-note-publique .ql-size .ql-picker-label,
+        #toolbar-note-privee .ql-font .ql-picker-label,
+        #toolbar-note-privee .ql-size .ql-picker-label {
+            width: 100% !important;
+            min-width: 100% !important;
+            padding: 4px 8px !important;
+            white-space: nowrap !important;
+            overflow: visible !important;
+            text-overflow: clip !important;
+            display: block !important;
+            box-sizing: border-box !important;
+        }
+        
+        #toolbar-note-publique .ql-font .ql-picker-options,
+        #toolbar-note-publique .ql-size .ql-picker-options,
+        #toolbar-note-privee .ql-font .ql-picker-options,
+        #toolbar-note-privee .ql-size .ql-picker-options {
+            min-width: 180px !important;
+            width: 180px !important;
+        }
+        
+        /* Forcer la largeur avec une approche CSS plus agressive */
+        #toolbar-note-publique span.ql-picker[class*="ql-font"],
+        #toolbar-note-privee span.ql-picker[class*="ql-font"] {
+            width: 180px !important;
+            min-width: 180px !important;
+        }
+        
+        #toolbar-note-publique span.ql-picker[class*="ql-size"],
+        #toolbar-note-privee span.ql-picker[class*="ql-size"] {
+            width: 140px !important;
+            min-width: 140px !important;
+        }
+        
+        /* Préserver les color pickers - taille normale */
+        #toolbar-note-publique .ql-color .ql-picker,
+        #toolbar-note-publique .ql-background .ql-picker,
+        #toolbar-note-publique .ql-align .ql-picker,
+        #toolbar-note-privee .ql-color .ql-picker,
+        #toolbar-note-privee .ql-background .ql-picker,
+        #toolbar-note-privee .ql-align .ql-picker {
+            min-width: 28px !important;
+            width: 28px !important;
+            max-width: 28px !important;
+        }
+        
+        /* Prévisualisation des polices dans les selects */
+        #toolbar-note-publique select.ql-font option[value="arial"],
+        #toolbar-note-privee select.ql-font option[value="arial"] {
+            font-family: Arial, sans-serif;
+        }
+        
+        #toolbar-note-publique select.ql-font option[value="helvetica"],
+        #toolbar-note-privee select.ql-font option[value="helvetica"] {
+            font-family: Helvetica, sans-serif;
+        }
+        
+        #toolbar-note-publique select.ql-font option[value="times"],
+        #toolbar-note-privee select.ql-font option[value="times"] {
+            font-family: 'Times New Roman', serif;
+        }
+        
+        #toolbar-note-publique select.ql-font option[value="georgia"],
+        #toolbar-note-privee select.ql-font option[value="georgia"] {
+            font-family: Georgia, serif;
+        }
+        
+        #toolbar-note-publique select.ql-font option[value="verdana"],
+        #toolbar-note-privee select.ql-font option[value="verdana"] {
+            font-family: Verdana, sans-serif;
+        }
+        
+        #toolbar-note-publique select.ql-font option[value="courier"],
+        #toolbar-note-privee select.ql-font option[value="courier"] {
+            font-family: 'Courier New', monospace;
+        }
+    </style>
     <script>
-    document.addEventListener("DOMContentLoaded", function() {
-        // Initialisation des éditeurs WYSIWYG avec le gestionnaire réutilisable
-        if (typeof WysiwygNotesManager !== "undefined") {
-            window.wysiwygManager = new WysiwygNotesManager("new", "note_publique", "note_privee");
-            window.wysiwygManager.init();
+    document.addEventListener('DOMContentLoaded', function() {
+        // Handler personnalisé pour l'upload d'images dans le WYSIWYG
+        function imageHandler() {
+            const currentEditor = this.quill;
+            showImageDimensionsModal(currentEditor);
+        }
+
+        // Configuration des éditeurs WYSIWYG
+        const quillOptions = {
+            theme: 'snow',
+            placeholder: '',
+            modules: {
+                toolbar: {
+                    container: null, // Sera défini pour chaque éditeur
+                    handlers: {
+                        'image': imageHandler
+                    }
+                }
+            }
+        };
+
+        // Initialisation de l'éditeur pour note publique
+        const optionsNotePublique = {...quillOptions};
+        optionsNotePublique.modules.toolbar.container = '#toolbar-note-publique';
+        optionsNotePublique.placeholder = '';
+        
+        const quillNotePublique = new Quill('#editor-note-publique', optionsNotePublique);
+
+        // Initialisation de l'éditeur pour note privée
+        const optionsNotePrivee = {...quillOptions};
+        optionsNotePrivee.modules.toolbar.container = '#toolbar-note-privee';
+        optionsNotePrivee.placeholder = '';
+        
+        const quillNotePrivee = new Quill('#editor-note-privee', optionsNotePrivee);
+
+        // Synchronisation des éditeurs avec les champs cachés du formulaire
+        quillNotePublique.on('text-change', function() {
+            const content = quillNotePublique.root.innerHTML;
+            document.getElementById('note_publique').value = content === '<p><br></p>' ? '' : content;
+        });
+
+        quillNotePrivee.on('text-change', function() {
+            const content = quillNotePrivee.root.innerHTML;
+            document.getElementById('note_privee').value = content === '<p><br></p>' ? '' : content;
+        });
+
+
+        // Validation avant soumission du formulaire
+        document.getElementById('devis-form').addEventListener('submit', function() {
+            // S'assurer que les champs cachés sont à jour
+            const contentPublique = quillNotePublique.root.innerHTML;
+            const contentPrivee = quillNotePrivee.root.innerHTML;
+            
+            document.getElementById('note_publique').value = contentPublique === '<p><br></p>' ? '' : contentPublique;
+            document.getElementById('note_privee').value = contentPrivee === '<p><br></p>' ? '' : contentPrivee;
+        });
+
+        // Correction forcée des largeurs des dropdowns après initialisation
+        setTimeout(() => {
+            // Pour la note publique
+            const fontPickerPublique = document.querySelector('#toolbar-note-publique .ql-font .ql-picker');
+            const sizePickerPublique = document.querySelector('#toolbar-note-publique .ql-size .ql-picker');
+            
+            if (fontPickerPublique) {
+                fontPickerPublique.style.width = '180px';
+                fontPickerPublique.style.minWidth = '180px';
+                fontPickerPublique.style.maxWidth = '180px';
+            }
+            
+            if (sizePickerPublique) {
+                sizePickerPublique.style.width = '140px';
+                sizePickerPublique.style.minWidth = '140px';
+                sizePickerPublique.style.maxWidth = '140px';
+            }
+
+            // Pour la note privée
+            const fontPickerPrivee = document.querySelector('#toolbar-note-privee .ql-font .ql-picker');
+            const sizePickerPrivee = document.querySelector('#toolbar-note-privee .ql-size .ql-picker');
+            
+            if (fontPickerPrivee) {
+                fontPickerPrivee.style.width = '180px';
+                fontPickerPrivee.style.minWidth = '180px';
+                fontPickerPrivee.style.maxWidth = '180px';
+            }
+            
+            if (sizePickerPrivee) {
+                sizePickerPrivee.style.width = '140px';
+                sizePickerPrivee.style.minWidth = '140px';
+                sizePickerPrivee.style.maxWidth = '140px';
+            }
+        }, 500); // Délai pour s'assurer que Quill.js a fini son initialisation
+
+        // Fonction pour afficher la modal de choix des dimensions d'image
+        function showImageDimensionsModal(targetEditor = null) {
+            const modalHtml = `
+                <div class="modal fade" id="imageDimensionsModal" tabindex="-1" aria-labelledby="imageDimensionsModalLabel" aria-hidden="true">
+                    <div class="modal-dialog modal-lg">
+                        <div class="modal-content">
+                            <div class="modal-header">
+                                <h5 class="modal-title" id="imageDimensionsModalLabel">
+                                    <i class="fas fa-image me-2"></i>Insérer une image
+                                </h5>
+                                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                            </div>
+                            <div class="modal-body">
+                                <!-- Section upload d'image -->
+                                <div class="mb-4">
+                                    <label for="imageFileInput" class="form-label">
+                                        <i class="fas fa-upload me-2"></i>Sélectionner une image
+                                    </label>
+                                    <input type="file" class="form-control" id="imageFileInput" accept="image/*">
+                                </div>
+                                
+                                <!-- Prévisualisation de l'image -->
+                                <div id="imagePreviewContainer" class="text-center mb-4" style="display: none;">
+                                    <img id="imagePreview" class="img-thumbnail" style="max-width: 300px; max-height: 200px;">
+                                    <p id="imageInfo" class="mt-2 text-muted"></p>
+                                </div>
+                                
+                                <!-- Section dimensions -->
+                                <div id="dimensionsSection" style="display: none;">
+                                    <h6><i class="fas fa-expand-arrows-alt me-2"></i>Dimensions de l'image</h6>
+                                    
+                                    <div class="row">
+                                        <div class="col-md-6">
+                                            <label for="imageWidth" class="form-label">Largeur (px)</label>
+                                            <input type="number" class="form-control" id="imageWidth" value="300" min="50" max="800">
+                                        </div>
+                                        <div class="col-md-6">
+                                            <label for="imageHeight" class="form-label">Hauteur (px)</label>
+                                            <input type="number" class="form-control" id="imageHeight" value="200" min="50" max="600">
+                                        </div>
+                                    </div>
+                                    
+                                    <div class="row mt-3">
+                                        <div class="col-12">
+                                            <div class="form-check">
+                                                <input class="form-check-input" type="checkbox" id="maintainAspectRatio" checked>
+                                                <label class="form-check-label" for="maintainAspectRatio">
+                                                    Conserver les proportions originales
+                                                </label>
+                                            </div>
+                                        </div>
+                                    </div>
+                                    
+                                    <div class="row mt-3">
+                                        <div class="col-12">
+                                            <label class="form-label">Dimensions prédéfinies :</label>
+                                            <div class="btn-group w-100" role="group">
+                                                <button type="button" class="btn btn-outline-secondary preset-size" data-width="150">Petite</button>
+                                                <button type="button" class="btn btn-outline-secondary preset-size" data-width="300">Moyenne</button>
+                                                <button type="button" class="btn btn-outline-secondary preset-size" data-width="450">Grande</button>
+                                                <button type="button" class="btn btn-outline-secondary preset-size" data-width="100%">Pleine largeur</button>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="modal-footer">
+                                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">
+                                    <i class="fas fa-times me-2"></i>Annuler
+                                </button>
+                                <button type="button" class="btn btn-primary" id="insertImageIntoEditorBtn" style="display: none;">
+                                    <i class="fas fa-check me-2"></i>Insérer l'image
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            `;
+            
+            // Supprimer la modal existante si elle existe
+            const existingModal = document.getElementById('imageDimensionsModal');
+            if (existingModal) {
+                existingModal.remove();
+            }
+            
+            // Ajouter la modal au DOM
+            document.body.insertAdjacentHTML('beforeend', modalHtml);
+            
+            // Attacher les événements
+            const modal = new bootstrap.Modal(document.getElementById('imageDimensionsModal'));
+            const fileInput = document.getElementById('imageFileInput');
+            const preview = document.getElementById('imagePreview');
+            const previewContainer = document.getElementById('imagePreviewContainer');
+            const dimensionsSection = document.getElementById('dimensionsSection');
+            const widthInput = document.getElementById('imageWidth');
+            const heightInput = document.getElementById('imageHeight');
+            const aspectRatioCheck = document.getElementById('maintainAspectRatio');
+            const insertBtn = document.getElementById('insertImageIntoEditorBtn');
+            const imageInfo = document.getElementById('imageInfo');
+            
+            let originalRatio = 1;
+            let imageFile = null;
+            let imageDataUrl = null;
+            
+            // Gestion de la sélection de fichier
+            fileInput.addEventListener('change', function(e) {
+                const file = e.target.files[0];
+                if (!file) return;
+                
+                imageFile = file;
+                const reader = new FileReader();
+                
+                reader.onload = function(e) {
+                    imageDataUrl = e.target.result;
+                    preview.src = imageDataUrl;
+                    
+                    // Calculer le ratio réel de l'image
+                    const tempImg = new Image();
+                    tempImg.onload = function() {
+                        originalRatio = this.naturalWidth / this.naturalHeight;
+                        const naturalWidth = this.naturalWidth;
+                        const naturalHeight = this.naturalHeight;
+                        
+                        // Définir une taille par défaut raisonnable
+                        let defaultWidth = Math.min(300, naturalWidth);
+                        if (defaultWidth < 150) defaultWidth = naturalWidth; // Petites images gardent leur taille
+                        
+                        widthInput.value = defaultWidth;
+                        heightInput.value = Math.round(defaultWidth / originalRatio);
+                        
+                        // Afficher les informations de l'image
+                        const sizeKB = Math.round(file.size / 1024);
+                        imageInfo.textContent = file.name + ' - ' + naturalWidth + ' × ' + naturalHeight + 'px (' + sizeKB + ' KB)';
+                        
+                        // Afficher la prévisualisation et les options
+                        previewContainer.style.display = 'block';
+                        dimensionsSection.style.display = 'block';
+                        insertBtn.style.display = 'inline-block';
+                    };
+                    tempImg.src = imageDataUrl;
+                };
+                
+                reader.readAsDataURL(file);
+            });
+            
+            // Gestion du maintien des proportions
+            widthInput.addEventListener('input', function() {
+                if (aspectRatioCheck.checked && originalRatio) {
+                    heightInput.value = Math.round(this.value / originalRatio);
+                }
+            });
+            
+            heightInput.addEventListener('input', function() {
+                if (aspectRatioCheck.checked && originalRatio) {
+                    widthInput.value = Math.round(this.value * originalRatio);
+                }
+            });
+            
+            // Gestion des tailles prédéfinies
+            document.querySelectorAll('.preset-size').forEach(btn => {
+                btn.addEventListener('click', function() {
+                    const width = this.dataset.width;
+                    
+                    if (width === '100%') {
+                        widthInput.value = '';
+                        heightInput.value = '';
+                        widthInput.placeholder = '100%';
+                        heightInput.placeholder = 'auto';
+                    } else {
+                        const widthNum = parseInt(width);
+                        widthInput.value = widthNum;
+                        // CORRECTION: Toujours calculer la hauteur selon le ratio de l'image originale
+                        if (originalRatio && originalRatio > 0) {
+                            heightInput.value = Math.round(widthNum / originalRatio);
+                        } else {
+                            // Fallback si pas de ratio disponible
+                            heightInput.value = Math.round(widthNum * 0.67); // Ratio 3:2 par défaut
+                        }
+                        widthInput.placeholder = '';
+                        heightInput.placeholder = '';
+                    }
+                    
+                    // Marquer le bouton comme actif temporairement
+                    document.querySelectorAll('.preset-size').forEach(b => b.classList.remove('active'));
+                    this.classList.add('active');
+                    setTimeout(() => this.classList.remove('active'), 1000);
+                });
+            });
+            
+            // Bouton d'insertion
+            insertBtn.addEventListener('click', function() {
+                const editorToUse = targetEditor;
+                if (!imageDataUrl || !editorToUse) return;
+                
+                const width = widthInput.value || widthInput.placeholder;
+                const height = heightInput.value || heightInput.placeholder;
+                
+                // Insérer l'image avec les dimensions choisies
+                const range = editorToUse.getSelection(true);
+                
+                // Insérer via l'API Quill avec les attributs appropriés
+                const imageBlot = editorToUse.insertEmbed(range.index, 'image', imageDataUrl);
+                
+                // Après insertion, modifier directement l'élément DOM dans l'éditeur
+                setTimeout(() => {
+                    const insertedImages = editorToUse.root.querySelectorAll('img[src="' + imageDataUrl + '"]');
+                    const lastInsertedImage = insertedImages[insertedImages.length - 1];
+                    
+                    if (lastInsertedImage) {
+                        // Appliquer les styles directement sur l'image insérée
+                        if (width === '100%' || width === '') {
+                            lastInsertedImage.style.maxWidth = '100%';
+                            lastInsertedImage.style.height = 'auto';
+                            lastInsertedImage.style.width = '100%';
+                        } else {
+                            if (width) {
+                                lastInsertedImage.style.width = width + 'px';
+                                lastInsertedImage.style.maxWidth = width + 'px';
+                            }
+                            if (height && height !== 'auto') {
+                                lastInsertedImage.style.height = height + 'px';
+                            } else {
+                                lastInsertedImage.style.height = 'auto';
+                            }
+                        }
+                        
+                        // Styles additionnels pour l'affichage dans l'éditeur
+                        lastInsertedImage.style.display = 'inline-block';
+                        lastInsertedImage.style.verticalAlign = 'middle';
+                        lastInsertedImage.alt = imageFile.name;
+                        
+                        console.log('✅ Image redimensionnée dans l\'éditeur:', lastInsertedImage.style.cssText);
+                    }
+                }, 100);
+                
+                // Fermer la modal
+                modal.hide();
+            });
+            
+            // Nettoyer la modal après fermeture
+            document.getElementById('imageDimensionsModal').addEventListener('hidden.bs.modal', function() {
+                this.remove();
+            });
+            
+            // Afficher la modal
+            modal.show();
         }
     });
     </script>
