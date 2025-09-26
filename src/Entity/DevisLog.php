@@ -133,13 +133,14 @@ class DevisLog
             'updated' => 'Devis modifié',
             'sent' => 'Devis envoyé',
             'resent' => 'Devis renvoyé',
-            'signed' => 'Devis signé',
-            'version_created' => 'Version créée',
-            'status_changed' => 'Statut modifié',
+            'signed' => '',  // Pas de préfixe pour cette action (déjà dans les détails)
+            'version_created' => '',  // Pas de préfixe pour cette action (déjà dans les détails)
+            'status_changed' => '',  // Pas de préfixe pour cette action (déjà dans les détails)
             'converted_to_order' => 'Transféré en commande',
             'converted_to_invoice' => 'Transféré en facture',
             'payment_received' => 'Paiement reçu',
-            'cancelled' => 'Devis annulé'
+            'cancelled' => 'Devis annulé',
+            'signature_cancelled' => ''  // Pas de préfixe pour cette action
         ];
 
         return $actionLabels[$this->action] ?? $this->action;

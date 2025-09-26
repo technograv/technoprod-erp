@@ -207,6 +207,28 @@ class DevisLoggerService
     }
 
     /**
+     * Log l'annulation de signature
+     */
+    public function logSignatureCancelled(Devis $devis, string $signatureName, string $signatureEmail, \DateTime $signatureDate, ?string $reason = null, ?User $user = null): DevisLog
+    {
+        // Construire le texte complet sur 2 lignes
+        $details = sprintf(
+            'Signature de %s (%s) du %s à %s annulée',
+            $signatureName,
+            $signatureEmail,
+            $signatureDate->format('d/m/Y'),
+            $signatureDate->format('H:i')
+        );
+
+        // Ajouter la raison sur une nouvelle ligne si fournie
+        if ($reason) {
+            $details .= "\n" . sprintf('Raison : %s', $reason);
+        }
+
+        return $this->log($devis, 'signature_cancelled', $details, $user);
+    }
+
+    /**
      * Log l'annulation d'un devis
      */
     public function logCancelled(Devis $devis, ?string $reason = null, ?User $user = null): DevisLog

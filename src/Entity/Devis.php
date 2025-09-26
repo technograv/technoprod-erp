@@ -84,7 +84,7 @@ class Devis
     private ?string $acompteMontant = null;
 
 
-    #[ORM\Column(type: Types::DATE_MUTABLE, nullable: true)]
+    #[ORM\Column(type: Types::DATETIME_MUTABLE, nullable: true)]
     private ?\DateTimeInterface $dateSignature = null;
 
     #[ORM\Column(length: 255, nullable: true)]
@@ -1058,6 +1058,22 @@ class Devis
     public function canCreateVersion(): bool
     {
         return in_array($this->statut, ['envoye', 'signe']);
+    }
+
+    /**
+     * Détermine si le devis est éditable
+     */
+    public function isEditable(): bool
+    {
+        return $this->statut === 'brouillon';
+    }
+
+    /**
+     * Détermine si la signature peut être annulée
+     */
+    public function canCancelSignature(): bool
+    {
+        return $this->statut === 'signe' && $this->dateSignature !== null;
     }
 
     /**

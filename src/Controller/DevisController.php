@@ -28,8 +28,8 @@ use Symfony\Component\Routing\Generator\UrlGeneratorInterface;
 use Symfony\Component\Mailer\MailerInterface;
 use Symfony\Component\Mime\Email;
 use App\Service\GmailMailerService;
-use App\Service\DocumentNumerotationService;
 use App\Service\DevisLoggerService;
+use App\Service\DocumentNumerotationService;
 use Dompdf\Dompdf;
 use Dompdf\Options;
 
@@ -765,7 +765,7 @@ final class DevisController extends AbstractController
     }
 
     #[Route('/{id}/client/{token}', name: 'app_devis_client_acces', methods: ['GET', 'POST'])]
-    public function clientAcces(Request $request, Devis $devis, string $token, EntityManagerInterface $entityManager): Response
+    public function clientAcces(Request $request, Devis $devis, string $token, EntityManagerInterface $entityManager, DevisLoggerService $loggerService): Response
     {
         // Vérifier le token
         $expectedToken = md5($devis->getId() . $devis->getCreatedAt()->format('Y-m-d'));
@@ -782,6 +782,18 @@ final class DevisController extends AbstractController
                 $signatureData = $request->request->get('signature_data');
 
                 if ($signatureNom && $signatureEmail && $signatureData) {
+                    // 1. Capturer l'état actuel AVANT signature pour la version "non-signée"
+                    $currentState = $this->captureDevisState($devis);
+
+                    // 2. Créer une version qui archive l'état NON-SIGNÉ
+                    $lastVersionNumber = $this->getLastVersionNumber($devis, $entityManager);
+                    $newVersionNumber = $lastVersionNumber + 1;
+
+                    $version = $this->createDevisVersionFromState($devis, $entityManager, $currentState, 'Version archivée');
+                    $version->setVersionLabel('Version ' . $newVersionNumber);
+
+                    // 3. Appliquer la signature au devis actuel
+                    $oldStatus = $devis->getStatut();
                     $devis->setSignatureNom($signatureNom);
                     $devis->setSignatureEmail($signatureEmail);
                     $devis->setSignatureData($signatureData);
@@ -789,6 +801,14 @@ final class DevisController extends AbstractController
                     $devis->setStatut('signe');
 
                     $entityManager->flush();
+
+                    // 4. Marquer la version comme créée par signature
+                    $version->setVersionLabel('Signature du client');
+                    $version->setModificationReason('Signature client - archivage automatique');
+                    $entityManager->flush();
+
+                    // 5. Logger seulement la signature (pas de logs redondants)
+                    $loggerService->logSigned($devis, $signatureNom, $signatureEmail);
 
                     $this->addFlash('success', 'Devis signé avec succès !');
                 }
@@ -1389,6 +1409,101 @@ final class DevisController extends AbstractController
     }
 
     /**
+     * Récupère le numéro de la dernière version
+     */
+    private function getLastVersionNumber(Devis $devis, EntityManagerInterface $entityManager): int
+    {
+        $lastVersion = $entityManager->getRepository(DevisVersion::class)
+            ->createQueryBuilder('dv')
+            ->where('dv.devis = :devis')
+            ->setParameter('devis', $devis)
+            ->orderBy('dv.versionNumber', 'DESC')
+            ->setMaxResults(1)
+            ->getQuery()
+            ->getOneOrNullResult();
+
+        return $lastVersion ? $lastVersion->getVersionNumber() : 0;
+    }
+
+    /**
+     * Déclenche les actions automatiques après signature
+     */
+    private function triggerSignatureActions(Devis $devis, EntityManagerInterface $entityManager, DevisLoggerService $loggerService): void
+    {
+        try {
+            // TODO: Implémenter création automatique de commande
+            // $this->createOrderFromDevis($devis, $entityManager, $loggerService);
+
+            // TODO: Implémenter création facture d'acompte si montant > 0
+            // if ($devis->getMontantAcompte() > 0) {
+            //     $this->createDownPaymentInvoice($devis, $entityManager, $loggerService);
+            // }
+
+            // TODO: Implémenter création automatique de projet
+            // $this->createProjectFromDevis($devis, $entityManager, $loggerService);
+
+            // Actions automatiques déclenchées silencieusement (pas de log)
+
+        } catch (\Exception $e) {
+            $loggerService->log($devis, 'workflow_error', 'Erreur lors du déclenchement automatique: ' . $e->getMessage());
+        }
+    }
+
+    /**
+     * Annule la signature d'un devis
+     */
+    #[Route('/{id}/annuler-signature', name: 'app_devis_cancel_signature', methods: ['POST'])]
+    public function cancelSignature(Request $request, Devis $devis, EntityManagerInterface $entityManager, DevisLoggerService $loggerService): Response
+    {
+        // Vérifier que le devis est bien signé
+        if ($devis->getStatut() !== 'signe') {
+            $this->addFlash('error', 'Seuls les devis signés peuvent voir leur signature annulée.');
+            return $this->redirectToRoute('app_devis_show', ['id' => $devis->getId()]);
+        }
+
+        $reason = $request->request->get('reason', 'Annulation manuelle');
+        $oldStatus = $devis->getStatut();
+
+        // Sauvegarder les informations de signature pour le log AVANT suppression
+        $signatureName = $devis->getSignatureNom();
+        $signatureEmail = $devis->getSignatureEmail();
+        $signatureDate = $devis->getDateSignature();
+
+        // Annuler la signature
+        $devis->setSignatureNom(null);
+        $devis->setSignatureEmail(null);
+        $devis->setSignatureData(null);
+        $devis->setDateSignature(null);
+        $devis->setStatut('brouillon'); // Retour en mode éditable
+
+        $entityManager->flush();
+
+        // Supprimer la dernière version créée par signature
+        $lastVersion = $entityManager->getRepository(DevisVersion::class)
+            ->createQueryBuilder('dv')
+            ->where('dv.devis = :devis')
+            ->andWhere('dv.modificationReason LIKE :signature')
+            ->setParameter('devis', $devis)
+            ->setParameter('signature', '%Signature client%')
+            ->orderBy('dv.versionNumber', 'DESC')
+            ->setMaxResults(1)
+            ->getQuery()
+            ->getOneOrNullResult();
+
+        if ($lastVersion) {
+            $entityManager->remove($lastVersion);
+            $entityManager->flush();
+        }
+
+        // Logger l'annulation (pas de log de changement de statut redondant)
+        $loggerService->logSignatureCancelled($devis, $signatureName, $signatureEmail, $signatureDate, $reason);
+
+        $this->addFlash('success', 'Signature annulée avec succès. Le devis est de nouveau modifiable.');
+
+        return $this->redirectToRoute('app_devis_show', ['id' => $devis->getId()]);
+    }
+
+    /**
      * Redirige vers l'onglet historique de la page principale du devis
      */
     #[Route('/{id}/versions', name: 'app_devis_versions', methods: ['GET'])]
@@ -1432,8 +1547,18 @@ final class DevisController extends AbstractController
     {
         $allVersions = $versionRepository->findVersionsByDevis($devis);
 
-        // Exclure la dernière version (version actuelle) de l'historique
-        $versions = array_slice($allVersions, 1);
+        // Exclure la dernière version SAUF si c'est une version de signature
+        $versions = $allVersions;
+        if (!empty($versions)) {
+            $lastVersion = $versions[0]; // La plus récente
+            $isSignatureVersion = $lastVersion->getModificationReason() &&
+                                  strpos($lastVersion->getModificationReason(), 'Signature client') !== false;
+
+            if (!$isSignatureVersion) {
+                // Exclure seulement si ce n'est pas une version de signature
+                $versions = array_slice($allVersions, 1);
+            }
+        }
 
         $result = [];
         foreach ($versions as $version) {
@@ -1442,7 +1567,7 @@ final class DevisController extends AbstractController
             $result[] = [
                 'id' => $version->getId(),
                 'versionNumber' => $version->getVersionNumber(),
-                'versionLabel' => $version->generateAutoLabel(),
+                'versionLabel' => $version->getVersionLabel() ?: $version->generateAutoLabel(),
                 'createdAt' => $version->getCreatedAt()->format('d/m/Y à H:i'),
                 'modifiedBy' => $version->getModifiedBy() ? 
                     $version->getModifiedBy()->getPrenom() . ' ' . $version->getModifiedBy()->getNom() : 'Inconnu',
@@ -1494,6 +1619,13 @@ final class DevisController extends AbstractController
         
         // Changer le statut du devis pour permettre l'édition (le contenu reste le même)
         $devis->setStatut('brouillon');
+
+        // Vider les données de signature pour la nouvelle version
+        $devis->setSignatureNom(null);
+        $devis->setSignatureEmail(null);
+        $devis->setSignatureData(null);
+        $devis->setDateSignature(null);
+
         $entityManager->flush();
         
         // Log de la création de version

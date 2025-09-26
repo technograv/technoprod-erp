@@ -77,6 +77,12 @@
             background: #28a745;
             border-color: #28a745;
         }
+
+        /* Masquer le pseudo-élément ::before quand il y a un timeline-marker */
+        .timeline-item .timeline-marker ~ * .timeline-item::before,
+        .timeline-item:has(.timeline-marker)::before {
+            display: none !important;
+        }
         
         /* Styles pour l'historique des versions */
         .timeline-marker {
@@ -728,8 +734,8 @@
                     <div class="timeline">
                         {% for log in logs %}
                             <div class="timeline-item completed">
-                                <div class="timeline-marker">
-                                    <i class="fas fa-{{ log.action == 'created' ? 'plus' : (log.action == 'sent' or log.action == 'resent' ? 'paper-plane' : (log.action == 'signed' ? 'signature' : (log.action == 'version_created' ? 'copy' : (log.action == 'status_changed' ? 'exchange-alt' : (log.action == 'updated' ? 'edit' : 'check'))))) }}"></i>
+                                <div class="timeline-marker {{ log.action == 'signature_cancelled' ? 'bg-danger' : '' }}">
+                                    <i class="fas fa-{{ log.action == 'created' ? 'plus' : (log.action == 'sent' or log.action == 'resent' ? 'paper-plane' : (log.action == 'signed' ? 'signature' : (log.action == 'signature_cancelled' ? 'signature' : (log.action == 'version_created' ? 'copy' : (log.action == 'status_changed' ? 'exchange-alt' : (log.action == 'updated' ? 'edit' : 'check')))))) }}"></i>
                                 </div>
                                 <div class="timeline-content">
                                     <div class="d-flex justify-content-between align-items-start">
@@ -746,6 +752,25 @@
                                                 {% elseif log.action == 'created' %}
                                                     {# Pour les créations, afficher seulement les détails #}
                                                     {{ log.details }}
+                                                {% elseif log.action == 'signature_cancelled' %}
+                                                    {# Pour l'annulation de signature, afficher seulement les détails sans préfixe avec retours à la ligne #}
+                                                    {{ log.details|nl2br|raw }}
+                                                {% elseif log.action == 'status_changed' %}
+                                                    {# Pour les changements de statut, afficher seulement les détails sans préfixe #}
+                                                    {{ log.details }}
+                                                {% elseif log.action == 'version_created' %}
+                                                    {# Pour les versions créées, afficher seulement les détails sans préfixe #}
+                                                    {{ log.details }}
+                                                {% elseif log.action == 'signed' %}
+                                                    {# Pour la signature, afficher seulement les détails sans préfixe #}
+                                                    {{ log.details }}
+                                                {% elseif log.action == 'updated' %}
+                                                    {# Pour les modifications, afficher seulement l'action ou les détails si présents #}
+                                                    {% if log.details %}
+                                                        {{ log.formattedAction }}: {{ log.details }}
+                                                    {% else %}
+                                                        {{ log.formattedAction }}
+                                                    {% endif %}
                                                 {% else %}
                                                     {{ log.formattedAction }}
                                                     {% if log.details %}
@@ -753,15 +778,39 @@
                                                     {% endif %}
                                                 {% endif %}
                                             </h6>
+                                            {% if log.action != 'signed' %}
                                             <small class="text-muted">
                                                 <i class="fas fa-user me-1"></i>Par {{ log.userName }}
                                                 le {{ log.createdAt|date('d/m/Y') }} à {{ log.createdAt|date('H:i') }}
                                             </small>
+                                            {% endif %}
                                         </div>
-                                        {% if log.action in ['sent', 'resent', 'signed'] %}
-                                            <span class="badge bg-{{ log.action == 'signed' ? 'success' : 'info' }}">
-                                                <i class="fas fa-{{ log.action == 'signed' ? 'check-circle' : 'envelope' }} me-1"></i>
-                                                {{ log.action == 'signed' ? 'Signé' : 'Envoyé' }}
+                                        {% set statusActions = ['sent', 'resent', 'signed', 'signature_cancelled', 'status_changed', 'cancelled', 'payment_received'] %}
+                                        {% if log.action in statusActions %}
+                                            {% set badgeConfig = {
+                                                'sent': { 'color': 'info', 'icon': 'envelope', 'label': 'Envoyé' },
+                                                'resent': { 'color': 'info', 'icon': 'envelope', 'label': 'Renvoyé' },
+                                                'signed': { 'color': 'success', 'icon': 'check-circle', 'label': 'Signé' },
+                                                'signature_cancelled': { 'color': 'danger', 'icon': 'times-circle', 'label': 'Annulé' },
+                                                'status_changed': {
+                                                    'color': log.details matches '/Brouillon/' ? 'secondary' :
+                                                            (log.details matches '/Envoyé/' ? 'info' :
+                                                            (log.details matches '/Signé/' ? 'success' :
+                                                            (log.details matches '/Refusé/' ? 'danger' :
+                                                            (log.details matches '/Accepté/' ? 'success' :
+                                                            (log.details matches '/Expiré/' ? 'dark' :
+                                                            (log.details matches '/Acompte réglé/' ? 'warning' : 'primary')))))),
+                                                    'icon': 'exchange-alt',
+                                                    'label': log.details matches '/→ (.+)/' ? log.details|split('→')|last|trim : 'Modifié'
+                                                },
+                                                'cancelled': { 'color': 'danger', 'icon': 'ban', 'label': 'Annulé' },
+                                                'payment_received': { 'color': 'warning', 'icon': 'euro-sign', 'label': 'Payé' }
+                                            } %}
+
+                                            {% set config = badgeConfig[log.action] %}
+                                            <span class="badge bg-{{ config.color }}">
+                                                <i class="fas fa-{{ config.icon }} me-1"></i>
+                                                {{ config.label }}
                                             </span>
                                         {% endif %}
                                     </div>
@@ -1045,6 +1094,57 @@
     </div>
 </div>
 
+<!-- Modal d'annulation de signature -->
+{% if devis.canCancelSignature %}
+<div class="modal fade" id="cancelSignatureModal" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">
+                    <i class="fas fa-exclamation-triangle text-warning me-2"></i>
+                    Annuler la signature
+                </h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <div class="alert alert-warning">
+                    <strong>Attention !</strong> Cette action va :
+                    <ul class="mb-0 mt-2">
+                        <li>Annuler définitivement la signature électronique</li>
+                        <li>Remettre le devis en mode "brouillon" (modifiable)</li>
+                        <li>Enregistrer cette action dans l'historique</li>
+                    </ul>
+                </div>
+
+                <div class="mb-3">
+                    <strong>Signature actuelle :</strong><br>
+                    <small class="text-muted">
+                        {{ devis.signatureNom }} ({{ devis.signatureEmail }})<br>
+                        Signée le {{ devis.dateSignature|date('d/m/Y à H:i') }}
+                    </small>
+                </div>
+
+                <form id="cancelSignatureForm" action="{{ path('app_devis_cancel_signature', {'id': devis.id}) }}" method="POST">
+                    <div class="mb-3">
+                        <label for="cancelReason" class="form-label">Raison de l'annulation <span class="text-danger">*</span></label>
+                        <textarea class="form-control" id="cancelReason" name="reason" rows="3"
+                                  placeholder="Expliquez pourquoi vous annulez cette signature..." required></textarea>
+                    </div>
+                </form>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">
+                    <i class="fas fa-times me-2"></i>Annuler
+                </button>
+                <button type="button" class="btn btn-danger" onclick="document.getElementById('cancelSignatureForm').submit()">
+                    <i class="fas fa-ban me-2"></i>Confirmer l'annulation
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+{% endif %}
+
 <!-- Barre flottante d'actions -->
 <div class="floating-action-bar" id="floating-actions">
     <div class="container-fluid">
@@ -1064,11 +1164,18 @@
                 {% endif %}
             </div>
             <div class="d-flex gap-2">
-                {% if devis.statut in ['envoye', 'signe', 'relance'] %}
+                {% if devis.canCancelSignature %}
+                    {# Devis signé : bouton d'annulation de signature au lieu de modifier #}
+                    <button type="button" class="btn btn-warning" data-bs-toggle="modal" data-bs-target="#cancelSignatureModal">
+                        <i class="fas fa-ban me-1"></i>Annuler signature
+                    </button>
+                {% elseif devis.statut in ['envoye', 'relance'] %}
+                    {# Devis envoyé/relancé : création de version pour modification #}
                     <button type="button" class="btn btn-light" data-bs-toggle="modal" data-bs-target="#versionModal">
                         <i class="fas fa-edit me-1"></i>Modifier
                     </button>
-                {% else %}
+                {% elseif devis.isEditable %}
+                    {# Devis brouillon : modification directe #}
                     <a href="{{ path('app_devis_edit', {'id': devis.id}) }}" class="btn btn-light">
                         <i class="fas fa-edit me-1"></i>Modifier
                     </a>
@@ -1149,22 +1256,23 @@ function loadVersions() {
             versions.forEach((version, index) => {
                 const isFirst = index === 0;
                 const badgeClass = getStatusBadgeClass(version.statutAtTime);
-                
+                const isSignatureVersion = version.modificationReason && version.modificationReason.includes('Signature client');
+
                 html += `
                     <div class="timeline-item ${isFirst ? 'latest' : ''} mb-4">
-                        <div class="timeline-marker ${isFirst ? 'bg-primary' : 'bg-secondary'}">
-                            <i class="fas fa-${isFirst ? 'clock' : 'history'} text-white"></i>
+                        <div class="timeline-marker ${isFirst && !isSignatureVersion ? 'bg-primary' : (isSignatureVersion ? 'bg-success' : 'bg-secondary')}">
+                            <i class="fas fa-${isSignatureVersion ? 'lock' : (isFirst ? 'clock' : 'history')} text-white"></i>
                         </div>
                         <div class="timeline-content ms-4">
                             <div class="card ${isFirst ? 'border-primary' : ''}">
                                 <div class="card-header d-flex justify-content-between align-items-center">
                                     <div>
-                                        <h6 class="mb-1">
-                                            ${version.versionLabel || version.nomProjet || 'Version ' + version.versionNumber}
-                                        </h6>
-                                        <small class="text-muted">
-                                            Version créée par ${version.modifiedBy} le ${version.createdAt}
-                                        </small>
+                                        <div class="mb-1">
+                                            ${isSignatureVersion ?
+                                                '<h6 class="mb-0">Archivage automatique</h6>' :
+                                                `<span><strong>${version.versionLabel || version.nomProjet || 'Version ' + version.versionNumber}</strong> créée par ${version.modifiedBy} le ${version.createdAt}</span>`
+                                            }
+                                        </div>
                                     </div>
                                     <div class="text-end">
                                         <div class="mb-1">
@@ -1182,8 +1290,7 @@ function loadVersions() {
                                     </div>
                                 </div>
                                 <div class="card-body">
-                                    <p class="mb-2"><strong>Motif :</strong> ${version.modificationReason || 'Non spécifié'}</p>
-                                    <p class="mb-1 text-muted"><small>Version créée par ${version.modifiedBy} le ${version.createdAt}</small></p>
+                                    <p class="mb-2"><strong>Motif :</strong> ${isSignatureVersion ? `Signature du client le ${version.createdAt}` : (version.modificationReason || 'Non spécifié')}</p>
                                     <div class="d-flex gap-2">
                                         <a href="/devis/{{ devis.id }}/versions/${version.versionNumber}" 
                                            class="btn btn-outline-primary btn-sm">
