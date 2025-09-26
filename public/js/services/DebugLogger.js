@@ -25,8 +25,8 @@ class DebugLogger {
         }
         window.debugLoggers[serviceName] = this;
         
-        // Créer un panneau de debug visuel
-        this.createDebugPanel();
+        // Panneau de debug désactivé pour la production
+        // this.createDebugPanel();
     }
     
     createDebugPanel() {

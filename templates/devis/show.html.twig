@@ -83,6 +83,34 @@
         .timeline-item:has(.timeline-marker)::before {
             display: none !important;
         }
+
+        /* Styles pour le contenu WYSIWYG dans les notes */
+        .wysiwyg-content {
+            line-height: 1.6;
+        }
+
+        .wysiwyg-content img {
+            max-width: 100%;
+            height: auto;
+            border-radius: 4px;
+            margin: 10px 0;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        }
+
+        .wysiwyg-content p {
+            margin-bottom: 1rem;
+        }
+
+        .wysiwyg-content ul, .wysiwyg-content ol {
+            margin-bottom: 1rem;
+            padding-left: 2rem;
+        }
+
+        .wysiwyg-content h1, .wysiwyg-content h2, .wysiwyg-content h3,
+        .wysiwyg-content h4, .wysiwyg-content h5, .wysiwyg-content h6 {
+            margin-top: 1.5rem;
+            margin-bottom: 1rem;
+        }
         
         /* Styles pour l'historique des versions */
         .timeline-marker {
@@ -696,8 +724,10 @@
                     {% if devis.notesClient %}
                     <div class="info-group">
                         <h6><i class="fas fa-eye me-2"></i>Notes visibles par le client</h6>
-                        <div class="border rounded p-3 bg-light">
-                            {{ devis.notesClient|nl2br|raw }}
+                        <div class="border rounded p-3 bg-light" style="max-height: 400px; overflow-y: auto;">
+                            <div class="wysiwyg-content">
+                                {{ devis.notesClient|raw }}
+                            </div>
                         </div>
                     </div>
                     {% else %}
@@ -711,8 +741,10 @@
                     {% if devis.notesInternes %}
                     <div class="info-group">
                         <h6><i class="fas fa-eye-slash me-2"></i>Notes internes</h6>
-                        <div class="border rounded p-3 bg-warning-subtle">
-                            {{ devis.notesInternes|nl2br|raw }}
+                        <div class="border rounded p-3 bg-warning-subtle" style="max-height: 400px; overflow-y: auto;">
+                            <div class="wysiwyg-content">
+                                {{ devis.notesInternes|raw }}
+                            </div>
                         </div>
                     </div>
                     {% else %}

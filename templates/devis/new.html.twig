@@ -350,7 +350,6 @@
                             </div>
                             <!-- Éditeur WYSIWYG pour note publique -->
                             <div id="editor-note-publique" class="border border-top-0" style="min-height: 120px;">
-                                <p>Cette note sera visible sur le devis envoyé au client...</p>
                             </div>
                             <!-- Champ caché pour synchroniser avec le formulaire -->
                             <input type="hidden" id="note_publique" name="note_publique" value="">
@@ -401,7 +400,6 @@
                             </div>
                             <!-- Éditeur WYSIWYG pour note privée -->
                             <div id="editor-note-privee" class="border border-top-0" style="min-height: 90px;">
-                                <p>Notes internes, remarques pour l'équipe...</p>
                             </div>
                             <!-- Champ caché pour synchroniser avec le formulaire -->
                             <input type="hidden" id="note_privee" name="note_privee" value="">
@@ -490,7 +488,7 @@
         console.log('🚀 Initialisation du DevisContactService...');
         try {
             window.devisContactService = new DevisContactService({
-                debug: true
+                debug: false
             });
             console.log('✅ DevisContactService initialisé avec succès');
         } catch (error) {
@@ -1231,14 +1229,14 @@
         // Initialisation de l'éditeur pour note publique
         const optionsNotePublique = {...quillOptions};
         optionsNotePublique.modules.toolbar.container = '#toolbar-note-publique';
-        optionsNotePublique.placeholder = 'Cette note sera visible sur le devis envoyé au client...';
+        optionsNotePublique.placeholder = '';
         
         const quillNotePublique = new Quill('#editor-note-publique', optionsNotePublique);
 
         // Initialisation de l'éditeur pour note privée
         const optionsNotePrivee = {...quillOptions};
         optionsNotePrivee.modules.toolbar.container = '#toolbar-note-privee';
-        optionsNotePrivee.placeholder = 'Notes internes, remarques pour l\'équipe...';
+        optionsNotePrivee.placeholder = '';
         
         const quillNotePrivee = new Quill('#editor-note-privee', optionsNotePrivee);
 
@@ -1253,18 +1251,6 @@
             document.getElementById('note_privee').value = content === '<p><br></p>' ? '' : content;
         });
 
-        // Nettoyer le contenu placeholder au premier focus
-        quillNotePublique.on('selection-change', function(range) {
-            if (range && quillNotePublique.getText().trim() === 'Cette note sera visible sur le devis envoyé au client...') {
-                quillNotePublique.setText('');
-            }
-        });
-
-        quillNotePrivee.on('selection-change', function(range) {
-            if (range && quillNotePrivee.getText().trim() === 'Notes internes, remarques pour l\'équipe...') {
-                quillNotePrivee.setText('');
-            }
-        });
 
         // Validation avant soumission du formulaire
         document.getElementById('devis-form').addEventListener('submit', function() {
