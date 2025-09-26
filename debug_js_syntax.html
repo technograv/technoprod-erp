@@ -1,0 +1,47 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Debug JS Syntax</title>
+</head>
+<body>
+    <h3>Debug JavaScript Syntax</h3>
+    <p>Ouvrez les DevTools (F12) et regardez la console pour voir les erreurs précises.</p>
+
+    <script>
+        // Script pour capturer et analyser les erreurs JS
+        window.addEventListener('error', function(e) {
+            console.error('🎯 ERREUR EXACTE DÉTECTÉE:');
+            console.error('📄 Fichier:', e.filename);
+            console.error('📍 Ligne:', e.lineno, 'Colonne:', e.colno);
+            console.error('💬 Message:', e.message);
+            console.error('📚 Stack:', e.error?.stack);
+
+            // Tentative de récupération du code autour de l'erreur
+            if (e.lineno && e.colno) {
+                fetch(e.filename)
+                    .then(response => response.text())
+                    .then(html => {
+                        const lines = html.split('\n');
+                        const errorLine = lines[e.lineno - 1];
+                        if (errorLine) {
+                            console.error('🔍 LIGNE EXACTE:', errorLine);
+                            console.error('🔍 CARACTÈRE PROBLÈME:', errorLine.charAt(e.colno - 1));
+                            console.error('🔍 CONTEXTE AUTOUR:');
+                            console.error('  ', lines[e.lineno - 2] || '');
+                            console.error('→ ', errorLine);
+                            console.error('  ', lines[e.lineno] || '');
+                        }
+                    })
+                    .catch(err => console.error('Impossible de récupérer le source:', err));
+            }
+        });
+
+        // Rediriger vers la page de devis après 3 secondes
+        setTimeout(() => {
+            window.location.href = '/devis/41/edit';
+        }, 3000);
+    </script>
+
+    <p>Redirection automatique vers la page devis dans 3 secondes...</p>
+</body>
+</html>

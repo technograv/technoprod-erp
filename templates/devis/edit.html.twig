@@ -1069,6 +1069,17 @@
 <script src="/js/services/DevisContactService.js"></script>
 
 <script>
+// Script de diagnostic des erreurs JavaScript
+window.addEventListener('error', function(e) {
+    console.error('🚨 ERREUR JAVASCRIPT DÉTECTÉE:');
+    console.error('Fichier:', e.filename);
+    console.error('Ligne:', e.lineno);
+    console.error('Colonne:', e.colno);
+    console.error('Message:', e.message);
+    console.error('Stack:', e.error?.stack);
+});
+
+console.log('🔍 DEBUG: Début script principal edit.html.twig');
 (function() {
     'use strict';
     
@@ -1093,6 +1104,18 @@
 async function init() {
     try {
         await loadElements();
+
+        // Event listener pour les boutons d'édition de description (toujours actif)
+        if (typeof $ !== 'undefined') {
+            $(document).on('click', '.description-editor-btn', function(e) {
+                const btn = this;
+                const elementId = parseInt(btn.dataset.elementId);
+                const textarea = btn.parentElement.querySelector('.description-textarea');
+                const description = textarea ? textarea.value : '';
+                openDescriptionEditor(elementId, description);
+            });
+        }
+
         if (IS_EDITABLE) {
             initSortable();
             initEventListeners();
@@ -1101,7 +1124,7 @@ async function init() {
             // Initialiser la synchronisation contact/adresse pour l'email
             initContactAddressSynchronization();
             initQuillNotesClientEditor(); // Initialiser l'éditeur WYSIWYG des notes client
-            
+
             // Charger les contacts du client actuel pour la synchronisation email
             await loadInitialClientContacts();
         }
@@ -1111,6 +1134,9 @@ async function init() {
         showError('Erreur lors du chargement des données');
     }
 }
+
+// Exposer la fonction init globalement pour qu'elle soit accessible en dehors de l'IIFE
+window.init = init;
 
 // ==========================================
 // CHARGEMENT DES ÉLÉMENTS
@@ -1199,10 +1225,20 @@ function renderElements() {
     }
     
     container.innerHTML = html;
-    
+
+    // Peupler les descriptions dans les textareas
+    window.elements.forEach(element => {
+        if (element.is_product && element.description) {
+            const textarea = container.querySelector(`[data-element-id="${element.id}"] .description-textarea`);
+            if (textarea) {
+                textarea.value = cleanDescriptionForInput(element.description);
+            }
+        }
+    });
+
     // Réappliquer la visibilité des noms de fichier après le rendu
     applyFilenameVisibility();
-    
+
     // Initialiser l'autocomplétion après le rendu
     if (IS_EDITABLE) {
         setTimeout(() => initProductAutocomplete(), 100);
@@ -1292,9 +1328,10 @@ function renderProductElement(element) {
                                       onchange="updateElement(${element.id}, 'description', this.value)"
                                       onkeypress="preventEnterSubmit(event)"
                                       onfocus="showDescriptionTooltip(this)" 
-                                      style="resize: vertical; min-height: 50px; margin-right: 4px;">${element.description ? cleanDescriptionForInput(element.description) : ''}</textarea>
-                            <button type="button" class="btn btn-outline-secondary btn-sm" 
-                                    onclick="openDescriptionEditor(${element.id}, \`${element.description ? element.description.replace(/`/g, '\\`').replace(/\\/g, '\\\\') : ''}\`)" 
+                                      style="resize: vertical; min-height: 50px; margin-right: 4px;"></textarea>
+                            <button type="button" class="btn btn-outline-secondary btn-sm description-editor-btn"
+                                    data-element-id="${element.id}"
+                                    data-description=""
                                     title="Éditeur avancé (formatage)"
                                     style="padding: 2px 6px; font-size: 10px; height: 32px;">
                                 <i class="fas fa-palette"></i>
@@ -1364,8 +1401,8 @@ function renderProductElement(element) {
                     <div class="flex-grow-1">
                         <div class="row">
                             <div class="col-md-4">
-                                <strong>${element.designation || 'Produit sans nom'}</strong>
-                                ${element.description ? `<br><div class="text-muted" style="font-size: 0.875rem; line-height: 1.4;">${element.description}</div>` : ''}
+                                <strong>' + (element.designation || 'Produit sans nom') + '</strong>
+                                ${element.description ? '<br><div class="text-muted" style="font-size: 0.875rem; line-height: 1.4;">' + (element.description || '') + '</div>' : ''}
                                 ${element.image_visible ? '<br><small class="text-info"><i class="fas fa-camera me-1"></i>Photo incluse dans le PDF</small>' : ''}
                             </div>
                             <div class="col-md-2 text-center">
@@ -2293,7 +2330,7 @@ function populateContacts(contacts) {
         contacts.forEach(contact => {
             const option = document.createElement('option');
             option.value = contact.id;
-            option.textContent = contact.label || `${contact.civilite || ''} ${contact.prenom || ''} ${contact.nom || ''}`.trim();
+            option.textContent = contact.label || ((contact.civilite || '') + ' ' + (contact.prenom || '') + ' ' + (contact.nom || '')).trim();
             
             // Ordre de priorité: valeur existante > valeur initiale du devis > contact par défaut
             if (contact.id == valueToUse) {
@@ -2324,7 +2361,7 @@ function populateContacts(contacts) {
         contacts.forEach(contact => {
             const option = document.createElement('option');
             option.value = contact.id;
-            option.textContent = contact.label || `${contact.civilite || ''} ${contact.prenom || ''} ${contact.nom || ''}`.trim();
+            option.textContent = contact.label || ((contact.civilite || '') + ' ' + (contact.prenom || '') + ' ' + (contact.nom || '')).trim();
             
             // Ordre de priorité: valeur existante > valeur initiale du devis > contact par défaut
             if (contact.id == valueToUse) {
@@ -2971,13 +3008,13 @@ function setupProductAutocomplete(input, searchField) {
             return;
         }
 
-        suggestionsContainer.innerHTML = products.map((product, index) => `
-            <div class="product-suggestion ${index === 0 ? 'active' : ''}" data-index="${index}">
-                <div class="product-reference">${product.reference}</div>
-                <div class="product-designation">${product.designation}</div>
-                <div class="product-price">${parseFloat(product.prixVenteHt || 0).toFixed(2)} €</div>
-            </div>
-        `).join('');
+        suggestionsContainer.innerHTML = products.map((product, index) =>
+            '<div class="product-suggestion ' + (index === 0 ? 'active' : '') + '" data-index="' + index + '">' +
+                '<div class="product-reference">' + (product.reference || '') + '</div>' +
+                '<div class="product-designation">' + (product.designation || '') + '</div>' +
+                '<div class="product-price">' + parseFloat(product.prixVenteHt || 0).toFixed(2) + ' €</div>' +
+            '</div>'
+        ).join('');
 
         // Ajouter les event listeners
         suggestionsContainer.querySelectorAll('.product-suggestion').forEach(suggestionEl => {
@@ -3150,9 +3187,9 @@ function updateCollapsedView(elementId, product) {
     if (isReadOnlyMode) {
         const designationDiv = elementDiv.querySelector('.col-md-4');
         if (designationDiv) {
-            let content = `<strong>${product.designation || 'Produit sans nom'}</strong>`;
+            let content = '<strong>' + (product.designation || 'Produit sans nom') + '</strong>';
             if (product.description && product.description.trim()) {
-                content += `<br><div class="text-muted" style="font-size: 0.875rem; line-height: 1.4;">${product.description}</div>`;
+                content += '<br><div class="text-muted" style="font-size: 0.875rem; line-height: 1.4;">' + (product.description || '') + '</div>';
             }
             designationDiv.innerHTML = content;
         }
@@ -3219,11 +3256,14 @@ function showError(message) {
     }
 }
 
+console.log('🔍 DEBUG: Fin script principal edit.html.twig');
+})(); // Fin de la fonction IIFE
+
 // ==========================================
 // INITIALISATION AU CHARGEMENT
 // ==========================================
 
-document.addEventListener('DOMContentLoaded', function() {
+$(document).ready(function() {
     init();
     
     // ==========================================
@@ -3461,84 +3501,21 @@ document.addEventListener('DOMContentLoaded', function() {
         const addressModalService = new AddressModalService({
             debug: false,
             onAddressCreated: function(detail) {
-                console.log('📍 [EDIT] Adresse créée, rechargement puis fermeture...', detail);
-                
-                const clientSelect = document.getElementById('devis_client');
-                const clientId = clientSelect?.value;
-                if (clientId && window.devisContactService) {
-                    // Recharger SEULEMENT les adresses (pas les contacts) - version asynchrone
-                    window.devisContactService.reloadAddressesOnly(clientId).then(() => {
-                        // Sélectionner automatiquement la nouvelle adresse
-                        if (detail.adresse && detail.adresse.id) {
-                            const livraisonSelect = document.getElementById('adresse_livraison_select');
-                            const facturationSelect = document.getElementById('adresse_facturation_select');
-                            
-                            // Sélectionner dans les deux dropdowns par défaut
-                            if (livraisonSelect) {
-                                livraisonSelect.value = detail.adresse.id;
-                                livraisonSelect.dispatchEvent(new Event('change'));
-                            }
-                            
-                            if (facturationSelect) {
-                                facturationSelect.value = detail.adresse.id;
-                                facturationSelect.dispatchEvent(new Event('change'));
-                            }
-                        }
-                        
-                        // Fermer la modale après sélection (géré par le service centralisé maintenant)
-                        if (addressModalService.modalService) {
-                            addressModalService.modalService.closeModal();
-                            console.log('📍 [EDIT] Adresse sélectionnée et modale fermée');
-                        }
-                    });
+                console.log('📍 [EDIT] Adresse créée - DevisContactService gère le rechargement automatiquement', detail);
+
+                // DevisContactService gère automatiquement le rechargement des adresses
+                // Fermer la modale (géré par le service centralisé)
+                if (addressModalService.modalService) {
+                    addressModalService.modalService.closeModal();
+                    console.log('📍 [EDIT] Adresse créée et modale fermée');
                 }
             },
             onAddressUpdated: function(detail) {
-                console.log('📍 [EDIT] Adresse modifiée, rechargement puis re-sélection...', detail);
-                
-                // Service centralisé gère maintenant lastContactEditEvent automatiquement
-                // Plus besoin de gérer manuellement la navigation ici
-                
-                const clientSelect = document.getElementById('devis_client');
-                const clientId = clientSelect?.value;
-                if (clientId && window.devisContactService && detail.adresse) {
-                    // Recharger SEULEMENT les adresses (pas les contacts) - version asynchrone
-                    window.devisContactService.reloadAddressesOnly(clientId).then(() => {
-                        const addressId = detail.adresse.id;
-                        console.log('📍 [EDIT] Tentative de re-sélection de l\'adresse ID:', addressId);
-                        
-                        // Essayer de re-sélectionner dans les deux dropdowns d'adresses
-                        const livraisonSelect = document.getElementById('adresse_livraison_select');
-                        const facturationSelect = document.getElementById('adresse_facturation_select');
-                        
-                        if (livraisonSelect) {
-                            // Vérifier si l'adresse existe dans les options de livraison
-                            const livraisonOption = Array.from(livraisonSelect.options).find(opt => opt.value == addressId);
-                            if (livraisonOption) {
-                                livraisonSelect.value = addressId;
-                                livraisonSelect.dispatchEvent(new Event('change'));
-                                console.log('📍 [EDIT] Adresse re-sélectionnée dans livraison');
-                            }
-                        }
-                        
-                        if (facturationSelect) {
-                            // Vérifier si l'adresse existe dans les options de facturation
-                            const facturationOption = Array.from(facturationSelect.options).find(opt => opt.value == addressId);
-                            if (facturationOption) {
-                                facturationSelect.value = addressId;
-                                facturationSelect.dispatchEvent(new Event('change'));
-                                console.log('📍 [EDIT] Adresse re-sélectionnée dans facturation');
-                            }
-                        }
-                        
-                        // Fermer la modale après re-sélection (géré par le service centralisé)
-                        if (addressModalService && addressModalService.modalService) {
-                            console.log('📍 [EDIT] Fermeture modale d\'adresse après re-sélection');
-                            addressModalService.modalService.closeModal();
-                            console.log('📍 [EDIT] Adresse rechargée, re-sélectionnée et modale fermée');
-                        }
-                    });
-                }
+                console.log('📍 [EDIT] Adresse modifiée - DevisContactService gère le rechargement automatiquement', detail);
+
+                // DevisContactService gère automatiquement le rechargement et la re-sélection
+                // Le service centralisé gère la navigation Contact <-> Adresse
+                console.log('📍 [EDIT] Navigation gérée par MultiModalNavigationService');
             }
         });
         addressModalService.attachToDevisPage();
@@ -3560,8 +3537,8 @@ document.addEventListener('DOMContentLoaded', function() {
         }
         
         // PRÉVENTION: Ajouter un gestionnaire global pour éviter les ouvertures de modales parasites
-        document.addEventListener('modalOpening', function(e) {
-            console.log('🚨 [MODAL-DEBUG] Modale en cours d\'ouverture:', e.detail);
+        $(document).on('modalOpening', function(e) {
+            console.log('🚨 [MODAL-DEBUG] Modale en cours d\'ouverture:', e.originalEvent?.detail);
         });
         
         // Surveiller spécifiquement les conflits entre modales
@@ -4279,31 +4256,9 @@ document.addEventListener('DOMContentLoaded', function() {
     
     // Écouter la modification d'adresses
     window.addEventListener('addressUpdated', function(event) {
-        console.log('📢 Adresse modifiée détectée:', event.detail);
-        
-        const clientId = $('#devis_client').val();
-        
-        // Simplement recharger les dropdowns sans changer les sélections
-        // Les valeurs sélectionnées seront préservées
-        const currentLivraisonValue = $('#adresse_livraison_select').val();
-        const currentFacturationValue = $('#adresse_facturation_select').val();
-        
-        if (window.devisContactService) {
-            // Recharger via DevisContactService
-            window.devisContactService.reloadAddresses(clientId);
-            
-            // Le DevisContactService devrait préserver les sélections, mais au cas où :
-            setTimeout(() => {
-                if (currentLivraisonValue) {
-                    $('#adresse_livraison_select').val(currentLivraisonValue);
-                }
-                if (currentFacturationValue) {
-                    $('#adresse_facturation_select').val(currentFacturationValue);
-                }
-            }, 500);
-        } else {
-            console.error('❌ DevisContactService non disponible');
-        }
+        console.log('📢 Adresse modifiée détectée - gérée automatiquement par DevisContactService:', event.detail);
+        // DevisContactService gère automatiquement le rechargement et la synchronisation des adresses
+    });
 
     // ==========================================
     // MISE À JOUR NOM PROJET ET AUTOCOMPLÉTION
@@ -4349,8 +4304,6 @@ document.addEventListener('DOMContentLoaded', function() {
 
     // Initialiser l'autocomplétion au chargement
     initCommuneAutocomplete();
-
-    });
 });
 
 // Variables globales pour l'éditeur WYSIWYG
@@ -4487,8 +4440,8 @@ function makeModalResizable(modalElement) {
         startWidth = parseInt(computedStyle.width, 10);
         startHeight = parseInt(computedStyle.height, 10);
         
-        document.addEventListener('mousemove', resize);
-        document.addEventListener('mouseup', stopResize);
+        $(document).on('mousemove', resize);
+        $(document).on('mouseup', stopResize);
         e.preventDefault();
     });
     
@@ -5019,8 +4972,8 @@ function showImageDimensionsModal(targetEditor = null) {
 }
 
 // Gestionnaire de sauvegarde de la description
-document.addEventListener('DOMContentLoaded', function() {
-    document.getElementById('save-description-btn').addEventListener('click', async function() {
+$(document).ready(function() {
+    $(document).on('click', '#save-description-btn', async function() {
         console.log('💾 Sauvegarde description...');
         
         if (!currentEditingElementId) {
@@ -5063,8 +5016,6 @@ document.addEventListener('DOMContentLoaded', function() {
         }
     });
 });
-
-})(); // Fin de la fonction IIFE
 </script>
 
 <style>
@@ -5319,6 +5270,7 @@ document.addEventListener('DOMContentLoaded', function() {
 </style>
 
 <script>
+console.log('🔍 DEBUG: Début second script (images produits) edit.html.twig');
 // ==========================================
 // FONCTIONS GESTION IMAGES PRODUITS  
 // ==========================================
@@ -5406,7 +5358,7 @@ async function showImageSelectionModal(elementId, element) {
                     <div class="modal-header">
                         <h5 class="modal-title">
                             <i class="fas fa-images me-2"></i>
-                            Sélectionner une image pour "${element.designation || 'ce produit'}"
+                            Sélectionner une image pour "' + (element.designation || 'ce produit') + '"
                         </h5>
                         <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
                     </div>
@@ -5482,7 +5434,7 @@ function showBasicImageModal(elementId, element) {
                     <div class="modal-header">
                         <h5 class="modal-title">
                             <i class="fas fa-images me-2"></i>
-                            Images pour "${element.designation || 'ce produit'}"
+                            Images pour "' + (element.designation || 'ce produit') + '"
                         </h5>
                         <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
                     </div>
@@ -5726,14 +5678,13 @@ function showImagePreview(elementId, event) {
     }
     
     // Contenu de la tooltip avec image et informations
-    imagePreviewTooltip.innerHTML = `
-        <img src="${element.product_image_path}" 
-             style="width: 100%; max-width: 180px; height: auto; border-radius: 4px; margin-bottom: 6px;" 
-             alt="${element.product_image_filename}" />
-        <div style="font-size: 0.75rem; color: #666; text-align: center;">
-            <strong>${element.product_image_filename || 'Image produit'}</strong>
-        </div>
-    `;
+    imagePreviewTooltip.innerHTML =
+        '<img src="' + (element.product_image_path || '') + '"' +
+        '     style="width: 100%; max-width: 180px; height: auto; border-radius: 4px; margin-bottom: 6px;"' +
+        '     alt="' + (element.product_image_filename || '') + '" />' +
+        '<div style="font-size: 0.75rem; color: #666; text-align: center;">' +
+            '<strong>' + (element.product_image_filename || 'Image produit') + '</strong>' +
+        '</div>';
     
     // Positionner la tooltip
     const rect = event.target.getBoundingClientRect();
@@ -5750,6 +5701,7 @@ function hideImagePreview() {
 
 // Code d'autocomplétion maintenant intégré dans le DOMContentLoaded principal
 
+console.log('🔍 DEBUG: Fin second script (images produits) edit.html.twig');
 </script>
 
 
