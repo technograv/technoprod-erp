@@ -62,7 +62,12 @@ class AdminAjaxLoader {
                     }
                     document.head.appendChild(newScript);
                 });
-                
+
+                // Appeler les fonctions d'initialisation spécifiques après chargement des scripts
+                setTimeout(() => {
+                    this.callInitFunctionIfExists(tabId, url);
+                }, 100);
+
                 console.log('✅ Content loaded successfully for:', tabId);
                 return html;
             })
@@ -148,6 +153,31 @@ class AdminAjaxLoader {
                 notification.remove();
             }
         }, 5000);
+    }
+
+    callInitFunctionIfExists(tabId, url) {
+        console.log('🔧 Checking for init function for:', tabId, url);
+
+        // Mapping des onglets vers leurs fonctions d'initialisation
+        const initFunctions = {
+            '#societes-content': 'initSocietes',
+            '/admin/societes': 'initSocietes'
+        };
+
+        // Chercher la fonction d'initialisation par tabId ou par URL
+        let functionName = initFunctions[tabId] || initFunctions[url];
+
+        if (functionName && typeof window[functionName] === 'function') {
+            console.log('🚀 Calling init function:', functionName);
+            try {
+                window[functionName]();
+                console.log('✅ Init function called successfully:', functionName);
+            } catch (error) {
+                console.error('❌ Error calling init function:', functionName, error);
+            }
+        } else {
+            console.log('ℹ️ No init function found for:', tabId, url);
+        }
     }
 }
 

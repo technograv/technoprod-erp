@@ -40,7 +40,7 @@ final class SocieteController extends AbstractController
         $currentSociete = $this->tenantService->getCurrentSociete();
         $isSocieteMere = $currentSociete ? $currentSociete->isMere() : true;
         
-        return $this->render('admin/societe/societes.html.twig', [
+        return $this->render('admin/societes.html.twig', [
             'societes' => $societes,
             'is_societe_mere' => $isSocieteMere
         ]);
@@ -52,29 +52,18 @@ final class SocieteController extends AbstractController
         return $this->json([
             'id' => $societe->getId(),
             'nom' => $societe->getNom(),
-            'code' => $societe->getCode(),
-            'description' => $societe->getDescription(),
-            'siret' => $societe->getSiret(),
-            'siren' => $societe->getSiren(),
+            'type' => $societe->isMere() ? 'mere' : 'fille',
+            'parentId' => $societe->getSocieteParent()?->getId(),
             'adresse' => $societe->getAdresse(),
-            'code_postal' => $societe->getCodePostal(),
+            'codePostal' => $societe->getCodePostal(),
             'ville' => $societe->getVille(),
-            'pays' => $societe->getPays(),
             'telephone' => $societe->getTelephone(),
             'email' => $societe->getEmail(),
-            'site_web' => $societe->getSiteWeb(),
-            'logo_url' => $societe->getLogoUrl(),
-            'couleur_primaire' => $societe->getCouleurPrimaire(),
-            'couleur_secondaire' => $societe->getCouleurSecondaire(),
-            'delaiRelanceDevis' => $societe->getDelaiRelanceDevis(),
-            'delaiFacturation' => $societe->getDelaiFacturation(),
-            'actif' => $societe->isActif(),
-            'ordre' => $societe->getOrdre(),
-            'parent_id' => $societe->getParent()?->getId(),
-            'parent_nom' => $societe->getParent()?->getNom(),
-            'enfants_count' => $societe->getEnfants()->count(),
-            'created_at' => $societe->getCreatedAt()?->format('d/m/Y H:i'),
-            'updated_at' => $societe->getUpdatedAt()?->format('d/m/Y H:i')
+            'siret' => $societe->getSiret(),
+            'couleurPrimaire' => $societe->getCouleurPrimaire(),
+            'couleurSecondaire' => $societe->getCouleurSecondaire(),
+            'active' => $societe->isActive(),
+            'ordre' => $societe->getOrdre()
         ]);
     }
 
@@ -83,66 +72,51 @@ final class SocieteController extends AbstractController
     {
         try {
             $data = json_decode($request->getContent(), true);
-            
-            if (!isset($data['nom']) || !isset($data['code'])) {
-                return $this->json(['error' => 'Nom et code obligatoires'], 400);
-            }
 
-            // Vérifier l'unicité du code
-            $existingSociete = $this->entityManager->getRepository(Societe::class)
-                ->findOneBy(['code' => $data['code']]);
-            
-            if ($existingSociete) {
-                return $this->json(['error' => 'Ce code est déjà utilisé'], 400);
+            if (!isset($data['nom'])) {
+                return $this->json(['error' => 'Nom obligatoire'], 400);
             }
 
             $societe = new Societe();
             $societe->setNom($data['nom']);
-            $societe->setCode($data['code']);
-            $societe->setDescription($data['description'] ?? '');
-            $societe->setSiret($data['siret'] ?? '');
-            $societe->setSiren($data['siren'] ?? '');
             $societe->setAdresse($data['adresse'] ?? '');
-            $societe->setCodePostal($data['code_postal'] ?? '');
+            $societe->setCodePostal($data['codePostal'] ?? '');
             $societe->setVille($data['ville'] ?? '');
-            $societe->setPays($data['pays'] ?? 'France');
             $societe->setTelephone($data['telephone'] ?? '');
             $societe->setEmail($data['email'] ?? '');
-            $societe->setSiteWeb($data['site_web'] ?? '');
-            $societe->setCouleurPrimaire($data['couleur_primaire'] ?? '#007bff');
-            $societe->setCouleurSecondaire($data['couleur_secondaire'] ?? '#6c757d');
-            $societe->setActif($data['actif'] ?? true);
-            $societe->setDelaiRelanceDevis($data['delaiRelanceDevis'] ?? 14);
-            $societe->setDelaiFacturation($data['delaiFacturation'] ?? 1);
-            
-            // Gestion de la société parent
-            if (isset($data['parent_id']) && !empty($data['parent_id'])) {
-                $parent = $this->entityManager->find(Societe::class, $data['parent_id']);
-                if ($parent) {
-                    $societe->setParent($parent);
+            $societe->setSiret($data['siret'] ?? '');
+            $societe->setCouleurPrimaire($data['couleurPrimaire'] ?? '#dc3545');
+            $societe->setCouleurSecondaire($data['couleurSecondaire'] ?? '#6c757d');
+            $societe->setActive($data['active'] ?? true);
+
+            // Gestion du type et société parent
+            if (isset($data['type']) && $data['type'] === 'mere') {
+                $societe->setType('mere');
+            } else {
+                $societe->setType('fille');
+                if (isset($data['societeParentId']) && !empty($data['societeParentId'])) {
+                    $parent = $this->entityManager->find(Societe::class, $data['societeParentId']);
+                    if ($parent) {
+                        $societe->setSocieteParent($parent);
+                    }
                 }
             }
-            
-            // Gestion de l'ordre
-            if (isset($data['ordre'])) {
-                $repository = $this->entityManager->getRepository(Societe::class);
-                $repository->reorganizeOrdres(intval($data['ordre']));
-                $societe->setOrdre(intval($data['ordre']));
-            }
-            
+
+            // Déterminer l'ordre automatiquement
+            $maxOrdre = $this->entityManager->getRepository(Societe::class)
+                ->createQueryBuilder('s')
+                ->select('MAX(s.ordre)')
+                ->getQuery()
+                ->getSingleScalarResult();
+
+            $societe->setOrdre(($maxOrdre ?? 0) + 1);
+
             $this->entityManager->persist($societe);
             $this->entityManager->flush();
 
             return $this->json([
                 'success' => true,
-                'message' => 'Société créée avec succès',
-                'societe' => [
-                    'id' => $societe->getId(),
-                    'nom' => $societe->getNom(),
-                    'code' => $societe->getCode(),
-                    'actif' => $societe->isActif(),
-                    'ordre' => $societe->getOrdre()
-                ]
+                'message' => 'Société créée avec succès'
             ]);
         } catch (\Exception $e) {
             return $this->json(['error' => 'Erreur lors de la création: ' . $e->getMessage()], 500);
@@ -154,50 +128,18 @@ final class SocieteController extends AbstractController
     {
         try {
             $data = json_decode($request->getContent(), true);
-            
+
             if (isset($data['nom'])) {
                 $societe->setNom($data['nom']);
-            }
-            
-            if (isset($data['code'])) {
-                // Vérifier l'unicité du code (sauf pour la société actuelle)
-                $existingSociete = $this->entityManager->getRepository(Societe::class)
-                    ->createQueryBuilder('s')
-                    ->where('s.code = :code')
-                    ->andWhere('s.id != :id')
-                    ->setParameter('code', $data['code'])
-                    ->setParameter('id', $societe->getId())
-                    ->getQuery()
-                    ->getOneOrNullResult();
-                
-                if ($existingSociete) {
-                    return $this->json(['error' => 'Ce code est déjà utilisé'], 400);
-                }
-                
-                $societe->setCode($data['code']);
-            }
-            
-            // Mise à jour des autres champs
-            if (isset($data['description'])) {
-                $societe->setDescription($data['description']);
-            }
-            if (isset($data['siret'])) {
-                $societe->setSiret($data['siret']);
-            }
-            if (isset($data['siren'])) {
-                $societe->setSiren($data['siren']);
             }
             if (isset($data['adresse'])) {
                 $societe->setAdresse($data['adresse']);
             }
-            if (isset($data['code_postal'])) {
-                $societe->setCodePostal($data['code_postal']);
+            if (isset($data['codePostal'])) {
+                $societe->setCodePostal($data['codePostal']);
             }
             if (isset($data['ville'])) {
                 $societe->setVille($data['ville']);
-            }
-            if (isset($data['pays'])) {
-                $societe->setPays($data['pays']);
             }
             if (isset($data['telephone'])) {
                 $societe->setTelephone($data['telephone']);
@@ -205,56 +147,40 @@ final class SocieteController extends AbstractController
             if (isset($data['email'])) {
                 $societe->setEmail($data['email']);
             }
-            if (isset($data['site_web'])) {
-                $societe->setSiteWeb($data['site_web']);
+            if (isset($data['siret'])) {
+                $societe->setSiret($data['siret']);
             }
-            if (isset($data['couleur_primaire'])) {
-                $societe->setCouleurPrimaire($data['couleur_primaire']);
+            if (isset($data['couleurPrimaire'])) {
+                $societe->setCouleurPrimaire($data['couleurPrimaire']);
             }
-            if (isset($data['couleur_secondaire'])) {
-                $societe->setCouleurSecondaire($data['couleur_secondaire']);
+            if (isset($data['couleurSecondaire'])) {
+                $societe->setCouleurSecondaire($data['couleurSecondaire']);
             }
-            if (isset($data['actif'])) {
-                $societe->setActif($data['actif']);
+            if (isset($data['active'])) {
+                $societe->setActive($data['active']);
             }
-            if (isset($data['delaiRelanceDevis'])) {
-                $societe->setDelaiRelanceDevis($data['delaiRelanceDevis']);
-            }
-            if (isset($data['delaiFacturation'])) {
-                $societe->setDelaiFacturation($data['delaiFacturation']);
-            }
-            
-            // Gestion de la société parent
-            if (isset($data['parent_id'])) {
-                if (!empty($data['parent_id'])) {
-                    $parent = $this->entityManager->find(Societe::class, $data['parent_id']);
-                    if ($parent && $parent->getId() !== $societe->getId()) {
-                        $societe->setParent($parent);
-                    }
+
+            // Gestion du type et société parent
+            if (isset($data['type'])) {
+                if ($data['type'] === 'mere') {
+                    $societe->setType('mere');
+                    $societe->setSocieteParent(null); // Une société mère n'a pas de parent
                 } else {
-                    $societe->setParent(null);
+                    $societe->setType('fille');
+                    if (isset($data['societeParentId']) && !empty($data['societeParentId'])) {
+                        $parent = $this->entityManager->find(Societe::class, $data['societeParentId']);
+                        if ($parent && $parent->getId() !== $societe->getId()) {
+                            $societe->setSocieteParent($parent);
+                        }
+                    }
                 }
-            }
-            
-            // Gestion de l'ordre
-            if (isset($data['ordre'])) {
-                $repository = $this->entityManager->getRepository(Societe::class);
-                $repository->reorganizeOrdres(intval($data['ordre']));
-                $societe->setOrdre(intval($data['ordre']));
             }
 
             $this->entityManager->flush();
 
             return $this->json([
                 'success' => true,
-                'message' => 'Société mise à jour avec succès',
-                'societe' => [
-                    'id' => $societe->getId(),
-                    'nom' => $societe->getNom(),
-                    'code' => $societe->getCode(),
-                    'actif' => $societe->isActif(),
-                    'ordre' => $societe->getOrdre()
-                ]
+                'message' => 'Société mise à jour avec succès'
             ]);
         } catch (\Exception $e) {
             return $this->json(['error' => 'Erreur lors de la mise à jour: ' . $e->getMessage()], 500);
@@ -265,13 +191,13 @@ final class SocieteController extends AbstractController
     public function toggleSociete(Societe $societe): JsonResponse
     {
         try {
-            $societe->setActif(!$societe->isActif());
+            $societe->setActive(!$societe->isActive());
             $this->entityManager->flush();
 
             return $this->json([
                 'success' => true,
-                'actif' => $societe->isActif(),
-                'message' => $societe->isActif() ? 'Société activée' : 'Société désactivée'
+                'isActive' => $societe->isActive(),
+                'message' => $societe->isActive() ? 'Société activée' : 'Société désactivée'
             ]);
         } catch (\Exception $e) {
             return $this->json(['error' => 'Erreur lors de la mise à jour: ' . $e->getMessage()], 500);
@@ -316,15 +242,17 @@ final class SocieteController extends AbstractController
     {
         try {
             $data = json_decode($request->getContent(), true);
-            
-            if (!isset($data['ordre']) || !is_array($data['ordre'])) {
-                return $this->json(['error' => 'Ordre invalide'], 400);
+
+            if (!isset($data['societes']) || !is_array($data['societes'])) {
+                return $this->json(['error' => 'Format de données invalide'], 400);
             }
 
-            foreach ($data['ordre'] as $index => $societeId) {
-                $societe = $this->entityManager->find(Societe::class, $societeId);
-                if ($societe) {
-                    $societe->setOrdre($index + 1);
+            foreach ($data['societes'] as $item) {
+                if (isset($item['id']) && isset($item['ordre'])) {
+                    $societe = $this->entityManager->find(Societe::class, $item['id']);
+                    if ($societe) {
+                        $societe->setOrdre($item['ordre']);
+                    }
                 }
             }
 

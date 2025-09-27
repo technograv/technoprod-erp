@@ -193,6 +193,30 @@ cd /home/decorpub/TechnoProd/technoprod
    - Interface canvas HTML5 opérationnelle
    - Workflow complet : envoi → lien → signature → sauvegarde
 
+### ✅ CORRECTION JAVASCRIPT TEMPLATE LITERALS - 27/09/2025
+
+**PROBLÈME IDENTIFIÉ :** Template literals JavaScript (backticks + `${}`) causaient des conflits avec le moteur de templates Twig, générant des erreurs de syntaxe JavaScript "missing ) after argument list" dans le navigateur.
+
+**SOLUTION APPLIQUÉE :**
+- Conversion de tous les template literals vers string concatenation classique
+- 12 template literals remplacés dans `/templates/admin/societes.html.twig` :
+  - `fetch(\`/admin/societes/\${id}/toggle\`)` → `fetch('/admin/societes/' + id + '/toggle')`
+  - `document.querySelector(\`tr[data-id="\${id}"]\`)` → `document.querySelector('tr[data-id="' + id + '")')`
+  - Styles CSS multilignes convertis de template literals vers concaténation
+
+**CORRECTIONS ONCLICK HANDLERS :**
+- Remplacement de tous les `onclick="function({{ twig.var }})"` par des event listeners sécurisés
+- Conversion vers `data-*` attributes et delegation d'événements
+- Élimination des risques d'injection de code via variables Twig dans onclick
+
+**CORRECTIONS SYNTAXE JAVASCRIPT MODERNE :**
+- Remplacement de l'optional chaining operator `?.` par des conditions traditionnelles
+- Fix `value.match(/.{1,2}/g)?.join(' ')` → `matches ? matches.join(' ') : value`
+- Fix `selected?.classList.add()` → `if (selected) { selected.classList.add() }`
+- Compatibilité avec anciens navigateurs améliorée
+
+**RÉSULTAT :** Template Twig validé avec `php bin/console lint:twig` - syntaxe correcte confirmée.
+
 ### 🔧 CORRECTIONS TECHNIQUES APPORTÉES
 - **GoogleOAuthController.php** : Ajout scope `gmail.send`
 - **GmailMailerService.php** : API Gmail + fallback SMTP
