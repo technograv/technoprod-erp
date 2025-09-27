@@ -147,6 +147,29 @@ final class ConfigurationController extends AbstractController
         }
     }
 
+    #[Route('/formes-juridiques/reorder', name: 'app_admin_formes_juridiques_reorder', methods: ['POST'])]
+    public function reorderFormesJuridiques(Request $request): JsonResponse
+    {
+        try {
+            $data = json_decode($request->getContent(), true);
+            $order = $data['order'] ?? [];
+
+            foreach ($order as $index => $id) {
+                $forme = $this->entityManager->getRepository(FormeJuridique::class)->find($id);
+                if ($forme) {
+                    $forme->setOrdre($index + 1);
+                }
+            }
+
+            $this->entityManager->flush();
+
+            return $this->json(['success' => true, 'message' => 'Ordre mis à jour avec succès']);
+        } catch (\Exception $e) {
+            return $this->json(['success' => false, 'error' => 'Erreur lors de la mise à jour: ' . $e->getMessage()], 500);
+        }
+    }
+
+
     // ================================
     // MODES PAIEMENT
     // ================================
@@ -625,7 +648,7 @@ final class ConfigurationController extends AbstractController
             // Vérifier que la banque n'est pas utilisée par des modes de paiement
             $modesPaiementCount = $this->entityManager->getRepository(ModePaiement::class)
                 ->count(['banque' => $banque]);
-            
+
             if ($modesPaiementCount > 0) {
                 return $this->json([
                     'error' => 'Cette banque ne peut pas être supprimée car elle est utilisée par ' . $modesPaiementCount . ' mode(s) de paiement'
@@ -638,6 +661,28 @@ final class ConfigurationController extends AbstractController
             return $this->json(['message' => 'Banque supprimée avec succès']);
         } catch (\Exception $e) {
             return $this->json(['error' => 'Erreur lors de la suppression: ' . $e->getMessage()], 500);
+        }
+    }
+
+    #[Route('/banques/reorder', name: 'app_admin_banques_reorder', methods: ['POST'])]
+    public function reorderBanques(Request $request): JsonResponse
+    {
+        try {
+            $data = json_decode($request->getContent(), true);
+            $order = $data['order'] ?? [];
+
+            foreach ($order as $index => $id) {
+                $banque = $this->entityManager->getRepository(Banque::class)->find($id);
+                if ($banque) {
+                    $banque->setOrdre($index + 1);
+                }
+            }
+
+            $this->entityManager->flush();
+
+            return $this->json(['success' => true, 'message' => 'Ordre mis à jour avec succès']);
+        } catch (\Exception $e) {
+            return $this->json(['success' => false, 'error' => 'Erreur lors de la mise à jour: ' . $e->getMessage()], 500);
         }
     }
 
@@ -810,6 +855,28 @@ final class ConfigurationController extends AbstractController
             return $this->json(['message' => 'Taux TVA supprimé avec succès']);
         } catch (\Exception $e) {
             return $this->json(['error' => 'Erreur lors de la suppression: ' . $e->getMessage()], 500);
+        }
+    }
+
+    #[Route('/taux-tva/reorder', name: 'app_admin_taux_tva_reorder', methods: ['POST'])]
+    public function reorderTauxTva(Request $request): JsonResponse
+    {
+        try {
+            $data = json_decode($request->getContent(), true);
+            $order = $data['order'] ?? [];
+
+            foreach ($order as $index => $id) {
+                $taux = $this->entityManager->getRepository(TauxTVA::class)->find($id);
+                if ($taux) {
+                    $taux->setOrdre($index + 1);
+                }
+            }
+
+            $this->entityManager->flush();
+
+            return $this->json(['success' => true, 'message' => 'Ordre mis à jour avec succès']);
+        } catch (\Exception $e) {
+            return $this->json(['success' => false, 'error' => 'Erreur lors de la mise à jour: ' . $e->getMessage()], 500);
         }
     }
 

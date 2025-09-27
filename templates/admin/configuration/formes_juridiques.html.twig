@@ -13,20 +13,22 @@
         <table class="table table-hover" id="formesJuridiquesTable">
             <thead class="table-dark">
                 <tr>
-                    <th>Ordre</th>
+                    <th width="50"><i class="fas fa-arrows-alt" title="Glisser pour réordonner"></i></th>
                     <th>Nom</th>
                     <th>Template</th>
                     <th>Type</th>
                     <th>Statut</th>
-                    <th>Clients</th>
                     <th>Actions</th>
                 </tr>
             </thead>
-            <tbody>
+            <tbody id="sortable-formes-juridiques">
                 {% for forme in formes_juridiques %}
-                <tr data-id="{{ forme.id }}">
-                    <td>
-                        <span class="badge bg-secondary">{{ forme.ordre }}</span>
+                <tr data-id="{{ forme.id }}" class="sortable-item">
+                    <td class="text-center">
+                        <div class="drag-handle">
+                            <i class="fas fa-grip-vertical text-muted"></i>
+                        </div>
+                        <small class="d-block text-muted" style="font-size: 0.7rem;">{{ forme.ordre }}</small>
                     </td>
                     <td>
                         <strong>{{ forme.nom }}</strong>
@@ -53,11 +55,6 @@
                                 {{ forme.actif ? 'Actif' : 'Inactif' }}
                             </label>
                         </div>
-                    </td>
-                    <td>
-                        <span class="badge bg-secondary" id="clients-count-{{ forme.id }}">
-                            <i class="fas fa-users me-1"></i>-
-                        </span>
                     </td>
                     <td>
                         <div class="btn-group btn-group-sm">
@@ -142,6 +139,9 @@
         </div>
     </div>
 </div>
+
+<!-- SortableJS CDN -->
+<script src="https://cdn.jsdelivr.net/npm/sortablejs@1.15.0/Sortable.min.js"></script>
 
 <script>
 function initFormesJuridiquesEvents() {
@@ -327,16 +327,140 @@ function initFormesJuridiquesEvents() {
     });
 }
 
-// Initialisation pour AJAX loading
+// Remplacer les initialisations existantes
 if (document.readyState === 'loading') {
-    document.addEventListener('DOMContentLoaded', initFormesJuridiquesEvents);
+    document.addEventListener('DOMContentLoaded', initFormesJuridiquesEventsWithDragDrop);
 } else {
-    setTimeout(initFormesJuridiquesEvents, 50);
+    setTimeout(initFormesJuridiquesEventsWithDragDrop, 50);
 }
 
 // Fonction globale pour appel depuis dashboard
 window.initFormesJuridiques = function() {
-    setTimeout(initFormesJuridiquesEvents, 100);
+    setTimeout(initFormesJuridiquesEventsWithDragDrop, 100);
 };
+
+// Instance globale du drag & drop formes juridiques
+let dragDropFormesInstance = null;
+
+function initFormesJuridiquesDragDrop() {
+    console.log('🚀 Initialisation du drag & drop formes juridiques');
+
+    // Vérifier que l'élément DOM existe
+    const sortableContainer = document.getElementById('sortable-formes-juridiques');
+    if (!sortableContainer) {
+        console.error('❌ Container #sortable-formes-juridiques non trouvé, retry dans 200ms...');
+        setTimeout(initFormesJuridiquesDragDrop, 200);
+        return;
+    }
+
+    // Vérifier que SortableJS est disponible
+    if (typeof Sortable === 'undefined') {
+        console.error('❌ SortableJS non disponible, retry dans 100ms...');
+        setTimeout(initFormesJuridiquesDragDrop, 100);
+        return;
+    }
+
+    console.log('✅ Tous les prérequis sont disponibles, initialisation...');
+
+    // Utiliser la même configuration que les modes de paiement
+    dragDropFormesInstance = new Sortable(document.getElementById('sortable-formes-juridiques'), {
+        handle: '.drag-handle',
+        animation: 150,
+        ghostClass: 'sortable-ghost',
+        chosenClass: 'sortable-chosen',
+        dragClass: 'sortable-drag',
+        filter: '.thead, .table-dark',
+        preventOnFilter: false,
+        onEnd: async function(evt) {
+            // Récupérer l'ordre actuel des éléments
+            const items = Array.from(document.getElementById('sortable-formes-juridiques').querySelectorAll('.sortable-item'));
+            const itemIds = items.map(item => parseInt(item.dataset.id)).filter(id => !isNaN(id));
+
+            console.log('🔄 Nouvel ordre formes juridiques:', itemIds);
+
+            try {
+                const response = await fetch('/admin/formes-juridiques/reorder', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({ order: itemIds })
+                });
+
+                const data = await response.json();
+
+                if (data.success) {
+                    // Mettre à jour les numéros d'ordre affichés
+                    const orderElements = document.getElementById('sortable-formes-juridiques').querySelectorAll('small');
+                    orderElements.forEach((element, index) => {
+                        element.textContent = index + 1;
+                    });
+
+                    console.log('✅ Ordre des formes juridiques mis à jour avec succès');
+                } else {
+                    console.error('Erreur:', data.error);
+                    location.reload(); // Restaurer l'ordre correct
+                }
+            } catch (error) {
+                console.error('❌ Erreur lors de la sauvegarde:', error);
+                location.reload(); // Restaurer l'ordre correct
+            }
+        }
+    });
+
+    console.log('✅ Drag & drop formes juridiques initialisé avec succès');
+}
+
+function initFormesJuridiquesEventsWithDragDrop() {
+    if (window.formesJuridiquesInitialized) {
+        console.log('⚠️ Formes juridiques déjà initialisées, skip...');
+        return;
+    }
+
+    console.log('🎯 Initialisation complète formes juridiques avec drag & drop');
+
+    // Marquer comme initialisé
+    window.formesJuridiquesInitialized = true;
+
+    // Initialiser d'abord les événements de base
+    initFormesJuridiquesEvents();
+
+    // Puis initialiser le drag & drop
+    setTimeout(initFormesJuridiquesDragDrop, 200);
+}
+
 </script>
+
+<style>
+/* Styles drag & drop identiques aux modes de paiement pour un rendu ergonomique */
+.sortable-ghost {
+    opacity: 0.4;
+}
+
+.sortable-chosen {
+    background-color: #e3f2fd !important;
+}
+
+.drag-handle {
+    width: 20px;
+    cursor: move;
+    user-select: none;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.sortable-item {
+    transition: all 0.2s;
+}
+
+.sortable-item:hover {
+    box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+}
+
+.drag-handle:hover {
+    color: #007bff;
+}
+</style>
+
 {# Fin du template AJAX #}

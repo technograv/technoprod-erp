@@ -17,7 +17,7 @@
     <table class="table table-hover">
         <thead class="table-light">
             <tr>
-                <th>Ordre</th>
+                <th width="50"><i class="fas fa-arrows-alt" title="Glisser pour réordonner"></i></th>
                 <th>Nom</th>
                 <th>Taux (%)</th>
                 <th>Statut</th>
@@ -26,11 +26,14 @@
                 <th>Actions</th>
             </tr>
         </thead>
-        <tbody>
+        <tbody id="sortable-taux-tva">
             {% for taux in taux_tva %}
-            <tr>
-                <td>
-                    <span class="badge bg-secondary">{{ taux.ordre }}</span>
+            <tr data-id="{{ taux.id }}" class="sortable-item">
+                <td class="text-center">
+                    <div class="drag-handle">
+                        <i class="fas fa-grip-vertical text-muted"></i>
+                    </div>
+                    <small class="d-block text-muted" style="font-size: 0.7rem;">{{ taux.ordre }}</small>
                 </td>
                 <td>
                     <strong>{{ taux.nom }}</strong>
@@ -405,6 +408,136 @@ function initTauxTva() {
     });
 }
 
-// Rendre la fonction globale
-window.initTauxTva = initTauxTva;
+// Fonction globale pour appel depuis dashboard
+window.initTauxTva = function() {
+    setTimeout(initTauxTvaEventsWithDragDrop, 100);
+};
+
+// Instance globale du drag & drop taux TVA
+let dragDropTauxTvaInstance = null;
+
+function initTauxTvaDragDrop() {
+    console.log('🚀 Initialisation du drag & drop taux TVA');
+
+    // Vérifier que l'élément DOM existe
+    const sortableContainer = document.getElementById('sortable-taux-tva');
+    if (!sortableContainer) {
+        console.error('❌ Container #sortable-taux-tva non trouvé, retry dans 200ms...');
+        setTimeout(initTauxTvaDragDrop, 200);
+        return;
+    }
+
+    // Vérifier que SortableJS est disponible
+    if (typeof Sortable === 'undefined') {
+        console.error('❌ SortableJS non disponible, retry dans 100ms...');
+        setTimeout(initTauxTvaDragDrop, 100);
+        return;
+    }
+
+    console.log('✅ Tous les prérequis sont disponibles, initialisation...');
+
+    // Utiliser la même configuration que les autres onglets
+    dragDropTauxTvaInstance = new Sortable(document.getElementById('sortable-taux-tva'), {
+        handle: '.drag-handle',
+        animation: 150,
+        ghostClass: 'sortable-ghost',
+        chosenClass: 'sortable-chosen',
+        dragClass: 'sortable-drag',
+        filter: '.thead, .table-light',
+        preventOnFilter: false,
+        onEnd: async function(evt) {
+            // Récupérer l'ordre actuel des éléments
+            const items = Array.from(document.getElementById('sortable-taux-tva').querySelectorAll('.sortable-item'));
+            const itemIds = items.map(item => parseInt(item.dataset.id)).filter(id => !isNaN(id));
+
+            console.log('🔄 Nouvel ordre taux TVA:', itemIds);
+
+            try {
+                const response = await fetch('/admin/taux-tva/reorder', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({ order: itemIds })
+                });
+
+                const data = await response.json();
+
+                if (data.success) {
+                    // Mettre à jour les numéros d'ordre affichés
+                    const orderElements = document.getElementById('sortable-taux-tva').querySelectorAll('small');
+                    orderElements.forEach((element, index) => {
+                        element.textContent = index + 1;
+                    });
+
+                    console.log('✅ Ordre des taux TVA mis à jour avec succès');
+                } else {
+                    console.error('Erreur:', data.error);
+                    location.reload(); // Restaurer l'ordre correct
+                }
+            } catch (error) {
+                console.error('❌ Erreur lors de la sauvegarde:', error);
+                location.reload(); // Restaurer l'ordre correct
+            }
+        }
+    });
+
+    console.log('✅ Drag & drop taux TVA initialisé avec succès');
+}
+
+function initTauxTvaEventsWithDragDrop() {
+    if (window.tauxTvaInitialized) {
+        console.log('⚠️ Taux TVA déjà initialisés, skip...');
+        return;
+    }
+
+    console.log('🎯 Initialisation complète taux TVA avec drag & drop');
+
+    // Marquer comme initialisé
+    window.tauxTvaInitialized = true;
+
+    // Initialiser d'abord les événements de base
+    initTauxTva();
+
+    // Puis initialiser le drag & drop
+    setTimeout(initTauxTvaDragDrop, 200);
+}
+
+// Appeler la nouvelle fonction au lieu de l'ancienne
+initTauxTvaEventsWithDragDrop();
 </script>
+
+<!-- SortableJS CDN -->
+<script src="https://cdn.jsdelivr.net/npm/sortablejs@1.15.0/Sortable.min.js"></script>
+
+<style>
+/* Styles drag & drop identiques aux autres onglets pour un rendu ergonomique */
+.sortable-ghost {
+    opacity: 0.4;
+}
+
+.sortable-chosen {
+    background-color: #e3f2fd !important;
+}
+
+.drag-handle {
+    width: 20px;
+    cursor: move;
+    user-select: none;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.sortable-item {
+    transition: all 0.2s;
+}
+
+.sortable-item:hover {
+    box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+}
+
+.drag-handle:hover {
+    color: #007bff;
+}
+</style>
