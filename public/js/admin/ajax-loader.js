@@ -161,7 +161,9 @@ class AdminAjaxLoader {
         // Mapping des onglets vers leurs fonctions d'initialisation
         const initFunctions = {
             '#societes-content': 'initSocietes',
-            '/admin/societes': 'initSocietes'
+            '/admin/societes': 'initSocietes',
+            '#transporteurs-content': 'initTransporteurs',
+            '/admin/transporteurs': 'initTransporteurs'
         };
 
         // Chercher la fonction d'initialisation par tabId ou par URL
@@ -172,6 +174,14 @@ class AdminAjaxLoader {
             try {
                 window[functionName]();
                 console.log('✅ Init function called successfully:', functionName);
+
+                // Appeler aussi initTransporteursDragDrop pour les transporteurs
+                if ((tabId === '#transporteurs-content' || url === '/admin/transporteurs') &&
+                    typeof window.initTransporteursDragDrop === 'function') {
+                    console.log('🚚 Calling initTransporteursDragDrop after AJAX load');
+                    window.initTransporteursDragDrop();
+                }
+
             } catch (error) {
                 console.error('❌ Error calling init function:', functionName, error);
             }

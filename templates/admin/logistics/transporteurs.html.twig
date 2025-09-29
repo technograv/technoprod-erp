@@ -17,7 +17,7 @@
     <table class="table table-hover">
         <thead class="table-light">
             <tr>
-                <th>Ordre</th>
+                <th width="3%" title="Glisser pour réorganiser"><i class="fas fa-grip-vertical"></i></th>
                 <th>Code</th>
                 <th>Nom</th>
                 <th>Contact</th>
@@ -28,11 +28,11 @@
                 <th>Actions</th>
             </tr>
         </thead>
-        <tbody>
+        <tbody id="sortable-transporteurs">
             {% for transporteur in transporteurs %}
-            <tr>
-                <td>
-                    <span class="badge bg-secondary">{{ transporteur.ordre }}</span>
+            <tr data-id="{{ transporteur.id }}" class="sortable-item">
+                <td class="text-center drag-handle" style="cursor: grab;">
+                    <i class="fas fa-grip-vertical text-muted"></i>
                 </td>
                 <td>
                     <code class="bg-light px-2 py-1">{{ transporteur.code }}</code>
@@ -284,8 +284,123 @@
     </div>
 </div>
 
+<!-- SortableJS CDN -->
+<script src="https://cdn.jsdelivr.net/npm/sortablejs@1.15.0/Sortable.min.js"></script>
+
+<style>
+/* Styles pour le drag & drop */
+.drag-handle {
+    cursor: grab !important;
+}
+.drag-handle:active {
+    cursor: grabbing !important;
+}
+.sortable-ghost {
+    opacity: 0.4;
+    background: #f0f0f0;
+}
+.sortable-chosen {
+    background: #e8f4fd !important;
+}
+.sortable-drag {
+    opacity: 1 !important;
+}
+</style>
+
 <script>
+console.log('🚚 ===== DEBUT SCRIPT TRANSPORTEURS =====');
+let dragDropTransporteursInstance = null;
+
+function initTransporteursDragDrop() {
+    console.log('🚚 Initialisation du drag & drop transporteurs');
+
+    // Vérifier que l'élément DOM existe
+    const sortableContainer = document.getElementById('sortable-transporteurs');
+    if (!sortableContainer) {
+        console.error('❌ Container #sortable-transporteurs non trouvé, retry dans 200ms...');
+        setTimeout(initTransporteursDragDrop, 200);
+        return;
+    }
+
+    // Vérifier que SortableJS est disponible
+    if (typeof Sortable === 'undefined') {
+        console.error('❌ SortableJS non disponible, retry dans 100ms...');
+        setTimeout(initTransporteursDragDrop, 100);
+        return;
+    }
+
+    console.log('✅ Tous les prérequis sont disponibles, initialisation...');
+
+    // Détruire l'instance précédente si elle existe
+    if (dragDropTransporteursInstance) {
+        dragDropTransporteursInstance.destroy();
+    }
+
+    // Configuration SortableJS
+    dragDropTransporteursInstance = new Sortable(document.getElementById('sortable-transporteurs'), {
+        handle: '.drag-handle',
+        animation: 150,
+        ghostClass: 'sortable-ghost',
+        chosenClass: 'sortable-chosen',
+        dragClass: 'sortable-drag',
+
+        onEnd: function(evt) {
+            console.log('🔄 Drag terminé - sauvegarde de l\'ordre');
+
+            // Récupérer tous les IDs dans le nouvel ordre
+            const items = document.querySelectorAll('#sortable-transporteurs .sortable-item');
+            const reorderedData = [];
+
+            items.forEach((item, index) => {
+                const id = parseInt(item.dataset.id);
+                reorderedData.push({
+                    id: id,
+                    ordre: index + 1
+                });
+            });
+
+            console.log('🔄 Nouvel ordre:', reorderedData);
+
+            // Sauvegarder via API
+            fetch('{{ path('app_admin_transporteurs_reorder')|e('js') }}', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'X-Requested-With': 'XMLHttpRequest'
+                },
+                body: JSON.stringify({
+                    transporteurs: reorderedData
+                })
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.success) {
+                    console.log('✅ Ordre des transporteurs mis à jour');
+                    // Afficher une notification de succès (si disponible)
+                    if (typeof showNotification === 'function') {
+                        showNotification('success', 'Ordre des transporteurs mis à jour');
+                    }
+                } else {
+                    console.error('❌ Erreur lors de la mise à jour:', data.error);
+                }
+            })
+            .catch(error => {
+                console.error('❌ Erreur réseau:', error);
+            });
+        }
+    });
+
+    console.log('✅ Drag & drop transporteurs initialisé avec SortableJS');
+}
+
+// Rendre la fonction globale
+window.initTransporteursDragDrop = initTransporteursDragDrop;
+
 function initTransporteurs() {
+    console.log('🚚 ===== Initialisation du module Transporteurs =====');
+
+    // Initialiser le drag & drop avec un délai
+    setTimeout(initTransporteursDragDrop, 200);
     console.log('Initialisation du module Transporteurs...');
     
     // Boutons d'édition
@@ -442,4 +557,11 @@ function initTransporteurs() {
 
 // Rendre la fonction globale
 window.initTransporteurs = initTransporteurs;
+
+// Initialisation pour AJAX loading
+if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', initTransporteurs);
+} else {
+    setTimeout(initTransporteurs, 50);
+}
 </script>

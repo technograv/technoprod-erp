@@ -161,6 +161,36 @@ final class LogisticsController extends AbstractController
         }
     }
 
+    #[Route('/transporteurs/reorder', name: 'app_admin_transporteurs_reorder', methods: ['POST'])]
+    public function reorderTransporteurs(Request $request): JsonResponse
+    {
+        try {
+            $data = json_decode($request->getContent(), true);
+
+            if (!isset($data['transporteurs']) || !is_array($data['transporteurs'])) {
+                return $this->json(['error' => 'Format de données invalide'], 400);
+            }
+
+            foreach ($data['transporteurs'] as $item) {
+                if (isset($item['id']) && isset($item['ordre'])) {
+                    $transporteur = $this->entityManager->find(Transporteur::class, $item['id']);
+                    if ($transporteur) {
+                        $transporteur->setOrdre($item['ordre']);
+                    }
+                }
+            }
+
+            $this->entityManager->flush();
+
+            return $this->json([
+                'success' => true,
+                'message' => 'Ordre des transporteurs mis à jour'
+            ]);
+        } catch (\Exception $e) {
+            return $this->json(['error' => 'Erreur lors de la réorganisation: ' . $e->getMessage()], 500);
+        }
+    }
+
     // ================================
     // FRAIS DE PORT
     // ================================
