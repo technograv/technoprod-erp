@@ -266,7 +266,7 @@ function ajouterAlerte() {
 
 // Modifier alerte
 function modifierAlerte(alerteId) {
-    fetch(`{{ path('app_admin_alertes_get', {id: '__ID__'}) }}`.replace('__ID__', alerteId))
+    fetch(`{{ path('app_admin_alerte_get', {id: '__ID__'}) }}`.replace('__ID__', alerteId))
         .then(response => response.json())
         .then(alerte => {
             // Remplir le formulaire
@@ -321,8 +321,8 @@ function sauvegarderAlerte() {
     };
     
     const url = alerteId ? 
-        `{{ path('app_admin_alertes_update', {id: '__ID__'}) }}`.replace('__ID__', alerteId) :
-        '{{ path('app_admin_alertes_create') }}';
+        `{{ path('app_admin_alerte_update', {id: '__ID__'}) }}`.replace('__ID__', alerteId) :
+        '{{ path('app_admin_alerte_create') }}';
     const method = alerteId ? 'PUT' : 'POST';
     
     fetch(url, {
@@ -372,7 +372,7 @@ function supprimerAlerte(alerteId) {
         return;
     }
     
-    fetch(`{{ path('app_admin_alertes_delete', {id: '__ID__'}) }}`.replace('__ID__', alerteId), {
+    fetch(`{{ path('app_admin_alerte_delete', {id: '__ID__'}) }}`.replace('__ID__', alerteId), {
         method: 'DELETE',
         headers: { 
             'X-Requested-With': 'XMLHttpRequest',
