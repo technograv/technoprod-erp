@@ -55,3 +55,18 @@ services:
                 <strong>TechnoProd</strong><br>
                 Email : contact@technoprod.fr<br>
                 Tél : 01 23 45 67 89
+
+    # Services de détection d'alertes
+    App\Service\AlerteDetection\ClientSansContactDetector:
+        tags: ['app.alerte_detector']
+
+    App\Service\AlerteDetection\ContactSansAdresseDetector:
+        tags: ['app.alerte_detector']
+
+    # Enregistrement automatique des détecteurs
+    App\Service\AlerteManager:
+        calls:
+            - method: registerDetector
+              arguments: ['@App\Service\AlerteDetection\ClientSansContactDetector']
+            - method: registerDetector
+              arguments: ['@App\Service\AlerteDetection\ContactSansAdresseDetector']

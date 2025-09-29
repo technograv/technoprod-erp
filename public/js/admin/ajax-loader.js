@@ -163,7 +163,9 @@ class AdminAjaxLoader {
             '#societes-content': 'initSocietes',
             '/admin/societes': 'initSocietes',
             '#transporteurs-content': 'initTransporteurs',
-            '/admin/transporteurs': 'initTransporteurs'
+            '/admin/transporteurs': 'initTransporteurs',
+            '#parametres': 'initParametres',
+            '/admin/parametres/': 'initParametres'
         };
 
         // Chercher la fonction d'initialisation par tabId ou par URL

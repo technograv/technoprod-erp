@@ -291,12 +291,217 @@ function sauvegarderBDD() {
 
 // Fonction d'initialisation globale pour les paramètres
 window.initParametres = function() {
-    console.log('⚙️ Initializing Parametres module');
-    // Charger les alertes
+    console.log('⚙️ [DEBUG] Initializing Parametres module');
+    console.log('⚙️ [DEBUG] Firefox detection test - navigator.userAgent:', navigator.userAgent);
+
+    // Debug: vérifier les éléments présents
+    console.log('🔍 [DEBUG] Checking alertes elements:');
+    console.log('🔍 [DEBUG] - alertes-admin-loading:', document.getElementById('alertes-admin-loading'));
+    console.log('🔍 [DEBUG] - alertes-admin-container:', document.getElementById('alertes-admin-container'));
+    console.log('🔍 [DEBUG] - alertes-admin-empty:', document.getElementById('alertes-admin-empty'));
+
+    // Charger les alertes manuelles
+    console.log('⚙️ [DEBUG] Checking if initAlertes function exists:', typeof initAlertes);
     if (typeof initAlertes === 'function') {
+        console.log('⚙️ [DEBUG] Calling initAlertes()');
         initAlertes();
+        console.log('⚙️ [DEBUG] initAlertes() completed');
+    } else {
+        console.warn('⚠️ [DEBUG] initAlertes function not found');
     }
+
+    // Initialiser les onglets des alertes
+    console.log('⚙️ [DEBUG] Calling initAlertesNavigation()');
+    initAlertesNavigation();
+    console.log('⚙️ [DEBUG] initAlertesNavigation() completed');
 };
+
+// Debug: Confirmer que la fonction initParametres a été définie
+console.log('✅ [DEBUG] window.initParametres defined:', typeof window.initParametres);
+console.log('✅ [DEBUG] window object keys containing "init":', Object.keys(window).filter(k => k.includes('init')));
+
+// Navigation entre alertes manuelles et types d'alertes
+function initAlertesNavigation() {
+    console.log('🔍 [DEBUG] initAlertesNavigation() starting');
+    const typesAlertesTab = document.getElementById('types-alertes-tab');
+    console.log('🔍 [DEBUG] types-alertes-tab element:', typesAlertesTab);
+
+    if (typesAlertesTab) {
+        console.log('🔍 [DEBUG] Adding event listener to types-alertes-tab');
+        typesAlertesTab.addEventListener('shown.bs.tab', function() {
+            console.log('🔍 [DEBUG] types-alertes-tab activated - loading types d\'alertes');
+            chargerTypesAlertes();
+        });
+        console.log('🔍 [DEBUG] Event listener added successfully');
+    } else {
+        console.warn('⚠️ [DEBUG] types-alertes-tab element not found!');
+    }
+}
+
+// Charger le contenu des types d'alertes
+function chargerTypesAlertes() {
+    console.log('🔍 [DEBUG] chargerTypesAlertes() starting');
+    const content = document.getElementById('types-alertes-content');
+    console.log('🔍 [DEBUG] types-alertes-content element:', content);
+
+    if (!content) {
+        console.error('❌ [DEBUG] types-alertes-content element not found, exiting');
+        return;
+    }
+
+    console.log('🔍 [DEBUG] Starting fetch to {{ path('app_admin_types_alerte') }}');
+    fetch('{{ path('app_admin_types_alerte') }}', {
+        method: 'GET',
+        headers: { 'X-Requested-With': 'XMLHttpRequest' }
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.types_alerte) {
+            afficherTypesAlertes(data.types_alerte);
+        } else {
+            throw new Error('Format de réponse invalide');
+        }
+    })
+    .catch(error => {
+        console.error('Erreur chargement types alertes:', error);
+        content.innerHTML = `
+            <div class="alert alert-danger">
+                <i class="fas fa-exclamation-triangle me-2"></i>
+                Erreur lors du chargement des types d'alertes
+            </div>
+        `;
+    });
+}
+
+// Afficher la liste des types d'alertes dans l'onglet parametres
+function afficherTypesAlertes(typesAlerte) {
+    console.log('🔍 [DEBUG] afficherTypesAlertes() called with:', typesAlerte);
+    const content = document.getElementById('types-alertes-content');
+
+    if (typesAlerte.length === 0) {
+        content.innerHTML = `
+            <div class="text-center py-4 text-muted">
+                <i class="fas fa-exclamation-triangle fa-3x mb-3"></i>
+                <h6>Aucun type d'alerte configuré</h6>
+                <p class="mb-0">
+                    <a href="{{ path('app_admin_types_alerte') }}" class="btn btn-primary" target="_blank">
+                        <i class="fas fa-plus me-1"></i>Créer votre premier type d'alerte
+                    </a>
+                </p>
+            </div>
+        `;
+        return;
+    }
+
+    let html = `
+        <div class="d-flex justify-content-between align-items-center mb-3">
+            <h6 class="mb-0">Types d'alertes configurés (${typesAlerte.length})</h6>
+            <div>
+                <button class="btn btn-success btn-sm me-2" onclick="lancerToutesDetections()">
+                    <i class="fas fa-play me-1"></i>Lancer détections
+                </button>
+                <a href="{{ path('app_admin_types_alerte') }}" class="btn btn-primary btn-sm" target="_blank">
+                    <i class="fas fa-cogs me-1"></i>Configuration avancée
+                </a>
+            </div>
+        </div>
+        <div class="table-responsive">
+            <table class="table table-sm table-hover">
+                <thead>
+                    <tr>
+                        <th>Nom</th>
+                        <th>Statut</th>
+                        <th>Sévérité</th>
+                        <th>Instances</th>
+                        <th>Actions</th>
+                    </tr>
+                </thead>
+                <tbody>
+    `;
+
+    typesAlerte.forEach(type => {
+        const statusBadge = type.actif ?
+            '<span class="badge bg-success">Actif</span>' :
+            '<span class="badge bg-secondary">Inactif</span>';
+
+        const severityColor = {
+            'info': 'primary',
+            'warning': 'warning',
+            'danger': 'danger'
+        };
+        const severityBadge = `<span class="badge bg-${severityColor[type.severity] || 'secondary'}">${type.severity.toUpperCase()}</span>`;
+
+        const instancesBadge = type.instances_count > 0 ?
+            `<span class="badge bg-warning">${type.instances_count}</span>` :
+            `<span class="badge bg-secondary">0</span>`;
+
+        html += `
+            <tr>
+                <td>
+                    <strong>${type.nom}</strong>
+                    ${type.description ? `<br><small class="text-muted">${type.description}</small>` : ''}
+                </td>
+                <td>${statusBadge}</td>
+                <td>${severityBadge}</td>
+                <td>${instancesBadge}</td>
+                <td>
+                    <button class="btn btn-outline-success btn-sm" onclick="lancerDetection(${type.id})" title="Lancer détection">
+                        <i class="fas fa-play"></i>
+                    </button>
+                </td>
+            </tr>
+        `;
+    });
+
+    html += `
+                </tbody>
+            </table>
+        </div>
+    `;
+
+    content.innerHTML = html;
+}
+
+// Actions pour les types d'alertes
+function lancerDetection(typeId) {
+    fetch('{{ path('app_admin_types_alerte_detect', {id: '__ID__'}) }}'.replace('__ID__', typeId), {
+        method: 'POST',
+        headers: { 'X-Requested-With': 'XMLHttpRequest' }
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.success) {
+            showNotification(data.message, 'success');
+            chargerTypesAlertes(); // Recharger la liste
+        } else {
+            showNotification('Erreur: ' + data.error, 'error');
+        }
+    })
+    .catch(error => {
+        console.error('Erreur détection:', error);
+        showNotification('Erreur lors de la détection', 'error');
+    });
+}
+
+function lancerToutesDetections() {
+    fetch('{{ path('app_admin_types_alerte_run_all') }}', {
+        method: 'POST',
+        headers: { 'X-Requested-With': 'XMLHttpRequest' }
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.success) {
+            showNotification(data.message, 'success');
+            chargerTypesAlertes(); // Recharger la liste
+        } else {
+            showNotification('Erreur: ' + data.error, 'error');
+        }
+    })
+    .catch(error => {
+        console.error('Erreur détections:', error);
+        showNotification('Erreur lors des détections', 'error');
+    });
+}
 </script>
 
 <!-- Section Gestion des Alertes -->
@@ -309,10 +514,36 @@ window.initParametres = function() {
     <div class="card-body">
         <div class="alert alert-info mb-3">
             <i class="fas fa-info-circle me-2"></i>
-            Les alertes permettent d'afficher des messages importants aux utilisateurs sur leur dashboard.
+            Gérez les alertes manuelles et les types d'alertes automatiques pour le système.
         </div>
-        
-        {% include 'admin/alertes.html.twig' %}
+
+        <!-- Sous-navigation pour les alertes -->
+        <ul class="nav nav-pills mb-3" id="alertes-nav" role="tablist">
+            <li class="nav-item" role="presentation">
+                <button class="nav-link active" id="alertes-manuelles-tab" data-bs-toggle="pill" data-bs-target="#alertes-manuelles" type="button" role="tab">
+                    <i class="fas fa-edit me-2"></i>Alertes Manuelles
+                </button>
+            </li>
+            <li class="nav-item" role="presentation">
+                <button class="nav-link" id="types-alertes-tab" data-bs-toggle="pill" data-bs-target="#types-alertes" type="button" role="tab">
+                    <i class="fas fa-cogs me-2"></i>Types d'Alertes Automatiques
+                </button>
+            </li>
+        </ul>
+
+        <div class="tab-content" id="alertes-tab-content">
+            <div class="tab-pane fade show active" id="alertes-manuelles" role="tabpanel">
+                {% include 'admin/alertes.html.twig' %}
+            </div>
+            <div class="tab-pane fade" id="types-alertes" role="tabpanel">
+                <div id="types-alertes-content">
+                    <div class="text-center py-4">
+                        <div class="spinner-border text-primary" role="status"></div>
+                        <div class="mt-2 text-muted">Chargement des types d'alertes...</div>
+                    </div>
+                </div>
+            </div>
+        </div>
     </div>
 </div>
 

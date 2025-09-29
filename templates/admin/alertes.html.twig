@@ -173,41 +173,131 @@
 
 <script>
 function initAlertes() {
-    console.log('🔍 DEBUG: Initialisation des alertes admin');
-    chargerAlertesAdmin();
+    console.log('🔍 [DEBUG ALERTES] initAlertes() starting');
+    console.log('🔍 [DEBUG ALERTES] NOT calling chargerAlertesAdmin() to avoid loops');
+
+    // Ajouter un bouton pour charger manuellement
+    const container = document.getElementById('alertes-admin-container');
+    const loading = document.getElementById('alertes-admin-loading');
+    const empty = document.getElementById('alertes-admin-empty');
+
+    console.log('🔍 [DEBUG ALERTES] Elements check:');
+    console.log('🔍 [DEBUG ALERTES] - container:', container);
+    console.log('🔍 [DEBUG ALERTES] - loading:', loading);
+    console.log('🔍 [DEBUG ALERTES] - empty:', empty);
+
+    if (loading) {
+        loading.style.display = 'none';
+    }
+    if (container) {
+        container.style.display = 'none';
+    }
+    if (empty) {
+        empty.innerHTML = `
+            <div class="text-center py-4">
+                <i class="fas fa-bell fa-3x mb-3 text-muted"></i>
+                <h6>Alertes Manuelles</h6>
+                <p class="text-muted mb-3">Gestion des alertes créées manuellement par les administrateurs</p>
+                <button class="btn btn-primary" onclick="chargerAlertesAdmin()">
+                    <i class="fas fa-refresh me-2"></i>Charger les alertes
+                </button>
+            </div>
+        `;
+        empty.style.display = 'block';
+    }
 }
 
 // Charger les alertes pour l'admin
 function chargerAlertesAdmin() {
+    console.log('🔍 [DEBUG ALERTES] chargerAlertesAdmin() starting');
+
     const loading = document.getElementById('alertes-admin-loading');
     const container = document.getElementById('alertes-admin-container');
     const empty = document.getElementById('alertes-admin-empty');
-    
-    loading.style.display = 'block';
-    container.style.display = 'none';
-    empty.style.display = 'none';
-    
+
+    console.log('🔍 [DEBUG ALERTES] Elements for loading:');
+    console.log('🔍 [DEBUG ALERTES] - loading:', loading);
+    console.log('🔍 [DEBUG ALERTES] - container:', container);
+    console.log('🔍 [DEBUG ALERTES] - empty:', empty);
+
+    if (loading) loading.style.display = 'block';
+    if (container) container.style.display = 'none';
+    if (empty) empty.style.display = 'none';
+
+    console.log('🔍 [DEBUG ALERTES] Starting fetch to {{ path('app_admin_alertes') }}');
+
+    // Récupérer le token CSRF depuis l'en-tête de la page principale
+    let csrfToken = null;
+    const csrfMeta = document.querySelector('meta[name="csrf-token"]');
+    if (csrfMeta) {
+        csrfToken = csrfMeta.getAttribute('content');
+        console.log('🔍 [DEBUG ALERTES] CSRF token found:', csrfToken ? 'YES' : 'NO');
+    } else {
+        console.log('🔍 [DEBUG ALERTES] CSRF token meta not found');
+    }
+
+    const headers = { 'X-Requested-With': 'XMLHttpRequest' };
+    if (csrfToken) {
+        headers['X-CSRF-Token'] = csrfToken;
+    }
+
     fetch('{{ path('app_admin_alertes') }}', {
         method: 'GET',
-        headers: { 'X-Requested-With': 'XMLHttpRequest' }
+        headers: headers
     })
-    .then(response => response.json())
+    .then(response => {
+        console.log('🔍 [DEBUG ALERTES] Fetch response received:', response);
+        console.log('🔍 [DEBUG ALERTES] Response status:', response.status);
+        console.log('🔍 [DEBUG ALERTES] Response URL:', response.url);
+
+        // Vérifier si on a été redirigé vers la page de login
+        if (response.url.includes('/login') || response.status === 302) {
+            console.error('❌ [DEBUG ALERTES] Redirected to login - authentication issue');
+            throw new Error('Authentification expirée');
+        }
+
+        if (!response.ok) {
+            console.error('❌ [DEBUG ALERTES] HTTP error:', response.status, response.statusText);
+            throw new Error('Erreur HTTP: ' + response.status);
+        }
+
+        return response.json();
+    })
     .then(data => {
-        loading.style.display = 'none';
-        
-        if (data.alertes.length === 0) {
-            empty.style.display = 'block';
-        } else {
-            container.style.display = 'block';
+        console.log('🔍 [DEBUG ALERTES] JSON data received:', data);
+        if (loading) loading.style.display = 'none';
+
+        if (data.alertes && data.alertes.length === 0) {
+            console.log('🔍 [DEBUG ALERTES] No alertes found, showing empty');
+            if (empty) empty.style.display = 'block';
+        } else if (data.alertes) {
+            console.log('🔍 [DEBUG ALERTES] Alertes found:', data.alertes.length);
+            if (container) container.style.display = 'block';
             afficherTableauAlertes(data.alertes);
+        } else {
+            console.error('❌ [DEBUG ALERTES] Invalid data format:', data);
         }
     })
     .catch(error => {
-        console.error('Erreur chargement alertes:', error);
-        loading.style.display = 'none';
-        container.style.display = 'block';
-        document.getElementById('alertes-admin-tbody').innerHTML = 
-            '<tr><td colspan="7" class="text-center text-danger">Erreur de chargement</td></tr>';
+        console.error('❌ [DEBUG ALERTES] Fetch error:', error);
+        if (loading) loading.style.display = 'none';
+
+        // Afficher l'erreur dans la section empty
+        if (empty) {
+            empty.innerHTML = `
+                <div class="text-center py-4">
+                    <i class="fas fa-exclamation-triangle fa-3x mb-3 text-danger"></i>
+                    <h6 class="text-danger">Erreur de chargement des alertes</h6>
+                    <p class="text-muted mb-3">${error.message}</p>
+                    <button class="btn btn-outline-primary" onclick="chargerAlertesAdmin()">
+                        <i class="fas fa-redo me-2"></i>Réessayer
+                    </button>
+                </div>
+            `;
+            empty.style.display = 'block';
+        }
+
+        if (container) container.style.display = 'none';
     });
 }
 
@@ -325,20 +415,30 @@ function sauvegarderAlerte() {
         '{{ path('app_admin_alerte_create') }}';
     const method = alerteId ? 'PUT' : 'POST';
     
+    // Récupérer le token CSRF de manière sécurisée
+    const csrfMeta = document.querySelector('meta[name="csrf-token"]');
+    const csrfToken = csrfMeta ? csrfMeta.getAttribute('content') : null;
+
+    const headers = {
+        'Content-Type': 'application/json',
+        'X-Requested-With': 'XMLHttpRequest'
+    };
+
+    if (csrfToken) {
+        headers['X-CSRF-Token'] = csrfToken;
+    }
+
     fetch(url, {
         method: method,
-        headers: {
-            'Content-Type': 'application/json',
-            'X-Requested-With': 'XMLHttpRequest',
-            'X-CSRF-Token': document.querySelector('meta[name="csrf-token"]').getAttribute('content')
-        },
+        headers: headers,
         body: JSON.stringify(data)
     })
     .then(response => response.json())
     .then(data => {
         if (data.success) {
             bootstrap.Modal.getInstance(document.getElementById('alerteModal')).hide();
-            chargerAlertesAdmin();
+            console.log('🔍 [DEBUG ALERTES] Sauvegarde réussie - SKIP chargerAlertesAdmin() to avoid loops');
+            // chargerAlertesAdmin();
             
             // Notification succès
             const toast = document.createElement('div');
@@ -372,17 +472,27 @@ function supprimerAlerte(alerteId) {
         return;
     }
     
+    // Récupérer le token CSRF de manière sécurisée
+    const csrfMeta = document.querySelector('meta[name="csrf-token"]');
+    const csrfToken = csrfMeta ? csrfMeta.getAttribute('content') : null;
+
+    const headers = {
+        'X-Requested-With': 'XMLHttpRequest'
+    };
+
+    if (csrfToken) {
+        headers['X-CSRF-Token'] = csrfToken;
+    }
+
     fetch(`{{ path('app_admin_alerte_delete', {id: '__ID__'}) }}`.replace('__ID__', alerteId), {
         method: 'DELETE',
-        headers: { 
-            'X-Requested-With': 'XMLHttpRequest',
-            'X-CSRF-Token': document.querySelector('meta[name="csrf-token"]').getAttribute('content')
-        }
+        headers: headers
     })
     .then(response => response.json())
     .then(data => {
         if (data.success) {
-            chargerAlertesAdmin();
+            console.log('🔍 [DEBUG ALERTES] Suppression réussie - SKIP chargerAlertesAdmin() to avoid loops');
+            // chargerAlertesAdmin();
         } else {
             alert('Erreur: ' + data.message);
         }

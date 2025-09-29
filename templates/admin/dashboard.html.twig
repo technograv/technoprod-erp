@@ -1041,11 +1041,11 @@
             parametres: '{{ path("app_admin_parametres") }}'
         };
     </script>
-    <script src="{{ asset('js/services/DragDropService.js') }}"></script>
-    <script src="{{ asset('js/admin/ajax-loader.js') }}"></script>
-    <script src="{{ asset('js/admin/tab-manager.js') }}"></script>
-    <script src="{{ asset('js/admin/dashboard.js') }}"></script>
-    
+    <script src="{{ asset('js/services/DragDropService.js') }}?v={{ 'now'|date('Ymd-His') }}"></script>
+    <script src="{{ asset('js/admin/ajax-loader.js') }}?v={{ 'now'|date('Ymd-His') }}"></script>
+    <script src="{{ asset('js/admin/tab-manager.js') }}?v={{ 'now'|date('Ymd-His') }}"></script>
+    <script src="{{ asset('js/admin/dashboard.js') }}?v={{ 'now'|date('Ymd-His') }}"></script>
+
     <!-- Legacy functions for backward compatibility -->
-    <script src="{{ asset('js/admin/legacy-functions.js') }}"></script>
+    <script src="{{ asset('js/admin/legacy-functions.js') }}?v={{ 'now'|date('Ymd-His') }}"></script>
 {% endblock %}

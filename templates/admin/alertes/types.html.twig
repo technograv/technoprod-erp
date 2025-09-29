@@ -1,0 +1,527 @@
+<h3 class="section-title">
+    <i class="fas fa-exclamation-triangle me-2 text-warning"></i>Types d'alertes système
+</h3>
+
+<div class="row">
+    <div class="col-lg-12">
+        <div class="card">
+            <div class="card-header d-flex justify-content-between align-items-center">
+                <h6 class="mb-0">
+                    <i class="fas fa-list me-2"></i>Types d'alertes configurés
+                </h6>
+                <div class="btn-group">
+                    <button type="button" class="btn btn-success btn-sm" onclick="runAllDetections()">
+                        <i class="fas fa-play me-1"></i>Lancer toutes les détections
+                    </button>
+                    <button type="button" class="btn btn-primary btn-sm" onclick="ajouterTypeAlerte()">
+                        <i class="fas fa-plus me-1"></i>Nouveau type
+                    </button>
+                </div>
+            </div>
+            <div class="card-body">
+                <div id="types-alerte-loading" class="text-center py-4">
+                    <div class="spinner-border text-primary" role="status"></div>
+                    <div class="mt-2 text-muted">Chargement des types d'alertes...</div>
+                </div>
+                <div id="types-alerte-container" style="display: none;">
+                    <div class="table-responsive">
+                        <table class="table table-hover" id="sortable-types-alerte">
+                            <thead>
+                                <tr>
+                                    <th width="30"><i class="fas fa-grip-vertical"></i></th>
+                                    <th width="50">Ordre</th>
+                                    <th>Nom</th>
+                                    <th>Détecteur</th>
+                                    <th width="80">Statut</th>
+                                    <th width="100">Sévérité</th>
+                                    <th width="80">Instances</th>
+                                    <th width="120">Actions</th>
+                                </tr>
+                            </thead>
+                            <tbody id="types-alerte-tbody">
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+                <div id="types-alerte-empty" style="display: none;" class="text-center py-4 text-muted">
+                    <i class="fas fa-exclamation-triangle fa-3x mb-3"></i>
+                    <h6>Aucun type d'alerte configuré</h6>
+                    <p class="mb-0">Commencez par créer votre premier type d'alerte système.</p>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Modal Création/Édition Type Alerte -->
+<div class="modal fade" id="typeAlerteModal" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-lg">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title" id="typeAlerteModalTitle">
+                    <i class="fas fa-exclamation-triangle me-2"></i>Nouveau type d'alerte
+                </h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body">
+                <form id="typeAlerteForm">
+                    <input type="hidden" id="typeAlerteId" name="id">
+
+                    <div class="row">
+                        <div class="col-md-8">
+                            <div class="mb-3">
+                                <label for="typeAlerteNom" class="form-label">Nom du type d'alerte *</label>
+                                <input type="text" class="form-control" id="typeAlerteNom" name="nom" required maxlength="255">
+                            </div>
+                        </div>
+                        <div class="col-md-4">
+                            <div class="mb-3">
+                                <label for="typeAlerteOrdre" class="form-label">Ordre d'affichage</label>
+                                <input type="number" class="form-control" id="typeAlerteOrdre" name="ordre" min="0" value="0">
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="mb-3">
+                        <label for="typeAlerteDescription" class="form-label">Description</label>
+                        <textarea class="form-control" id="typeAlerteDescription" name="description" rows="2"></textarea>
+                    </div>
+
+                    <div class="row">
+                        <div class="col-md-6">
+                            <div class="mb-3">
+                                <label for="typeAlerteDetecteur" class="form-label">Détecteur *</label>
+                                <select class="form-select" id="typeAlerteDetecteur" name="classeDetection" required>
+                                    <option value="">-- Choisir un détecteur --</option>
+                                    {% for className, detector in detecteurs %}
+                                        <option value="{{ className }}">{{ detector.name }}</option>
+                                    {% endfor %}
+                                </select>
+                                <small class="form-text text-muted">Classe PHP responsable de la détection</small>
+                            </div>
+                        </div>
+                        <div class="col-md-6">
+                            <div class="mb-3">
+                                <label for="typeAlerteSeverity" class="form-label">Sévérité</label>
+                                <select class="form-select" id="typeAlerteSeverity" name="severity">
+                                    <option value="info">Information (bleu)</option>
+                                    <option value="warning" selected>Attention (orange)</option>
+                                    <option value="danger">Danger (rouge)</option>
+                                </select>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="row">
+                        <div class="col-md-6">
+                            <div class="mb-3">
+                                <label class="form-label">Rôles cibles</label>
+                                <div class="form-check">
+                                    <input class="form-check-input" type="checkbox" id="roleAdmin" name="rolesCibles" value="ROLE_ADMIN">
+                                    <label class="form-check-label" for="roleAdmin">Administrateurs</label>
+                                </div>
+                                <div class="form-check">
+                                    <input class="form-check-input" type="checkbox" id="roleManager" name="rolesCibles" value="ROLE_MANAGER">
+                                    <label class="form-check-label" for="roleManager">Managers</label>
+                                </div>
+                                <div class="form-check">
+                                    <input class="form-check-input" type="checkbox" id="roleCommercial" name="rolesCibles" value="ROLE_COMMERCIAL">
+                                    <label class="form-check-label" for="roleCommercial">Commerciaux</label>
+                                </div>
+                                <div class="form-check">
+                                    <input class="form-check-input" type="checkbox" id="roleComptable" name="rolesCibles" value="ROLE_COMPTABLE">
+                                    <label class="form-check-label" for="roleComptable">Comptables</label>
+                                </div>
+                                <div class="form-check">
+                                    <input class="form-check-input" type="checkbox" id="roleUser" name="rolesCibles" value="ROLE_USER">
+                                    <label class="form-check-label" for="roleUser">Utilisateurs</label>
+                                </div>
+                                <small class="form-text text-muted">Laissez vide pour afficher à tous les utilisateurs</small>
+                            </div>
+                        </div>
+                        <div class="col-md-6">
+                            <div class="mb-3">
+                                <label class="form-label">Sociétés cibles</label>
+                                <div class="form-check">
+                                    <input class="form-check-input" type="checkbox" id="touteSociete" onchange="toggleSocietes()">
+                                    <label class="form-check-label" for="touteSociete">
+                                        <strong>Toutes les sociétés</strong>
+                                    </label>
+                                </div>
+                                <div id="societes-list">
+                                    {% for societe in societes %}
+                                        <div class="form-check">
+                                            <input class="form-check-input" type="checkbox" id="societe{{ societe.id }}" name="societesCibles" value="{{ societe.id }}">
+                                            <label class="form-check-label" for="societe{{ societe.id }}">{{ societe.nom }}</label>
+                                        </div>
+                                    {% endfor %}
+                                </div>
+                                <small class="form-text text-muted">Laissez vide pour afficher à toutes les sociétés</small>
+                            </div>
+
+                            <div class="mb-3">
+                                <div class="form-check">
+                                    <input class="form-check-input" type="checkbox" id="typeAlerteActif" name="actif" checked>
+                                    <label class="form-check-label" for="typeAlerteActif">
+                                        Type d'alerte actif
+                                    </label>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </form>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Annuler</button>
+                <button type="button" class="btn btn-primary" onclick="sauvegarderTypeAlerte()">
+                    <i class="fas fa-save me-1"></i>Enregistrer
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<style>
+.drag-handle {
+    cursor: move;
+    color: #6c757d;
+}
+.sortable-ghost {
+    opacity: 0.4;
+}
+.badge-severity {
+    font-size: 0.75rem;
+    padding: 0.4rem 0.6rem;
+}
+</style>
+
+<script src="https://cdn.jsdelivr.net/npm/sortablejs@1.15.0/Sortable.min.js"></script>
+
+<script>
+let dragDropTypesAlerteInstance;
+
+function initTypesAlerte() {
+    console.log('🔍 DEBUG: Initialisation des types d\'alertes admin');
+    chargerTypesAlerteAdmin();
+    initDragDropTypesAlerte();
+}
+
+function chargerTypesAlerteAdmin() {
+    const loading = document.getElementById('types-alerte-loading');
+    const container = document.getElementById('types-alerte-container');
+    const empty = document.getElementById('types-alerte-empty');
+
+    loading.style.display = 'block';
+    container.style.display = 'none';
+    empty.style.display = 'none';
+
+    fetch('{{ path('app_admin_types_alerte') }}', {
+        method: 'GET',
+        headers: { 'X-Requested-With': 'XMLHttpRequest' }
+    })
+    .then(response => response.json())
+    .then(data => {
+        loading.style.display = 'none';
+
+        if (data.types_alerte && data.types_alerte.length === 0) {
+            empty.style.display = 'block';
+        } else {
+            container.style.display = 'block';
+            afficherTableauTypesAlerte(data.types_alerte || []);
+        }
+    })
+    .catch(error => {
+        console.error('Erreur chargement types alertes:', error);
+        loading.style.display = 'none';
+        container.style.display = 'block';
+        document.getElementById('types-alerte-tbody').innerHTML =
+            '<tr><td colspan="8" class="text-center text-danger">Erreur de chargement</td></tr>';
+    });
+}
+
+function initDragDropTypesAlerte() {
+    const tableBody = document.getElementById('types-alerte-tbody');
+    if (tableBody && !dragDropTypesAlerteInstance) {
+        dragDropTypesAlerteInstance = new Sortable(tableBody, {
+            handle: '.drag-handle',
+            animation: 150,
+            ghostClass: 'sortable-ghost',
+            onEnd: function(evt) {
+                const rows = Array.from(evt.to.children);
+                const reorderData = rows.map((row, index) => ({
+                    id: parseInt(row.dataset.id),
+                    ordre: index
+                }));
+
+                sauvegarderOrdreTypesAlerte(reorderData);
+            }
+        });
+    }
+}
+
+function sauvegarderOrdreTypesAlerte(reorderData) {
+    fetch('{{ path('app_admin_types_alerte_reorder') }}', {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json',
+            'X-Requested-With': 'XMLHttpRequest'
+        },
+        body: JSON.stringify({ types: reorderData })
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (!data.success) {
+            console.error('Erreur réorganisation:', data.error);
+            chargerTypesAlerteAdmin();
+        }
+    })
+    .catch(error => {
+        console.error('Erreur réorganisation:', error);
+        chargerTypesAlerteAdmin();
+    });
+}
+
+function afficherTableauTypesAlerte(typesAlerte) {
+    const tbody = document.getElementById('types-alerte-tbody');
+    let html = '';
+
+    typesAlerte.forEach(type => {
+        const statusBadge = type.actif ?
+            '<span class="badge bg-success">Actif</span>' :
+            '<span class="badge bg-secondary">Inactif</span>';
+
+        const severityColor = {
+            'info': 'primary',
+            'warning': 'warning',
+            'danger': 'danger'
+        };
+        const severityBadge = `<span class="badge badge-severity bg-${severityColor[type.severity] || 'secondary'}">${type.severity.toUpperCase()}</span>`;
+
+        const instancesBadge = type.instances_count > 0 ?
+            `<span class="badge bg-warning">${type.instances_count}</span>` :
+            `<span class="badge bg-secondary">0</span>`;
+
+        html += `
+            <tr data-id="${type.id}">
+                <td class="text-center">
+                    <i class="fas fa-grip-vertical drag-handle"></i>
+                </td>
+                <td class="text-center"><strong>${type.ordre}</strong></td>
+                <td>
+                    <div class="fw-bold">${type.nom}</div>
+                    ${type.description ? `<small class="text-muted">${type.description}</small>` : ''}
+                </td>
+                <td>
+                    <code class="small">${type.detecteur_nom || 'N/A'}</code>
+                </td>
+                <td>${statusBadge}</td>
+                <td>${severityBadge}</td>
+                <td class="text-center">${instancesBadge}</td>
+                <td>
+                    <button class="btn btn-outline-success btn-sm me-1" onclick="lancerDetection(${type.id})" title="Lancer détection">
+                        <i class="fas fa-play"></i>
+                    </button>
+                    <button class="btn btn-outline-primary btn-sm me-1" onclick="modifierTypeAlerte(${type.id})" title="Modifier">
+                        <i class="fas fa-edit"></i>
+                    </button>
+                    <button class="btn btn-outline-danger btn-sm" onclick="supprimerTypeAlerte(${type.id})" title="Supprimer">
+                        <i class="fas fa-trash"></i>
+                    </button>
+                </td>
+            </tr>
+        `;
+    });
+
+    tbody.innerHTML = html;
+
+    setTimeout(() => {
+        initDragDropTypesAlerte();
+    }, 100);
+}
+
+function ajouterTypeAlerte() {
+    resetTypeAlerteForm();
+    document.getElementById('typeAlerteModalTitle').innerHTML = '<i class="fas fa-exclamation-triangle me-2"></i>Nouveau type d\'alerte';
+    const modal = new bootstrap.Modal(document.getElementById('typeAlerteModal'));
+    modal.show();
+}
+
+function modifierTypeAlerte(typeId) {
+    // TODO: Implementer récupération des données du type
+    resetTypeAlerteForm();
+    document.getElementById('typeAlerteModalTitle').innerHTML = '<i class="fas fa-edit me-2"></i>Modifier le type d\'alerte';
+    const modal = new bootstrap.Modal(document.getElementById('typeAlerteModal'));
+    modal.show();
+}
+
+function sauvegarderTypeAlerte() {
+    const form = document.getElementById('typeAlerteForm');
+    const formData = new FormData(form);
+    const typeId = document.getElementById('typeAlerteId').value;
+
+    const rolesCibles = [];
+    document.querySelectorAll('input[name="rolesCibles"]:checked').forEach(input => {
+        rolesCibles.push(input.value);
+    });
+
+    const societesCibles = [];
+    document.querySelectorAll('input[name="societesCibles"]:checked').forEach(input => {
+        societesCibles.push(parseInt(input.value));
+    });
+
+    const data = {
+        nom: formData.get('nom'),
+        description: formData.get('description'),
+        classeDetection: formData.get('classeDetection'),
+        severity: formData.get('severity'),
+        ordre: parseInt(formData.get('ordre')) || 0,
+        actif: document.getElementById('typeAlerteActif').checked,
+        rolesCibles: rolesCibles,
+        societesCibles: societesCibles
+    };
+
+    const url = typeId ?
+        '{{ path('app_admin_types_alerte_update', {id: '__ID__'}) }}'.replace('__ID__', typeId) :
+        '{{ path('app_admin_types_alerte_create') }}';
+    const method = typeId ? 'PUT' : 'POST';
+
+    fetch(url, {
+        method: method,
+        headers: {
+            'Content-Type': 'application/json',
+            'X-Requested-With': 'XMLHttpRequest'
+        },
+        body: JSON.stringify(data)
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.success) {
+            bootstrap.Modal.getInstance(document.getElementById('typeAlerteModal')).hide();
+            chargerTypesAlerteAdmin();
+            showToast(data.message, 'success');
+        } else {
+            showToast('Erreur: ' + data.error, 'error');
+        }
+    })
+    .catch(error => {
+        console.error('Erreur sauvegarde type alerte:', error);
+        showToast('Erreur lors de la sauvegarde', 'error');
+    });
+}
+
+function supprimerTypeAlerte(typeId) {
+    if (!confirm('Êtes-vous sûr de vouloir supprimer ce type d\'alerte ?')) {
+        return;
+    }
+
+    fetch('{{ path('app_admin_types_alerte_delete', {id: '__ID__'}) }}'.replace('__ID__', typeId), {
+        method: 'DELETE',
+        headers: { 'X-Requested-With': 'XMLHttpRequest' }
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.success) {
+            chargerTypesAlerteAdmin();
+            showToast(data.message, 'success');
+        } else {
+            showToast('Erreur: ' + data.error, 'error');
+        }
+    })
+    .catch(error => {
+        console.error('Erreur suppression type alerte:', error);
+        showToast('Erreur lors de la suppression', 'error');
+    });
+}
+
+function lancerDetection(typeId) {
+    fetch('{{ path('app_admin_types_alerte_detect', {id: '__ID__'}) }}'.replace('__ID__', typeId), {
+        method: 'POST',
+        headers: { 'X-Requested-With': 'XMLHttpRequest' }
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.success) {
+            chargerTypesAlerteAdmin();
+            showToast(data.message, 'success');
+        } else {
+            showToast('Erreur: ' + data.error, 'error');
+        }
+    })
+    .catch(error => {
+        console.error('Erreur détection:', error);
+        showToast('Erreur lors de la détection', 'error');
+    });
+}
+
+function runAllDetections() {
+    if (!confirm('Lancer toutes les détections d\'alertes ?')) {
+        return;
+    }
+
+    fetch('{{ path('app_admin_types_alerte_run_all') }}', {
+        method: 'POST',
+        headers: { 'X-Requested-With': 'XMLHttpRequest' }
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.success) {
+            chargerTypesAlerteAdmin();
+            showToast(data.message, 'success');
+        } else {
+            showToast('Erreur: ' + data.error, 'error');
+        }
+    })
+    .catch(error => {
+        console.error('Erreur détections:', error);
+        showToast('Erreur lors des détections', 'error');
+    });
+}
+
+function toggleSocietes() {
+    const checkbox = document.getElementById('touteSociete');
+    const societeInputs = document.querySelectorAll('input[name="societesCibles"]');
+
+    societeInputs.forEach(input => {
+        input.disabled = checkbox.checked;
+        if (checkbox.checked) {
+            input.checked = false;
+        }
+    });
+}
+
+function resetTypeAlerteForm() {
+    document.getElementById('typeAlerteForm').reset();
+    document.getElementById('typeAlerteId').value = '';
+    document.querySelectorAll('input[name="rolesCibles"]').forEach(input => {
+        input.checked = false;
+    });
+    document.querySelectorAll('input[name="societesCibles"]').forEach(input => {
+        input.checked = false;
+        input.disabled = false;
+    });
+    document.getElementById('touteSociete').checked = false;
+}
+
+function showToast(message, type) {
+    const toast = document.createElement('div');
+    const bgClass = type === 'success' ? 'text-bg-success' : 'text-bg-danger';
+    const icon = type === 'success' ? 'fa-check' : 'fa-times';
+
+    toast.className = `toast align-items-center ${bgClass} border-0 position-fixed`;
+    toast.style.cssText = 'top: 20px; right: 20px; z-index: 9999;';
+    toast.innerHTML = `
+        <div class="d-flex">
+            <div class="toast-body">
+                <i class="fas ${icon} me-2"></i>${message}
+            </div>
+            <button type="button" class="btn-close btn-close-white me-2 m-auto" data-bs-dismiss="toast"></button>
+        </div>
+    `;
+
+    document.body.appendChild(toast);
+    const bsToast = new bootstrap.Toast(toast);
+    bsToast.show();
+
+    setTimeout(() => toast.remove(), 5000);
+}
+</script>
