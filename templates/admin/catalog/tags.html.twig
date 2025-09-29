@@ -19,7 +19,7 @@
         <table class="table table-hover" id="tagsTable">
             <thead class="table-dark">
                 <tr>
-                    <th>Ordre</th>
+                    <th width="3%" title="Glisser pour réorganiser"><i class="fas fa-grip-vertical"></i></th>
                     <th>Nom</th>
                     <th>Couleur</th>
                     <th>Description</th>
@@ -29,7 +29,7 @@
                     <th>Actions</th>
                 </tr>
             </thead>
-            <tbody>
+            <tbody id="sortable-tags">
                 {% if error is defined %}
                     <tr>
                         <td colspan="8" class="text-center text-danger">
@@ -39,9 +39,9 @@
                     </tr>
                 {% elseif tags is defined and tags is not empty %}
                     {% for tag in tags %}
-                    <tr data-id="{{ tag.id }}">
-                    <td>
-                        <span class="badge bg-secondary">{{ tag.ordre }}</span>
+                    <tr data-id="{{ tag.id }}" class="sortable-item">
+                    <td class="text-center drag-handle" style="cursor: grab;">
+                        <i class="fas fa-grip-vertical text-muted"></i>
                     </td>
                     <td>
                         <span class="badge" style="background-color: {{ tag.couleur ?? '#3498db' }}; color: white;">
@@ -228,8 +228,123 @@
     </div>
 </div>
 
+<!-- SortableJS CDN -->
+<script src="https://cdn.jsdelivr.net/npm/sortablejs@1.15.0/Sortable.min.js"></script>
+
+<style>
+/* Styles pour le drag & drop */
+.drag-handle {
+    cursor: grab !important;
+}
+.drag-handle:active {
+    cursor: grabbing !important;
+}
+.sortable-ghost {
+    opacity: 0.4;
+    background: #f0f0f0;
+}
+.sortable-chosen {
+    background: #e8f4fd !important;
+}
+.sortable-drag {
+    opacity: 1 !important;
+}
+</style>
+
 <script>
+console.log('🏷️ ===== DEBUT SCRIPT TAGS =====');
+let dragDropTagsInstance = null;
+
+function initTagsDragDrop() {
+    console.log('🏷️ Initialisation du drag & drop tags');
+
+    // Vérifier que l'élément DOM existe
+    const sortableContainer = document.getElementById('sortable-tags');
+    if (!sortableContainer) {
+        console.error('❌ Container #sortable-tags non trouvé, retry dans 200ms...');
+        setTimeout(initTagsDragDrop, 200);
+        return;
+    }
+
+    // Vérifier que SortableJS est disponible
+    if (typeof Sortable === 'undefined') {
+        console.error('❌ SortableJS non disponible, retry dans 100ms...');
+        setTimeout(initTagsDragDrop, 100);
+        return;
+    }
+
+    console.log('✅ Tous les prérequis sont disponibles, initialisation...');
+
+    // Détruire l'instance précédente si elle existe
+    if (dragDropTagsInstance) {
+        dragDropTagsInstance.destroy();
+    }
+
+    // Configuration SortableJS
+    dragDropTagsInstance = new Sortable(document.getElementById('sortable-tags'), {
+        handle: '.drag-handle',
+        animation: 150,
+        ghostClass: 'sortable-ghost',
+        chosenClass: 'sortable-chosen',
+        dragClass: 'sortable-drag',
+
+        onEnd: function(evt) {
+            console.log('🔄 Drag terminé - sauvegarde de l\'ordre');
+
+            // Récupérer tous les IDs dans le nouvel ordre
+            const items = document.querySelectorAll('#sortable-tags .sortable-item');
+            const reorderedData = [];
+
+            items.forEach((item, index) => {
+                const id = parseInt(item.dataset.id);
+                reorderedData.push({
+                    id: id,
+                    ordre: index + 1
+                });
+            });
+
+            console.log('🔄 Nouvel ordre:', reorderedData);
+
+            // Sauvegarder via API
+            fetch('{{ path('app_admin_tags_reorder')|e('js') }}', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'X-Requested-With': 'XMLHttpRequest'
+                },
+                body: JSON.stringify({
+                    tags: reorderedData
+                })
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.success) {
+                    console.log('✅ Ordre des tags mis à jour');
+                    // Afficher une notification de succès (si disponible)
+                    if (typeof showNotification === 'function') {
+                        showNotification('success', 'Ordre des tags mis à jour');
+                    }
+                } else {
+                    console.error('❌ Erreur lors de la mise à jour:', data.error);
+                }
+            })
+            .catch(error => {
+                console.error('❌ Erreur réseau:', error);
+            });
+        }
+    });
+
+    console.log('✅ Drag & drop tags initialisé avec SortableJS');
+}
+
+// Rendre la fonction globale
+window.initTagsDragDrop = initTagsDragDrop;
+
 function initTagsClientsEvents() {
+    console.log('🏷️ ===== Initialisation du module Tags =====');
+
+    // Initialiser le drag & drop avec un délai
+    setTimeout(initTagsDragDrop, 200);
     // Synchronisation couleur picker et texte
     const colorPicker = document.getElementById('tag-couleur');
     const colorText = document.getElementById('tag-couleur-text');

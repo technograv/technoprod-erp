@@ -884,6 +884,36 @@ final class ConfigurationController extends AbstractController
     // UNITES
     // ================================
 
+    #[Route('/unites/reorder', name: 'app_admin_unites_reorder', methods: ['POST'])]
+    public function reorderUnites(Request $request): JsonResponse
+    {
+        try {
+            $data = json_decode($request->getContent(), true);
+
+            if (!isset($data['unites']) || !is_array($data['unites'])) {
+                return $this->json(['error' => 'Format de données invalide'], 400);
+            }
+
+            foreach ($data['unites'] as $item) {
+                if (isset($item['id']) && isset($item['ordre'])) {
+                    $unite = $this->entityManager->find(Unite::class, $item['id']);
+                    if ($unite) {
+                        $unite->setOrdre($item['ordre']);
+                    }
+                }
+            }
+
+            $this->entityManager->flush();
+
+            return $this->json([
+                'success' => true,
+                'message' => 'Ordre des unités mis à jour'
+            ]);
+        } catch (\Exception $e) {
+            return $this->json(['error' => 'Erreur lors de la réorganisation: ' . $e->getMessage()], 500);
+        }
+    }
+
     #[Route('/unites', name: 'app_admin_unites', methods: ['GET'])]
     public function unites(): Response
     {

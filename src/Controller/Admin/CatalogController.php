@@ -41,6 +41,36 @@ final class CatalogController extends AbstractController
     // TAGS CLIENTS
     // ================================
 
+    #[Route('/tags/reorder', name: 'app_admin_tags_reorder', methods: ['POST'])]
+    public function reorderTags(Request $request): JsonResponse
+    {
+        try {
+            $data = json_decode($request->getContent(), true);
+
+            if (!isset($data['tags']) || !is_array($data['tags'])) {
+                return $this->json(['error' => 'Format de données invalide'], 400);
+            }
+
+            foreach ($data['tags'] as $item) {
+                if (isset($item['id']) && isset($item['ordre'])) {
+                    $tag = $this->entityManager->find(Tag::class, $item['id']);
+                    if ($tag) {
+                        $tag->setOrdre($item['ordre']);
+                    }
+                }
+            }
+
+            $this->entityManager->flush();
+
+            return $this->json([
+                'success' => true,
+                'message' => 'Ordre des tags mis à jour'
+            ]);
+        } catch (\Exception $e) {
+            return $this->json(['error' => 'Erreur lors de la réorganisation: ' . $e->getMessage()], 500);
+        }
+    }
+
     #[Route('/tags', name: 'app_admin_tags', methods: ['GET'])]
     public function tags(): Response
     {
