@@ -89,30 +89,26 @@ class DashboardService
 
             // Requête consolidée pour les stats du workflow utilisateur
             $sql = '
-                SELECT 
-                    (SELECT COUNT(*) FROM devis d 
-                     JOIN client c ON d.client_id = c.id 
-                     JOIN secteur s ON c.secteur_id = s.id 
-                     WHERE s.commercial_id = :userId 
-                     AND d.statut = \'BROUILLON\') as devis_brouillons,
-                    
-                    (SELECT COUNT(*) FROM devis d 
-                     JOIN client c ON d.client_id = c.id 
-                     JOIN secteur s ON c.secteur_id = s.id 
-                     WHERE s.commercial_id = :userId 
-                     AND d.statut = \'ENVOYE\' 
+                SELECT
+                    (SELECT COUNT(*) FROM devis d
+                     WHERE d.commercial_id = :userId
+                     AND d.statut = \'brouillon\') as devis_brouillons,
+
+                    (SELECT COUNT(*) FROM devis d
+                     WHERE d.commercial_id = :userId
+                     AND d.statut = \'envoye\'
                      AND d.date_envoi < NOW() - INTERVAL \'7 days\') as devis_relances,
                      
-                    (SELECT COUNT(*) FROM client c 
-                     JOIN secteur s ON c.secteur_id = s.id 
-                     WHERE s.commercial_id = :userId 
-                     AND c.statut = \'PROSPECT\' 
+                    (SELECT COUNT(*) FROM client c
+                     JOIN secteur s ON c.secteur_id = s.id
+                     WHERE s.commercial_id = :userId
+                     AND c.statut = \'prospect\'
                      AND c.date_conversion_client IS NULL) as prospects_actifs,
-                     
-                    (SELECT COUNT(*) FROM client c 
-                     JOIN secteur s ON c.secteur_id = s.id 
-                     WHERE s.commercial_id = :userId 
-                     AND c.statut = \'CLIENT\') as clients_total
+
+                    (SELECT COUNT(*) FROM client c
+                     JOIN secteur s ON c.secteur_id = s.id
+                     WHERE s.commercial_id = :userId
+                     AND c.statut = \'client\') as clients_total
             ';
 
             $result = $this->entityManager->getConnection()->fetchAssociative($sql, ['userId' => $userId]);

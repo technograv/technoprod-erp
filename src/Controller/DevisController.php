@@ -707,6 +707,7 @@ final class DevisController extends AbstractController
     }
 
     #[Route('/{id}/envoyer', name: 'app_devis_envoyer', methods: ['POST'])]
+    #[Route('/{id}/resend', name: 'app_devis_resend', methods: ['POST'])]
     public function envoyer(Request $request, Devis $devis, EntityManagerInterface $entityManager, GmailMailerService $gmailMailer, DevisLoggerService $loggerService): Response
     {
         $email = $request->request->get('email');
