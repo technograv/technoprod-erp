@@ -5,7 +5,8 @@
 # https://symfony.com/doc/current/best_practices.html#use-parameters-for-application-configuration
 parameters:
     app.crypto_keys_path: '%kernel.project_dir%/var/crypto'
-    
+    app.base_url: '%env(APP_BASE_URL)%'
+
     # Configuration entreprise pour Factur-X
     app.company.name: 'TechnoProd'
     app.company.siret: '12345678901234'

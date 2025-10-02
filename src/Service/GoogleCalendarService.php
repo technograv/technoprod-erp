@@ -74,12 +74,12 @@ class GoogleCalendarService
 
             $calendar = new Calendar($client);
             
-            // Calculer début et fin de semaine (lundi à vendredi)
+            // Calculer début et fin de semaine (lundi à dimanche)
             $startOfWeek = clone $startOfWeek;
             $startOfWeek->setTime(0, 0, 0);
-            
+
             $endOfWeek = clone $startOfWeek;
-            $endOfWeek->modify('+4 days'); // Lundi à vendredi
+            $endOfWeek->modify('+6 days'); // Lundi à dimanche (7 jours)
             $endOfWeek->setTime(23, 59, 59);
 
             // Utiliser les calendriers sélectionnés ou 'primary' par défaut
@@ -281,6 +281,13 @@ class GoogleCalendarService
             $foregroundColor = $calendarInfo['foreground_color'] ?: '#ffffff';
         }
 
+        // Récupérer l'URL source (pour les événements de commande)
+        $sourceUrl = null;
+        $source = $event->getSource();
+        if ($source && method_exists($source, 'getUrl')) {
+            $sourceUrl = $source->getUrl();
+        }
+
         return [
             'id' => $event->getId(),
             'title' => $event->getSummary() ?: 'Sans titre',
@@ -298,7 +305,8 @@ class GoogleCalendarService
             'background_color' => $backgroundColor,
             'foreground_color' => $foregroundColor,
             'calendar_name' => $calendarInfo['summary'] ?? 'Calendrier',
-            'color_id' => $event->getColorId()
+            'color_id' => $event->getColorId(),
+            'source_url' => $sourceUrl
         ];
     }
 
@@ -343,14 +351,14 @@ class GoogleCalendarService
     }
 
     /**
-     * Génère les jours de la semaine de travail (lundi à vendredi)
+     * Génère les jours de la semaine (lundi à dimanche)
      */
     public function getWorkWeekDays(\DateTime $startOfWeek): array
     {
         $days = [];
         $current = clone $startOfWeek;
-        
-        for ($i = 0; $i < 5; $i++) { // Lundi à vendredi
+
+        for ($i = 0; $i < 7; $i++) { // Lundi à dimanche
             $days[] = [
                 'date' => clone $current,
                 'day_name' => $current->format('l'),
@@ -452,17 +460,17 @@ class GoogleCalendarService
             }
 
             $calendar = new Calendar($client);
-            
+
             $event = new Event($eventData);
             $createdEvent = $calendar->events->insert($calendarId, $event);
-            
+
             $this->logger->info('Événement Google Calendar créé', [
                 'user_id' => $user->getId(),
                 'calendar_id' => $calendarId,
                 'event_id' => $createdEvent->getId(),
                 'event_title' => $eventData['summary'] ?? 'Sans titre'
             ]);
-            
+
             return $createdEvent->getId();
 
         } catch (\Exception $e) {
@@ -473,6 +481,39 @@ class GoogleCalendarService
                 'event_data' => $eventData
             ]);
             return null;
+        }
+    }
+
+    /**
+     * Supprime un événement d'un calendrier Google
+     */
+    public function deleteEvent(User $user, string $calendarId, string $eventId): bool
+    {
+        try {
+            $client = $this->createGoogleClient($user);
+            if (!$client) {
+                return false;
+            }
+
+            $calendar = new Calendar($client);
+            $calendar->events->delete($calendarId, $eventId);
+
+            $this->logger->info('Événement Google Calendar supprimé', [
+                'user_id' => $user->getId(),
+                'calendar_id' => $calendarId,
+                'event_id' => $eventId
+            ]);
+
+            return true;
+
+        } catch (\Exception $e) {
+            $this->logger->error('Erreur suppression événement Google Calendar', [
+                'user_id' => $user->getId(),
+                'calendar_id' => $calendarId,
+                'event_id' => $eventId,
+                'error' => $e->getMessage()
+            ]);
+            return false;
         }
     }
 }

@@ -210,15 +210,15 @@ class WorkflowController extends AbstractController
         // Récupérer l'offset de semaine depuis la requête
         $currentWeekOffset = (int) $request->query->get('week', 0);
         
-        // Générer les jours ouvrés (lundi à vendredi) pour le calendrier
+        // Générer les jours de la semaine (lundi à dimanche) pour le calendrier
         $startOfWeek = new \DateTime('monday this week');
         $startOfWeek->modify($currentWeekOffset . ' weeks');
-        
+
         $weekDays = [];
-        for ($i = 0; $i < 5; $i++) { // Seulement 5 jours : lundi à vendredi
+        for ($i = 0; $i < 7; $i++) { // 7 jours : lundi à dimanche
             $day = clone $startOfWeek;
             $day->modify('+' . $i . ' days');
-            
+
             $weekDays[] = [
                 'date' => $day,
                 'day_number' => $day->format('j'),
@@ -420,12 +420,12 @@ class WorkflowController extends AbstractController
             $startOfWeek = new \DateTime('monday this week');
             $startOfWeek->modify($weekOffset . ' weeks');
             
-            // Générer les jours ouvrés (lundi à vendredi) pour la nouvelle semaine
+            // Générer les jours de la semaine (lundi à dimanche) pour la nouvelle semaine
             $weekDays = [];
-            for ($i = 0; $i < 5; $i++) {
+            for ($i = 0; $i < 7; $i++) {
                 $day = clone $startOfWeek;
                 $day->modify('+' . $i . ' days');
-                
+
                 $weekDays[] = [
                     'date' => $day,
                     'day_number' => $day->format('j'),
@@ -474,8 +474,8 @@ class WorkflowController extends AbstractController
 
             // Formater le titre de la semaine
             $endOfWeek = clone $startOfWeek;
-            $endOfWeek->modify('+4 days'); // Vendredi
-            
+            $endOfWeek->modify('+6 days'); // Dimanche
+
             $weekTitle = 'Semaine du ' . $startOfWeek->format('d/m') . ' au ' . $endOfWeek->format('d/m/Y');
 
             return $this->json([
@@ -713,32 +713,40 @@ class WorkflowController extends AbstractController
     {
         /** @var User $user */
         $user = $this->getUser();
-        
+
         try {
-            // Récupérer les devis envoyés mais pas encore signés (à relancer)
-            // et dont la date de validité approche (moins de 7 jours)
-            $dateLimit = new \DateTime('+7 days');
-            
+            // Récupérer le délai de relance configuré dans la société
+            $societe = $user->getEffectiveSocietePrincipale();
+            $delaiRelance = $societe ? $societe->getDelaiRelanceDevis() : 14; // Par défaut 14 jours
+
+            $dateLimit = new \DateTime('-' . $delaiRelance . ' days');
+
             $devisARelancer = $this->entityManager->getRepository(Devis::class)
                 ->createQueryBuilder('d')
                 ->leftJoin('d.client', 'c')
                 ->where('d.statut = :statut')
                 ->andWhere('d.commercial = :commercial')
                 ->andWhere('d.dateSignature IS NULL')
-                ->andWhere('d.dateValidite <= :dateLimit')
                 ->andWhere('d.dateEnvoi IS NOT NULL')
+                ->andWhere('d.dateEnvoi < :dateLimit')
+                ->andWhere('d.dateValidite >= :today')
                 ->setParameter('statut', 'envoye')
                 ->setParameter('commercial', $user)
                 ->setParameter('dateLimit', $dateLimit)
-                ->orderBy('d.dateValidite', 'ASC')
+                ->setParameter('today', new \DateTime('today'))
+                ->orderBy('d.dateEnvoi', 'ASC')
                 ->getQuery()
                 ->getResult();
-            
+
             $data = [];
             foreach ($devisARelancer as $devis) {
-                $joursRestants = $devis->getDateValidite() ? 
-                    (new \DateTime())->diff($devis->getDateValidite())->days : 0;
-                    
+                // Calculer les jours depuis l'envoi
+                $joursDepuisEnvoi = $devis->getDateEnvoi() ?
+                    $devis->getDateEnvoi()->diff(new \DateTime())->days : 0;
+
+                // Vérifier si la validité est expirée
+                $validiteExpiree = $devis->getDateValidite() && $devis->getDateValidite() < new \DateTime();
+
                 $data[] = [
                     'id' => $devis->getId(),
                     'numeroDevis' => $devis->getNumeroDevis(),
@@ -746,20 +754,21 @@ class WorkflowController extends AbstractController
                     'totalTtc' => $devis->getTotalTtc(),
                     'dateEnvoi' => $devis->getDateEnvoi() ? $devis->getDateEnvoi()->format('d/m/Y') : null,
                     'dateValidite' => $devis->getDateValidite() ? $devis->getDateValidite()->format('d/m/Y') : null,
-                    'joursRestants' => $joursRestants,
-                    'urgence' => $joursRestants <= 2 ? 'high' : ($joursRestants <= 5 ? 'medium' : 'low'),
+                    'joursDepuisEnvoi' => $joursDepuisEnvoi,
+                    'validiteExpiree' => $validiteExpiree,
+                    'urgence' => $joursDepuisEnvoi >= 30 ? 'high' : ($joursDepuisEnvoi >= 14 ? 'medium' : 'low'),
                     'statut' => $devis->getStatut(),
                     'url_show' => $this->generateUrl('app_devis_show', ['id' => $devis->getId()]),
                     'url_resend' => $this->generateUrl('app_devis_resend', ['id' => $devis->getId()])
                 ];
             }
-            
+
             return $this->json([
                 'success' => true,
                 'data' => $data,
                 'total' => count($data)
             ]);
-            
+
         } catch (\Exception $e) {
             return $this->json([
                 'success' => false,
@@ -773,26 +782,26 @@ class WorkflowController extends AbstractController
     {
         /** @var User $user */
         $user = $this->getUser();
-        
+
         try {
-            // Récupérer les commandes confirmées mais pas encore livrées
+            // Récupérer les commandes validées sans date de livraison prévue
             $commandesSansLivraison = $this->entityManager->getRepository(Commande::class)
                 ->createQueryBuilder('cmd')
                 ->leftJoin('cmd.client', 'c')
-                ->where('cmd.statut IN (:statuts)')
+                ->where('cmd.statut = :statut')
                 ->andWhere('cmd.commercial = :commercial')
-                ->andWhere('cmd.dateLivraison IS NULL')
-                ->setParameter('statuts', ['confirmee', 'en_production'])
+                ->andWhere('cmd.dateLivraisonPrevue IS NULL')
+                ->setParameter('statut', 'validee')
                 ->setParameter('commercial', $user)
                 ->orderBy('cmd.dateCommande', 'ASC')
                 ->getQuery()
                 ->getResult();
-            
+
             $data = [];
             foreach ($commandesSansLivraison as $commande) {
-                $joursAttente = $commande->getDateCommande() ? 
+                $joursAttente = $commande->getDateCommande() ?
                     (new \DateTime())->diff($commande->getDateCommande())->days : 0;
-                    
+
                 $data[] = [
                     'id' => $commande->getId(),
                     'numeroCommande' => $commande->getNumeroCommande(),
@@ -803,67 +812,68 @@ class WorkflowController extends AbstractController
                     'joursAttente' => $joursAttente,
                     'urgence' => $joursAttente > 14 ? 'high' : ($joursAttente > 7 ? 'medium' : 'low'),
                     'statut' => $commande->getStatut(),
-                    'url_show' => $this->generateUrl('app_commande_show', ['id' => $commande->getId()]),
-                    'url_expedier' => $this->generateUrl('app_commande_expedier', ['id' => $commande->getId()])
+                    'url_show' => $this->generateUrl('app_commande_show', ['id' => $commande->getId()])
                 ];
             }
-            
+
             return $this->json([
                 'success' => true,
                 'data' => $data,
                 'total' => count($data)
             ]);
-            
+
         } catch (\Exception $e) {
+            $this->logger->error('Erreur récupération commandes sans livraison', [
+                'user_id' => $user->getId(),
+                'error' => $e->getMessage()
+            ]);
+
             return $this->json([
                 'success' => false,
-                'message' => 'Erreur lors de la récupération des commandes : ' . $e->getMessage()
+                'message' => 'Erreur lors de la récupération des commandes'
             ], 500);
         }
     }
 
-    #[Route('/livraisons-facturer', name: 'workflow_livraisons_facturer', methods: ['GET'])]
-    public function livraisonsFacturer(): JsonResponse
+    #[Route('/livraisons-a-facturer', name: 'workflow_livraisons_a_facturer', methods: ['GET'])]
+    public function livraisonsAFacturer(): JsonResponse
     {
         /** @var User $user */
         $user = $this->getUser();
-        
+
         try {
-            // Récupérer les commandes livrées mais pas encore facturées
+            // Récupérer les commandes livrées sans facture finalisée
             $livraisonsAFacturer = $this->entityManager->getRepository(Commande::class)
                 ->createQueryBuilder('cmd')
                 ->leftJoin('cmd.client', 'c')
-                ->leftJoin('cmd.factures', 'f')
-                ->where('cmd.statut = :statut')
-                ->andWhere('cmd.commercial = :commercial')
-                ->andWhere('cmd.dateLivraison IS NOT NULL')
-                ->andWhere('f.id IS NULL') // Pas encore de facture associée
-                ->setParameter('statut', 'livree')
+                ->leftJoin('App\Entity\Facture', 'f', 'WITH', 'f.commande = cmd AND f.statut != :statutBrouillon')
+                ->where('cmd.commercial = :commercial')
+                ->andWhere('cmd.dateLivraisonReelle IS NOT NULL')
+                ->andWhere('f.id IS NULL')
                 ->setParameter('commercial', $user)
-                ->orderBy('cmd.dateLivraison', 'ASC')
+                ->setParameter('statutBrouillon', 'brouillon')
+                ->orderBy('cmd.dateLivraisonReelle', 'ASC')
                 ->getQuery()
                 ->getResult();
-            
+
             $data = [];
             foreach ($livraisonsAFacturer as $commande) {
-                $joursDepuisLivraison = $commande->getDateLivraison() ? 
-                    (new \DateTime())->diff($commande->getDateLivraison())->days : 0;
-                    
+                $joursDepuisLivraison = $commande->getDateLivraisonReelle() ?
+                    (new \DateTime())->diff($commande->getDateLivraisonReelle())->days : 0;
+
                 $data[] = [
                     'id' => $commande->getId(),
                     'numeroCommande' => $commande->getNumeroCommande(),
                     'client_nom' => $commande->getClient() ? $commande->getClient()->getNomEntreprise() : 'N/A',
                     'totalTtc' => $commande->getTotalTtc(),
-                    'dateCommande' => $commande->getDateCommande() ? $commande->getDateCommande()->format('d/m/Y') : null,
-                    'dateLivraison' => $commande->getDateLivraison() ? $commande->getDateLivraison()->format('d/m/Y') : null,
+                    'dateLivraisonReelle' => $commande->getDateLivraisonReelle() ? $commande->getDateLivraisonReelle()->format('d/m/Y H:i') : null,
                     'joursDepuisLivraison' => $joursDepuisLivraison,
-                    'urgence' => $joursDepuisLivraison > 5 ? 'high' : ($joursDepuisLivraison > 2 ? 'medium' : 'low'),
+                    'urgence' => $joursDepuisLivraison > 30 ? 'high' : ($joursDepuisLivraison > 15 ? 'medium' : 'low'),
                     'statut' => $commande->getStatut(),
-                    'url_show' => $this->generateUrl('app_commande_show', ['id' => $commande->getId()]),
-                    'url_facturer' => $this->generateUrl('app_facture_create_from_commande', ['id' => $commande->getId()])
+                    'url_show' => $this->generateUrl('app_commande_show', ['id' => $commande->getId()])
                 ];
             }
-            
+
             return $this->json([
                 'success' => true,
                 'data' => $data,
@@ -871,9 +881,14 @@ class WorkflowController extends AbstractController
             ]);
             
         } catch (\Exception $e) {
+            $this->logger->error('Erreur récupération livraisons à facturer', [
+                'user_id' => $user->getId(),
+                'error' => $e->getMessage()
+            ]);
+
             return $this->json([
                 'success' => false,
-                'message' => 'Erreur lors de la récupération des livraisons à facturer : ' . $e->getMessage()
+                'message' => 'Erreur lors de la récupération des livraisons à facturer'
             ], 500);
         }
     }

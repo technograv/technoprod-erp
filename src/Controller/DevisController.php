@@ -194,15 +194,21 @@ final class DevisController extends AbstractController
                 error_log("Date création vide ou null - utilisation de 'now'");
                 $devis->setDateCreation(new \DateTime('now'));
             }
-            
+
+            // La date de validité est automatiquement calculée = date création + 30 jours
+            // L'utilisateur peut la modifier manuellement dans le formulaire si fournie
             if ($dateValidite && !empty($dateValidite)) {
                 try {
                     $devis->setDateValidite(new \DateTime($dateValidite));
                 } catch (\Exception $e) {
-                    $devis->setDateValidite(new \DateTime('+30 days'));
+                    $dateValiditeAuto = clone $devis->getDateCreation();
+                    $dateValiditeAuto->modify('+30 days');
+                    $devis->setDateValidite($dateValiditeAuto);
                 }
             } else {
-                $devis->setDateValidite(new \DateTime('+30 days'));
+                $dateValiditeAuto = clone $devis->getDateCreation();
+                $dateValiditeAuto->modify('+30 days');
+                $devis->setDateValidite($dateValiditeAuto);
             }
             // Gestion du délai de livraison et de la date de livraison séparément
             $devis->setDelaiLivraison($delaiLivraison);
@@ -379,7 +385,7 @@ final class DevisController extends AbstractController
     }
 
     #[Route('/{id}/edit', name: 'app_devis_edit', methods: ['GET', 'POST'], requirements: ['id' => '\d+'])]
-    public function edit(Request $request, Devis $devis, EntityManagerInterface $entityManager, DevisLoggerService $loggerService): Response
+    public function edit(Request $request, Devis $devis, EntityManagerInterface $entityManager, DevisLoggerService $loggerService, \App\Service\DashboardService $dashboardService): Response
     {
         // Rediriger les devis non-brouillon vers la page de consultation
         if ($devis->getStatut() !== 'brouillon') {
@@ -416,15 +422,26 @@ final class DevisController extends AbstractController
             foreach ($devis->getDevisItems() as $item) {
                 $item->calculateTotal();
             }
-            
+
             // Recalculer les totaux globaux
             $devis->calculateTotals();
-            
+
+            // Mettre à jour automatiquement la date de validité si le devis est brouillon
+            // La date de validité = date de création + 30 jours
+            if ($devis->getStatut() === 'brouillon' && $devis->getDateCreation()) {
+                $dateValiditeAuto = clone $devis->getDateCreation();
+                $dateValiditeAuto->modify('+30 days');
+                $devis->setDateValidite($dateValiditeAuto);
+            }
+
             // CORRECTION ORDRE GLOBAL : Réorganiser tous les éléments selon un ordre unifié
             $this->synchronizeGlobalOrder($devis, $entityManager);
-            
+
             $entityManager->flush();
-            
+
+            // Invalider le cache du dashboard pour mettre à jour les compteurs
+            $dashboardService->invalidateUserCache($this->getUser()->getId());
+
             // Log de la modification du devis
             $loggerService->logUpdated($devis);
 
@@ -439,13 +456,16 @@ final class DevisController extends AbstractController
                 // Changer le statut en "envoyé" et rediriger vers la page show avec modal d'envoi
                 $devis->setStatut('envoye');
                 $entityManager->flush();
-                
+
+                // Invalider à nouveau le cache car le statut a changé
+                $dashboardService->invalidateUserCache($this->getUser()->getId());
+
                 if ($shouldCreateVersion) {
                     $this->addFlash('success', 'Devis modifié et marqué comme envoyé avec succès ! Une version a été créée pour conserver l\'historique.');
                 } else {
                     $this->addFlash('success', 'Devis modifié et marqué comme envoyé avec succès !');
                 }
-                
+
                 // Rediriger vers la page show avec un paramètre pour ouvrir la modal d'envoi
                 return $this->redirectToRoute('app_devis_show', [
                     'id' => $devis->getId(),
@@ -458,7 +478,7 @@ final class DevisController extends AbstractController
             } else {
                 $this->addFlash('success', 'Devis modifié avec succès !');
             }
-            
+
             return $this->redirectToRoute('app_devis_show', ['id' => $devis->getId()], Response::HTTP_SEE_OTHER);
         }
 
@@ -708,7 +728,7 @@ final class DevisController extends AbstractController
 
     #[Route('/{id}/envoyer', name: 'app_devis_envoyer', methods: ['POST'])]
     #[Route('/{id}/resend', name: 'app_devis_resend', methods: ['POST'])]
-    public function envoyer(Request $request, Devis $devis, EntityManagerInterface $entityManager, GmailMailerService $gmailMailer, DevisLoggerService $loggerService): Response
+    public function envoyer(Request $request, Devis $devis, EntityManagerInterface $entityManager, GmailMailerService $gmailMailer, DevisLoggerService $loggerService, \App\Service\DashboardService $dashboardService): Response
     {
         $email = $request->request->get('email');
         $message = $request->request->get('message', '');
@@ -753,7 +773,10 @@ final class DevisController extends AbstractController
             $devis->setDateEnvoi(new \DateTime());
 
             $entityManager->flush();
-            
+
+            // Invalider le cache du dashboard pour mettre à jour les compteurs
+            $dashboardService->invalidateUserCache($this->getUser()->getId());
+
             // Log de l'envoi du devis
             $loggerService->logSent($devis, $email);
 
@@ -766,7 +789,7 @@ final class DevisController extends AbstractController
     }
 
     #[Route('/{id}/client/{token}', name: 'app_devis_client_acces', methods: ['GET', 'POST'])]
-    public function clientAcces(Request $request, Devis $devis, string $token, EntityManagerInterface $entityManager, DevisLoggerService $loggerService): Response
+    public function clientAcces(Request $request, Devis $devis, string $token, EntityManagerInterface $entityManager, DevisLoggerService $loggerService, \App\Service\DashboardService $dashboardService): Response
     {
         // Vérifier le token
         $expectedToken = md5($devis->getId() . $devis->getCreatedAt()->format('Y-m-d'));
@@ -803,6 +826,11 @@ final class DevisController extends AbstractController
 
                     $entityManager->flush();
 
+                    // Invalider le cache du dashboard du commercial
+                    if ($devis->getCommercial()) {
+                        $dashboardService->invalidateUserCache($devis->getCommercial()->getId());
+                    }
+
                     // 4. Marquer la version comme créée par signature
                     $version->setVersionLabel('Signature du client');
                     $version->setModificationReason('Signature client - archivage automatique');
@@ -817,6 +845,11 @@ final class DevisController extends AbstractController
                 $devis->setStatut('refuse');
                 $entityManager->flush();
 
+                // Invalider le cache du dashboard du commercial
+                if ($devis->getCommercial()) {
+                    $dashboardService->invalidateUserCache($devis->getCommercial()->getId());
+                }
+
                 $this->addFlash('info', 'Devis refusé.');
             }
         }
@@ -828,7 +861,7 @@ final class DevisController extends AbstractController
     }
 
     #[Route('/{id}/paiement-acompte', name: 'app_devis_paiement_acompte', methods: ['POST'])]
-    public function paiementAcompte(Request $request, Devis $devis, EntityManagerInterface $entityManager): Response
+    public function paiementAcompte(Request $request, Devis $devis, EntityManagerInterface $entityManager, \App\Service\DashboardService $dashboardService): Response
     {
         $transactionId = $request->request->get('transaction_id');
         $modePaiement = $request->request->get('mode_paiement');
@@ -840,6 +873,11 @@ final class DevisController extends AbstractController
             $devis->setStatut('acompte_regle');
 
             $entityManager->flush();
+
+            // Invalider le cache du dashboard du commercial
+            if ($devis->getCommercial()) {
+                $dashboardService->invalidateUserCache($devis->getCommercial()->getId());
+            }
 
             return new JsonResponse(['status' => 'success', 'message' => 'Paiement enregistré']);
         }
@@ -1588,7 +1626,7 @@ final class DevisController extends AbstractController
      * Crée manuellement une version avec un label personnalisé
      */
     #[Route('/{id}/create-version', name: 'app_devis_create_version', methods: ['POST'])]
-    public function createVersion(Request $request, Devis $devis, EntityManagerInterface $entityManager, DevisLoggerService $loggerService): Response
+    public function createVersion(Request $request, Devis $devis, EntityManagerInterface $entityManager, DevisLoggerService $loggerService, \App\Service\DashboardService $dashboardService): Response
     {
         if (!$devis->canCreateVersion()) {
             $this->addFlash('error', 'Impossible de créer une version pour ce devis.');
@@ -1621,13 +1659,23 @@ final class DevisController extends AbstractController
         // Changer le statut du devis pour permettre l'édition (le contenu reste le même)
         $devis->setStatut('brouillon');
 
+        // Mettre à jour les dates pour la nouvelle version
+        $devis->setDateCreation(new \DateTime());
+        $dateValidite = clone $devis->getDateCreation();
+        $dateValidite->modify('+30 days');
+        $devis->setDateValidite($dateValidite);
+
         // Vider les données de signature pour la nouvelle version
         $devis->setSignatureNom(null);
         $devis->setSignatureEmail(null);
         $devis->setSignatureData(null);
         $devis->setDateSignature(null);
+        $devis->setDateEnvoi(null);
 
         $entityManager->flush();
+
+        // Invalider le cache du dashboard pour mettre à jour les compteurs
+        $dashboardService->invalidateUserCache($this->getUser()->getId());
         
         // Log de la création de version
         $loggerService->logVersionCreated($devis, $version->getVersionNumber(), $version->getVersionLabel());

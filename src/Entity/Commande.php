@@ -62,6 +62,9 @@ class Commande
     #[ORM\Column(type: Types::TEXT, nullable: true)]
     private ?string $notesLivraison = null;
 
+    #[ORM\Column(length: 255, nullable: true)]
+    private ?string $googleCalendarEventId = null;
+
     #[ORM\Column]
     private ?\DateTimeImmutable $createdAt = null;
 
@@ -237,6 +240,17 @@ class Commande
     public function setNotesLivraison(?string $notesLivraison): static
     {
         $this->notesLivraison = $notesLivraison;
+        return $this;
+    }
+
+    public function getGoogleCalendarEventId(): ?string
+    {
+        return $this->googleCalendarEventId;
+    }
+
+    public function setGoogleCalendarEventId(?string $googleCalendarEventId): static
+    {
+        $this->googleCalendarEventId = $googleCalendarEventId;
         return $this;
     }
 

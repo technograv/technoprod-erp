@@ -83,9 +83,19 @@ class DashboardService
     public function getWorkflowDashboardStats(int $userId): array
     {
         $cacheKey = "workflow_dashboard_stats_user_{$userId}";
-        
+
         return $this->dashboardCache->get($cacheKey, function (ItemInterface $item) use ($userId) {
             $item->expiresAfter(300); // 5 minutes
+
+            // Récupérer le délai de relance configuré
+            $user = $this->userRepository->find($userId);
+            $delaiRelance = 14; // Par défaut
+            if ($user) {
+                $societe = $user->getEffectiveSocietePrincipale();
+                if ($societe) {
+                    $delaiRelance = $societe->getDelaiRelanceDevis();
+                }
+            }
 
             // Requête consolidée pour les stats du workflow utilisateur
             $sql = '
@@ -97,8 +107,10 @@ class DashboardService
                     (SELECT COUNT(*) FROM devis d
                      WHERE d.commercial_id = :userId
                      AND d.statut = \'envoye\'
-                     AND d.date_envoi < NOW() - INTERVAL \'7 days\') as devis_relances,
-                     
+                     AND d.date_signature IS NULL
+                     AND d.date_envoi < NOW() - INTERVAL \'' . $delaiRelance . ' days\'
+                     AND d.date_validite >= CURRENT_DATE) as devis_relances,
+
                     (SELECT COUNT(*) FROM client c
                      JOIN secteur s ON c.secteur_id = s.id
                      WHERE s.commercial_id = :userId
@@ -108,7 +120,18 @@ class DashboardService
                     (SELECT COUNT(*) FROM client c
                      JOIN secteur s ON c.secteur_id = s.id
                      WHERE s.commercial_id = :userId
-                     AND c.statut = \'client\') as clients_total
+                     AND c.statut = \'client\') as clients_total,
+
+                    (SELECT COUNT(*) FROM commande cmd
+                     WHERE cmd.commercial_id = :userId
+                     AND cmd.statut = \'validee\'
+                     AND cmd.date_livraison_prevue IS NULL) as commandes_sans_livraison,
+
+                    (SELECT COUNT(*) FROM commande cmd
+                     LEFT JOIN facture f ON cmd.id = f.commande_id AND f.statut != \'brouillon\'
+                     WHERE cmd.commercial_id = :userId
+                     AND cmd.date_livraison_reelle IS NOT NULL
+                     AND f.id IS NULL) as livraisons_a_facturer
             ';
 
             $result = $this->entityManager->getConnection()->fetchAssociative($sql, ['userId' => $userId]);
@@ -117,7 +140,9 @@ class DashboardService
                 'devis_brouillons' => (int)$result['devis_brouillons'],
                 'devis_relances' => (int)$result['devis_relances'],
                 'prospects_actifs' => (int)$result['prospects_actifs'],
-                'clients_total' => (int)$result['clients_total']
+                'clients_total' => (int)$result['clients_total'],
+                'commandes_sans_livraison' => (int)$result['commandes_sans_livraison'],
+                'livraisons_a_facturer' => (int)$result['livraisons_a_facturer']
             ];
         });
     }

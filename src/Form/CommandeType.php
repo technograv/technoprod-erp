@@ -9,6 +9,7 @@ use App\Entity\Devis;
 use App\Entity\User;
 use Symfony\Bridge\Doctrine\Form\Type\EntityType;
 use Symfony\Component\Form\AbstractType;
+use Symfony\Component\Form\Extension\Core\Type\DateTimeType;
 use Symfony\Component\Form\FormBuilderInterface;
 use Symfony\Component\OptionsResolver\OptionsResolver;
 
@@ -19,8 +20,16 @@ class CommandeType extends AbstractType
         $builder
             ->add('numeroCommande')
             ->add('dateCommande')
-            ->add('dateLivraisonPrevue')
-            ->add('dateLivraisonReelle')
+            ->add('dateLivraisonPrevue', DateTimeType::class, [
+                'widget' => 'single_text',
+                'required' => false,
+                'label' => 'Date et heure de livraison prévue'
+            ])
+            ->add('dateLivraisonReelle', DateTimeType::class, [
+                'widget' => 'single_text',
+                'required' => false,
+                'label' => 'Date et heure de livraison réelle'
+            ])
             ->add('statut')
             ->add('totalHt')
             ->add('totalTva')

@@ -128,6 +128,22 @@
             transform: translateY(-1px);
             box-shadow: 0 4px 12px rgba(0,0,0,0.15);
         }
+        .event-item-link {
+            display: block;
+        }
+        .event-item-link:hover {
+            text-decoration: none;
+            transform: translateY(-2px);
+            box-shadow: 0 6px 16px rgba(0,0,0,0.2);
+        }
+        .event-item-link .event-title::after {
+            content: " →";
+            opacity: 0;
+            transition: opacity 0.2s;
+        }
+        .event-item-link:hover .event-title::after {
+            opacity: 1;
+        }
         .event-time {
             font-weight: 600;
             color: #007bff;
@@ -250,7 +266,22 @@
                     
                     {% if dayEvents|length > 0 %}
                         {% for event in dayEvents %}
-                        <div class="event-item" 
+                        {% if event.source_url %}
+                        <a href="{{ event.source_url }}" class="event-item event-item-link text-decoration-none"
+                             style="--event-color: {{ event.background_color }}; --calendar-color: {{ event.background_color }}; color: {{ event.foreground_color ?: '#333' }};"
+                             title="{{ event.title }}{% if event.location %} - {{ event.location }}{% endif %}{% if event.calendar_name %} ({{ event.calendar_name }}){% endif %}">
+                            <div class="calendar-indicator"></div>
+                            <div class="event-time">{{ event.start_formatted }}</div>
+                            <div class="event-title">{{ event.title|length > 20 ? event.title|slice(0, 20) ~ '...' : event.title }}</div>
+                            {% if event.location and event.location|length < 15 %}
+                            <div class="event-location"><i class="fas fa-map-marker-alt me-1"></i>{{ event.location }}</div>
+                            {% endif %}
+                            {% if event.calendar_name and event.calendar_name != 'primary' %}
+                            <div class="event-calendar"><i class="fas fa-calendar me-1"></i>{{ event.calendar_name|length > 15 ? event.calendar_name|slice(0, 15) ~ '...' : event.calendar_name }}</div>
+                            {% endif %}
+                        </a>
+                        {% else %}
+                        <div class="event-item"
                              style="--event-color: {{ event.background_color }}; --calendar-color: {{ event.background_color }}; color: {{ event.foreground_color ?: '#333' }};"
                              title="{{ event.title }}{% if event.location %} - {{ event.location }}{% endif %}{% if event.calendar_name %} ({{ event.calendar_name }}){% endif %}">
                             <div class="calendar-indicator"></div>
@@ -263,6 +294,7 @@
                             <div class="event-calendar"><i class="fas fa-calendar me-1"></i>{{ event.calendar_name|length > 15 ? event.calendar_name|slice(0, 15) ~ '...' : event.calendar_name }}</div>
                             {% endif %}
                         </div>
+                        {% endif %}
                         {% endfor %}
                     {% else %}
                         <small class="opacity-50 d-block text-center mt-3">Aucun événement</small>
@@ -279,9 +311,9 @@
         <!-- Devis brouillons à terminer -->
         <div class="col-xl-3 col-md-6 mb-4">
             <div class="card border-left-warning shadow h-100 py-2" style="cursor: pointer;" onclick="ouvrirModalDevisBrouillons()">
-                <div class="card-body">
-                    <div class="row no-gutters align-items-center">
-                        <div class="col mr-2">
+                <div class="card-body" style="position: relative;">
+                    <div class="row no-gutters">
+                        <div class="col" style="padding-right: 60px;">
                             <div class="text-xs font-weight-bold text-warning text-uppercase mb-1">
                                 Devis à Terminer
                             </div>
@@ -289,17 +321,12 @@
                                 {{ stats.devis_brouillons|default(0) }}
                             </div>
                             <div class="mt-2" id="devis-brouillons-preview">
-                                <small class="text-muted">Cliquez pour voir les détails</small>
+                                <small class="text-muted">Chargement...</small>
                             </div>
                         </div>
-                        <div class="col-auto">
-                            <i class="fas fa-edit fa-2x text-warning"></i>
-                        </div>
                     </div>
-                    <div class="mt-2">
-                        <button class="btn btn-warning btn-sm w-100 btn-voir-brouillons" onclick="ouvrirModalDevisBrouillons()">
-                            <i class="fas fa-eye me-1"></i>Voir les brouillons
-                        </button>
+                    <div style="position: absolute; top: 15px; right: 15px;">
+                        <i class="fas fa-edit fa-2x text-warning"></i>
                     </div>
                 </div>
             </div>
@@ -308,22 +335,22 @@
         <!-- Devis à relancer (2 semaines) -->
         <div class="col-xl-3 col-md-6 mb-4">
             <div class="card border-left-danger shadow h-100 py-2" style="cursor: pointer;" onclick="ouvrirModalDevisRelances()">
-                <div class="card-body">
-                    <div class="row no-gutters align-items-center">
-                        <div class="col mr-2">
+                <div class="card-body" style="position: relative;">
+                    <div class="row no-gutters">
+                        <div class="col" style="padding-right: 60px;">
                             <div class="text-xs font-weight-bold text-danger text-uppercase mb-1">
                                 Relances Devis
                             </div>
                             <div class="h5 mb-0 font-weight-bold text-gray-800" id="count-devis-relance">
-                                {{ stats.devis_a_relancer|default(0) }}
+                                {{ stats.devis_relances|default(0) }}
                             </div>
                             <div class="mt-2" id="devis-relance-preview">
-                                <small class="text-muted">Cliquez pour voir les détails</small>
+                                <small class="text-muted">Chargement...</small>
                             </div>
                         </div>
-                        <div class="col-auto">
-                            <i class="fas fa-phone fa-2x text-danger"></i>
-                        </div>
+                    </div>
+                    <div style="position: absolute; top: 15px; right: 15px;">
+                        <i class="fas fa-phone fa-2x text-danger"></i>
                     </div>
                 </div>
             </div>
@@ -332,9 +359,9 @@
         <!-- Commandes sans date de livraison -->
         <div class="col-xl-3 col-md-6 mb-4">
             <div class="card border-left-info shadow h-100 py-2" style="cursor: pointer;" onclick="ouvrirModalCommandesSansLivraison()">
-                <div class="card-body">
-                    <div class="row no-gutters align-items-center">
-                        <div class="col mr-2">
+                <div class="card-body" style="position: relative;">
+                    <div class="row no-gutters">
+                        <div class="col" style="padding-right: 60px;">
                             <div class="text-xs font-weight-bold text-info text-uppercase mb-1">
                                 Livraisons à Programmer
                             </div>
@@ -342,12 +369,12 @@
                                 {{ stats.commandes_sans_livraison|default(0) }}
                             </div>
                             <div class="mt-2" id="commandes-livraison-preview">
-                                <small class="text-muted">Cliquez pour voir les détails</small>
+                                <small class="text-muted">Chargement...</small>
                             </div>
                         </div>
-                        <div class="col-auto">
-                            <i class="fas fa-truck fa-2x text-info"></i>
-                        </div>
+                    </div>
+                    <div style="position: absolute; top: 15px; right: 15px;">
+                        <i class="fas fa-truck fa-2x text-info"></i>
                     </div>
                 </div>
             </div>
@@ -356,22 +383,22 @@
         <!-- Livraisons non facturées -->
         <div class="col-xl-3 col-md-6 mb-4">
             <div class="card border-left-success shadow h-100 py-2" style="cursor: pointer;" onclick="ouvrirModalLivraisonsFacturer()">
-                <div class="card-body">
-                    <div class="row no-gutters align-items-center">
-                        <div class="col mr-2">
+                <div class="card-body" style="position: relative;">
+                    <div class="row no-gutters">
+                        <div class="col" style="padding-right: 60px;">
                             <div class="text-xs font-weight-bold text-success text-uppercase mb-1">
                                 Livraisons à Facturer
                             </div>
-                            <div class="h5 mb-0 font-weight-bold text-gray-800" id="count-livraisons-non-facturees">
-                                {{ stats.livraisons_non_facturees|default(0) }}
+                            <div class="h5 mb-0 font-weight-bold text-gray-800" id="count-livraisons-facturer">
+                                {{ stats.livraisons_a_facturer|default(0) }}
                             </div>
                             <div class="mt-2" id="livraisons-facturer-preview">
-                                <small class="text-muted">Cliquez pour voir les détails</small>
+                                <small class="text-muted">Chargement...</small>
                             </div>
                         </div>
-                        <div class="col-auto">
-                            <i class="fas fa-file-invoice-dollar fa-2x text-success"></i>
-                        </div>
+                    </div>
+                    <div style="position: absolute; top: 15px; right: 15px;">
+                        <i class="fas fa-file-invoice-dollar fa-2x text-success"></i>
                     </div>
                 </div>
             </div>
@@ -636,9 +663,17 @@ const commercialDashboard = new CommercialDashboard({
     currentWeekOffset: {{ current_week_offset }}
 });
 
-// Exposer globalement pour compatibilité  
+// Exposer globalement pour compatibilité
 window.commercialDashboard = commercialDashboard;
 window.currentWeekOffset = {{ current_week_offset }};
+
+// Charger les previews au chargement de la page
+setTimeout(() => {
+    chargerPreviewDevisBrouillons();
+    chargerPreviewDevisRelances();
+    chargerPreviewCommandesSansLivraison();
+    chargerPreviewLivraisonsAFacturer();
+}, 500);
 
 // Fonctions proxy pour compatibilité template
 function initialiserMonSecteur() { 
@@ -662,7 +697,114 @@ function ouvrirModalCommandesSansLivraison() {
     chargerDonneesEtAfficherModal('{{ path('workflow_commandes_sans_livraison') }}', 'Commandes sans Livraison', 'commandes-livraison');
 }
 function ouvrirModalLivraisonsFacturer() {
-    chargerDonneesEtAfficherModal('{{ path('workflow_livraisons_facturer') }}', 'Livraisons à Facturer', 'livraisons-facturer');
+    chargerDonneesEtAfficherModal('{{ path('workflow_livraisons_a_facturer') }}', 'Livraisons à Facturer', 'livraisons-facturer');
+}
+
+// Charger les previews des blocs
+function chargerPreviewDevisBrouillons() {
+    fetch('{{ path('workflow_devis_brouillons') }}', {
+        headers: { 'X-Requested-With': 'XMLHttpRequest' }
+    })
+    .then(response => response.json())
+    .then(result => {
+        console.log('Preview brouillons - result:', result);
+        const preview = document.getElementById('devis-brouillons-preview');
+        if (result.success && result.data && result.data.length > 0) {
+            console.log('Preview brouillons - ' + result.data.length + ' devis found');
+            const top3 = result.data.slice(0, 3);
+            preview.innerHTML = top3.map(function(d) {
+                return '<div class="small text-truncate" onclick="event.stopPropagation(); window.location.href=\'/devis/' + d.id + '\';" style="cursor: pointer;">' +
+                    '<i class="fas fa-file-alt text-warning me-1"></i> ' + d.numeroDevis + ' - ' + (d.client_nom || 'N/A') +
+                    '</div>';
+            }).join('');
+        } else {
+            console.log('Preview brouillons - no data:', result);
+            preview.innerHTML = '<small class="text-muted">Aucun devis brouillon</small>';
+        }
+    })
+    .catch(function(error) {
+        console.error('Preview brouillons - error:', error);
+        document.getElementById('devis-brouillons-preview').innerHTML = '<small class="text-muted">Erreur de chargement</small>';
+    });
+}
+
+function chargerPreviewDevisRelances() {
+    fetch('{{ path('workflow_devis_relances') }}', {
+        headers: { 'X-Requested-With': 'XMLHttpRequest' }
+    })
+    .then(response => response.json())
+    .then(result => {
+        console.log('Preview relances - result:', result);
+        const preview = document.getElementById('devis-relance-preview');
+        if (result.success && result.data && result.data.length > 0) {
+            console.log('Preview relances - ' + result.data.length + ' devis found');
+            const top3 = result.data.slice(0, 3);
+            preview.innerHTML = top3.map(function(d) {
+                return '<div class="small text-truncate" onclick="event.stopPropagation(); window.location.href=\'/devis/' + d.id + '\';" style="cursor: pointer;">' +
+                    '<i class="fas fa-file-alt text-danger me-1"></i> ' + d.numeroDevis + ' - ' + (d.client_nom || 'N/A') +
+                    '</div>';
+            }).join('');
+        } else {
+            console.log('Preview relances - no data:', result);
+            preview.innerHTML = '<small class="text-muted">Aucun devis à relancer</small>';
+        }
+    })
+    .catch(function(error) {
+        console.error('Preview relances - error:', error);
+        document.getElementById('devis-relance-preview').innerHTML = '<small class="text-muted">Erreur de chargement</small>';
+    });
+}
+
+function chargerPreviewCommandesSansLivraison() {
+    fetch('{{ path('workflow_commandes_sans_livraison') }}', {
+        headers: { 'X-Requested-With': 'XMLHttpRequest' }
+    })
+    .then(response => response.json())
+    .then(result => {
+        console.log('Preview commandes - result:', result);
+        const preview = document.getElementById('commandes-livraison-preview');
+        if (result.success && result.data && result.data.length > 0) {
+            console.log('Preview commandes - ' + result.data.length + ' commandes found');
+            const top3 = result.data.slice(0, 3);
+            preview.innerHTML = top3.map(function(cmd) {
+                return '<div class="small text-truncate" onclick="event.stopPropagation(); window.location.href=\'/commande/' + cmd.id + '\';" style="cursor: pointer;">' +
+                    '<i class="fas fa-box text-info me-1"></i> ' + cmd.numeroCommande + ' - ' + (cmd.client_nom || 'N/A') +
+                    '</div>';
+            }).join('');
+        } else {
+            console.log('Preview commandes - no data:', result);
+            preview.innerHTML = '<small class="text-muted">Aucune commande à programmer</small>';
+        }
+    })
+    .catch(function(error) {
+        console.error('Preview commandes - error:', error);
+        document.getElementById('commandes-livraison-preview').innerHTML = '<small class="text-muted">Erreur de chargement</small>';
+    });
+}
+
+function chargerPreviewLivraisonsAFacturer() {
+    fetch('{{ path('workflow_livraisons_a_facturer') }}', {
+        headers: { 'X-Requested-With': 'XMLHttpRequest' }
+    })
+    .then(response => response.json())
+    .then(result => {
+        const preview = document.getElementById('livraisons-facturer-preview');
+        if (result.success && result.data && result.data.length > 0) {
+            const top3 = result.data.slice(0, 3);
+            preview.innerHTML = top3.map(function(cmd) {
+                return '<div class="small text-truncate" onclick="event.stopPropagation(); window.location.href=\'/commande/' + cmd.id + '\';" style="cursor: pointer;">' +
+                    '<i class="fas fa-file-invoice text-success me-1"></i> ' + cmd.numeroCommande + ' - ' + (cmd.client_nom || 'N/A') +
+                    ' <span class="badge badge-sm badge-' + (cmd.urgence === 'high' ? 'danger' : cmd.urgence === 'medium' ? 'warning' : 'info') + '">' + cmd.joursDepuisLivraison + 'j</span>' +
+                    '</div>';
+            }).join('');
+        } else {
+            preview.innerHTML = '<small class="text-muted">Aucune livraison à facturer</small>';
+        }
+    })
+    .catch(function(error) {
+        console.error('Preview livraisons à facturer - error:', error);
+        document.getElementById('livraisons-facturer-preview').innerHTML = '<small class="text-muted">Erreur de chargement</small>';
+    });
 }
 
 // Fonction générique pour charger les données et afficher une modale
