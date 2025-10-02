@@ -39,6 +39,63 @@
                                 </tr>
                             </thead>
                             <tbody id="types-alerte-tbody">
+                                {% for type in types_alerte %}
+                                    <tr data-id="{{ type.id }}"
+                                        data-nom="{{ type.nom }}"
+                                        data-description="{{ type.description ?? '' }}"
+                                        data-classe-detection="{{ type.classeDetection }}"
+                                        data-severity="{{ type.severity }}"
+                                        data-ordre="{{ type.ordre }}"
+                                        data-actif="{{ type.actif ? '1' : '0' }}"
+                                        data-roles-cibles="{{ type.rolesCibles|default([])|json_encode|e('html_attr') }}"
+                                        data-societes-cibles="{{ type.societesCibles|default([])|json_encode|e('html_attr') }}">
+                                        <td class="text-center">
+                                            <i class="fas fa-grip-vertical drag-handle"></i>
+                                        </td>
+                                        <td class="text-center"><strong>{{ type.ordre }}</strong></td>
+                                        <td>
+                                            <div class="fw-bold">{{ type.nom }}</div>
+                                            {% if type.description %}<small class="text-muted">{{ type.description }}</small>{% endif %}
+                                        </td>
+                                        <td>
+                                            <code class="small">{{ detecteurs[type.classeDetection].name ?? 'N/A' }}</code>
+                                        </td>
+                                        <td>
+                                            {% if type.actif %}
+                                                <span class="badge bg-success">Actif</span>
+                                            {% else %}
+                                                <span class="badge bg-secondary">Inactif</span>
+                                            {% endif %}
+                                        </td>
+                                        <td>
+                                            {% set severityColors = {'info': 'primary', 'warning': 'warning', 'danger': 'danger'} %}
+                                            <span class="badge badge-severity bg-{{ severityColors[type.severity] ?? 'secondary' }}">{{ type.severity|upper }}</span>
+                                        </td>
+                                        <td class="text-center">
+                                            {% set instancesCount = type.activeInstancesCount %}
+                                            {% if instancesCount > 0 %}
+                                                <a href="#" onclick="voirInstancesAlerte({{ type.id }}); return false;"
+                                                   class="badge bg-warning text-decoration-none"
+                                                   title="Cliquer pour voir les instances">
+                                                    {{ instancesCount }}
+                                                </a>
+                                            {% else %}
+                                                <span class="badge bg-secondary">0</span>
+                                            {% endif %}
+                                        </td>
+                                        <td>
+                                            <button class="btn btn-outline-success btn-sm me-1" onclick="lancerDetection({{ type.id }})" title="Lancer détection">
+                                                <i class="fas fa-play"></i>
+                                            </button>
+                                            <button class="btn btn-outline-primary btn-sm me-1" onclick="modifierTypeAlerte({{ type.id }})" title="Modifier">
+                                                <i class="fas fa-edit"></i>
+                                            </button>
+                                            <button class="btn btn-outline-danger btn-sm" onclick="supprimerTypeAlerte({{ type.id }})" title="Supprimer">
+                                                <i class="fas fa-trash"></i>
+                                            </button>
+                                        </td>
+                                    </tr>
+                                {% endfor %}
                             </tbody>
                         </table>
                     </div>
@@ -48,6 +105,27 @@
                     <h6>Aucun type d'alerte configuré</h6>
                     <p class="mb-0">Commencez par créer votre premier type d'alerte système.</p>
                 </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Modal Instances d'alertes -->
+<div class="modal fade" id="instancesAlerteModal" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-xl">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">
+                    <i class="fas fa-list me-2"></i><span id="instancesModalTitle">Instances d'alertes</span>
+                </h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body">
+                <div id="instancesAlerteLoading" class="text-center py-4">
+                    <div class="spinner-border text-primary" role="status"></div>
+                    <div class="mt-2">Chargement des instances...</div>
+                </div>
+                <div id="instancesAlerteContent" style="display: none;"></div>
             </div>
         </div>
     </div>
@@ -202,41 +280,26 @@ let dragDropTypesAlerteInstance;
 
 function initTypesAlerte() {
     console.log('🔍 DEBUG: Initialisation des types d\'alertes admin');
-    chargerTypesAlerteAdmin();
-    initDragDropTypesAlerte();
-}
-
-function chargerTypesAlerteAdmin() {
+    // Les données sont déjà chargées dans le template côté serveur
+    // On initialise juste le drag & drop et on affiche le contenu
     const loading = document.getElementById('types-alerte-loading');
     const container = document.getElementById('types-alerte-container');
     const empty = document.getElementById('types-alerte-empty');
+    const tbody = document.getElementById('types-alerte-tbody');
 
-    loading.style.display = 'block';
-    container.style.display = 'none';
-    empty.style.display = 'none';
+    // Vérifier si des types sont présents
+    const hasTypes = tbody && tbody.children.length > 0;
 
-    fetch('{{ path('app_admin_types_alerte') }}', {
-        method: 'GET',
-        headers: { 'X-Requested-With': 'XMLHttpRequest' }
-    })
-    .then(response => response.json())
-    .then(data => {
-        loading.style.display = 'none';
+    if (loading) loading.style.display = 'none';
 
-        if (data.types_alerte && data.types_alerte.length === 0) {
-            empty.style.display = 'block';
-        } else {
-            container.style.display = 'block';
-            afficherTableauTypesAlerte(data.types_alerte || []);
-        }
-    })
-    .catch(error => {
-        console.error('Erreur chargement types alertes:', error);
-        loading.style.display = 'none';
-        container.style.display = 'block';
-        document.getElementById('types-alerte-tbody').innerHTML =
-            '<tr><td colspan="8" class="text-center text-danger">Erreur de chargement</td></tr>';
-    });
+    if (hasTypes) {
+        if (container) container.style.display = 'block';
+        if (empty) empty.style.display = 'none';
+        initDragDropTypesAlerte();
+    } else {
+        if (container) container.style.display = 'none';
+        if (empty) empty.style.display = 'block';
+    }
 }
 
 function initDragDropTypesAlerte() {
@@ -272,71 +335,13 @@ function sauvegarderOrdreTypesAlerte(reorderData) {
     .then(data => {
         if (!data.success) {
             console.error('Erreur réorganisation:', data.error);
-            chargerTypesAlerteAdmin();
+            window.location.reload();
         }
     })
     .catch(error => {
         console.error('Erreur réorganisation:', error);
-        chargerTypesAlerteAdmin();
+        window.location.reload();
     });
-}
-
-function afficherTableauTypesAlerte(typesAlerte) {
-    const tbody = document.getElementById('types-alerte-tbody');
-    let html = '';
-
-    typesAlerte.forEach(type => {
-        const statusBadge = type.actif ?
-            '<span class="badge bg-success">Actif</span>' :
-            '<span class="badge bg-secondary">Inactif</span>';
-
-        const severityColor = {
-            'info': 'primary',
-            'warning': 'warning',
-            'danger': 'danger'
-        };
-        const severityBadge = `<span class="badge badge-severity bg-${severityColor[type.severity] || 'secondary'}">${type.severity.toUpperCase()}</span>`;
-
-        const instancesBadge = type.instances_count > 0 ?
-            `<span class="badge bg-warning">${type.instances_count}</span>` :
-            `<span class="badge bg-secondary">0</span>`;
-
-        html += `
-            <tr data-id="${type.id}">
-                <td class="text-center">
-                    <i class="fas fa-grip-vertical drag-handle"></i>
-                </td>
-                <td class="text-center"><strong>${type.ordre}</strong></td>
-                <td>
-                    <div class="fw-bold">${type.nom}</div>
-                    ${type.description ? `<small class="text-muted">${type.description}</small>` : ''}
-                </td>
-                <td>
-                    <code class="small">${type.detecteur_nom || 'N/A'}</code>
-                </td>
-                <td>${statusBadge}</td>
-                <td>${severityBadge}</td>
-                <td class="text-center">${instancesBadge}</td>
-                <td>
-                    <button class="btn btn-outline-success btn-sm me-1" onclick="lancerDetection(${type.id})" title="Lancer détection">
-                        <i class="fas fa-play"></i>
-                    </button>
-                    <button class="btn btn-outline-primary btn-sm me-1" onclick="modifierTypeAlerte(${type.id})" title="Modifier">
-                        <i class="fas fa-edit"></i>
-                    </button>
-                    <button class="btn btn-outline-danger btn-sm" onclick="supprimerTypeAlerte(${type.id})" title="Supprimer">
-                        <i class="fas fa-trash"></i>
-                    </button>
-                </td>
-            </tr>
-        `;
-    });
-
-    tbody.innerHTML = html;
-
-    setTimeout(() => {
-        initDragDropTypesAlerte();
-    }, 100);
 }
 
 function ajouterTypeAlerte() {
@@ -347,9 +352,55 @@ function ajouterTypeAlerte() {
 }
 
 function modifierTypeAlerte(typeId) {
-    // TODO: Implementer récupération des données du type
+    // Récupérer les données depuis les attributs data-* de la ligne
+    const row = document.querySelector('tr[data-id="' + typeId + '"]');
+    if (!row) {
+        showToast('Type d\'alerte introuvable', 'error');
+        return;
+    }
+
+    // Réinitialiser le formulaire
     resetTypeAlerteForm();
+
+    // Remplir le formulaire avec les données du type
+    document.getElementById('typeAlerteId').value = typeId;
+    document.getElementById('typeAlerteNom').value = row.dataset.nom;
+    document.getElementById('typeAlerteDescription').value = row.dataset.description || '';
+    document.getElementById('typeAlerteDetecteur').value = row.dataset.classeDetection;
+    document.getElementById('typeAlerteSeverity').value = row.dataset.severity;
+    document.getElementById('typeAlerteOrdre').value = row.dataset.ordre;
+    document.getElementById('typeAlerteActif').checked = row.dataset.actif === '1';
+
+    // Cocher les rôles cibles
+    try {
+        const rolesCibles = JSON.parse(row.dataset.rolesCibles || '[]');
+        if (Array.isArray(rolesCibles)) {
+            rolesCibles.forEach(function(role) {
+                const checkbox = document.querySelector('input[name="rolesCibles"][value="' + role + '"]');
+                if (checkbox) checkbox.checked = true;
+            });
+        }
+    } catch (e) {
+        console.error('Erreur parsing roles_cibles:', e);
+    }
+
+    // Cocher les sociétés cibles
+    try {
+        const societesCibles = JSON.parse(row.dataset.societesCibles || '[]');
+        if (Array.isArray(societesCibles)) {
+            societesCibles.forEach(function(societeId) {
+                const checkbox = document.getElementById('societe' + societeId);
+                if (checkbox) checkbox.checked = true;
+            });
+        }
+    } catch (e) {
+        console.error('Erreur parsing societes_cibles:', e);
+    }
+
+    // Changer le titre de la modale
     document.getElementById('typeAlerteModalTitle').innerHTML = '<i class="fas fa-edit me-2"></i>Modifier le type d\'alerte';
+
+    // Afficher la modale
     const modal = new bootstrap.Modal(document.getElementById('typeAlerteModal'));
     modal.show();
 }
@@ -397,8 +448,38 @@ function sauvegarderTypeAlerte() {
     .then(data => {
         if (data.success) {
             bootstrap.Modal.getInstance(document.getElementById('typeAlerteModal')).hide();
-            chargerTypesAlerteAdmin();
             showToast(data.message, 'success');
+
+            // Mettre à jour la ligne dans le tableau au lieu de recharger
+            if (data.type) {
+                const row = document.querySelector('tr[data-id="' + data.type.id + '"]');
+                if (row) {
+                    // Mettre à jour les données data-*
+                    const form = document.getElementById('typeAlerteForm');
+                    row.dataset.nom = document.getElementById('typeAlerteNom').value;
+                    row.dataset.description = document.getElementById('typeAlerteDescription').value;
+                    row.dataset.classeDetection = document.getElementById('typeAlerteDetecteur').value;
+                    row.dataset.severity = document.getElementById('typeAlerteSeverity').value;
+                    row.dataset.ordre = document.getElementById('typeAlerteOrdre').value;
+                    row.dataset.actif = document.getElementById('typeAlerteActif').checked ? '1' : '0';
+
+                    // Mettre à jour l'affichage
+                    const nomCell = row.querySelector('td:nth-child(3)');
+                    if (nomCell) {
+                        const desc = document.getElementById('typeAlerteDescription').value;
+                        nomCell.innerHTML = '<div class="fw-bold">' + document.getElementById('typeAlerteNom').value + '</div>' +
+                            (desc ? '<small class="text-muted">' + desc + '</small>' : '');
+                    }
+
+                    const statusCell = row.querySelector('td:nth-child(5)');
+                    if (statusCell) {
+                        const actif = document.getElementById('typeAlerteActif').checked;
+                        statusCell.innerHTML = actif ?
+                            '<span class="badge bg-success">Actif</span>' :
+                            '<span class="badge bg-secondary">Inactif</span>';
+                    }
+                }
+            }
         } else {
             showToast('Erreur: ' + data.error, 'error');
         }
@@ -421,8 +502,18 @@ function supprimerTypeAlerte(typeId) {
     .then(response => response.json())
     .then(data => {
         if (data.success) {
-            chargerTypesAlerteAdmin();
             showToast(data.message, 'success');
+            // Supprimer la ligne du tableau
+            const row = document.querySelector('tr[data-id="' + typeId + '"]');
+            if (row) {
+                row.remove();
+            }
+            // Vérifier s'il reste des types
+            const tbody = document.getElementById('types-alerte-tbody');
+            if (tbody && tbody.children.length === 0) {
+                document.getElementById('types-alerte-container').style.display = 'none';
+                document.getElementById('types-alerte-empty').style.display = 'block';
+            }
         } else {
             showToast('Erreur: ' + data.error, 'error');
         }
@@ -441,8 +532,21 @@ function lancerDetection(typeId) {
     .then(response => response.json())
     .then(data => {
         if (data.success) {
-            chargerTypesAlerteAdmin();
             showToast(data.message, 'success');
+            // Mettre à jour le badge avec le total d'instances non résolues
+            const row = document.querySelector('tr[data-id="' + typeId + '"]');
+            if (row && data.total_instances !== undefined) {
+                const badgeCell = row.querySelector('td:nth-child(7)');
+                if (badgeCell) {
+                    if (data.total_instances > 0) {
+                        badgeCell.innerHTML = '<a href="#" onclick="voirInstancesAlerte(' + typeId + '); return false;" ' +
+                            'class="badge bg-warning text-decoration-none" title="Cliquer pour voir les instances">' +
+                            data.total_instances + '</a>';
+                    } else {
+                        badgeCell.innerHTML = '<span class="badge bg-secondary">0</span>';
+                    }
+                }
+            }
         } else {
             showToast('Erreur: ' + data.error, 'error');
         }
@@ -465,8 +569,27 @@ function runAllDetections() {
     .then(response => response.json())
     .then(data => {
         if (data.success) {
-            chargerTypesAlerteAdmin();
             showToast(data.message, 'success');
+            // Mettre à jour les badges avec le total d'instances non résolues
+            if (data.totals) {
+                Object.entries(data.totals).forEach(function(entry) {
+                    const typeId = entry[0];
+                    const totalInstances = entry[1];
+                    const row = document.querySelector('tr[data-id="' + typeId + '"]');
+                    if (row) {
+                        const badgeCell = row.querySelector('td:nth-child(7)');
+                        if (badgeCell) {
+                            if (totalInstances > 0) {
+                                badgeCell.innerHTML = '<a href="#" onclick="voirInstancesAlerte(' + typeId + '); return false;" ' +
+                                    'class="badge bg-warning text-decoration-none" title="Cliquer pour voir les instances">' +
+                                    totalInstances + '</a>';
+                            } else {
+                                badgeCell.innerHTML = '<span class="badge bg-secondary">0</span>';
+                            }
+                        }
+                    }
+                });
+            }
         } else {
             showToast('Erreur: ' + data.error, 'error');
         }
@@ -523,5 +646,84 @@ function showToast(message, type) {
     bsToast.show();
 
     setTimeout(() => toast.remove(), 5000);
+}
+
+function voirInstancesAlerte(typeId) {
+    const modal = new bootstrap.Modal(document.getElementById('instancesAlerteModal'));
+    const loading = document.getElementById('instancesAlerteLoading');
+    const content = document.getElementById('instancesAlerteContent');
+
+    loading.style.display = 'block';
+    content.style.display = 'none';
+
+    fetch('{{ path('app_admin_types_alerte_instances', {id: '__ID__'}) }}'.replace('__ID__', typeId), {
+        method: 'GET',
+        headers: { 'X-Requested-With': 'XMLHttpRequest' }
+    })
+    .then(response => response.json())
+    .then(data => {
+        loading.style.display = 'none';
+
+        if (data.success) {
+            document.getElementById('instancesModalTitle').textContent = data.typeName + ' (' + data.instances.length + ' instance(s))';
+
+            let html = '<div class="table-responsive"><table class="table table-hover"><thead><tr>' +
+                '<th>Date</th><th>Entité</th><th>Message</th><th width="150">Actions</th></tr></thead><tbody>';
+
+            data.instances.forEach(instance => {
+                const entityName = instance.metadata.client_nom || instance.metadata.contact_nom || 'N/A';
+
+                // Construire l'URL selon le type d'entité
+                let editUrl = '#';
+                let hasLink = false;
+
+                if (instance.entityType === 'App\\Entity\\Client') {
+                    editUrl = '{{ path('app_prospect_show', {id: '__ID__'}) }}'.replace('__ID__', instance.entityId);
+                    hasLink = true;
+                } else if (instance.entityType === 'App\\Entity\\Contact') {
+                    // Pour un contact, on doit aller vers le client parent
+                    if (instance.clientId) {
+                        editUrl = '{{ path('app_prospect_show', {id: '__ID__'}) }}'.replace('__ID__', instance.clientId);
+                        hasLink = true;
+                    }
+                }
+
+                const linkButton = hasLink ?
+                    '<a href="' + editUrl + '" target="_blank" class="btn btn-sm btn-outline-primary me-1" title="Ouvrir dans un nouvel onglet">' +
+                    '<i class="fas fa-external-link-alt"></i></a>' :
+                    '<button class="btn btn-sm btn-outline-secondary me-1" disabled title="Lien non disponible">' +
+                    '<i class="fas fa-external-link-alt"></i></button>';
+
+                html += '<tr>' +
+                    '<td>' + instance.dateCreation + '</td>' +
+                    '<td>' + entityName + '</td>' +
+                    '<td>' + instance.message + '</td>' +
+                    '<td>' +
+                    linkButton +
+                    '<button class="btn btn-sm btn-outline-success" onclick="resoudreInstance(' + instance.id + ')" title="Marquer comme résolu">' +
+                    '<i class="fas fa-check"></i></button>' +
+                    '</td></tr>';
+            });
+
+            html += '</tbody></table></div>';
+            content.innerHTML = html;
+            content.style.display = 'block';
+            modal.show();
+        } else {
+            showToast('Erreur: ' + data.error, 'error');
+        }
+    })
+    .catch(error => {
+        loading.style.display = 'none';
+        console.error('Erreur chargement instances:', error);
+        showToast('Erreur lors du chargement', 'error');
+    });
+}
+
+function resoudreInstance(instanceId) {
+    if (!confirm('Marquer cette instance comme résolue ?')) {
+        return;
+    }
+    showToast('Fonctionnalité à implémenter: résolution instance #' + instanceId, 'info');
 }
 </script>

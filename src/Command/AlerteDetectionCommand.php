@@ -57,8 +57,8 @@ class AlerteDetectionCommand extends Command
             $stats = $this->alerteManager->getStatistics();
             $io->text([
                 sprintf('Types actifs: %d', $stats['types_actifs']),
-                sprintf('Instances non résolues: %d', $stats['instances_non_resolues']),
-                sprintf('Instances résolues aujourd\'hui: %d', $stats['instances_resolues_aujourd_hui'])
+                sprintf('Instances non résolues: %d', $stats['alertes_non_resolues']),
+                sprintf('Instances résolues aujourd\'hui: %d', $stats['alertes_resolues_aujourd_hui'])
             ]);
 
             if (!empty($stats['par_type'])) {

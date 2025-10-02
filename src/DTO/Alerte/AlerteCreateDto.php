@@ -37,11 +37,6 @@ class AlerteCreateDto
     )]
     public ?array $cibles = [];
 
-    #[Assert\Range(
-        min: 0,
-        max: 100,
-        notInRangeMessage: 'L\'ordre doit être entre {{ min }} et {{ max }}'
-    )]
     public int $ordre = 0;
 
     #[Assert\Type(

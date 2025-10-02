@@ -46,6 +46,9 @@ class AlerteType
     #[ORM\Column(length: 50, options: ['default' => 'warning'])]
     private string $severity = 'warning';
 
+    #[ORM\Column(type: Types::JSON, nullable: true)]
+    private ?array $configuration = null;
+
     #[ORM\OneToMany(mappedBy: 'alerteType', targetEntity: AlerteInstance::class, cascade: ['remove'])]
     private Collection $instances;
 
@@ -221,5 +224,16 @@ class AlerteType
             error_log('❌ [ERROR] Stack trace: ' . $e->getTraceAsString());
             throw $e;
         }
+    }
+
+    public function getConfiguration(): ?array
+    {
+        return $this->configuration;
+    }
+
+    public function setConfiguration(?array $configuration): static
+    {
+        $this->configuration = $configuration;
+        return $this;
     }
 }

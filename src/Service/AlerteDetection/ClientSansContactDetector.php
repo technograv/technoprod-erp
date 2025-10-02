@@ -9,25 +9,37 @@ class ClientSansContactDetector extends AbstractAlerteDetector
 {
     public function detect(AlerteType $alerteType): array
     {
-        $clientsQuery = $this->entityManager->createQueryBuilder()
+        // Détecter les clients qui n'ont AUCUN contact actif
+        // LEFT JOIN pour trouver ceux sans contact actif
+        $qb = $this->entityManager->createQueryBuilder()
             ->select('c')
             ->from(Client::class, 'c')
-            ->leftJoin('c.contacts', 'contact')
-            ->where('contact.id IS NULL')
-            ->andWhere('c.actif = true')
-            ->getQuery();
+            ->leftJoin('c.contacts', 'contact', 'WITH', 'contact.actif = true')
+            ->groupBy('c.id')
+            ->having('COUNT(contact.id) = 0');
 
-        $clients = $clientsQuery->getResult();
+        $clients = $qb->getQuery()->getResult();
+
         $instances = [];
+        $currentEntityIds = [];
 
         foreach ($clients as $client) {
+            $currentEntityIds[] = $client->getId();
+
             if (!$this->instanceExists($alerteType, $client->getId())) {
+                // Récupérer le nom : priorité nomEntreprise, sinon "Client #ID"
+                $clientNom = $client->getNomEntreprise() ?: 'Client #' . $client->getId();
+
                 $instances[] = $this->createInstance($alerteType, $client->getId(), [
-                    'client_nom' => $client->getNom(),
-                    'client_type' => $client->getType(),
+                    'client_nom' => $clientNom,
+                    'client_code' => $client->getCode(),
+                    'client_statut' => $client->getStatut(),
                 ]);
             }
         }
+
+        // Résoudre automatiquement les alertes obsolètes
+        $this->resolveObsoleteInstances($alerteType, $currentEntityIds);
 
         return $instances;
     }
@@ -37,6 +49,12 @@ class ClientSansContactDetector extends AbstractAlerteDetector
         return Client::class;
     }
 
+    protected function generateMessage(int $entityId, array $metadata): string
+    {
+        $clientNom = $metadata['client_nom'] ?? 'Client inconnu';
+        return 'Client "' . $clientNom . '" n\'a aucun contact actif';
+    }
+
     public function getName(): string
     {
         return 'Client sans contact';
@@ -44,6 +62,6 @@ class ClientSansContactDetector extends AbstractAlerteDetector
 
     public function getDescription(): string
     {
-        return 'Détecte les clients actifs qui n\'ont aucun contact associé';
+        return 'Détecte les clients et prospects qui n\'ont aucun contact actif';
     }
 }

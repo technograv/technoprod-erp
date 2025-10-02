@@ -1,5 +1,5 @@
 <h3 class="section-title">
-    <i class="fas fa-bell me-2 text-warning"></i>Gestion des Alertes
+    <i class="fas fa-bell me-2 text-warning"></i>Gestion des Alertes (Système Unifié)
 </h3>
 
 <div class="row">
@@ -9,9 +9,17 @@
                 <h6 class="mb-0">
                     <i class="fas fa-list me-2"></i>Alertes configurées
                 </h6>
-                <button type="button" class="btn btn-primary btn-sm" onclick="ajouterAlerte()">
-                    <i class="fas fa-plus me-1"></i>Nouvelle alerte
-                </button>
+                <div>
+                    <button type="button" class="btn btn-warning btn-sm me-2" onclick="lancerDetectionAlertes()" id="btn-scan-alertes">
+                        <i class="fas fa-sync-alt me-1"></i>Scanner les alertes
+                    </button>
+                    <button type="button" class="btn btn-success btn-sm me-2" onclick="ajouterAlerteConfigurable()">
+                        <i class="fas fa-cogs me-1"></i>Nouvelle alerte automatique
+                    </button>
+                    <button type="button" class="btn btn-primary btn-sm" onclick="ajouterAlerte()">
+                        <i class="fas fa-plus me-1"></i>Nouvelle alerte manuelle
+                    </button>
+                </div>
             </div>
             <div class="card-body">
                 <div id="alertes-admin-loading" class="text-center py-4">
@@ -23,16 +31,17 @@
                         <table class="table table-hover">
                             <thead>
                                 <tr>
-                                    <th width="50">Ordre</th>
+                                    <th width="40"></th>
+                                    <th width="80">Source</th>
                                     <th>Titre</th>
                                     <th>Type</th>
                                     <th width="80">Statut</th>
-                                    <th width="100">Dismissible</th>
+                                    <th width="120">Instances</th>
                                     <th width="150">Expiration</th>
                                     <th width="120">Actions</th>
                                 </tr>
                             </thead>
-                            <tbody id="alertes-admin-tbody">
+                            <tbody id="alertes-admin-tbody" class="sortable-alertes">
                             </tbody>
                         </table>
                     </div>
@@ -42,6 +51,63 @@
                     <h6>Aucune alerte configurée</h6>
                     <p class="mb-0">Commencez par créer votre première alerte système.</p>
                 </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Modal Détail Instances Alertes Automatiques -->
+<div class="modal fade" id="instancesModal" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-xl">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title" id="instancesModalTitle">
+                    <i class="fas fa-list me-2"></i>Instances d'alerte
+                </h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body">
+                <div id="instances-loading" class="text-center py-4" style="display: none;">
+                    <div class="spinner-border text-primary" role="status"></div>
+                    <div class="mt-2 text-muted">Chargement des instances...</div>
+                </div>
+
+                <div id="instances-container" style="display: none;">
+                    <div class="alert alert-info mb-3">
+                        <i class="fas fa-info-circle me-2"></i>
+                        <span id="instances-info"></span>
+                    </div>
+
+                    <div class="table-responsive">
+                        <table class="table table-hover table-sm">
+                            <thead>
+                                <tr>
+                                    <th>Message</th>
+                                    <th width="150">Créée le</th>
+                                    <th width="100">Type</th>
+                                    <th width="120">Actions</th>
+                                </tr>
+                            </thead>
+                            <tbody id="instances-tbody">
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+
+                <div id="instances-empty" style="display: none;" class="text-center py-4 text-muted">
+                    <i class="fas fa-check-circle fa-3x mb-3 text-success"></i>
+                    <h6>Aucune instance non résolue</h6>
+                    <p class="mb-0">Toutes les alertes de ce type ont été résolues.</p>
+                </div>
+
+                <div id="instances-error" style="display: none;" class="text-center py-4">
+                    <i class="fas fa-exclamation-triangle fa-3x mb-3 text-danger"></i>
+                    <h6 class="text-danger">Erreur de chargement</h6>
+                    <p id="instances-error-message" class="text-muted"></p>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Fermer</button>
             </div>
         </div>
     </div>
@@ -61,19 +127,9 @@
                 <form id="alerteForm">
                     <input type="hidden" id="alerteId" name="id">
                     
-                    <div class="row">
-                        <div class="col-md-8">
-                            <div class="mb-3">
-                                <label for="alerteTitre" class="form-label">Titre de l'alerte *</label>
-                                <input type="text" class="form-control" id="alerteTitre" name="titre" required maxlength="255">
-                            </div>
-                        </div>
-                        <div class="col-md-4">
-                            <div class="mb-3">
-                                <label for="alerteOrdre" class="form-label">Ordre d'affichage</label>
-                                <input type="number" class="form-control" id="alerteOrdre" name="ordre" min="0" value="0">
-                            </div>
-                        </div>
+                    <div class="mb-3">
+                        <label for="alerteTitre" class="form-label">Titre de l'alerte *</label>
+                        <input type="text" class="form-control" id="alerteTitre" name="titre" required maxlength="255">
                     </div>
                     
                     <div class="row">
@@ -157,6 +213,245 @@
     </div>
 </div>
 
+<!-- Modal Création Alerte Configurable -->
+<div class="modal fade" id="alerteConfigurableModal" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-xl">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">
+                    <i class="fas fa-cogs me-2"></i>Nouvelle alerte automatique configurable
+                </h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body">
+                <form id="alerteConfigurableForm">
+
+                    <div class="alert alert-info mb-3">
+                        <i class="fas fa-info-circle me-2"></i>
+                        <strong>Alerte configurable :</strong> Créez une règle de détection automatique sans écrire de code PHP.
+                        Le système détectera automatiquement les entités correspondant à vos critères.
+                    </div>
+
+                    <!-- Informations de base -->
+                    <h6 class="border-bottom pb-2 mb-3">
+                        <i class="fas fa-info-circle me-2"></i>Informations de base
+                    </h6>
+
+                    <div class="row mb-3">
+                        <div class="col-md-8">
+                            <label for="configNom" class="form-label">Nom de l'alerte *</label>
+                            <input type="text" class="form-control" id="configNom" required maxlength="255" placeholder="Ex: Clients sans adresse de livraison">
+                        </div>
+                        <div class="col-md-4">
+                            <label for="configSeverity" class="form-label">Sévérité *</label>
+                            <select class="form-select" id="configSeverity" required>
+                                <option value="info">Information</option>
+                                <option value="success">Succès</option>
+                                <option value="warning" selected>Attention</option>
+                                <option value="error">Erreur</option>
+                            </select>
+                        </div>
+                    </div>
+
+                    <div class="mb-3">
+                        <label for="configDescription" class="form-label">Description</label>
+                        <textarea class="form-control" id="configDescription" rows="2" placeholder="Description de cette règle d'alerte"></textarea>
+                    </div>
+
+                    <!-- Configuration de détection -->
+                    <h6 class="border-bottom pb-2 mb-3 mt-4">
+                        <i class="fas fa-search me-2"></i>Règles de détection
+                    </h6>
+
+                    <div class="row mb-3">
+                        <div class="col-md-6">
+                            <label for="configEntity" class="form-label">Type d'entité à surveiller *</label>
+                            <select class="form-select" id="configEntity" required onchange="chargerChampsEntite()">
+                                <option value="">Sélectionnez une entité...</option>
+                                <option value="App\Entity\Client">Client</option>
+                                <option value="App\Entity\Contact">Contact</option>
+                                <option value="App\Entity\Devis">Devis</option>
+                                <option value="App\Entity\Produit">Produit</option>
+                                <option value="App\Entity\User">Utilisateur</option>
+                            </select>
+                        </div>
+                        <div class="col-md-6">
+                            <label for="configNameField" class="form-label">Champ nom de l'entité *</label>
+                            <select class="form-select" id="configNameField" required disabled>
+                                <option value="">Sélectionnez d'abord une entité...</option>
+                            </select>
+                            <small class="form-text text-muted">Champ utilisé pour identifier l'entité dans le message</small>
+                        </div>
+                    </div>
+
+                    <div class="mb-3">
+                        <label class="form-label">Conditions <span class="badge bg-secondary" id="conditionsCount">0</span></label>
+                        <div id="conditionsList" class="border rounded p-3 bg-light">
+                            <p class="text-muted mb-2">
+                                <i class="fas fa-info-circle me-1"></i>Ajoutez des conditions pour détecter les entités problématiques
+                            </p>
+                            <!-- Les conditions seront ajoutées ici dynamiquement -->
+                        </div>
+                        <button type="button" class="btn btn-sm btn-outline-primary mt-2" onclick="ajouterCondition()">
+                            <i class="fas fa-plus me-1"></i>Ajouter une condition
+                        </button>
+                    </div>
+
+                    <!-- Template de message -->
+                    <h6 class="border-bottom pb-2 mb-3 mt-4">
+                        <i class="fas fa-comment me-2"></i>Message d'alerte
+                    </h6>
+
+                    <div class="mb-3">
+                        <label for="configMessageTemplate" class="form-label">Template du message *</label>
+                        <input type="text" class="form-control" id="configMessageTemplate" required value="Problème détecté pour {entity_name}" placeholder="Ex: Le client {entity_name} n'a pas de contact">
+                        <small class="form-text text-muted">
+                            Variables disponibles: <code>{entity_name}</code>, <code>{entity_id}</code>
+                        </small>
+                    </div>
+
+                    <!-- Cibles -->
+                    <h6 class="border-bottom pb-2 mb-3 mt-4">
+                        <i class="fas fa-users me-2"></i>Destinataires
+                    </h6>
+
+                    <div class="row">
+                        <div class="col-md-6">
+                            <label class="form-label">Rôles cibles</label>
+                            <div class="form-check">
+                                <input class="form-check-input config-role" type="checkbox" id="configRoleAdmin" value="ROLE_ADMIN">
+                                <label class="form-check-label" for="configRoleAdmin">Administrateurs</label>
+                            </div>
+                            <div class="form-check">
+                                <input class="form-check-input config-role" type="checkbox" id="configRoleManager" value="ROLE_MANAGER">
+                                <label class="form-check-label" for="configRoleManager">Managers</label>
+                            </div>
+                            <div class="form-check">
+                                <input class="form-check-input config-role" type="checkbox" id="configRoleCommercial" value="ROLE_COMMERCIAL">
+                                <label class="form-check-label" for="configRoleCommercial">Commerciaux</label>
+                            </div>
+                            <small class="form-text text-muted">Laissez vide pour tous les utilisateurs</small>
+                        </div>
+                        <div class="col-md-6">
+                            <div class="form-check">
+                                <input class="form-check-input" type="checkbox" id="configActif" checked>
+                                <label class="form-check-label" for="configActif">
+                                    <strong>Alerte active</strong>
+                                </label>
+                            </div>
+                        </div>
+                    </div>
+
+                </form>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Annuler</button>
+                <button type="button" class="btn btn-success" onclick="sauvegarderAlerteConfigurable()">
+                    <i class="fas fa-save me-1"></i>Créer l'alerte automatique
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Modal Édition Type d'Alerte Automatique -->
+<div class="modal fade" id="alerteTypeModal" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-lg">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title" id="alerteTypeModalTitle">
+                    <i class="fas fa-cog me-2"></i>Configuration type d'alerte automatique
+                </h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body">
+                <form id="alerteTypeForm">
+                    <input type="hidden" id="alerteTypeId" name="id">
+
+                    <div class="alert alert-info mb-3">
+                        <i class="fas fa-info-circle me-2"></i>
+                        Les alertes automatiques sont détectées par le système. Vous pouvez configurer leurs paramètres d'affichage et leurs cibles.
+                    </div>
+
+                    <div class="mb-3">
+                        <label for="alerteTypeNom" class="form-label">Nom du type d'alerte *</label>
+                        <input type="text" class="form-control" id="alerteTypeNom" name="nom" required maxlength="255">
+                    </div>
+
+                    <div class="mb-3">
+                        <label for="alerteTypeDescription" class="form-label">Description</label>
+                        <textarea class="form-control" id="alerteTypeDescription" name="description" rows="3"></textarea>
+                        <small class="form-text text-muted">Description du type d'alerte et de sa détection</small>
+                    </div>
+
+                    <div class="row">
+                        <div class="col-md-6">
+                            <div class="mb-3">
+                                <label for="alerteTypeSeverity" class="form-label">Sévérité *</label>
+                                <select class="form-select" id="alerteTypeSeverity" name="severity" required>
+                                    <option value="info">Information (bleu)</option>
+                                    <option value="success">Succès (vert)</option>
+                                    <option value="warning">Attention (orange)</option>
+                                    <option value="error">Erreur (rouge)</option>
+                                </select>
+                            </div>
+                        </div>
+                        <div class="col-md-6">
+                            <div class="mb-3">
+                                <label for="alerteTypeDetecteur" class="form-label">Classe de détection</label>
+                                <input type="text" class="form-control" id="alerteTypeDetecteur" name="classeDetection" readonly>
+                                <small class="form-text text-muted">Détecteur système (non modifiable)</small>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="row">
+                        <div class="col-md-6">
+                            <div class="mb-3">
+                                <label class="form-label">Rôles cibles</label>
+                                <div class="form-check">
+                                    <input class="form-check-input" type="checkbox" id="typeRoleAdmin" name="rolesCibles" value="ROLE_ADMIN">
+                                    <label class="form-check-label" for="typeRoleAdmin">Administrateurs</label>
+                                </div>
+                                <div class="form-check">
+                                    <input class="form-check-input" type="checkbox" id="typeRoleManager" name="rolesCibles" value="ROLE_MANAGER">
+                                    <label class="form-check-label" for="typeRoleManager">Managers</label>
+                                </div>
+                                <div class="form-check">
+                                    <input class="form-check-input" type="checkbox" id="typeRoleCommercial" name="rolesCibles" value="ROLE_COMMERCIAL">
+                                    <label class="form-check-label" for="typeRoleCommercial">Commerciaux</label>
+                                </div>
+                                <div class="form-check">
+                                    <input class="form-check-input" type="checkbox" id="typeRoleUser" name="rolesCibles" value="ROLE_USER">
+                                    <label class="form-check-label" for="typeRoleUser">Utilisateurs</label>
+                                </div>
+                                <small class="form-text text-muted">Laissez vide pour afficher à tous les utilisateurs</small>
+                            </div>
+                        </div>
+                        <div class="col-md-6">
+                            <div class="mb-3">
+                                <div class="form-check">
+                                    <input class="form-check-input" type="checkbox" id="alerteTypeActif" name="actif" checked>
+                                    <label class="form-check-label" for="alerteTypeActif">
+                                        <strong>Type d'alerte actif</strong>
+                                    </label>
+                                    <small class="form-text text-muted d-block">Si désactivé, le détecteur ne s'exécutera plus</small>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </form>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Annuler</button>
+                <button type="button" class="btn btn-primary" onclick="sauvegarderAlerteType()">
+                    <i class="fas fa-save me-1"></i>Enregistrer
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+
 <style>
 .alert-dismissible {
     transition: all 0.3s ease;
@@ -169,42 +464,34 @@
     font-size: 0.75rem;
     padding: 0.4rem 0.6rem;
 }
+.cursor-pointer {
+    cursor: pointer;
+}
+.cursor-pointer:hover {
+    opacity: 0.8;
+    transform: scale(1.05);
+    transition: all 0.2s ease;
+}
+.sortable-ghost {
+    opacity: 0.4;
+    background: #f0f0f0;
+}
+.drag-handle:hover {
+    color: #0d6efd !important;
+}
 </style>
 
+<script src="https://cdn.jsdelivr.net/npm/sortablejs@1.15.0/Sortable.min.js"></script>
+
 <script>
+let allAlertes = []; // Stocker toutes les alertes pour le filtrage
+
 function initAlertes() {
     console.log('🔍 [DEBUG ALERTES] initAlertes() starting');
-    console.log('🔍 [DEBUG ALERTES] NOT calling chargerAlertesAdmin() to avoid loops');
+    console.log('🔍 [DEBUG ALERTES] Auto-loading alertes on init');
 
-    // Ajouter un bouton pour charger manuellement
-    const container = document.getElementById('alertes-admin-container');
-    const loading = document.getElementById('alertes-admin-loading');
-    const empty = document.getElementById('alertes-admin-empty');
-
-    console.log('🔍 [DEBUG ALERTES] Elements check:');
-    console.log('🔍 [DEBUG ALERTES] - container:', container);
-    console.log('🔍 [DEBUG ALERTES] - loading:', loading);
-    console.log('🔍 [DEBUG ALERTES] - empty:', empty);
-
-    if (loading) {
-        loading.style.display = 'none';
-    }
-    if (container) {
-        container.style.display = 'none';
-    }
-    if (empty) {
-        empty.innerHTML = `
-            <div class="text-center py-4">
-                <i class="fas fa-bell fa-3x mb-3 text-muted"></i>
-                <h6>Alertes Manuelles</h6>
-                <p class="text-muted mb-3">Gestion des alertes créées manuellement par les administrateurs</p>
-                <button class="btn btn-primary" onclick="chargerAlertesAdmin()">
-                    <i class="fas fa-refresh me-2"></i>Charger les alertes
-                </button>
-            </div>
-        `;
-        empty.style.display = 'block';
-    }
+    // Charger automatiquement les alertes au démarrage
+    chargerAlertesAdmin();
 }
 
 // Charger les alertes pour l'admin
@@ -272,6 +559,7 @@ function chargerAlertesAdmin() {
             if (empty) empty.style.display = 'block';
         } else if (data.alertes) {
             console.log('🔍 [DEBUG ALERTES] Alertes found:', data.alertes.length);
+            allAlertes = data.alertes; // Stocker pour le filtrage
             if (container) container.style.display = 'block';
             afficherTableauAlertes(data.alertes);
         } else {
@@ -305,45 +593,287 @@ function chargerAlertesAdmin() {
 function afficherTableauAlertes(alertes) {
     const tbody = document.getElementById('alertes-admin-tbody');
     let html = '';
-    
+
     alertes.forEach(alerte => {
-        const statusBadge = alerte.isActive ? 
-            '<span class="badge bg-success">Active</span>' : 
+        // Badge source (manuel ou automatique)
+        const sourceBadge = alerte.isManual
+            ? '<span class="badge bg-info"><i class="fas fa-user-edit me-1"></i>Manuelle</span>'
+            : '<span class="badge bg-warning text-dark"><i class="fas fa-robot me-1"></i>Auto</span>';
+
+        const statusBadge = alerte.isActive ?
+            '<span class="badge bg-success">Active</span>' :
             '<span class="badge bg-secondary">Inactive</span>';
-            
-        const dismissibleBadge = alerte.dismissible ? 
-            '<span class="badge bg-info">Oui</span>' : 
-            '<span class="badge bg-secondary">Non</span>';
-            
+
         const typeBadge = `<span class="badge badge-type bg-${alerte.type === 'info' ? 'primary' : alerte.type}">${alerte.type.toUpperCase()}</span>`;
-        
+
         const expiration = alerte.dateExpiration || '<span class="text-muted">Permanente</span>';
         const isExpired = alerte.isExpired ? ' <span class="badge bg-danger">Expirée</span>' : '';
-        
+
+        // Badge instances : pour les alertes auto, afficher le compteur cliquable
+        let instancesBadge = '<span class="text-muted">-</span>';
+        if (alerte.isAutomatic) {
+            const badgeClass = alerte.instancesCount > 0 ? 'bg-danger' : 'bg-secondary';
+            // Échapper les backslashes pour JavaScript
+            const escapedDetectorClass = alerte.detectorClass.replace(/\\/g, '\\\\');
+            instancesBadge = `<span class="badge ${badgeClass} cursor-pointer" onclick="voirInstancesAlerte('${escapedDetectorClass}')" title="Cliquer pour voir les instances">
+                <i class="fas fa-exclamation-triangle me-1"></i>${alerte.instancesCount} instance${alerte.instancesCount > 1 ? 's' : ''}
+            </span>`;
+        }
+
+        // Actions différentes selon le type
+        let actionsHtml = '';
+        if (alerte.isManual) {
+            // Alertes manuelles : édition + suppression
+            actionsHtml = `
+                <button class="btn btn-outline-primary btn-sm me-1" onclick="modifierAlerte(${alerte.id})" title="Modifier">
+                    <i class="fas fa-edit"></i>
+                </button>
+                <button class="btn btn-outline-danger btn-sm" onclick="supprimerAlerte(${alerte.id})" title="Supprimer">
+                    <i class="fas fa-trash"></i>
+                </button>
+            `;
+        } else {
+            // Alertes automatiques : édition + suppression
+            // Extraire l'ID numérique (retirer le préfixe 'type_')
+            const typeId = alerte.id.toString().replace('type_', '');
+            actionsHtml = `
+                <button class="btn btn-outline-primary btn-sm me-1" onclick="modifierAlerteAutomatique(${typeId})" title="Configurer">
+                    <i class="fas fa-cog"></i>
+                </button>
+                <button class="btn btn-outline-danger btn-sm" onclick="supprimerAlerte('${alerte.id}')" title="Supprimer">
+                    <i class="fas fa-trash"></i>
+                </button>
+            `;
+        }
+
         html += `
-            <tr class="${alerte.isExpired ? 'text-muted' : ''}">
-                <td class="text-center"><strong>${alerte.ordre}</strong></td>
+            <tr class="${alerte.isExpired ? 'text-muted' : ''}" data-id="${alerte.id}">
+                <td class="drag-handle" style="cursor: move;"><i class="fas fa-grip-vertical text-muted"></i></td>
+                <td>${sourceBadge}</td>
                 <td>
                     <div class="fw-bold">${alerte.titre}</div>
                     <small class="text-muted">${alerte.message.substring(0, 80)}${alerte.message.length > 80 ? '...' : ''}</small>
                 </td>
                 <td>${typeBadge}</td>
                 <td>${statusBadge}</td>
-                <td>${dismissibleBadge}</td>
+                <td>${instancesBadge}</td>
                 <td>${expiration}${isExpired}</td>
                 <td>
-                    <button class="btn btn-outline-primary btn-sm me-1" onclick="modifierAlerte(${alerte.id})" title="Modifier">
-                        <i class="fas fa-edit"></i>
-                    </button>
-                    <button class="btn btn-outline-danger btn-sm" onclick="supprimerAlerte(${alerte.id})" title="Supprimer">
-                        <i class="fas fa-trash"></i>
-                    </button>
+                    ${actionsHtml}
                 </td>
             </tr>
         `;
     });
-    
+
     tbody.innerHTML = html;
+
+    // Initialiser le drag & drop après l'affichage
+    initAlertesDragDrop();
+}
+
+// Initialiser le drag & drop pour les alertes
+function initAlertesDragDrop() {
+    const tbody = document.getElementById('alertes-admin-tbody');
+    if (!tbody || tbody.children.length === 0) return;
+
+    // Détruire l'instance existante si elle existe
+    if (tbody.sortable) {
+        tbody.sortable.destroy();
+    }
+
+    // Initialiser SortableJS
+    tbody.sortable = Sortable.create(tbody, {
+        animation: 150,
+        handle: '.drag-handle',
+        ghostClass: 'sortable-ghost',
+        onEnd: function(evt) {
+            // Récupérer l'ordre actuel
+            const ordre = [];
+            const rows = tbody.querySelectorAll('tr[data-id]');
+            rows.forEach((row, index) => {
+                ordre.push({
+                    id: row.getAttribute('data-id'),
+                    ordre: index + 1
+                });
+            });
+
+            // Sauvegarder l'ordre via AJAX
+            sauvegarderOrdreAlertes(ordre);
+        }
+    });
+}
+
+// Sauvegarder l'ordre des alertes
+function sauvegarderOrdreAlertes(ordre) {
+    const csrfMeta = document.querySelector('meta[name="csrf-token"]');
+    const csrfToken = csrfMeta ? csrfMeta.getAttribute('content') : null;
+
+    const headers = {
+        'Content-Type': 'application/json',
+        'X-Requested-With': 'XMLHttpRequest'
+    };
+
+    if (csrfToken) {
+        headers['X-CSRF-Token'] = csrfToken;
+    }
+
+    fetch('/admin/alertes/ordre', {
+        method: 'POST',
+        headers: headers,
+        body: JSON.stringify({ ordre: ordre })
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.success) {
+            console.log('✅ Ordre des alertes sauvegardé');
+        } else {
+            console.error('❌ Erreur sauvegarde ordre:', data.message);
+        }
+    })
+    .catch(error => {
+        console.error('❌ Erreur sauvegarde ordre:', error);
+    });
+}
+
+// Voir les instances d'une alerte automatique
+function voirInstancesAlerte(detectorClass) {
+    const modal = new bootstrap.Modal(document.getElementById('instancesModal'));
+    const loading = document.getElementById('instances-loading');
+    const container = document.getElementById('instances-container');
+    const empty = document.getElementById('instances-empty');
+    const error = document.getElementById('instances-error');
+
+    // Réinitialiser l'affichage
+    loading.style.display = 'block';
+    container.style.display = 'none';
+    empty.style.display = 'none';
+    error.style.display = 'none';
+
+    // Extraire le nom court du détecteur pour le titre
+    const detectorName = detectorClass.split('\\').pop().replace('Detector', '');
+    document.getElementById('instancesModalTitle').innerHTML = '<i class="fas fa-list me-2"></i>Instances - ' + detectorName;
+
+    // Ouvrir la modal
+    modal.show();
+
+    // Charger les instances
+    fetch('/admin/alertes/instances/' + encodeURIComponent(detectorClass), {
+        method: 'GET',
+        headers: {
+            'X-Requested-With': 'XMLHttpRequest'
+        }
+    })
+    .then(response => {
+        if (!response.ok) {
+            throw new Error('Erreur HTTP: ' + response.status);
+        }
+        return response.json();
+    })
+    .then(data => {
+        loading.style.display = 'none';
+
+        if (data.success && data.instances.length === 0) {
+            empty.style.display = 'block';
+        } else if (data.success && data.instances.length > 0) {
+            container.style.display = 'block';
+            document.getElementById('instances-info').textContent =
+                data.total + ' instance' + (data.total > 1 ? 's' : '') + ' non résolue' + (data.total > 1 ? 's' : '');
+            afficherInstancesTableau(data.instances);
+        } else {
+            throw new Error('Format de données invalide');
+        }
+    })
+    .catch(err => {
+        loading.style.display = 'none';
+        error.style.display = 'block';
+        document.getElementById('instances-error-message').textContent = err.message;
+    });
+}
+
+// Afficher le tableau des instances
+function afficherInstancesTableau(instances) {
+    const tbody = document.getElementById('instances-tbody');
+    let html = '';
+
+    instances.forEach(instance => {
+        const typeBadge = `<span class="badge bg-${instance.type === 'info' ? 'primary' : instance.type}">${instance.type.toUpperCase()}</span>`;
+
+        // Générer le lien vers l'entité si disponible
+        let editUrl = null;
+        if (instance.entityType === 'App\\Entity\\Client') {
+            editUrl = '/prospect/' + instance.entityId;
+        } else if (instance.entityType === 'App\\Entity\\Contact' && instance.metadata.client_id) {
+            editUrl = '/prospect/' + instance.metadata.client_id;
+        }
+
+        const actionsHtml = editUrl
+            ? `<a href="${editUrl}" class="btn btn-sm btn-outline-primary" target="_blank" title="Voir l'entité">
+                <i class="fas fa-external-link-alt"></i>
+               </a>
+               <button class="btn btn-sm btn-outline-success" onclick="resoudreInstance(${instance.id})" title="Marquer comme résolu">
+                <i class="fas fa-check"></i>
+               </button>`
+            : `<button class="btn btn-sm btn-outline-success" onclick="resoudreInstance(${instance.id})" title="Marquer comme résolu">
+                <i class="fas fa-check"></i>
+               </button>`;
+
+        html += `
+            <tr data-instance-id="${instance.id}">
+                <td>${instance.message}</td>
+                <td><small class="text-muted">${instance.createdAt}</small></td>
+                <td>${typeBadge}</td>
+                <td>
+                    ${actionsHtml}
+                </td>
+            </tr>
+        `;
+    });
+
+    tbody.innerHTML = html;
+}
+
+// Résoudre une instance d'alerte (depuis l'admin)
+function resoudreInstance(instanceId) {
+    fetch('/admin/alertes/instance/' + instanceId + '/resolve', {
+        method: 'POST',
+        headers: {
+            'X-Requested-With': 'XMLHttpRequest',
+            'Content-Type': 'application/json'
+        }
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.success) {
+            // Retirer la ligne du tableau
+            const row = document.querySelector('tr[data-instance-id="' + instanceId + '"]');
+            if (row) {
+                row.remove();
+            }
+
+            // Mettre à jour le compteur
+            const tbody = document.getElementById('instances-tbody');
+            const remainingCount = tbody.querySelectorAll('tr').length;
+
+            if (remainingCount === 0) {
+                // Plus d'instances, afficher l'état vide
+                document.getElementById('instances-container').style.display = 'none';
+                document.getElementById('instances-empty').style.display = 'block';
+            } else {
+                // Mettre à jour le texte du compteur
+                document.getElementById('instances-info').textContent =
+                    remainingCount + ' instance' + (remainingCount > 1 ? 's' : '') + ' non résolue' + (remainingCount > 1 ? 's' : '');
+            }
+
+            // Recharger les alertes pour mettre à jour le badge dans le tableau principal
+            chargerAlertesAdmin();
+        } else {
+            alert('Erreur: ' + data.message);
+        }
+    })
+    .catch(error => {
+        console.error('Erreur résolution:', error);
+        alert('Erreur de communication avec le serveur');
+    });
 }
 
 // Nouvelle alerte
@@ -364,7 +894,6 @@ function modifierAlerte(alerteId) {
             document.getElementById('alerteTitre').value = alerte.titre;
             document.getElementById('alerteMessage').value = alerte.message;
             document.getElementById('alerteType').value = alerte.type;
-            document.getElementById('alerteOrdre').value = alerte.ordre;
             document.getElementById('alerteActive').checked = alerte.isActive;
             document.getElementById('alerteDismissible').checked = alerte.dismissible;
             
@@ -403,12 +932,16 @@ function sauvegarderAlerte() {
         titre: formData.get('titre'),
         message: formData.get('message'),
         type: formData.get('type'),
-        ordre: parseInt(formData.get('ordre')) || 0,
         isActive: document.getElementById('alerteActive').checked,
         dismissible: document.getElementById('alerteDismissible').checked,
         dateExpiration: formData.get('dateExpiration') || null,
         cibles: cibles
     };
+
+    // Ajouter l'ID pour les updates
+    if (alerteId) {
+        data.id = parseInt(alerteId);
+    }
     
     const url = alerteId ? 
         `{{ path('app_admin_alerte_update', {id: '__ID__'}) }}`.replace('__ID__', alerteId) :
@@ -428,18 +961,240 @@ function sauvegarderAlerte() {
         headers['X-CSRF-Token'] = csrfToken;
     }
 
+    console.log('🔍 [DEBUG] Sauvegarde alerte - URL:', url);
+    console.log('🔍 [DEBUG] Sauvegarde alerte - Method:', method);
+    console.log('🔍 [DEBUG] Sauvegarde alerte - Data:', data);
+
     fetch(url, {
         method: method,
+        headers: headers,
+        body: JSON.stringify(data)
+    })
+    .then(response => {
+        console.log('🔍 [DEBUG] Response status:', response.status);
+        return response.json().then(data => {
+            if (!response.ok) {
+                // Lancer une erreur avec les données JSON
+                throw { status: response.status, data: data };
+            }
+            return data;
+        });
+    })
+    .then(data => {
+        console.log('🔍 [DEBUG] Response data:', data);
+        if (data.success) {
+            bootstrap.Modal.getInstance(document.getElementById('alerteModal')).hide();
+            console.log('🔍 [DEBUG ALERTES] Sauvegarde réussie - reloading alertes');
+            chargerAlertesAdmin();
+
+            // Notification succès
+            const toast = document.createElement('div');
+            toast.className = 'toast align-items-center text-bg-success border-0 position-fixed';
+            toast.style.cssText = 'top: 20px; right: 20px; z-index: 9999;';
+            toast.innerHTML = '<div class="d-flex"><div class="toast-body"><i class="fas fa-check me-2"></i>' + data.message + '</div><button type="button" class="btn-close btn-close-white me-2 m-auto" data-bs-dismiss="toast"></button></div>';
+            document.body.appendChild(toast);
+            const bsToast = new bootstrap.Toast(toast);
+            bsToast.show();
+            setTimeout(() => toast.remove(), 5000);
+        } else {
+            console.error('❌ [DEBUG] Erreur serveur:', data);
+            // Afficher les erreurs de validation de manière claire
+            if (data.errors) {
+                let errorMsg = 'Erreurs de validation :\n';
+                for (let field in data.errors) {
+                    errorMsg += '- ' + data.errors[field] + '\n';
+                }
+                alert(errorMsg);
+            } else {
+                alert('Erreur: ' + (data.message || 'Erreur inconnue'));
+            }
+        }
+    })
+    .catch(error => {
+        console.error('❌ [DEBUG] Erreur sauvegarde alerte:', error);
+
+        // Si c'est une erreur HTTP avec des données de validation
+        if (error.data && error.data.errors) {
+            let errorMsg = 'Erreurs de validation :\n';
+            for (let field in error.data.errors) {
+                errorMsg += '- ' + error.data.errors[field] + '\n';
+            }
+            alert(errorMsg);
+        } else if (error.data && error.data.message) {
+            alert('Erreur: ' + error.data.message);
+        } else if (error.message) {
+            alert('Erreur lors de la sauvegarde: ' + error.message);
+        } else {
+            alert('Erreur inconnue lors de la sauvegarde');
+        }
+    });
+}
+
+// Supprimer alerte
+function supprimerAlerte(alerteId) {
+    if (!confirm('Êtes-vous sûr de vouloir supprimer cette alerte ?')) {
+        return;
+    }
+
+    // Récupérer le token CSRF de manière sécurisée
+    const csrfMeta = document.querySelector('meta[name="csrf-token"]');
+    const csrfToken = csrfMeta ? csrfMeta.getAttribute('content') : null;
+
+    const headers = {
+        'X-Requested-With': 'XMLHttpRequest'
+    };
+
+    if (csrfToken) {
+        headers['X-CSRF-Token'] = csrfToken;
+    }
+
+    // Vérifier si c'est une alerte automatique (type_XX) ou manuelle
+    let url;
+    if (alerteId.toString().startsWith('type_')) {
+        // Alerte automatique (AlerteType)
+        const typeId = alerteId.replace('type_', '');
+        url = '/admin/alertes/type/' + typeId;
+    } else {
+        // Alerte manuelle
+        url = '{{ path('app_admin_alerte_delete', {id: '__ID__'}) }}'.replace('__ID__', alerteId);
+    }
+
+    fetch(url, {
+        method: 'DELETE',
+        headers: headers
+    })
+    .then(response => {
+        if (!response.ok) {
+            return response.text().then(text => {
+                throw new Error('HTTP ' + response.status + ': ' + text);
+            });
+        }
+        return response.json();
+    })
+    .then(data => {
+        if (data.success) {
+            console.log('✅ Suppression réussie - rechargement de la liste');
+
+            // Toast de succès
+            const toast = document.createElement('div');
+            toast.className = 'toast align-items-center text-bg-success border-0 position-fixed';
+            toast.style.cssText = 'top: 20px; right: 20px; z-index: 9999;';
+            toast.innerHTML = '<div class="d-flex"><div class="toast-body"><i class="fas fa-check me-2"></i>Alerte supprimée avec succès</div><button type="button" class="btn-close btn-close-white me-2 m-auto" data-bs-dismiss="toast"></button></div>';
+            document.body.appendChild(toast);
+            const bsToast = new bootstrap.Toast(toast, { autohide: true, delay: 3000 });
+            bsToast.show();
+            setTimeout(() => toast.remove(), 4000);
+
+            // Recharger la liste
+            chargerAlertesAdmin();
+        } else {
+            alert('Erreur: ' + data.message);
+        }
+    })
+    .catch(error => {
+        console.error('❌ Erreur suppression alerte:', error);
+        alert('Erreur lors de la suppression: ' + error.message);
+    });
+}
+
+// Reset formulaire
+function resetAlerteForm() {
+    document.getElementById('alerteForm').reset();
+    document.getElementById('alerteId').value = '';
+    document.querySelectorAll('input[name="cibles"]').forEach(input => {
+        input.checked = false;
+    });
+}
+
+// Modifier un type d'alerte automatique
+function modifierAlerteAutomatique(typeId) {
+    fetch('/admin/alertes/type/' + typeId, {
+        method: 'GET',
+        headers: {
+            'X-Requested-With': 'XMLHttpRequest'
+        }
+    })
+    .then(response => response.json())
+    .then(alerteType => {
+        console.log('🔍 [DEBUG] Type alerte à éditer:', alerteType);
+        console.log('🔍 [DEBUG] classeDetection:', alerteType.classeDetection);
+
+        // Vérifier si c'est une alerte configurable (contient ConfigurableDetector)
+        if (alerteType.classeDetection && alerteType.classeDetection.includes('ConfigurableDetector')) {
+            console.log('✅ [DEBUG] Détecté comme ConfigurableDetector, ouverture modal édition');
+            // Utiliser le modal de création configurable en mode édition
+            editerAlerteConfigurable(alerteType);
+        } else {
+            console.log('ℹ️ [DEBUG] Alerte standard, ouverture modal classique');
+            // Utiliser le modal d'édition classique
+            // Remplir le formulaire
+            document.getElementById('alerteTypeId').value = alerteType.id;
+            document.getElementById('alerteTypeNom').value = alerteType.nom;
+            document.getElementById('alerteTypeDescription').value = alerteType.description || '';
+            document.getElementById('alerteTypeSeverity').value = alerteType.severity;
+            document.getElementById('alerteTypeActif').checked = alerteType.actif;
+            document.getElementById('alerteTypeDetecteur').value = alerteType.classeDetection;
+
+            // Cocher les rôles cibles
+            document.querySelectorAll('input[name="rolesCibles"]').forEach(input => {
+                input.checked = alerteType.rolesCibles && alerteType.rolesCibles.includes(input.value);
+            });
+
+            document.getElementById('alerteTypeModalTitle').innerHTML = '<i class="fas fa-cog me-2"></i>Configuration - ' + alerteType.nom;
+            const modal = new bootstrap.Modal(document.getElementById('alerteTypeModal'));
+            modal.show();
+        }
+    })
+    .catch(error => {
+        console.error('Erreur chargement type alerte:', error);
+        alert('Erreur lors du chargement du type d\'alerte');
+    });
+}
+
+// Sauvegarder un type d'alerte automatique
+function sauvegarderAlerteType() {
+    const form = document.getElementById('alerteTypeForm');
+    const formData = new FormData(form);
+    const typeId = document.getElementById('alerteTypeId').value;
+
+    // Récupérer les rôles cibles cochés
+    const rolesCibles = [];
+    document.querySelectorAll('input[name="rolesCibles"]:checked').forEach(input => {
+        rolesCibles.push(input.value);
+    });
+
+    const data = {
+        nom: formData.get('nom'),
+        description: formData.get('description'),
+        severity: formData.get('severity'),
+        actif: document.getElementById('alerteTypeActif').checked,
+        rolesCibles: rolesCibles
+    };
+
+    // Récupérer le token CSRF
+    const csrfMeta = document.querySelector('meta[name="csrf-token"]');
+    const csrfToken = csrfMeta ? csrfMeta.getAttribute('content') : null;
+
+    const headers = {
+        'Content-Type': 'application/json',
+        'X-Requested-With': 'XMLHttpRequest'
+    };
+
+    if (csrfToken) {
+        headers['X-CSRF-Token'] = csrfToken;
+    }
+
+    fetch('/admin/alertes/type/' + typeId, {
+        method: 'PUT',
         headers: headers,
         body: JSON.stringify(data)
     })
     .then(response => response.json())
     .then(data => {
         if (data.success) {
-            bootstrap.Modal.getInstance(document.getElementById('alerteModal')).hide();
-            console.log('🔍 [DEBUG ALERTES] Sauvegarde réussie - SKIP chargerAlertesAdmin() to avoid loops');
-            // chargerAlertesAdmin();
-            
+            bootstrap.Modal.getInstance(document.getElementById('alerteTypeModal')).hide();
+            chargerAlertesAdmin();
+
             // Notification succès
             const toast = document.createElement('div');
             toast.className = 'toast align-items-center text-bg-success border-0 position-fixed';
@@ -461,54 +1216,660 @@ function sauvegarderAlerte() {
         }
     })
     .catch(error => {
-        console.error('Erreur sauvegarde alerte:', error);
+        console.error('Erreur sauvegarde type alerte:', error);
         alert('Erreur lors de la sauvegarde');
     });
 }
 
-// Supprimer alerte
-function supprimerAlerte(alerteId) {
-    if (!confirm('Êtes-vous sûr de vouloir supprimer cette alerte ?')) {
-        return;
-    }
-    
-    // Récupérer le token CSRF de manière sécurisée
-    const csrfMeta = document.querySelector('meta[name="csrf-token"]');
-    const csrfToken = csrfMeta ? csrfMeta.getAttribute('content') : null;
+// Lancer la détection manuelle des alertes
+function lancerDetectionAlertes() {
+    const btn = document.getElementById('btn-scan-alertes');
+    const originalHtml = btn.innerHTML;
 
-    const headers = {
-        'X-Requested-With': 'XMLHttpRequest'
-    };
+    // Désactiver le bouton et afficher un spinner
+    btn.disabled = true;
+    btn.innerHTML = '<i class="fas fa-spinner fa-spin me-1"></i>Scan en cours...';
 
-    if (csrfToken) {
-        headers['X-CSRF-Token'] = csrfToken;
-    }
-
-    fetch(`{{ path('app_admin_alerte_delete', {id: '__ID__'}) }}`.replace('__ID__', alerteId), {
-        method: 'DELETE',
-        headers: headers
+    fetch('/admin/alertes/scan', {
+        method: 'POST',
+        headers: {
+            'X-Requested-With': 'XMLHttpRequest',
+            'Content-Type': 'application/json'
+        }
     })
     .then(response => response.json())
     .then(data => {
+        btn.disabled = false;
+        btn.innerHTML = originalHtml;
+
         if (data.success) {
-            console.log('🔍 [DEBUG ALERTES] Suppression réussie - SKIP chargerAlertesAdmin() to avoid loops');
-            // chargerAlertesAdmin();
+            // Afficher un toast de succès
+            const toast = document.createElement('div');
+            toast.className = 'toast align-items-center text-bg-success border-0 position-fixed';
+            toast.style.cssText = 'top: 20px; right: 20px; z-index: 9999;';
+            toast.innerHTML = `
+                <div class="d-flex">
+                    <div class="toast-body">
+                        <i class="fas fa-check-circle me-2"></i><strong>Scan terminé !</strong><br>
+                        <small>${data.message}</small><br>
+                        <small>${data.statistics.instances_non_resolues} instance(s) non résolue(s) au total</small>
+                    </div>
+                    <button type="button" class="btn-close btn-close-white me-2 m-auto" data-bs-dismiss="toast"></button>
+                </div>
+            `;
+            document.body.appendChild(toast);
+            const bsToast = new bootstrap.Toast(toast, { autohide: true, delay: 5000 });
+            bsToast.show();
+            setTimeout(() => toast.remove(), 6000);
+
+            // Recharger la liste des alertes pour mettre à jour les compteurs
+            chargerAlertesAdmin();
         } else {
             alert('Erreur: ' + data.message);
         }
     })
     .catch(error => {
-        console.error('Erreur suppression alerte:', error);
-        alert('Erreur lors de la suppression');
+        btn.disabled = false;
+        btn.innerHTML = originalHtml;
+        console.error('Erreur lors du scan:', error);
+        alert('Erreur de communication avec le serveur');
     });
 }
 
-// Reset formulaire
-function resetAlerteForm() {
-    document.getElementById('alerteForm').reset();
-    document.getElementById('alerteId').value = '';
-    document.querySelectorAll('input[name="cibles"]').forEach(input => {
-        input.checked = false;
+// ========================================
+// FONCTIONS POUR ALERTES CONFIGURABLES
+// ========================================
+
+let conditionsData = [];
+let entityFields = [];
+let entityRelations = [];
+
+// Ouvrir le modal de création d'alerte configurable
+function ajouterAlerteConfigurable() {
+    conditionsData = [];
+    entityFields = [];
+    entityRelations = [];
+    document.getElementById('alerteConfigurableForm').reset();
+    document.getElementById('conditionsList').innerHTML = '<p class="text-muted mb-2"><i class="fas fa-info-circle me-1"></i>Ajoutez des conditions pour détecter les entités problématiques</p>';
+    updateConditionsCount();
+
+    // Réinitialiser le champ nom
+    const nameFieldSelect = document.getElementById('configNameField');
+    nameFieldSelect.innerHTML = '<option value="">Sélectionnez d\'abord une entité...</option>';
+    nameFieldSelect.disabled = true;
+
+    const modal = new bootstrap.Modal(document.getElementById('alerteConfigurableModal'));
+    modal.show();
+}
+
+// Charger les champs d'une entité
+function chargerChampsEntite() {
+    const entityClass = document.getElementById('configEntity').value;
+    const nameFieldSelect = document.getElementById('configNameField');
+
+    if (!entityClass) {
+        nameFieldSelect.innerHTML = '<option value="">Sélectionnez d\'abord une entité...</option>';
+        nameFieldSelect.disabled = true;
+        entityFields = [];
+        entityRelations = [];
+        return Promise.resolve(); // Retourner une Promise résolue
+    }
+
+    // Afficher un loader
+    nameFieldSelect.innerHTML = '<option value="">Chargement...</option>';
+    nameFieldSelect.disabled = true;
+
+    // Encoder le nom de classe pour l'URL
+    const encodedClass = encodeURIComponent(entityClass);
+
+    return fetch('/admin/alertes/entity-fields/' + encodedClass, {
+        method: 'GET',
+        headers: {
+            'X-Requested-With': 'XMLHttpRequest'
+        }
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.success) {
+            entityFields = data.fields;
+            entityRelations = data.relations;
+
+            // Remplir le select du champ nom
+            nameFieldSelect.innerHTML = '<option value="">Sélectionnez un champ...</option>';
+
+            // Ajouter l'option ID
+            const idOption = document.createElement('option');
+            idOption.value = 'id';
+            idOption.textContent = 'ID (identifiant)';
+            nameFieldSelect.appendChild(idOption);
+
+            // Ajouter les champs
+            data.fields.forEach(field => {
+                const option = document.createElement('option');
+                option.value = field.name;
+                option.textContent = field.label + ' (' + field.type + ')';
+                nameFieldSelect.appendChild(option);
+            });
+
+            nameFieldSelect.disabled = false;
+        } else {
+            nameFieldSelect.innerHTML = '<option value="">Erreur de chargement</option>';
+            alert('Erreur: ' + (data.message || 'Impossible de charger les champs'));
+        }
+    })
+    .catch(error => {
+        console.error('Erreur chargement champs:', error);
+        nameFieldSelect.innerHTML = '<option value="">Erreur de chargement</option>';
+        alert('Erreur de communication avec le serveur');
     });
 }
+
+// Ajouter une condition
+function ajouterCondition() {
+    // Vérifier qu'une entité a été sélectionnée
+    const entityClass = document.getElementById('configEntity').value;
+    if (!entityClass) {
+        alert('Veuillez d\'abord sélectionner un type d\'entité');
+        return;
+    }
+
+    if (entityFields.length === 0 && entityRelations.length === 0) {
+        alert('Les champs de l\'entité n\'ont pas encore été chargés. Veuillez patienter...');
+        return;
+    }
+
+    const conditionId = 'condition_' + Date.now();
+    const conditionDiv = document.createElement('div');
+    conditionDiv.className = 'card mb-2';
+    conditionDiv.id = conditionId;
+    conditionDiv.innerHTML = `
+        <div class="card-body p-3">
+            <div class="row align-items-end">
+                <div class="col-md-4">
+                    <label class="form-label small">Type de condition</label>
+                    <select class="form-select form-select-sm condition-type" data-id="${conditionId}" onchange="updateConditionFields('${conditionId}')">
+                        <option value="field_empty">Champ vide</option>
+                        <option value="field_not_empty">Champ non vide</option>
+                        <option value="field_duplicate">Doublons détectés (même valeur)</option>
+                        <option value="relation_empty">Relation vide</option>
+                        <option value="relation_not_empty">Relation non vide</option>
+                        <option value="field_equals">Champ égal à</option>
+                        <option value="field_not_equals">Champ différent de</option>
+                        <option value="number_less_than">Nombre inférieur à</option>
+                        <option value="number_greater_than">Nombre supérieur à</option>
+                        <option value="date_before">Date avant maintenant</option>
+                        <option value="date_after">Date après maintenant</option>
+                    </select>
+                </div>
+                <div class="col-md-4">
+                    <label class="form-label small">Champ</label>
+                    <select class="form-select form-select-sm condition-field" data-id="${conditionId}">
+                        <option value="">Sélectionnez...</option>
+                    </select>
+                </div>
+                <div class="col-md-3 condition-value-container" style="display: none;">
+                    <label class="form-label small">Valeur</label>
+                    <input type="text" class="form-control form-control-sm condition-value" data-id="${conditionId}">
+                </div>
+                <div class="col-md-1">
+                    <button type="button" class="btn btn-sm btn-danger" onclick="supprimerCondition('${conditionId}')">
+                        <i class="fas fa-trash"></i>
+                    </button>
+                </div>
+            </div>
+        </div>
+    `;
+
+    const container = document.getElementById('conditionsList');
+    const placeholder = container.querySelector('p.text-muted');
+    if (placeholder) {
+        placeholder.remove();
+    }
+    container.appendChild(conditionDiv);
+
+    // Remplir le select avec les champs par défaut
+    updateConditionFields(conditionId);
+    updateConditionsCount();
+}
+
+// Mettre à jour les champs selon le type de condition
+function updateConditionFields(conditionId) {
+    const conditionDiv = document.getElementById(conditionId);
+    const typeSelect = conditionDiv.querySelector('.condition-type');
+    const valueContainer = conditionDiv.querySelector('.condition-value-container');
+    const fieldSelect = conditionDiv.querySelector('.condition-field');
+    const fieldLabel = conditionDiv.querySelector('.col-md-4:nth-child(2) label');
+
+    const type = typeSelect.value;
+    const needsValue = ['field_equals', 'field_not_equals', 'number_less_than', 'number_greater_than'].includes(type);
+    const isRelation = ['relation_empty', 'relation_not_empty'].includes(type);
+
+    // Afficher/masquer le champ valeur
+    valueContainer.style.display = needsValue ? 'block' : 'none';
+
+    // Changer le label selon le type
+    fieldLabel.textContent = isRelation ? 'Relation' : 'Champ';
+
+    // Ajuster les colonnes
+    if (needsValue) {
+        conditionDiv.querySelector('.col-md-4:nth-child(2)').className = 'col-md-3';
+    } else {
+        conditionDiv.querySelector('.col-md-4:nth-child(2)').className = 'col-md-4';
+    }
+
+    // Remplir le select avec les champs ou relations appropriés
+    fieldSelect.innerHTML = '<option value="">Sélectionnez...</option>';
+
+    if (isRelation) {
+        // Afficher uniquement les relations de type collection
+        entityRelations.forEach(relation => {
+            if (relation.type === 'collection') {
+                const option = document.createElement('option');
+                option.value = relation.name;
+                option.textContent = relation.label + ' (collection)';
+                fieldSelect.appendChild(option);
+            }
+        });
+    } else {
+        // Afficher les champs appropriés selon le type de condition
+        entityFields.forEach(field => {
+            const option = document.createElement('option');
+            option.value = field.name;
+            option.textContent = field.label + ' (' + field.type + ')';
+            fieldSelect.appendChild(option);
+        });
+    }
+}
+
+// Supprimer une condition
+function supprimerCondition(conditionId) {
+    document.getElementById(conditionId).remove();
+    updateConditionsCount();
+
+    const container = document.getElementById('conditionsList');
+    if (container.children.length === 0) {
+        container.innerHTML = '<p class="text-muted mb-2"><i class="fas fa-info-circle me-1"></i>Ajoutez des conditions pour détecter les entités problématiques</p>';
+    }
+}
+
+// Mettre à jour le compteur de conditions
+function updateConditionsCount() {
+    const count = document.querySelectorAll('#conditionsList .card').length;
+    document.getElementById('conditionsCount').textContent = count;
+}
+
+// Sauvegarder l'alerte configurable
+function sauvegarderAlerteConfigurable() {
+    // Récupérer les données du formulaire
+    const nom = document.getElementById('configNom').value;
+    const description = document.getElementById('configDescription').value;
+    const severity = document.getElementById('configSeverity').value;
+    const entity = document.getElementById('configEntity').value;
+    const nameField = document.getElementById('configNameField').value;
+    const messageTemplate = document.getElementById('configMessageTemplate').value;
+    const actif = document.getElementById('configActif').checked;
+
+    // Validation
+    if (!nom || !entity || !nameField || !messageTemplate) {
+        alert('Veuillez remplir tous les champs obligatoires (*)');
+        return;
+    }
+
+    // Récupérer les conditions
+    const conditions = [];
+    document.querySelectorAll('#conditionsList .card').forEach(card => {
+        const id = card.id;
+        const type = card.querySelector('.condition-type').value;
+        const field = card.querySelector('.condition-field').value;
+        const valueInput = card.querySelector('.condition-value');
+
+        if (!field) {
+            alert('Toutes les conditions doivent avoir un champ ou une relation');
+            return;
+        }
+
+        const condition = { type };
+
+        // Déterminer si c'est un champ ou une relation
+        if (['relation_empty', 'relation_not_empty'].includes(type)) {
+            condition.relation = field;
+        } else {
+            condition.field = field;
+        }
+
+        // Ajouter la valeur si nécessaire
+        if (['field_equals', 'field_not_equals', 'number_less_than', 'number_greater_than'].includes(type)) {
+            condition.value = valueInput.value;
+        }
+
+        conditions.push(condition);
+    });
+
+    if (conditions.length === 0) {
+        alert('Vous devez ajouter au moins une condition de détection');
+        return;
+    }
+
+    // Récupérer les rôles cibles
+    const rolesCibles = [];
+    document.querySelectorAll('.config-role:checked').forEach(input => {
+        rolesCibles.push(input.value);
+    });
+
+    // Construire la configuration JSON
+    const configuration = {
+        entity: entity,
+        conditions: conditions,
+        message_template: messageTemplate,
+        name_field: nameField
+    };
+
+    // Construire les données du type d'alerte
+    const data = {
+        nom: nom,
+        description: description,
+        severity: severity,
+        classeDetection: 'App\\Service\\AlerteDetection\\ConfigurableDetector',
+        actif: actif,
+        rolesCibles: rolesCibles,
+        configuration: configuration
+    };
+
+    // Envoyer au serveur
+    const csrfToken = document.querySelector('meta[name=csrf-token]')?.content;
+    const headers = {
+        'Content-Type': 'application/json',
+        'X-Requested-With': 'XMLHttpRequest'
+    };
+    if (csrfToken) {
+        headers['X-CSRF-Token'] = csrfToken;
+    }
+
+    fetch('/admin/alertes/type/create', {
+        method: 'POST',
+        headers: headers,
+        body: JSON.stringify(data)
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.success) {
+            bootstrap.Modal.getInstance(document.getElementById('alerteConfigurableModal')).hide();
+            chargerAlertesAdmin();
+
+            // Notification succès
+            const toast = document.createElement('div');
+            toast.className = 'toast align-items-center text-bg-success border-0 position-fixed';
+            toast.style.cssText = 'top: 20px; right: 20px; z-index: 9999;';
+            toast.innerHTML = `
+                <div class="d-flex">
+                    <div class="toast-body">
+                        <i class="fas fa-check me-2"></i>Alerte automatique créée avec succès
+                    </div>
+                    <button type="button" class="btn-close btn-close-white me-2 m-auto" data-bs-dismiss="toast"></button>
+                </div>
+            `;
+            document.body.appendChild(toast);
+            const bsToast = new bootstrap.Toast(toast);
+            bsToast.show();
+            setTimeout(() => toast.remove(), 5000);
+        } else {
+            alert('Erreur: ' + (data.message || 'Erreur inconnue'));
+        }
+    })
+    .catch(error => {
+        console.error('Erreur création alerte configurable:', error);
+        alert('Erreur lors de la création de l\'alerte');
+    });
+}
+
+// Éditer une alerte configurable existante
+function editerAlerteConfigurable(alerteType) {
+    // Stocker l'ID pour la mise à jour
+    currentEditingTypeId = alerteType.id;
+
+    // Pré-remplir les champs de base
+    document.getElementById('configNom').value = alerteType.nom;
+    document.getElementById('configDescription').value = alerteType.description || '';
+    document.getElementById('configSeverity').value = alerteType.severity;
+    document.getElementById('configActif').checked = alerteType.actif;
+
+    // Récupérer la configuration
+    const config = alerteType.configuration || {};
+
+    // Pré-remplir l'entité
+    const entitySelect = document.getElementById('configEntity');
+    entitySelect.value = config.entity || '';
+
+    // Charger les champs de l'entité
+    if (config.entity) {
+        chargerChampsEntite().then(() => {
+            // Après le chargement des champs, sélectionner le champ nom
+            document.getElementById('configNameField').value = config.name_field || 'id';
+
+            // Recréer les conditions
+            document.getElementById('conditionsList').innerHTML = '';
+            if (config.conditions && config.conditions.length > 0) {
+                config.conditions.forEach(condition => {
+                    ajouterConditionAvecDonnees(condition);
+                });
+            } else {
+                document.getElementById('conditionsList').innerHTML = '<p class="text-muted mb-2"><i class="fas fa-info-circle me-1"></i>Ajoutez des conditions pour détecter les entités problématiques</p>';
+            }
+            updateConditionsCount();
+        });
+    }
+
+    // Pré-remplir le template de message
+    document.getElementById('configMessageTemplate').value = config.message_template || 'Problème détecté pour {entity_name}';
+
+    // Cocher les rôles cibles
+    document.querySelectorAll('.config-role').forEach(checkbox => {
+        checkbox.checked = alerteType.rolesCibles && alerteType.rolesCibles.includes(checkbox.value);
+    });
+
+    // Changer le titre et le bouton
+    document.querySelector('#alerteConfigurableModal .modal-title').innerHTML = '<i class="fas fa-edit me-2"></i>Modifier l\'alerte automatique';
+    document.querySelector('#alerteConfigurableModal .modal-footer .btn-success').innerHTML = '<i class="fas fa-save me-1"></i>Mettre à jour';
+    document.querySelector('#alerteConfigurableModal .modal-footer .btn-success').setAttribute('onclick', 'sauvegarderAlerteConfigurableEdit()');
+
+    // Ouvrir le modal
+    const modal = new bootstrap.Modal(document.getElementById('alerteConfigurableModal'));
+    modal.show();
+}
+
+// Ajouter une condition avec des données pré-remplies (pour l'édition)
+function ajouterConditionAvecDonnees(conditionData) {
+    const conditionId = 'condition_' + Date.now() + '_' + Math.random();
+    const conditionDiv = document.createElement('div');
+    conditionDiv.className = 'card mb-2';
+    conditionDiv.id = conditionId;
+
+    conditionDiv.innerHTML = `
+        <div class="card-body p-3">
+            <div class="row align-items-end">
+                <div class="col-md-4">
+                    <label class="form-label small">Type de condition</label>
+                    <select class="form-select form-select-sm condition-type" data-id="${conditionId}" onchange="updateConditionFields('${conditionId}')">
+                        <option value="field_empty">Champ vide</option>
+                        <option value="field_not_empty">Champ non vide</option>
+                        <option value="field_duplicate">Doublons détectés (même valeur)</option>
+                        <option value="relation_empty">Relation vide</option>
+                        <option value="relation_not_empty">Relation non vide</option>
+                        <option value="field_equals">Champ égal à</option>
+                        <option value="field_not_equals">Champ différent de</option>
+                        <option value="number_less_than">Nombre inférieur à</option>
+                        <option value="number_greater_than">Nombre supérieur à</option>
+                        <option value="date_before">Date avant maintenant</option>
+                        <option value="date_after">Date après maintenant</option>
+                    </select>
+                </div>
+                <div class="col-md-4">
+                    <label class="form-label small">Champ</label>
+                    <select class="form-select form-select-sm condition-field" data-id="${conditionId}">
+                        <option value="">Sélectionnez...</option>
+                    </select>
+                </div>
+                <div class="col-md-3 condition-value-container" style="display: none;">
+                    <label class="form-label small">Valeur</label>
+                    <input type="text" class="form-control form-control-sm condition-value" data-id="${conditionId}">
+                </div>
+                <div class="col-md-1">
+                    <button type="button" class="btn btn-sm btn-danger" onclick="supprimerCondition('${conditionId}')">
+                        <i class="fas fa-trash"></i>
+                    </button>
+                </div>
+            </div>
+        </div>
+    `;
+
+    const container = document.getElementById('conditionsList');
+    container.appendChild(conditionDiv);
+
+    // Pré-sélectionner le type
+    conditionDiv.querySelector('.condition-type').value = conditionData.type;
+
+    // Remplir les champs
+    updateConditionFields(conditionId);
+
+    // Pré-sélectionner le champ/relation
+    setTimeout(() => {
+        const fieldValue = conditionData.field || conditionData.relation || '';
+        conditionDiv.querySelector('.condition-field').value = fieldValue;
+
+        // Pré-remplir la valeur si elle existe
+        if (conditionData.value) {
+            conditionDiv.querySelector('.condition-value').value = conditionData.value;
+        }
+    }, 100);
+}
+
+// Sauvegarder l'alerte configurable en mode édition
+function sauvegarderAlerteConfigurableEdit() {
+    // Récupérer les données du formulaire (même logique que la création)
+    const nom = document.getElementById('configNom').value;
+    const description = document.getElementById('configDescription').value;
+    const severity = document.getElementById('configSeverity').value;
+    const entity = document.getElementById('configEntity').value;
+    const nameField = document.getElementById('configNameField').value;
+    const messageTemplate = document.getElementById('configMessageTemplate').value;
+    const actif = document.getElementById('configActif').checked;
+
+    // Validation
+    if (!nom || !entity || !nameField || !messageTemplate) {
+        alert('Veuillez remplir tous les champs obligatoires (*)');
+        return;
+    }
+
+    // Récupérer les conditions
+    const conditions = [];
+    document.querySelectorAll('#conditionsList .card').forEach(card => {
+        const type = card.querySelector('.condition-type').value;
+        const field = card.querySelector('.condition-field').value;
+        const valueInput = card.querySelector('.condition-value');
+
+        if (!field) {
+            alert('Toutes les conditions doivent avoir un champ ou une relation');
+            return;
+        }
+
+        const condition = { type };
+
+        if (['relation_empty', 'relation_not_empty'].includes(type)) {
+            condition.relation = field;
+        } else {
+            condition.field = field;
+        }
+
+        if (['field_equals', 'field_not_equals', 'number_less_than', 'number_greater_than'].includes(type)) {
+            condition.value = valueInput.value;
+        }
+
+        conditions.push(condition);
+    });
+
+    if (conditions.length === 0) {
+        alert('Vous devez ajouter au moins une condition de détection');
+        return;
+    }
+
+    // Récupérer les rôles cibles
+    const rolesCibles = [];
+    document.querySelectorAll('.config-role:checked').forEach(input => {
+        rolesCibles.push(input.value);
+    });
+
+    // Construire la configuration JSON
+    const configuration = {
+        entity: entity,
+        conditions: conditions,
+        message_template: messageTemplate,
+        name_field: nameField
+    };
+
+    // Construire les données
+    const data = {
+        nom: nom,
+        description: description,
+        severity: severity,
+        actif: actif,
+        rolesCibles: rolesCibles,
+        configuration: configuration
+    };
+
+    // Envoyer au serveur (PUT pour update)
+    const csrfToken = document.querySelector('meta[name=csrf-token]')?.content;
+    const headers = {
+        'Content-Type': 'application/json',
+        'X-Requested-With': 'XMLHttpRequest'
+    };
+    if (csrfToken) {
+        headers['X-CSRF-Token'] = csrfToken;
+    }
+
+    fetch('/admin/alertes/type/' + currentEditingTypeId, {
+        method: 'PUT',
+        headers: headers,
+        body: JSON.stringify(data)
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.success) {
+            bootstrap.Modal.getInstance(document.getElementById('alerteConfigurableModal')).hide();
+            chargerAlertesAdmin();
+
+            // Réinitialiser le modal pour la prochaine utilisation
+            document.querySelector('#alerteConfigurableModal .modal-title').innerHTML = '<i class="fas fa-cogs me-2"></i>Nouvelle alerte automatique configurable';
+            document.querySelector('#alerteConfigurableModal .modal-footer .btn-success').innerHTML = '<i class="fas fa-save me-1"></i>Créer l\'alerte automatique';
+            document.querySelector('#alerteConfigurableModal .modal-footer .btn-success').setAttribute('onclick', 'sauvegarderAlerteConfigurable()');
+            currentEditingTypeId = null;
+
+            // Toast succès
+            const toast = document.createElement('div');
+            toast.className = 'toast align-items-center text-bg-success border-0 position-fixed';
+            toast.style.cssText = 'top: 20px; right: 20px; z-index: 9999;';
+            toast.innerHTML = `
+                <div class="d-flex">
+                    <div class="toast-body">
+                        <i class="fas fa-check me-2"></i>Alerte automatique mise à jour avec succès
+                    </div>
+                    <button type="button" class="btn-close btn-close-white me-2 m-auto" data-bs-dismiss="toast"></button>
+                </div>
+            `;
+            document.body.appendChild(toast);
+            const bsToast = new bootstrap.Toast(toast);
+            bsToast.show();
+            setTimeout(() => toast.remove(), 5000);
+        } else {
+            alert('Erreur: ' + (data.message || 'Erreur inconnue'));
+        }
+    })
+    .catch(error => {
+        console.error('Erreur mise à jour alerte configurable:', error);
+        alert('Erreur lors de la mise à jour de l\'alerte');
+    });
+}
+
+// Variable globale pour stocker l'ID en cours d'édition
+let currentEditingTypeId = null;
+
 </script>

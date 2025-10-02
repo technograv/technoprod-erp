@@ -9,27 +9,33 @@ class ContactSansAdresseDetector extends AbstractAlerteDetector
 {
     public function detect(AlerteType $alerteType): array
     {
+        // Détecter les contacts actifs qui n'ont pas d'adresse assignée
         $contactsQuery = $this->entityManager->createQueryBuilder()
             ->select('c')
             ->from(Contact::class, 'c')
-            ->leftJoin('c.adresses', 'adresse')
-            ->leftJoin('c.client', 'client')
-            ->where('adresse.id IS NULL')
-            ->andWhere('client.actif = true')
+            ->where('c.actif = true')
+            ->andWhere('c.adresse IS NULL')
             ->getQuery();
 
         $contacts = $contactsQuery->getResult();
         $instances = [];
+        $currentEntityIds = [];
 
         foreach ($contacts as $contact) {
+            $currentEntityIds[] = $contact->getId();
+
             if (!$this->instanceExists($alerteType, $contact->getId())) {
                 $instances[] = $this->createInstance($alerteType, $contact->getId(), [
                     'contact_nom' => $contact->getNom(),
                     'contact_prenom' => $contact->getPrenom(),
                     'client_nom' => $contact->getClient()?->getNom(),
+                    'client_id' => $contact->getClient()?->getId(),
                 ]);
             }
         }
+
+        // Résoudre automatiquement les alertes obsolètes
+        $this->resolveObsoleteInstances($alerteType, $currentEntityIds);
 
         return $instances;
     }
@@ -39,6 +45,19 @@ class ContactSansAdresseDetector extends AbstractAlerteDetector
         return Contact::class;
     }
 
+    protected function generateMessage(int $entityId, array $metadata): string
+    {
+        $contactName = $metadata['contact_prenom']
+            ? $metadata['contact_prenom'] . ' ' . $metadata['contact_nom']
+            : $metadata['contact_nom'];
+
+        $clientNom = $metadata['client_nom'] ?? '';
+
+        return 'Contact "' . $contactName . '"' .
+            ($clientNom ? ' (Client: ' . $clientNom . ')' : '') .
+            ' n\'a pas d\'adresse';
+    }
+
     public function getName(): string
     {
         return 'Contact sans adresse';
@@ -46,6 +65,6 @@ class ContactSansAdresseDetector extends AbstractAlerteDetector
 
     public function getDescription(): string
     {
-        return 'Détecte les contacts qui n\'ont aucune adresse associée';
+        return 'Détecte les contacts actifs qui n\'ont aucune adresse associée';
     }
 }

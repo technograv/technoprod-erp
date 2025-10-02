@@ -7,15 +7,18 @@ use Doctrine\DBAL\Types\Types;
 use Doctrine\ORM\Mapping as ORM;
 
 /**
- * Entité Alerte - Système d'alertes paramétrables pour les utilisateurs
- * 
- * Permet aux administrateurs de créer des alertes ciblées par rôle
- * avec gestion de l'expiration et fermeture individuelle par utilisateur.
- * 
+ * Entité Alerte - Système d'alertes unifié (manuelles et automatiques)
+ *
+ * Permet aux administrateurs de créer des alertes manuelles ou automatiques
+ * ciblées par rôle ET société avec gestion de l'expiration et résolution.
+ *
  * @author TechnoProd System
- * @version 2.2
+ * @version 3.0 - Système unifié
  */
 #[ORM\Entity(repositoryClass: AlerteRepository::class)]
+#[ORM\Index(name: 'idx_detector', columns: ['detector_class'])]
+#[ORM\Index(name: 'idx_entity', columns: ['entity_type', 'entity_id'])]
+#[ORM\Index(name: 'idx_resolved', columns: ['resolved'])]
 class Alerte
 {
     #[ORM\Id]
@@ -52,6 +55,36 @@ class Alerte
 
     #[ORM\Column]
     private ?bool $dismissible = true; // Si false, alerte permanente non-fermable
+
+    // ========== NOUVEAUX CHAMPS POUR UNIFICATION ==========
+
+    #[ORM\Column(type: Types::JSON, nullable: true)]
+    private ?array $societesCibles = null; // IDs des sociétés ciblées (vide = toutes)
+
+    #[ORM\Column(length: 255, nullable: true)]
+    private ?string $detectorClass = null; // null = alerte manuelle, sinon classe du détecteur
+
+    #[ORM\Column(length: 255, nullable: true)]
+    private ?string $entityType = null; // Type d'entité concernée (pour alertes automatiques)
+
+    #[ORM\Column(nullable: true)]
+    private ?int $entityId = null; // ID de l'entité concernée (pour alertes automatiques)
+
+    #[ORM\Column(type: Types::JSON, nullable: true)]
+    private ?array $metadata = []; // Métadonnées additionnelles (pour alertes automatiques)
+
+    #[ORM\Column]
+    private bool $resolved = false; // Alerte résolue ou non
+
+    #[ORM\Column(type: Types::DATETIME_IMMUTABLE, nullable: true)]
+    private ?\DateTimeImmutable $dateResolution = null;
+
+    #[ORM\ManyToOne(targetEntity: User::class)]
+    #[ORM\JoinColumn(nullable: true)]
+    private ?User $resolvedBy = null;
+
+    #[ORM\Column(type: Types::TEXT, nullable: true)]
+    private ?string $commentaire = null;
 
     public function __construct()
     {
@@ -213,5 +246,123 @@ class Alerte
             'info' => 'fas fa-info-circle',
             default => 'fas fa-bell'
         };
+    }
+
+    // ========== GETTERS/SETTERS POUR NOUVEAUX CHAMPS ==========
+
+    public function getSocietesCibles(): ?array
+    {
+        return $this->societesCibles;
+    }
+
+    public function setSocietesCibles(?array $societesCibles): static
+    {
+        $this->societesCibles = $societesCibles;
+        $this->updatedAt = new \DateTime();
+        return $this;
+    }
+
+    public function getDetectorClass(): ?string
+    {
+        return $this->detectorClass;
+    }
+
+    public function setDetectorClass(?string $detectorClass): static
+    {
+        $this->detectorClass = $detectorClass;
+        $this->updatedAt = new \DateTime();
+        return $this;
+    }
+
+    public function getEntityType(): ?string
+    {
+        return $this->entityType;
+    }
+
+    public function setEntityType(?string $entityType): static
+    {
+        $this->entityType = $entityType;
+        return $this;
+    }
+
+    public function getEntityId(): ?int
+    {
+        return $this->entityId;
+    }
+
+    public function setEntityId(?int $entityId): static
+    {
+        $this->entityId = $entityId;
+        return $this;
+    }
+
+    public function getMetadata(): ?array
+    {
+        return $this->metadata ?? [];
+    }
+
+    public function setMetadata(?array $metadata): static
+    {
+        $this->metadata = $metadata;
+        return $this;
+    }
+
+    public function isResolved(): bool
+    {
+        return $this->resolved;
+    }
+
+    public function setResolved(bool $resolved): static
+    {
+        $this->resolved = $resolved;
+        if ($resolved && !$this->dateResolution) {
+            $this->dateResolution = new \DateTimeImmutable();
+        }
+        return $this;
+    }
+
+    public function getDateResolution(): ?\DateTimeImmutable
+    {
+        return $this->dateResolution;
+    }
+
+    public function setDateResolution(?\DateTimeImmutable $dateResolution): static
+    {
+        $this->dateResolution = $dateResolution;
+        return $this;
+    }
+
+    public function getResolvedBy(): ?User
+    {
+        return $this->resolvedBy;
+    }
+
+    public function setResolvedBy(?User $resolvedBy): static
+    {
+        $this->resolvedBy = $resolvedBy;
+        return $this;
+    }
+
+    public function getCommentaire(): ?string
+    {
+        return $this->commentaire;
+    }
+
+    public function setCommentaire(?string $commentaire): static
+    {
+        $this->commentaire = $commentaire;
+        return $this;
+    }
+
+    // ========== MÉTHODES UTILITAIRES ==========
+
+    public function isManual(): bool
+    {
+        return $this->detectorClass === null;
+    }
+
+    public function isAutomatic(): bool
+    {
+        return $this->detectorClass !== null;
     }
 }

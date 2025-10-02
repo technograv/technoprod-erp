@@ -198,11 +198,22 @@
         // Switch d'utilisateur en mode développement
         let testUsers = [];
         let currentUserId = null;
+        let originalGoogleAccountId = null;
+
+        // Sauvegarder l'ID du compte Google original au premier chargement
+        {% if app.user.isGoogleAccount %}
+        if (!sessionStorage.getItem('originalGoogleAccountId')) {
+            sessionStorage.setItem('originalGoogleAccountId', '{{ app.user.id }}');
+        }
+        {% endif %}
+
+        // Récupérer l'ID du compte Google original
+        originalGoogleAccountId = sessionStorage.getItem('originalGoogleAccountId');
 
         // Charger la liste des utilisateurs au chargement de la page
         document.addEventListener('DOMContentLoaded', function() {
             loadTestUsers();
-            
+
             // Charger les utilisateurs quand le dropdown est ouvert
             document.getElementById('userSwitchDropdown').addEventListener('click', function(e) {
                 if (testUsers.length === 0) {
@@ -248,52 +259,66 @@
 
         function updateUserSwitchDropdown() {
             const dropdown = document.getElementById('userSwitchDropdownMenu');
-            
+
             let html = `
                 <li><h6 class="dropdown-header">Mode Test - Switch Utilisateur</h6></li>
                 <li><hr class="dropdown-divider"></li>
             `;
-            
-            // Séparer compte principal et comptes de test
-            const mainAccount = testUsers.find(user => user.isMainAccount);
+
+            // Séparer comptes principaux (Google) et comptes de test
+            const mainAccounts = testUsers.filter(user => user.isMainAccount);
             const testAccounts = testUsers.filter(user => !user.isMainAccount);
-            
-            // Afficher d'abord le compte principal
-            if (mainAccount) {
-                const isCurrentUser = mainAccount.id === currentUserId;
-                const rolesBadges = mainAccount.roles
-                    .filter(role => role !== 'ROLE_USER')
-                    .map(role => {
-                        const color = role === 'ROLE_ADMIN' ? 'danger' : role === 'ROLE_COMMERCIAL' ? 'success' : 'primary';
-                        const label = role === 'ROLE_ADMIN' ? 'Admin' : role === 'ROLE_COMMERCIAL' ? 'Com' : role;
-                        return `<span class="badge bg-${color} me-1">${label}</span>`;
-                    }).join('');
-                
-                const groupesBadges = mainAccount.groupes && mainAccount.groupes.length > 0 
-                    ? mainAccount.groupes.map(groupe => `<span class="badge bg-info me-1">${groupe}</span>`).join('')
-                    : '';
-                
-                html += `
-                    <li><h6 class="dropdown-header text-primary"><i class="fab fa-google me-1"></i>Compte Principal</h6></li>
-                    <li>
-                        <a class="dropdown-item ${isCurrentUser ? 'active' : ''}" 
-                           href="#" 
-                           onclick="${isCurrentUser ? 'return false;' : `switchUser(${mainAccount.id})`}">
-                            <div class="d-flex flex-column">
-                                <div class="d-flex align-items-center">
-                                    <i class="fas fa-user-shield me-2 text-primary"></i>
-                                    <strong>${mainAccount.nom}</strong>
-                                    ${isCurrentUser ? '<i class="fas fa-check text-success ms-auto"></i>' : ''}
+
+            // Trier les comptes Google : le compte original en premier, puis les autres
+            const sortedMainAccounts = mainAccounts.sort((a, b) => {
+                if (originalGoogleAccountId) {
+                    if (a.id == originalGoogleAccountId) return -1;
+                    if (b.id == originalGoogleAccountId) return 1;
+                }
+                return a.nom.localeCompare(b.nom);
+            });
+
+            // Afficher d'abord tous les comptes principaux (Google)
+            if (sortedMainAccounts.length > 0) {
+                html += `<li><h6 class="dropdown-header text-primary"><i class="fab fa-google me-1"></i>Comptes Principaux</h6></li>`;
+
+                sortedMainAccounts.forEach(mainAccount => {
+                    const isOriginalAccount = originalGoogleAccountId && mainAccount.id == originalGoogleAccountId;
+                    const isCurrentUser = mainAccount.id === currentUserId;
+                    const rolesBadges = mainAccount.roles
+                        .filter(role => role !== 'ROLE_USER')
+                        .map(role => {
+                            const color = role === 'ROLE_ADMIN' ? 'danger' : role === 'ROLE_COMMERCIAL' ? 'success' : 'primary';
+                            const label = role === 'ROLE_ADMIN' ? 'Admin' : role === 'ROLE_COMMERCIAL' ? 'Com' : role;
+                            return `<span class="badge bg-${color} me-1">${label}</span>`;
+                        }).join('');
+
+                    const groupesBadges = mainAccount.groupes && mainAccount.groupes.length > 0
+                        ? mainAccount.groupes.map(groupe => `<span class="badge bg-info me-1">${groupe}</span>`).join('')
+                        : '';
+
+                    html += `
+                        <li>
+                            <a class="dropdown-item ${isCurrentUser ? 'active' : ''}"
+                               href="#"
+                               onclick="${isCurrentUser ? 'return false;' : `switchUser(${mainAccount.id})`}">
+                                <div class="d-flex flex-column">
+                                    <div class="d-flex align-items-center">
+                                        <i class="fas fa-user-shield me-2 ${isOriginalAccount ? 'text-success' : 'text-primary'}"></i>
+                                        <strong>${mainAccount.nom}${isOriginalAccount ? ' <span class="badge bg-success ms-1">Vous</span>' : ''}</strong>
+                                        ${isCurrentUser ? '<i class="fas fa-check text-success ms-auto"></i>' : ''}
+                                    </div>
+                                    <small class="text-muted">${mainAccount.email}</small>
+                                    ${rolesBadges ? `<div class="mt-1">${rolesBadges}</div>` : ''}
+                                    ${groupesBadges ? `<div class="mt-1">${groupesBadges}</div>` : ''}
+                                    ${mainAccount.societePrincipale ? `<small class="text-info"><i class="fas fa-building me-1"></i>${mainAccount.societePrincipale}</small>` : ''}
                                 </div>
-                                <small class="text-muted">${mainAccount.email}</small>
-                                ${rolesBadges ? `<div class="mt-1">${rolesBadges}</div>` : ''}
-                                ${groupesBadges ? `<div class="mt-1">${groupesBadges}</div>` : ''}
-                                ${mainAccount.societePrincipale ? `<small class="text-info"><i class="fas fa-building me-1"></i>${mainAccount.societePrincipale}</small>` : ''}
-                            </div>
-                        </a>
-                    </li>
-                    <li><hr class="dropdown-divider"></li>
-                `;
+                            </a>
+                        </li>
+                    `;
+                });
+
+                html += `<li><hr class="dropdown-divider"></li>`;
             }
             
             // Puis afficher les comptes de test

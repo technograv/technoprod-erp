@@ -10,6 +10,10 @@ use Doctrine\ORM\Mapping as ORM;
 
 #[ORM\Entity(repositoryClass: EcritureComptableRepository::class)]
 #[ORM\Table(name: 'ecriture_comptable')]
+#[ORM\UniqueConstraint(
+    name: 'unique_numero_journal_exercice',
+    columns: ['journal_id', 'numero_ecriture', 'exercice_comptable_id']
+)]
 class EcritureComptable
 {
     #[ORM\Id]

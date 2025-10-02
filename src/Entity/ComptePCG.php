@@ -7,6 +7,7 @@ use Doctrine\Common\Collections\ArrayCollection;
 use Doctrine\Common\Collections\Collection;
 use Doctrine\DBAL\Types\Types;
 use Doctrine\ORM\Mapping as ORM;
+use Symfony\Component\Validator\Constraints as Assert;
 
 #[ORM\Entity(repositoryClass: ComptePCGRepository::class)]
 #[ORM\Table(name: 'compte_pcg')]
@@ -14,6 +15,11 @@ class ComptePCG
 {
     #[ORM\Id]
     #[ORM\Column(length: 10)]
+    #[Assert\NotBlank(message: 'Le numéro de compte est obligatoire')]
+    #[Assert\Regex(
+        pattern: '/^[1-8]\d{2,9}$/',
+        message: 'Le numéro de compte doit commencer par un chiffre de 1 à 8 suivi de 2 à 9 autres chiffres'
+    )]
     private string $numeroCompte; // 411000, 701000, etc.
 
     #[ORM\Column(length: 255)]
@@ -85,10 +91,17 @@ class ComptePCG
 
     public function setNumeroCompte(string $numeroCompte): static
     {
+        // Validation format PCG français
+        if (!preg_match('/^[1-8]\d{2,9}$/', $numeroCompte)) {
+            throw new \InvalidArgumentException(
+                'Format compte PCG invalide : doit commencer par un chiffre de 1 à 8 suivi de 2 à 9 autres chiffres'
+            );
+        }
+
         $this->numeroCompte = $numeroCompte;
         // Auto-détection de la classe basée sur le premier chiffre
         $this->classe = substr($numeroCompte, 0, 1);
-        
+
         return $this;
     }
 

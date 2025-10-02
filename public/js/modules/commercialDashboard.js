@@ -579,24 +579,24 @@ class CommercialDashboard {
         const container = document.getElementById('alertes-container');
         const badge = document.getElementById('badge-alertes-count');
         const loader = document.getElementById('alertes-loading');
-        
+
         console.log('🔍 [DEBUG] Éléments DOM alertes:', {
             container: container ? 'OUI' : 'NON',
             badge: badge ? 'OUI' : 'NON',
             loader: loader ? 'OUI' : 'NON',
             alertesCount: alertes ? alertes.length : 'NULL/UNDEFINED'
         });
-        
+
         // Masquer le loader
         if (loader) {
             loader.style.display = 'none';
         }
-        
+
         if (!container) {
             console.error('❌ [DEBUG] Container alertes-container introuvable dans le DOM!');
             return;
         }
-        
+
         if (!alertes || alertes.length === 0) {
             container.innerHTML = `
                 <div class="alert alert-light text-center">
@@ -609,42 +609,70 @@ class CommercialDashboard {
             badge.style.display = 'none';
             return;
         }
-        
+
         let html = '<div class="row">';
-        
+
         alertes.forEach((alerte, index) => {
-            const alertClass = `alert-${alerte.typeBootstrap}`;
+            const alertClass = 'alert-' + alerte.typeBootstrap;
             const iconClass = alerte.typeIcon;
-            
-            html += `
-                <div class="col-12 mb-3">
-                    <div class="alert ${alertClass} d-flex align-items-start position-relative" style="padding-right: 50px;">
-                        <i class="${iconClass} fa-lg me-3 mt-1"></i>
-                        <div class="flex-grow-1">
-                            <h6 class="alert-heading mb-2">${alerte.titre}</h6>
-                            <p class="mb-1">${alerte.message}</p>
-                            <small class="opacity-75">
-                                <i class="fas fa-clock me-1"></i>Créée le ${alerte.createdAt}
-                                ${alerte.dateExpiration ? `• Expire le ${alerte.dateExpiration}` : ''}
-                            </small>
-                        </div>
-                        ${alerte.dismissible ? `
-                            <button type="button" class="btn-close position-absolute" 
-                                    style="top: 10px; right: 15px;"
-                                    onclick="commercialDashboard.fermerAlerte(${alerte.id})"
-                                    title="Fermer cette alerte">
-                            </button>
-                        ` : ''}
-                    </div>
-                </div>
-            `;
+
+            // Extraire l'URL du message si présente (pour les alertes automatiques)
+            let messageText = alerte.message;
+            let detailsUrl = null;
+
+            // Chercher le lien "Voir détails" dans le message
+            const linkMatch = alerte.message.match(/<a href="([^"]+)"[^>]*>Voir détails<\/a>/);
+            if (linkMatch) {
+                detailsUrl = linkMatch[1];
+                // Retirer le lien du message
+                messageText = alerte.message.replace(/<a href="[^"]+"[^>]*>Voir détails<\/a>/, '').trim();
+            }
+
+            // Bouton de fermeture (croix en haut à droite)
+            let closeButton = '';
+            if (alerte.dismissible) {
+                // Pour les alertes manuelles
+                closeButton = '<button type="button" class="btn-close position-absolute" ' +
+                    'style="top: 10px; right: 15px;" ' +
+                    'onclick="commercialDashboard.fermerAlerte(\'' + alerte.id + '\')" ' +
+                    'title="Fermer cette alerte"></button>';
+            } else if (alerte.source === 'automatic') {
+                // Pour les alertes automatiques, permettre de résoudre l'instance
+                closeButton = '<button type="button" class="btn-close position-absolute" ' +
+                    'style="top: 10px; right: 15px;" ' +
+                    'onclick="commercialDashboard.resoudreAlerteAutomatique(\'' + alerte.id + '\')" ' +
+                    'title="Marquer comme résolue"></button>';
+            }
+
+            // Lien "Voir détails" inline avec le message (pour alertes automatiques avec URL)
+            let detailsLink = '';
+            if (detailsUrl) {
+                detailsLink = '<a href="' + detailsUrl + '" target="_blank" class="btn btn-sm btn-outline-' + alerte.typeBootstrap + ' ms-2">' +
+                    '<i class="fas fa-external-link-alt me-1"></i>Voir détails' +
+                    '</a>';
+            }
+
+            html += '<div class="col-12 mb-3">' +
+                '<div class="alert ' + alertClass + ' position-relative mb-0" style="padding-right: 40px;">' +
+                '<div class="d-flex align-items-start">' +
+                '<i class="' + iconClass + ' fa-lg me-3 mt-1"></i>' +
+                '<div class="flex-grow-1">' +
+                '<h6 class="alert-heading mb-2">' + alerte.titre + '</h6>' +
+                '<div class="d-flex align-items-center">' +
+                '<p class="mb-0 me-2">' + messageText + '</p>' +
+                detailsLink +
+                '</div>' +
+                '</div>' +
+                '</div>' +
+                closeButton +
+                '</div></div>';
         });
-        
+
         html += '</div>';
-        
+
         container.innerHTML = html;
         container.style.display = 'block';
-        
+
         if (badge) {
             badge.textContent = alertes.length.toString();
             badge.style.display = alertes.length > 0 ? 'inline' : 'none';
@@ -677,28 +705,59 @@ class CommercialDashboard {
 
     async fermerAlerte(alerteId) {
         try {
-            const response = await fetch(`/workflow/dashboard/alerte/${alerteId}/dismiss`, {
+            const response = await fetch('/workflow/dashboard/alerte/' + alerteId + '/dismiss', {
                 method: 'POST',
                 headers: {
                     'X-Requested-With': 'XMLHttpRequest',
-                    'X-CSRF-Token': document.querySelector('meta[name="csrf-token"]').getAttribute('content')
+                    'X-CSRF-Token': document.querySelector('meta[name="csrf-token"]')?.getAttribute('content') || ''
                 }
             });
-            
+
             const data = await response.json();
-            
+
             if (data.success) {
                 // Recharger les alertes pour mise à jour
                 this.chargerMesAlertes();
-                
+
                 // Notification success
                 this.showNotification('Alerte fermée avec succès', 'success');
             } else {
                 this.showNotification('Erreur: ' + data.message, 'danger');
             }
-            
+
         } catch (error) {
             console.error('❌ Erreur fermeture alerte:', error);
+            this.showNotification('Erreur de communication avec le serveur', 'danger');
+        }
+    }
+
+    async resoudreAlerteAutomatique(alerteId) {
+        try {
+            // Extraire l'ID numérique (retirer le préfixe 'auto_' ou 'manual_')
+            const alerteNumericId = alerteId.replace(/^(auto_|manual_)/, '');
+
+            const response = await fetch('/workflow/dashboard/alerte/' + alerteNumericId + '/resolve', {
+                method: 'POST',
+                headers: {
+                    'X-Requested-With': 'XMLHttpRequest',
+                    'Content-Type': 'application/json'
+                }
+            });
+
+            const data = await response.json();
+
+            if (data.success) {
+                // Recharger les alertes pour mise à jour
+                this.chargerMesAlertes();
+
+                // Notification success
+                this.showNotification('Alerte résolue avec succès', 'success');
+            } else {
+                this.showNotification('Erreur: ' + data.message, 'danger');
+            }
+
+        } catch (error) {
+            console.error('❌ Erreur résolution alerte:', error);
             this.showNotification('Erreur de communication avec le serveur', 'danger');
         }
     }

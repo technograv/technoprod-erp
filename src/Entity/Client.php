@@ -414,9 +414,8 @@ class Client
 
     public function isActif(): bool
     {
-        // Pour maintenir la compatibilité, on considère qu'un client est actif
-        // si il a au moins un contact (les contacts n'ont pas de champ actif)
-        return $this->contacts->count() > 0;
+        // Un client est actif si il a au moins un contact actif
+        return $this->getContactsActifs()->count() > 0;
     }
 
     public function isActive(): bool

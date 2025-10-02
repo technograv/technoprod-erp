@@ -329,8 +329,11 @@ function initAlertesNavigation() {
     if (typesAlertesTab) {
         console.log('🔍 [DEBUG] Adding event listener to types-alertes-tab');
         typesAlertesTab.addEventListener('shown.bs.tab', function() {
-            console.log('🔍 [DEBUG] types-alertes-tab activated - loading types d\'alertes');
-            chargerTypesAlertes();
+            console.log('🔍 [DEBUG] types-alertes-tab activated - initializing types alertes');
+            // Le contenu est déjà chargé via include, on initialise juste
+            if (typeof initTypesAlerte === 'function') {
+                initTypesAlerte();
+            }
         });
         console.log('🔍 [DEBUG] Event listener added successfully');
     } else {
@@ -338,40 +341,7 @@ function initAlertesNavigation() {
     }
 }
 
-// Charger le contenu des types d'alertes
-function chargerTypesAlertes() {
-    console.log('🔍 [DEBUG] chargerTypesAlertes() starting');
-    const content = document.getElementById('types-alertes-content');
-    console.log('🔍 [DEBUG] types-alertes-content element:', content);
-
-    if (!content) {
-        console.error('❌ [DEBUG] types-alertes-content element not found, exiting');
-        return;
-    }
-
-    console.log('🔍 [DEBUG] Starting fetch to {{ path('app_admin_types_alerte') }}');
-    fetch('{{ path('app_admin_types_alerte') }}', {
-        method: 'GET',
-        headers: { 'X-Requested-With': 'XMLHttpRequest' }
-    })
-    .then(response => response.json())
-    .then(data => {
-        if (data.types_alerte) {
-            afficherTypesAlertes(data.types_alerte);
-        } else {
-            throw new Error('Format de réponse invalide');
-        }
-    })
-    .catch(error => {
-        console.error('Erreur chargement types alertes:', error);
-        content.innerHTML = `
-            <div class="alert alert-danger">
-                <i class="fas fa-exclamation-triangle me-2"></i>
-                Erreur lors du chargement des types d'alertes
-            </div>
-        `;
-    });
-}
+// Cette fonction a été supprimée car l'onglet types-alertes utilise maintenant le rendu côté serveur
 
 // Afficher la liste des types d'alertes dans l'onglet parametres
 function afficherTypesAlertes(typesAlerte) {
@@ -472,7 +442,7 @@ function lancerDetection(typeId) {
     .then(data => {
         if (data.success) {
             showNotification(data.message, 'success');
-            chargerTypesAlertes(); // Recharger la liste
+            // chargerTypesAlertes(); // Fonction supprimée - utiliser l'onglet types-alertes dédié
         } else {
             showNotification('Erreur: ' + data.error, 'error');
         }
@@ -492,7 +462,7 @@ function lancerToutesDetections() {
     .then(data => {
         if (data.success) {
             showNotification(data.message, 'success');
-            chargerTypesAlertes(); // Recharger la liste
+            // chargerTypesAlertes(); // Fonction supprimée - utiliser l'onglet types-alertes dédié
         } else {
             showNotification('Erreur: ' + data.error, 'error');
         }
@@ -514,36 +484,11 @@ function lancerToutesDetections() {
     <div class="card-body">
         <div class="alert alert-info mb-3">
             <i class="fas fa-info-circle me-2"></i>
-            Gérez les alertes manuelles et les types d'alertes automatiques pour le système.
+            Gérez les alertes manuelles et automatiques du système. Les alertes automatiques affichent le nombre d'instances détectées.
         </div>
 
-        <!-- Sous-navigation pour les alertes -->
-        <ul class="nav nav-pills mb-3" id="alertes-nav" role="tablist">
-            <li class="nav-item" role="presentation">
-                <button class="nav-link active" id="alertes-manuelles-tab" data-bs-toggle="pill" data-bs-target="#alertes-manuelles" type="button" role="tab">
-                    <i class="fas fa-edit me-2"></i>Alertes Manuelles
-                </button>
-            </li>
-            <li class="nav-item" role="presentation">
-                <button class="nav-link" id="types-alertes-tab" data-bs-toggle="pill" data-bs-target="#types-alertes" type="button" role="tab">
-                    <i class="fas fa-cogs me-2"></i>Types d'Alertes Automatiques
-                </button>
-            </li>
-        </ul>
-
-        <div class="tab-content" id="alertes-tab-content">
-            <div class="tab-pane fade show active" id="alertes-manuelles" role="tabpanel">
-                {% include 'admin/alertes.html.twig' %}
-            </div>
-            <div class="tab-pane fade" id="types-alertes" role="tabpanel">
-                <div id="types-alertes-content">
-                    <div class="text-center py-4">
-                        <div class="spinner-border text-primary" role="status"></div>
-                        <div class="mt-2 text-muted">Chargement des types d'alertes...</div>
-                    </div>
-                </div>
-            </div>
-        </div>
+        {# Onglet unique pour toutes les alertes #}
+        {% include 'admin/alertes.html.twig' %}
     </div>
 </div>
 

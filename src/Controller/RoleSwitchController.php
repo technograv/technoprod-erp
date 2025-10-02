@@ -80,49 +80,50 @@ class RoleSwitchController extends AbstractController
             $users = $entityManager->getRepository(User::class)->findBy([
                 'isActive' => true
             ], ['nom' => 'ASC']);
-            
+
             $currentUser = $this->getUser();
             $usersData = [];
-            
-            // Trouver le compte principal Google OAuth (celui qui s'est connecté initialement)
-            $mainGoogleAccount = null;
+
+            // Séparer les comptes Google (principaux) et les comptes de test
+            $googleAccounts = [];
+            $testAccounts = [];
+
             foreach ($users as $user) {
                 if ($user->isGoogleAccount()) {
-                    $mainGoogleAccount = $user;
-                    break; // On prend le premier compte Google trouvé comme compte principal
+                    $googleAccounts[] = $user;
+                } else {
+                    $testAccounts[] = $user;
                 }
             }
-            
-            // Ajouter le compte principal Google en premier (s'il existe)
-            if ($mainGoogleAccount) {
-                $isCurrentUser = $mainGoogleAccount->getId() === $currentUser->getId();
+
+            // Ajouter d'abord tous les comptes Google (comptes principaux)
+            foreach ($googleAccounts as $googleAccount) {
+                $isCurrentUser = $googleAccount->getId() === $currentUser->getId();
                 $usersData[] = [
-                    'id' => $mainGoogleAccount->getId(),
-                    'nom' => $mainGoogleAccount->getFullName(),
-                    'email' => $mainGoogleAccount->getEmail(),
-                    'roles' => $mainGoogleAccount->getRoles(),
-                    'societePrincipale' => $mainGoogleAccount->getSocietePrincipale() ? $mainGoogleAccount->getSocietePrincipale()->getNom() : null,
-                    'groupes' => $mainGoogleAccount->getNomsGroupes(),
+                    'id' => $googleAccount->getId(),
+                    'nom' => $googleAccount->getFullName(),
+                    'email' => $googleAccount->getEmail(),
+                    'roles' => $googleAccount->getRoles(),
+                    'societePrincipale' => $googleAccount->getSocietePrincipale() ? $googleAccount->getSocietePrincipale()->getNom() : null,
+                    'groupes' => $googleAccount->getNomsGroupes(),
                     'isCurrentUser' => $isCurrentUser,
                     'isMainAccount' => true
                 ];
             }
-            
+
             // Puis ajouter les comptes de test (non-Google)
-            foreach ($users as $user) {
-                if (!$user->isGoogleAccount()) {
-                    $isCurrentUser = $user->getId() === $currentUser->getId();
-                    $usersData[] = [
-                        'id' => $user->getId(),
-                        'nom' => $user->getFullName(),
-                        'email' => $user->getEmail(),
-                        'roles' => $user->getRoles(),
-                        'societePrincipale' => $user->getSocietePrincipale() ? $user->getSocietePrincipale()->getNom() : null,
-                        'groupes' => $user->getNomsGroupes(),
-                        'isCurrentUser' => $isCurrentUser,
-                        'isMainAccount' => false
-                    ];
-                }
+            foreach ($testAccounts as $testAccount) {
+                $isCurrentUser = $testAccount->getId() === $currentUser->getId();
+                $usersData[] = [
+                    'id' => $testAccount->getId(),
+                    'nom' => $testAccount->getFullName(),
+                    'email' => $testAccount->getEmail(),
+                    'roles' => $testAccount->getRoles(),
+                    'societePrincipale' => $testAccount->getSocietePrincipale() ? $testAccount->getSocietePrincipale()->getNom() : null,
+                    'groupes' => $testAccount->getNomsGroupes(),
+                    'isCurrentUser' => $isCurrentUser,
+                    'isMainAccount' => false
+                ];
             }
 
             return $this->json([

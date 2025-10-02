@@ -35,31 +35,32 @@ final class AlerteTypeController extends AbstractController
         // Si c'est une requête AJAX, retourner seulement les données
         if ($request->isXmlHttpRequest()) {
             try {
-                // Ultra-simplified test - just return hardcoded data to isolate the issue
-                return $this->json([
-                    'types_alerte' => [
-                        [
-                            'id' => 1,
-                            'nom' => 'Test Type 1',
-                            'description' => 'Test Description',
-                            'actif' => true,
-                            'ordre' => 1,
-                            'severity' => 'warning',
-                            'detecteur_nom' => 'Test Detector',
-                            'instances_count' => 0
-                        ],
-                        [
-                            'id' => 2,
-                            'nom' => 'Test Type 2',
-                            'description' => 'Another Test',
-                            'actif' => true,
-                            'ordre' => 2,
-                            'severity' => 'error',
-                            'detecteur_nom' => 'Another Detector',
-                            'instances_count' => 0
-                        ]
-                    ]
-                ]);
+                $typesAlerte = $this->entityManager
+                    ->getRepository(AlerteType::class)
+                    ->findBy([], ['ordre' => 'ASC', 'nom' => 'ASC']);
+
+                $detecteurs = $this->alerteManager->getDetectors();
+
+                $typesData = [];
+                foreach ($typesAlerte as $type) {
+                    $detector = $detecteurs[$type->getClasseDetection()] ?? null;
+
+                    $typesData[] = [
+                        'id' => $type->getId(),
+                        'nom' => $type->getNom(),
+                        'description' => $type->getDescription(),
+                        'classe_detection' => $type->getClasseDetection(),
+                        'actif' => $type->isActif(),
+                        'ordre' => $type->getOrdre(),
+                        'severity' => $type->getSeverity(),
+                        'roles_cibles' => $type->getRolesCibles() ?? [],
+                        'societes_cibles' => $type->getSocietesCibles() ?? [],
+                        'detecteur_nom' => $detector ? $detector['name'] : 'Détecteur inconnu',
+                        'instances_count' => $type->getInstances()->count()
+                    ];
+                }
+
+                return $this->json(['types_alerte' => $typesData]);
             } catch (\Exception $e) {
                 return $this->json(['error' => 'Exception: ' . $e->getMessage()], 500);
             }
@@ -72,7 +73,7 @@ final class AlerteTypeController extends AbstractController
 
             $societes = $this->entityManager
                 ->getRepository(Societe::class)
-                ->findBy(['actif' => true], ['nom' => 'ASC']);
+                ->findBy(['active' => true], ['nom' => 'ASC']);
 
             $detecteurs = $this->alerteManager->getDetectors();
 
@@ -247,10 +248,16 @@ final class AlerteTypeController extends AbstractController
             $results = $this->alerteManager->runDetection($type);
             $instancesCreated = $results[$type->getId()] ?? 0;
 
+            // Compter le total d'instances non résolues pour ce type
+            $totalInstances = $this->entityManager
+                ->getRepository(\App\Entity\AlerteInstance::class)
+                ->count(['alerteType' => $type, 'resolved' => false]);
+
             return $this->json([
                 'success' => true,
-                'message' => sprintf('%d instance(s) d\'alerte créée(s)', $instancesCreated),
-                'instances_created' => $instancesCreated
+                'message' => sprintf('%d nouvelle(s) instance(s) créée(s). Total non résolu: %d', $instancesCreated, $totalInstances),
+                'instances_created' => $instancesCreated,
+                'total_instances' => $totalInstances
             ]);
         } catch (\Exception $e) {
             return $this->json(['error' => 'Erreur lors de la détection: ' . $e->getMessage()], 500);
@@ -287,17 +294,82 @@ final class AlerteTypeController extends AbstractController
         }
     }
 
+    #[Route('/types-alerte/{id}/instances', name: 'app_admin_types_alerte_instances', methods: ['GET'])]
+    public function getInstances(AlerteType $type): JsonResponse
+    {
+        try {
+            $instances = $this->entityManager
+                ->getRepository(\App\Entity\AlerteInstance::class)
+                ->findBy(
+                    ['alerteType' => $type, 'resolved' => false],
+                    ['dateDetection' => 'DESC']
+                );
+
+            $data = [];
+            foreach ($instances as $instance) {
+                // Générer le message depuis les metadata et entity_type
+                $metadata = $instance->getMetadata();
+                $entityType = $instance->getEntityType();
+                $message = '';
+
+                // Déterminer le message selon le type d'entité
+                if ($entityType === 'App\Entity\Client' || isset($metadata['client_code'])) {
+                    $clientNom = $metadata['client_nom'] ?? 'Client inconnu';
+                    $message = 'Client "' . $clientNom . '" n\'a aucun contact actif';
+                } elseif ($entityType === 'App\Entity\Contact' || isset($metadata['contact_nom'])) {
+                    $contactName = $metadata['contact_prenom'] ? $metadata['contact_prenom'] . ' ' . $metadata['contact_nom'] : $metadata['contact_nom'];
+                    $clientNom = $metadata['client_nom'] ?? '';
+                    $message = 'Contact "' . $contactName . '"' . ($clientNom ? ' (Client: ' . $clientNom . ')' : '') . ' n\'a pas d\'adresse';
+                } else {
+                    $message = 'Alerte détectée';
+                }
+
+                $data[] = [
+                    'id' => $instance->getId(),
+                    'entityType' => $instance->getEntityType(),
+                    'entityId' => $instance->getEntityId(),
+                    'message' => $message,
+                    'metadata' => $metadata,
+                    'dateCreation' => $instance->getDateDetection()->format('d/m/Y H:i'),
+                    'clientId' => $metadata['client_id'] ?? null,
+                ];
+            }
+
+            return $this->json([
+                'success' => true,
+                'instances' => $data,
+                'typeName' => $type->getNom()
+            ]);
+        } catch (\Exception $e) {
+            return $this->json(['error' => 'Erreur: ' . $e->getMessage()], 500);
+        }
+    }
+
     #[Route('/types-alerte/run-all', name: 'app_admin_types_alerte_run_all', methods: ['POST'])]
     public function runAllDetections(): JsonResponse
     {
         try {
             $results = $this->alerteManager->runDetection();
-            $totalInstances = array_sum(array_filter($results, 'is_numeric'));
+            $totalCreated = array_sum(array_filter($results, 'is_numeric'));
+
+            // Compter le total d'instances non résolues par type
+            $totals = [];
+            foreach ($results as $typeId => $created) {
+                if (is_numeric($created)) {
+                    $type = $this->entityManager->find(\App\Entity\AlerteType::class, $typeId);
+                    if ($type) {
+                        $totals[$typeId] = $this->entityManager
+                            ->getRepository(\App\Entity\AlerteInstance::class)
+                            ->count(['alerteType' => $type, 'resolved' => false]);
+                    }
+                }
+            }
 
             return $this->json([
                 'success' => true,
-                'message' => sprintf('%d instance(s) d\'alerte créée(s) au total', $totalInstances),
-                'results' => $results
+                'message' => sprintf('%d nouvelle(s) instance(s) créée(s) au total', $totalCreated),
+                'results' => $results,
+                'totals' => $totals
             ]);
         } catch (\Exception $e) {
             return $this->json(['error' => 'Erreur lors des détections: ' . $e->getMessage()], 500);

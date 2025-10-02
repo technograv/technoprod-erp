@@ -12,6 +12,7 @@ use App\Entity\AlerteUtilisateur;
 use App\Service\WorkflowService;
 use App\Service\DashboardService;
 use App\Service\AlerteService;
+use App\Service\AlerteManager;
 use App\Service\SecteurService;
 use App\DTO\Dashboard\ProductionStatusUpdateDto;
 use Symfony\Component\HttpKernel\Attribute\MapRequestPayload;
@@ -35,6 +36,7 @@ class WorkflowController extends AbstractController
         private ValidatorInterface $validator,
         private DashboardService $dashboardService,
         private AlerteService $alerteService,
+        private AlerteManager $alerteManager,
         private SecteurService $secteurService,
         private \App\Service\CommuneGeometryCacheService $cacheService,
         private \App\Service\GoogleCalendarService $googleCalendarService,
@@ -877,8 +879,8 @@ class WorkflowController extends AbstractController
     }
 
     /**
-     * Récupère les alertes actives pour l'utilisateur connecté
-     * Filtre selon les rôles et exclut les alertes déjà fermées
+     * Récupère les alertes actives pour l'utilisateur connecté (système unifié)
+     * Filtre selon les rôles et sociétés - inclut alertes manuelles et automatiques
      */
     #[Route('/dashboard/mes-alertes', name: 'workflow_mes_alertes', methods: ['GET'])]
     public function getMesAlertes(): JsonResponse
@@ -886,7 +888,7 @@ class WorkflowController extends AbstractController
         try {
             /** @var User $user */
             $user = $this->getUser();
-            
+
             if (!$user) {
                 return $this->json([
                     'success' => false,
@@ -894,37 +896,53 @@ class WorkflowController extends AbstractController
                 ]);
             }
 
-            // Utiliser le service optimisé pour obtenir les alertes visibles
-            $alertes = $this->alerteService->getVisibleAlertsForUser($user);
+            // Utiliser le service AlerteManager pour récupérer toutes les alertes filtrées
+            $alertes = $this->alerteManager->getAlertsForUser($user);
 
-            // Formater les alertes
             $alertesData = [];
             foreach ($alertes as $alerte) {
+                $message = $alerte->getMessage();
+
+                // Générer URL vers l'entité si c'est une alerte automatique
+                if ($alerte->isAutomatic() && $alerte->getEntityType() && $alerte->getEntityId()) {
+                    $editUrl = null;
+                    $metadata = $alerte->getMetadata();
+
+                    if ($alerte->getEntityType() === 'App\\Entity\\Client') {
+                        $editUrl = $this->generateUrl('app_prospect_show', ['id' => $alerte->getEntityId()]);
+                    } elseif ($alerte->getEntityType() === 'App\\Entity\\Contact' && isset($metadata['client_id'])) {
+                        $editUrl = $this->generateUrl('app_prospect_show', ['id' => $metadata['client_id']]);
+                    }
+
+                    if ($editUrl) {
+                        $message .= ' <a href="' . $editUrl . '" target="_blank" class="alert-link">Voir détails</a>';
+                    }
+                }
+
                 $alertesData[] = [
-                    'id' => $alerte->getId(),
+                    'id' => ($alerte->isManual() ? 'manual_' : 'auto_') . $alerte->getId(),
                     'titre' => $alerte->getTitre(),
-                    'message' => $alerte->getMessage(),
+                    'message' => $message,
                     'type' => $alerte->getType(),
                     'typeBootstrap' => $alerte->getTypeBootstrap(),
                     'typeIcon' => $alerte->getTypeIcon(),
                     'dismissible' => $alerte->isDismissible(),
                     'dateExpiration' => $alerte->getDateExpiration() ? $alerte->getDateExpiration()->format('d/m/Y à H:i') : null,
-                    'createdAt' => $alerte->getCreatedAt()->format('d/m/Y à H:i')
+                    'createdAt' => $alerte->getCreatedAt()->format('d/m/Y à H:i'),
+                    'source' => $alerte->isManual() ? 'manual' : 'automatic'
                 ];
             }
 
             return $this->json([
                 'success' => true,
                 'alertes' => $alertesData,
-                'total' => count($alertesData),
-                'debug_user' => $user->getPrenom() . ' ' . $user->getNom()
+                'total' => count($alertesData)
             ]);
-            
+
         } catch (\Exception $e) {
             return $this->json([
                 'success' => false,
-                'message' => 'Erreur serveur: ' . $e->getMessage(),
-                'debug_trace' => $e->getTraceAsString()
+                'message' => 'Erreur serveur: ' . $e->getMessage()
             ], 500);
         }
     }
@@ -939,7 +957,7 @@ class WorkflowController extends AbstractController
         try {
             /** @var User $user */
             $user = $this->getUser();
-            
+
             if (!$user) {
                 return $this->json([
                     'success' => false,
@@ -949,7 +967,7 @@ class WorkflowController extends AbstractController
 
             // Utiliser le service pour fermer l'alerte
             $success = $this->alerteService->dismissAlertForUser($alerte, $user);
-            
+
             if (!$success) {
                 return $this->json([
                     'success' => false,
@@ -961,7 +979,71 @@ class WorkflowController extends AbstractController
                 'success' => true,
                 'message' => 'Alerte fermée avec succès'
             ]);
-            
+
+        } catch (\Exception $e) {
+            return $this->json([
+                'success' => false,
+                'message' => 'Erreur serveur: ' . $e->getMessage()
+            ], 500);
+        }
+    }
+
+    /**
+     * Marque une alerte comme résolue (système unifié)
+     */
+    #[Route('/dashboard/alerte/{id}/resolve', name: 'workflow_alerte_resolve', methods: ['POST'])]
+    public function resolveAlerte(int $id): JsonResponse
+    {
+        try {
+            /** @var User $user */
+            $user = $this->getUser();
+
+            if (!$user) {
+                return $this->json([
+                    'success' => false,
+                    'message' => 'Utilisateur non authentifié'
+                ]);
+            }
+
+            // Récupérer l'alerte
+            $alerte = $this->entityManager->getRepository(Alerte::class)->find($id);
+
+            if (!$alerte) {
+                return $this->json([
+                    'success' => false,
+                    'message' => 'Alerte introuvable'
+                ], 404);
+            }
+
+            // Vérifier que l'utilisateur a le droit de résoudre cette alerte
+            $userRoles = $user->getRoles();
+            $userSociete = $user->getSocietePrincipale();
+
+            $cibles = $alerte->getCibles() ?? [];
+            $societesCibles = $alerte->getSocietesCibles() ?? [];
+
+            // Vérifier les rôles
+            $roleMatch = empty($cibles) || array_intersect($userRoles, $cibles);
+
+            // Vérifier les sociétés
+            $societeMatch = empty($societesCibles) ||
+                ($userSociete && in_array($userSociete->getId(), $societesCibles));
+
+            if (!$roleMatch || !$societeMatch) {
+                return $this->json([
+                    'success' => false,
+                    'message' => 'Vous n\'avez pas les droits pour résoudre cette alerte'
+                ], 403);
+            }
+
+            // Utiliser AlerteManager pour résoudre
+            $this->alerteManager->resolveAlerte($alerte, $user);
+
+            return $this->json([
+                'success' => true,
+                'message' => 'Alerte résolue avec succès'
+            ]);
+
         } catch (\Exception $e) {
             return $this->json([
                 'success' => false,
