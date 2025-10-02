@@ -80,34 +80,26 @@ class CalendarDashboard {
 
     // Fonctions prospection
     lancerProspectionTelephonique() {
-        const zone = document.getElementById('phone-prospection-zone').value;
-        if (!zone) {
-            alert('Veuillez sélectionner une zone de prospection');
+        const inputZone = document.getElementById('phone-prospection-zone');
+        const zone = inputZone ? inputZone.value : '';
+
+        const codePostal = inputZone ? (inputZone.getAttribute('data-code-postal') || '') : '';
+        const nomCommune = inputZone ? (inputZone.getAttribute('data-nom-commune') || '') : '';
+
+        console.log('📞 Lancement prospection téléphonique pour zone:', { codePostal, nomCommune, zone });
+
+        // Si pas de zone sélectionnée via autocomplete, afficher tous les clients
+        if (!codePostal && !nomCommune && zone) {
+            alert('Veuillez sélectionner une zone dans la liste de suggestions');
             return;
         }
-        
-        console.log('📞 Lancement prospection téléphonique pour zone:', zone);
-        
-        fetch('/workflow/prospection-telephonique', {
-            method: 'POST',
-            headers: {
-                'Content-Type': 'application/json',
-                'X-Requested-With': 'XMLHttpRequest'
-            },
-            body: JSON.stringify({ zone: zone })
-        })
-        .then(response => response.json())
-        .then(data => {
-            if (data.success) {
-                alert('Prospection téléphonique lancée!');
-            } else {
-                alert('Erreur: ' + data.message);
-            }
-        })
-        .catch(error => {
-            console.error('Erreur prospection téléphonique:', error);
-            alert('Erreur de communication');
-        });
+
+        // Rediriger vers la page de prospection avec les paramètres
+        const params = new URLSearchParams();
+        if (codePostal) params.append('codePostal', codePostal);
+        if (nomCommune) params.append('commune', nomCommune);
+
+        window.location.href = '/workflow/prospection-telephonique' + (params.toString() ? '?' + params.toString() : '');
     }
 
     preparerProspectionTerrain() {

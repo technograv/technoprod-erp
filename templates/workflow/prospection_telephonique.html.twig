@@ -1,0 +1,435 @@
+{% extends 'base.html.twig' %}
+
+{% block title %}Prospection Téléphonique - TechnoProd{% endblock %}
+
+{% block stylesheets %}
+<style>
+.prospect-viewer {
+    position: relative;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    min-height: 700px;
+    padding: 3rem 0;
+}
+
+.prospect-card-container {
+    width: 70vw;
+    max-width: 900px;
+    margin: 0 auto;
+}
+
+.prospect-card {
+    min-height: 600px;
+    height: auto;
+    border-left: 4px solid #007bff;
+    box-shadow: 0 8px 30px rgba(0,0,0,0.25);
+}
+
+.prospect-card.called {
+    border-left-color: #28a745;
+}
+
+.prospect-card.not-interested {
+    border-left-color: #dc3545;
+}
+
+.prospect-card .card-body {
+    padding: 2rem;
+}
+
+.prospect-card .card-body > div {
+    margin-bottom: 1rem;
+}
+
+.prospect-card .card-footer {
+    padding: 1rem 2rem;
+    background-color: #f8f9fa;
+}
+
+.nav-btn {
+    position: absolute;
+    top: 50%;
+    transform: translateY(-50%);
+    z-index: 10;
+    background: white;
+    border: 2px solid #007bff;
+    border-radius: 50%;
+    width: 60px;
+    height: 60px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    transition: all 0.2s;
+    box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+}
+
+.nav-btn:hover:not(:disabled) {
+    background: #007bff;
+    color: white;
+    transform: translateY(-50%) scale(1.1);
+}
+
+.nav-btn.prev {
+    left: 20px;
+}
+
+.nav-btn.next {
+    right: 20px;
+}
+
+.nav-btn:disabled {
+    opacity: 0.3;
+    cursor: not-allowed;
+}
+
+.call-btn {
+    font-size: 1.3rem;
+    padding: 0.75rem 1.5rem;
+    font-weight: 600;
+    box-shadow: 0 4px 12px rgba(40, 167, 69, 0.3);
+}
+
+.call-btn:hover {
+    box-shadow: 0 6px 16px rgba(40, 167, 69, 0.4);
+    transform: scale(1.05);
+}
+
+.prospect-indicator {
+    text-align: center;
+    margin-top: 1.5rem;
+    color: #6c757d;
+    font-size: 1.1rem;
+}
+</style>
+{% endblock %}
+
+{% block body %}
+<div class="container-fluid mt-4 mb-5 pb-5">
+    <!-- En-tête simple -->
+    <div class="row mb-4">
+        <div class="col-12">
+            <div class="d-flex justify-content-between align-items-center">
+                <h1 class="h3 mb-0">
+                    <i class="fas fa-phone-volume text-primary me-2"></i>
+                    Prospection Téléphonique
+                </h1>
+                <a href="{{ path('workflow_dashboard') }}" class="btn btn-outline-secondary">
+                    <i class="fas fa-arrow-left me-1"></i>Retour
+                </a>
+            </div>
+        </div>
+    </div>
+
+    <!-- Visualiseur de prospects -->
+    {% if prospects|length > 0 %}
+    <div class="prospect-viewer">
+        <!-- Bouton Précédent -->
+        <button class="nav-btn prev" onclick="previousProspect()" id="btn-prev">
+            <i class="fas fa-chevron-left fa-lg"></i>
+        </button>
+
+        <!-- Carte unique du prospect actuel -->
+        <div class="prospect-card-container">
+            <div class="card prospect-card" id="current-prospect-card">
+                <!-- Le contenu sera injecté par JavaScript -->
+            </div>
+        </div>
+
+        <!-- Bouton Suivant -->
+        <button class="nav-btn next" onclick="nextProspect()" id="btn-next">
+            <i class="fas fa-chevron-right fa-lg"></i>
+        </button>
+    </div>
+
+    <!-- Indicateur de position -->
+    <div class="prospect-indicator">
+        <strong id="current-index">1</strong> / {{ prospects|length }}
+    </div>
+    {% else %}
+    <div class="alert alert-info text-center">
+        <i class="fas fa-info-circle fa-2x mb-3"></i>
+        <h5>Aucun client trouvé</h5>
+        <p class="mb-0">
+            {% if codePostal or commune %}
+                Aucun client avec adresse trouvé dans cette zone. Essayez une autre zone.
+            {% else %}
+                Aucun client avec adresse dans la base.
+                <a href="{{ path('app_prospect_new') }}" class="alert-link">Créer un nouveau prospect</a>.
+            {% endif %}
+        </p>
+    </div>
+    {% endif %}
+
+    <!-- Barre flottante en bas -->
+    <div class="floating-action-bar" style="position: fixed; bottom: 0; left: 0; right: 0; z-index: 1000; background: white; box-shadow: 0 -2px 10px rgba(0,0,0,0.1); border-top: 2px solid #007bff;">
+        <div class="container-fluid">
+            <div class="py-3">
+                <div class="row align-items-center">
+                    <!-- Zone de prospection -->
+                    <div class="col-md-4">
+                        <div class="d-flex align-items-center">
+                            <i class="fas fa-map-marker-alt text-primary fa-lg me-3"></i>
+                            <div>
+                                <small class="text-muted d-block">Zone</small>
+                                <strong>
+                                    {% if codePostal %}
+                                        {{ codePostal }}
+                                        {% if commune %} - {{ commune }}{% endif %}
+                                    {% elseif commune %}
+                                        {{ commune }}
+                                    {% else %}
+                                        <em class="text-muted">Tous les clients</em>
+                                    {% endif %}
+                                </strong>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Statistiques de session -->
+                    <div class="col-md-5">
+                        <div class="row text-center g-3">
+                            <div class="col-4">
+                                <small class="text-muted d-block">Total</small>
+                                <h5 class="mb-0 text-primary">{{ prospects|length }}</h5>
+                            </div>
+                            <div class="col-4">
+                                <small class="text-muted d-block">Appelés</small>
+                                <h5 class="mb-0 text-success" id="count-called">0</h5>
+                            </div>
+                            <div class="col-4">
+                                <small class="text-muted d-block">Restants</small>
+                                <h5 class="mb-0 text-warning" id="count-remaining">{{ prospects|length }}</h5>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Actions -->
+                    <div class="col-md-3 text-end">
+                        <a href="{{ path('workflow_dashboard') }}" class="btn btn-outline-secondary me-2">
+                            <i class="fas fa-arrow-left me-1"></i>Retour
+                        </a>
+                        <button class="btn btn-primary" onclick="window.location.reload()">
+                            <i class="fas fa-sync-alt me-1"></i>Actualiser
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Données des prospects en JSON pour JavaScript -->
+<script>
+const prospectsData = {{ prospectsData|json_encode|raw }};
+let currentIndex = 0;
+
+console.log('Prospects chargés:', prospectsData.length);
+
+// Template HTML pour une carte de prospect
+function renderProspectCard(prospect) {
+    const adresse = prospect.adresse;
+    const telephone = prospect.telephone;
+    const email = prospect.email;
+
+    return `
+        <div class="card-body">
+            <!-- En-tête -->
+            <div class="d-flex justify-content-between align-items-start mb-3">
+                <div class="flex-grow-1">
+                    <h5 class="card-title mb-1">
+                        <a href="/prospect/${prospect.id}" target="_blank" class="text-decoration-none">
+                            ${prospect.nomComplet}
+                            <i class="fas fa-external-link-alt fa-xs ms-1"></i>
+                        </a>
+                    </h5>
+                    <div class="d-flex align-items-center gap-2">
+                        <span class="badge bg-${prospect.statut === 'PROSPECT' ? 'warning' : 'success'}">
+                            ${prospect.statut}
+                        </span>
+                        ${prospect.secteur ? `<small class="text-muted"><i class="fas fa-map-pin me-1"></i>${prospect.secteur.nomSecteur}</small>` : ''}
+                    </div>
+                </div>
+                ${prospect.distanceKm ? `
+                <div class="text-end">
+                    <div class="badge bg-primary">
+                        <i class="fas fa-location-arrow me-1"></i>
+                        ${prospect.distanceKm} km
+                    </div>
+                </div>
+                ` : ''}
+            </div>
+
+            <!-- Contact -->
+            <div class="mb-3">
+                ${telephone ? `
+                <div class="mb-2">
+                    <a href="tel:${telephone}" class="btn btn-success call-btn w-100" onclick="markAsCalled(${prospect.id})">
+                        <i class="fas fa-phone me-2"></i>${telephone}
+                    </a>
+                </div>
+                ` : ''}
+                ${email ? `<div class="text-muted small"><i class="fas fa-envelope me-1"></i>${email}</div>` : ''}
+                ${adresse ? `
+                <div class="text-muted small mt-2">
+                    <i class="fas fa-map-marker-alt me-1"></i>
+                    ${adresse.ville} (${adresse.codePostal})
+                </div>
+                ` : ''}
+            </div>
+
+            <!-- Actions -->
+            <div class="btn-group w-100 mt-2">
+                <button class="btn btn-sm btn-outline-success" onclick="markAsCalled(${prospect.id})" title="Marquer comme appelé">
+                    <i class="fas fa-check"></i>
+                </button>
+                <button class="btn btn-sm btn-outline-danger" onclick="markAsNotInterested(${prospect.id})" title="Pas intéressé">
+                    <i class="fas fa-times"></i>
+                </button>
+                <button class="btn btn-sm btn-outline-primary" onclick="addNote(${prospect.id})" title="Ajouter une note">
+                    <i class="fas fa-sticky-note"></i>
+                </button>
+                <a href="/prospect/${prospect.id}/edit" class="btn btn-sm btn-outline-secondary" title="Éditer" target="_blank">
+                    <i class="fas fa-edit"></i>
+                </a>
+            </div>
+
+            <!-- Zone note -->
+            <div class="mt-3 note-area" id="note-${prospect.id}" style="display: none;">
+                <textarea class="form-control form-control-sm" rows="2" placeholder="Note de prospection..."></textarea>
+                <button class="btn btn-sm btn-primary mt-1 w-100" onclick="saveNote(${prospect.id})">
+                    <i class="fas fa-save me-1"></i>Enregistrer
+                </button>
+            </div>
+        </div>
+        <div class="card-footer text-muted small">
+            <i class="fas fa-calendar me-1"></i>
+            Créé le ${prospect.createdAt ? new Date(prospect.createdAt).toLocaleDateString('fr-FR') : 'N/A'}
+        </div>
+    `;
+}
+
+// Afficher le prospect actuel
+function displayCurrentProspect() {
+    console.log('Affichage prospect index:', currentIndex);
+    const card = document.getElementById('current-prospect-card');
+    const prospect = prospectsData[currentIndex];
+
+    if (!card) {
+        console.error('Carte non trouvée!');
+        return;
+    }
+
+    if (!prospect) {
+        console.error('Prospect non trouvé à l\'index:', currentIndex);
+        return;
+    }
+
+    console.log('Prospect:', prospect);
+    card.innerHTML = renderProspectCard(prospect);
+    card.setAttribute('data-prospect-id', prospect.id);
+
+    // Mettre à jour l'indicateur
+    const indicator = document.getElementById('current-index');
+    if (indicator) {
+        indicator.textContent = currentIndex + 1;
+    }
+
+    // Gérer les boutons
+    const btnPrev = document.getElementById('btn-prev');
+    const btnNext = document.getElementById('btn-next');
+
+    if (btnPrev) btnPrev.disabled = currentIndex === 0;
+    if (btnNext) btnNext.disabled = currentIndex === prospectsData.length - 1;
+}
+
+function nextProspect() {
+    if (currentIndex < prospectsData.length - 1) {
+        currentIndex++;
+        displayCurrentProspect();
+    }
+}
+
+function previousProspect() {
+    if (currentIndex > 0) {
+        currentIndex--;
+        displayCurrentProspect();
+    }
+}
+
+// Navigation clavier
+document.addEventListener('keydown', (e) => {
+    if (e.key === 'ArrowRight') nextProspect();
+    else if (e.key === 'ArrowLeft') previousProspect();
+});
+
+// Compteurs de session
+let sessionStats = {
+    called: 0,
+    notInterested: 0,
+    total: prospectsData.length
+};
+
+function updateStats() {
+    document.getElementById('count-called').textContent = sessionStats.called;
+    document.getElementById('count-remaining').textContent = sessionStats.total - sessionStats.called - sessionStats.notInterested;
+}
+
+function markAsCalled(prospectId) {
+    const card = document.getElementById('current-prospect-card');
+    if (!card.classList.contains('called')) {
+        card.classList.add('called');
+        card.classList.remove('not-interested');
+        sessionStats.called++;
+        updateStats();
+    }
+}
+
+function markAsNotInterested(prospectId) {
+    const card = document.getElementById('current-prospect-card');
+    if (!card.classList.contains('not-interested')) {
+        card.classList.add('not-interested');
+        card.classList.remove('called');
+        sessionStats.notInterested++;
+        updateStats();
+    }
+}
+
+function addNote(prospectId) {
+    const noteArea = document.getElementById('note-' + prospectId);
+    if (noteArea) {
+        noteArea.style.display = noteArea.style.display === 'none' ? 'block' : 'none';
+    }
+}
+
+function saveNote(prospectId) {
+    const noteArea = document.getElementById('note-' + prospectId);
+    const textarea = noteArea.querySelector('textarea');
+    alert('Note enregistrée (fonctionnalité à implémenter)');
+    noteArea.style.display = 'none';
+    textarea.value = '';
+}
+
+// Initialiser au chargement de la page
+document.addEventListener('DOMContentLoaded', function() {
+    console.log('DOM chargé, initialisation...');
+    if (prospectsData.length > 0) {
+        displayCurrentProspect();
+    } else {
+        console.warn('Aucun prospect à afficher');
+    }
+});
+
+// Fallback au cas où DOMContentLoaded est déjà passé
+if (document.readyState === 'loading') {
+    // DOMContentLoaded s'exécutera
+} else {
+    // DOM déjà chargé, exécuter immédiatement
+    console.log('DOM déjà chargé, initialisation immédiate...');
+    if (prospectsData.length > 0) {
+        displayCurrentProspect();
+    }
+}
+</script>
+{% endblock %}

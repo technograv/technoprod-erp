@@ -14,7 +14,7 @@ class PostalAutocompleteService {
      */
     init(postalInputId, villeInputId) {
         console.log('🔧 PostalAutocompleteService.init appelé:', { postalInputId, villeInputId });
-        
+
         const postalInput = document.getElementById(postalInputId);
         const villeInput = document.getElementById(villeInputId);
 
@@ -32,6 +32,33 @@ class PostalAutocompleteService {
         this.setupAutocompleteForInput(villeInput);
 
         console.log('✅ PostalAutocompleteService: Initialisation réussie pour', postalInputId, '↔', villeInputId);
+    }
+
+    /**
+     * Initialise l'autocomplétion sur un champ unique (mixte: code postal OU ville)
+     * @param {string} inputId - ID du champ unique
+     * @param {function} onSelectCallback - Callback appelé quand une commune est sélectionnée
+     */
+    initSingle(inputId, onSelectCallback) {
+        console.log('🔧 PostalAutocompleteService.initSingle appelé:', { inputId });
+
+        const input = document.getElementById(inputId);
+
+        if (!input) {
+            console.error('❌ PostalAutocompleteService: Champ non trouvé', { inputId });
+            return;
+        }
+
+        // Marquer le champ comme mixte
+        input.setAttribute('data-type', 'mixed');
+
+        // Stocker le callback pour utilisation lors de la sélection
+        input._selectCallback = onSelectCallback;
+
+        // Configurer l'autocomplétion
+        this.setupAutocompleteForInput(input);
+
+        console.log('✅ PostalAutocompleteService: Initialisation single réussie pour', inputId);
     }
 
     /**
@@ -207,11 +234,25 @@ class PostalAutocompleteService {
     selectCommune(inputField, commune) {
         const inputType = inputField.getAttribute('data-type');
         const container = inputField.closest('tr') || inputField.closest('.modal-body') || inputField.closest('form');
-        
+
         console.log('🎯 Sélection commune:', commune, 'pour type:', inputType);
         console.log('🔍 Container trouvé:', container ? container.tagName : 'AUCUN');
         console.log('🔍 Input field ID:', inputField.id, 'Name:', inputField.name);
-        
+
+        // Gestion du type "mixed" (champ unique)
+        if (inputType === 'mixed') {
+            inputField.value = commune.codePostal + ' - ' + commune.nomCommune;
+            inputField.setAttribute('data-code-postal', commune.codePostal);
+            inputField.setAttribute('data-nom-commune', commune.nomCommune);
+            console.log('✅ Champ mixte mis à jour:', inputField.value);
+
+            // Appeler le callback si présent
+            if (inputField._selectCallback && typeof inputField._selectCallback === 'function') {
+                inputField._selectCallback(commune);
+            }
+            return;
+        }
+
         if (inputType === 'postal') {
             // Mettre à jour le code postal
             inputField.value = commune.codePostal;

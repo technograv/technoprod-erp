@@ -576,13 +576,161 @@ class WorkflowController extends AbstractController
         }
     }
 
-    #[Route('/prospection-telephonique', name: 'workflow_prospection_telephonique', methods: ['POST'])]
-    public function prospectionTelephonique(Request $request): JsonResponse
+    #[Route('/prospection-telephonique', name: 'workflow_prospection_telephonique', methods: ['GET', 'POST'])]
+    public function prospectionTelephonique(Request $request): Response|JsonResponse
     {
-        // Route placeholder pour éviter l'erreur de template
-        return $this->json([
-            'success' => false,
-            'message' => 'Fonctionnalité prospection téléphonique temporairement désactivée'
+        $user = $this->getUser();
+
+        // Supporter à la fois GET et POST pour compatibilité cache navigateur
+        if ($request->isMethod('POST')) {
+            $data = json_decode($request->getContent(), true);
+            $zone = $data['zone'] ?? '';
+
+            // Parser la zone (format: "CODE_POSTAL - NOM_COMMUNE")
+            if (preg_match('/^(\d{5})\s*-\s*(.+)$/', $zone, $matches)) {
+                $codePostal = $matches[1];
+                $commune = $matches[2];
+            } else {
+                $codePostal = '';
+                $commune = '';
+            }
+
+            // Pour les requêtes AJAX, retourner l'URL de redirection
+            if ($request->isXmlHttpRequest()) {
+                return $this->json([
+                    'success' => false,
+                    'message' => 'Veuillez rafraîchir votre page (F5 ou Ctrl+F5) puis réessayer',
+                    'redirect' => $this->generateUrl('workflow_prospection_telephonique', [
+                        'codePostal' => $codePostal,
+                        'commune' => $commune
+                    ])
+                ]);
+            }
+
+            // Pour les requêtes POST normales, rediriger
+            return $this->redirectToRoute('workflow_prospection_telephonique', [
+                'codePostal' => $codePostal,
+                'commune' => $commune
+            ]);
+        }
+
+        $codePostal = $request->query->get('codePostal', '');
+        $commune = $request->query->get('commune', '');
+
+        // Récupérer les coordonnées du point de départ
+        $pointDepart = null;
+        if (!empty($codePostal)) {
+            $pointDepart = $this->entityManager->getRepository(\App\Entity\CommuneFrancaise::class)
+                ->findOneBy(['codePostal' => $codePostal]);
+        } elseif (!empty($commune)) {
+            $pointDepart = $this->entityManager->getRepository(\App\Entity\CommuneFrancaise::class)
+                ->createQueryBuilder('cf')
+                ->where('cf.nomCommune LIKE :commune')
+                ->setParameter('commune', '%' . $commune . '%')
+                ->setMaxResults(1)
+                ->getQuery()
+                ->getOneOrNullResult();
+        }
+
+        // Si on a un point de départ avec coordonnées GPS, trier par distance
+        if ($pointDepart && $pointDepart->getLatitude() && $pointDepart->getLongitude()) {
+            $lat = (float) $pointDepart->getLatitude();
+            $lon = (float) $pointDepart->getLongitude();
+
+            // Requête SQL native pour calculer les distances avec formule Haversine
+            $sql = "
+                SELECT DISTINCT ON (c.id)
+                    c.id,
+                    6371 * acos(
+                        LEAST(1.0, GREATEST(-1.0,
+                            cos(radians(:lat)) * cos(radians(CAST(cf.latitude AS NUMERIC))) *
+                            cos(radians(CAST(cf.longitude AS NUMERIC)) - radians(:lon)) +
+                            sin(radians(:lat)) * sin(radians(CAST(cf.latitude AS NUMERIC)))
+                        ))
+                    ) as distance_km
+                FROM client c
+                LEFT JOIN forme_juridique fj ON c.forme_juridique_id = fj.id
+                LEFT JOIN contact cont_liv ON c.contact_livraison_default_id = cont_liv.id
+                LEFT JOIN adresse a_liv ON cont_liv.adresse_id = a_liv.id
+                LEFT JOIN contact cont_fact ON c.contact_facturation_default_id = cont_fact.id
+                LEFT JOIN adresse a_fact ON cont_fact.adresse_id = a_fact.id
+                LEFT JOIN commune_francaise cf ON COALESCE(a_liv.code_postal, a_fact.code_postal) = cf.code_postal
+                WHERE (a_liv.id IS NOT NULL OR a_fact.id IS NOT NULL)
+                AND cf.latitude IS NOT NULL
+                AND cf.longitude IS NOT NULL
+                AND (fj.template_formulaire IS NULL OR fj.template_formulaire != 'personne_physique')
+                ORDER BY c.id, distance_km ASC
+            ";
+
+            $stmt = $this->entityManager->getConnection()->prepare($sql);
+            $results = $stmt->executeQuery([
+                'lat' => $lat,
+                'lon' => $lon
+            ])->fetchAllAssociative();
+
+            // Récupérer les entités Client complètes avec distance
+            $prospects = [];
+            foreach ($results as $result) {
+                $client = $this->entityManager->getRepository(\App\Entity\Client::class)->find($result['id']);
+                if ($client) {
+                    // Ajouter la distance comme propriété temporaire
+                    $client->distanceKm = round($result['distance_km'], 1);
+                    $prospects[] = $client;
+                }
+            }
+        } else {
+            // Pas de point de départ : afficher tous les clients avec adresse
+            $qb = $this->entityManager->getRepository(\App\Entity\Client::class)
+                ->createQueryBuilder('c')
+                ->leftJoin('c.formeJuridique', 'fj')
+                ->leftJoin('c.contactLivraisonDefault', 'contLiv')
+                ->leftJoin('contLiv.adresse', 'aLiv')
+                ->leftJoin('c.contactFacturationDefault', 'contFact')
+                ->leftJoin('contFact.adresse', 'aFact')
+                ->where('aLiv.id IS NOT NULL OR aFact.id IS NOT NULL')
+                ->andWhere('fj.templateFormulaire IS NULL OR fj.templateFormulaire != :personnePhysique')
+                ->setParameter('personnePhysique', 'personne_physique')
+                ->orderBy('c.nomEntreprise', 'ASC');
+
+            $prospects = $qb->getQuery()->getResult();
+        }
+
+        // Récupérer les secteurs de l'utilisateur pour info
+        $secteurs = $this->entityManager->getRepository(Secteur::class)
+            ->findBy(['commercial' => $user]);
+
+        // Préparer les données pour le JavaScript
+        $prospectsData = [];
+        foreach ($prospects as $prospect) {
+            $adresseLivraison = $prospect->getAdresseLivraison();
+            $adresseFacturation = $prospect->getAdresseFacturation();
+            $adresse = $adresseLivraison ?: $adresseFacturation;
+
+            $prospectsData[] = [
+                'id' => $prospect->getId(),
+                'nomComplet' => $prospect->getNomComplet(),
+                'statut' => $prospect->getStatut(),
+                'telephone' => $prospect->getTelephone(),
+                'email' => $prospect->getEmail(),
+                'secteur' => $prospect->getSecteur() ? [
+                    'id' => $prospect->getSecteur()->getId(),
+                    'nomSecteur' => $prospect->getSecteur()->getNomSecteur()
+                ] : null,
+                'adresse' => $adresse ? [
+                    'ville' => $adresse->getVille(),
+                    'codePostal' => $adresse->getCodePostal()
+                ] : null,
+                'distanceKm' => $prospect->distanceKm ?? null,
+                'createdAt' => $prospect->getCreatedAt() ? $prospect->getCreatedAt()->format('Y-m-d') : null
+            ];
+        }
+
+        return $this->render('workflow/prospection_telephonique.html.twig', [
+            'prospects' => $prospects,
+            'prospectsData' => $prospectsData,
+            'codePostal' => $codePostal,
+            'commune' => $commune,
+            'secteurs' => $secteurs
         ]);
     }
 

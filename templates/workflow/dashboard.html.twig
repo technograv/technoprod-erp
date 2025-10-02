@@ -420,9 +420,10 @@
                                 Lancer une session
                             </div>
                             <div class="mb-2">
-                                <input type="text" class="form-control form-control-sm mb-2 commune-autocomplete" 
-                                       id="phone-prospection-zone" placeholder="Code postal ou ville..." 
+                                <input type="text" class="form-control form-control-sm mb-2 commune-autocomplete"
+                                       id="phone-prospection-zone" placeholder="Code postal ou ville (optionnel)..."
                                        data-type="mixed">
+                                <small class="text-muted">Laissez vide pour tous les clients</small>
                             </div>
                         </div>
                         <div class="col-auto">
@@ -430,7 +431,7 @@
                         </div>
                     </div>
                     <div class="mt-2">
-                        <button class="btn btn-primary btn-sm w-100" onclick="lancerProspectionTelephonique()" disabled id="btn-phone-prospection">
+                        <button class="btn btn-primary btn-sm w-100" onclick="lancerProspectionTelephonique()" id="btn-phone-prospection">
                             <i class="fas fa-play me-1"></i>Lancer session
                         </button>
                     </div>
@@ -993,12 +994,21 @@ function getUrgenceBadgeClass(urgence) {
 </script>
 
 <!-- Module Calendrier -->
-<script src="{{ asset('js/dashboard/calendar.js') }}"></script>
+<script src="{{ asset('js/dashboard/calendar.js') }}?v=2.4"></script>
+
+<!-- Service Autocomplétion Code Postal -->
+<script src="{{ asset('js/services/PostalAutocompleteService.js') }}?v=2.4"></script>
 
 <script>
 // Initialiser le module Calendar après chargement
 const calendarDashboard = new CalendarDashboard();
 window.calendarDashboard = calendarDashboard;
+
+// Initialiser l'autocomplétion pour prospection téléphonique
+const postalService = new PostalAutocompleteService();
+postalService.initSingle('phone-prospection-zone', function(commune) {
+    console.log('📍 Zone sélectionnée:', commune);
+});
 
 // Fonctions globales pour compatibilité avec templates
 function changeWeekAjax(offset) {
@@ -1007,11 +1017,11 @@ function changeWeekAjax(offset) {
 function goToCurrentWeek() {
     return calendarDashboard.goToCurrentWeek();
 }
-function lancerProspectionTelephonique() { 
-    return calendarDashboard.lancerProspectionTelephonique(); 
+function lancerProspectionTelephonique() {
+    return calendarDashboard.lancerProspectionTelephonique();
 }
-function preparerProspectionTerrain() { 
-    return calendarDashboard.preparerProspectionTerrain(); 
+function preparerProspectionTerrain() {
+    return calendarDashboard.preparerProspectionTerrain();
 }
 </script>
 
