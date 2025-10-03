@@ -239,7 +239,7 @@ function renderProspectCard(prospect) {
             <div class="d-flex justify-content-between align-items-start mb-3">
                 <div class="flex-grow-1">
                     <h5 class="card-title mb-1">
-                        <a href="/prospect/${prospect.id}" target="_blank" class="text-decoration-none">
+                        <a href="/client/${prospect.id}" target="_blank" class="text-decoration-none">
                             ${prospect.nomComplet}
                             <i class="fas fa-external-link-alt fa-xs ms-1"></i>
                         </a>
@@ -290,7 +290,7 @@ function renderProspectCard(prospect) {
                 <button class="btn btn-sm btn-outline-primary" onclick="addNote(${prospect.id})" title="Ajouter une note">
                     <i class="fas fa-sticky-note"></i>
                 </button>
-                <a href="/prospect/${prospect.id}/edit" class="btn btn-sm btn-outline-secondary" title="Éditer" target="_blank">
+                <a href="/client/${prospect.id}/edit" class="btn btn-sm btn-outline-secondary" title="Éditer" target="_blank">
                     <i class="fas fa-edit"></i>
                 </a>
             </div>
