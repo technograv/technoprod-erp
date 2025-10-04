@@ -195,19 +195,23 @@ final class DevisController extends AbstractController
                 $devis->setDateCreation(new \DateTime('now'));
             }
 
-            // La date de validité est automatiquement calculée = date création + 30 jours
+            // La date de validité est automatiquement calculée = date création + durée configurée
             // L'utilisateur peut la modifier manuellement dans le formulaire si fournie
             if ($dateValidite && !empty($dateValidite)) {
                 try {
                     $devis->setDateValidite(new \DateTime($dateValidite));
                 } catch (\Exception $e) {
+                    $societe = $this->getUser()->getSocietePrincipale();
+                    $dureeValidite = $societe ? $societe->getDureeValiditeDevisDefautAvecHeritage() : 30;
                     $dateValiditeAuto = clone $devis->getDateCreation();
-                    $dateValiditeAuto->modify('+30 days');
+                    $dateValiditeAuto->modify('+' . $dureeValidite . ' days');
                     $devis->setDateValidite($dateValiditeAuto);
                 }
             } else {
+                $societe = $this->getUser()->getSocietePrincipale();
+                $dureeValidite = $societe ? $societe->getDureeValiditeDevisDefautAvecHeritage() : 30;
                 $dateValiditeAuto = clone $devis->getDateCreation();
-                $dateValiditeAuto->modify('+30 days');
+                $dateValiditeAuto->modify('+' . $dureeValidite . ' days');
                 $devis->setDateValidite($dateValiditeAuto);
             }
             // Gestion du délai de livraison et de la date de livraison séparément
@@ -358,12 +362,20 @@ final class DevisController extends AbstractController
         // Récupérer tous les modes de règlement pour le formulaire
         $modesReglement = $modeReglementRepository->findBy(['actif' => true], ['nom' => 'ASC']);
 
+        // Récupérer la durée de validité des devis depuis la configuration société
+        $dureeValiditeDevis = 30; // Valeur par défaut
+        if ($user && $user->getSocietePrincipale()) {
+            $societe = $user->getSocietePrincipale();
+            $dureeValiditeDevis = $societe->getDureeValiditeDevisDefautAvecHeritage();
+        }
+
         return $this->render('devis/new.html.twig', [
             'devis' => $devis,
             'prospects' => $prospects,
             'next_devis_number' => $nextDevisNumber,
             'formes_juridiques' => $formesJuridiques,
             'modes_reglement' => $modesReglement,
+            'duree_validite_devis' => $dureeValiditeDevis,
         ]);
     }
 
@@ -427,10 +439,12 @@ final class DevisController extends AbstractController
             $devis->calculateTotals();
 
             // Mettre à jour automatiquement la date de validité si le devis est brouillon
-            // La date de validité = date de création + 30 jours
+            // La date de validité = date de création + durée configurée
             if ($devis->getStatut() === 'brouillon' && $devis->getDateCreation()) {
+                $societe = $this->getUser()->getSocietePrincipale();
+                $dureeValidite = $societe ? $societe->getDureeValiditeDevisDefautAvecHeritage() : 30;
                 $dateValiditeAuto = clone $devis->getDateCreation();
-                $dateValiditeAuto->modify('+30 days');
+                $dateValiditeAuto->modify('+' . $dureeValidite . ' days');
                 $devis->setDateValidite($dateValiditeAuto);
             }
 

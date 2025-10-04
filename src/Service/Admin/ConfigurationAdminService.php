@@ -46,7 +46,10 @@ class ConfigurationAdminService
             if (isset($data['acompteDefautPercent'])) {
                 $societe->setAcompteDefautPercent($data['acompteDefautPercent']);
             }
-            
+            if (isset($data['dureeValiditeDevisDefaut'])) {
+                $societe->setDureeValiditeDevisDefaut($data['dureeValiditeDevisDefaut']);
+            }
+
             $this->entityManager->flush();
             $this->logger->info("Paramètres workflow de la société {$societe->getNom()} mis à jour");
 

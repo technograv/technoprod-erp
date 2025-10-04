@@ -1,0 +1,125 @@
+{% extends 'base.html.twig' %}
+
+{% block title %}Nouveau fournisseur{% endblock %}
+
+{% block body %}
+<div class="container-fluid mt-4">
+    <nav aria-label="breadcrumb">
+        <ol class="breadcrumb">
+            <li class="breadcrumb-item"><a href="{{ path('admin_fournisseur_index') }}">Fournisseurs</a></li>
+            <li class="breadcrumb-item active">Nouveau fournisseur</li>
+        </ol>
+    </nav>
+
+    <h1 class="mb-4"><i class="fas fa-plus"></i> Nouveau fournisseur</h1>
+
+    <div class="row">
+        <div class="col-md-8">
+            <div class="card">
+                <div class="card-body">
+                    {{ form_start(form) }}
+                        <h5 class="card-title border-bottom pb-2 mb-3">Informations générales</h5>
+                        <div class="row">
+                            <div class="col-md-3">
+                                {{ form_row(form.code) }}
+                            </div>
+                            <div class="col-md-6">
+                                {{ form_row(form.raisonSociale) }}
+                            </div>
+                            <div class="col-md-3">
+                                {{ form_row(form.formeJuridique) }}
+                            </div>
+                        </div>
+
+                        <h5 class="card-title border-bottom pb-2 mb-3 mt-4">Identifiants légaux</h5>
+                        <div class="row">
+                            <div class="col-md-3">
+                                {{ form_row(form.siren) }}
+                            </div>
+                            <div class="col-md-3">
+                                {{ form_row(form.siret) }}
+                            </div>
+                            <div class="col-md-3">
+                                {{ form_row(form.numeroTVA) }}
+                            </div>
+                            <div class="col-md-3">
+                                {{ form_row(form.codeNAF) }}
+                            </div>
+                        </div>
+
+                        <h5 class="card-title border-bottom pb-2 mb-3 mt-4">Contact</h5>
+                        <div class="row">
+                            <div class="col-md-4">
+                                {{ form_row(form.email) }}
+                            </div>
+                            <div class="col-md-4">
+                                {{ form_row(form.telephone) }}
+                            </div>
+                            <div class="col-md-4">
+                                {{ form_row(form.siteWeb) }}
+                            </div>
+                        </div>
+
+                        <h5 class="card-title border-bottom pb-2 mb-3 mt-4">Conditions commerciales</h5>
+                        <div class="row">
+                            <div class="col-md-4">
+                                {{ form_row(form.conditionsPaiement) }}
+                            </div>
+                            <div class="col-md-4">
+                                {{ form_row(form.modeReglement) }}
+                            </div>
+                            <div class="col-md-4">
+                                {{ form_row(form.remiseGenerale) }}
+                            </div>
+                        </div>
+
+                        <div class="row mt-3">
+                            <div class="col-md-6">
+                                {{ form_row(form.statut) }}
+                            </div>
+                        </div>
+
+                        {{ form_row(form.notesInternes) }}
+
+                        <div class="d-flex justify-content-between mt-4">
+                            <a href="{{ path('admin_fournisseur_index') }}" class="btn btn-secondary">
+                                <i class="fas fa-arrow-left"></i> Retour
+                            </a>
+                            <button type="submit" class="btn btn-primary">
+                                <i class="fas fa-save"></i> Créer
+                            </button>
+                        </div>
+                    {{ form_end(form) }}
+                </div>
+            </div>
+        </div>
+
+        <div class="col-md-4">
+            <div class="card bg-light">
+                <div class="card-header">
+                    <i class="fas fa-info-circle"></i> Aide
+                </div>
+                <div class="card-body">
+                    <h6>Code fournisseur</h6>
+                    <p class="small">
+                        Le code doit être unique. Format recommandé : F-001, F-002, etc.
+                    </p>
+                    <hr>
+                    <h6>Remise générale</h6>
+                    <p class="small">
+                        Pourcentage de remise accordé par défaut par ce fournisseur sur tous ses produits.
+                        Peut être surchargé au niveau produit.
+                    </p>
+                    <hr>
+                    <h6>Statut</h6>
+                    <p class="small mb-1">
+                        <strong>Actif:</strong> Fournisseur utilisable normalement<br>
+                        <strong>Inactif:</strong> Temporairement désactivé<br>
+                        <strong>Bloqué:</strong> Ne peut plus être utilisé
+                    </p>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

@@ -1857,25 +1857,643 @@ class PlanningService
    - Gravure : ✅
    - Covering : ✅
    - Textile : ✅
-   - IT/Bureautique : ❓ (nécessite ajout contrats maintenance/infogérance ?)
+   - IT/Bureautique : ✅ **(à compléter plus tard - contrats maintenance/infogérance)**
 
 2. **Entité Machine administrable te convient ?**
    - Tous paramètres modifiables en BDD
    - Pas besoin toucher au code pour évoluer
    - Formules flexibles
+   - **✅ VALIDÉ** (à compléter au fur et à mesure)
 
 3. **Formules dynamiques : tu valides le système expression-language Symfony ?**
    - Syntaxe : `(largeur / 1000) * (hauteur / 1000) * {coeff_chute}`
    - Variables entre `{}` récupérées de Machine/Produit
    - Variables user saisies sans `{}`
+   - **✅ VALIDÉ** (formules potentiellement complexes avec nombreux paramètres)
 
 4. **Intégration devis comme décrit OK ?**
    - Modal configurateur
    - Calcul temps réel
    - Affichage détail avant ajout ligne
+   - **✅ VALIDÉ avec UX "caisse automatique"** (navigation catégories → produit → paramètres)
 
 5. **On valide architecture complète PUIS on commence Phase 1 ?**
+   - **✅ VALIDÉ**
 
 ---
 
-*Document mis à jour le 03/10/2025 - Architecture globale complète définie*
+## 🆕 COMPLÉMENTS ARCHITECTURE - EXIGENCES ADDITIONNELLES
+
+### 🔹 1. Web-to-Print & E-commerce (Future)
+
+**Besoin identifié :** Personnalisation en ligne + commande directe client
+
+**Architecture préparée :**
+- Champ `Produit.configurateur` (JSON) déjà prévu
+- Interface web réutilisera même moteur calcul que backoffice
+- Ajout futurs champs e-commerce :
+  ```php
+  // Produit
+  - visibleEnLigne: boolean
+  - slugURL: string (SEO)
+  - metaTitle, metaDescription: string
+  - imageWeb: string (optimisée e-commerce)
+  ```
+
+**Web-to-Print spécifique :**
+- Upload fichiers clients (PDF, AI, etc.)
+- Prévisualisation 3D/2D
+- Zone de personnalisation (texte, images)
+- → **Phase 3** (après production atelier)
+
+---
+
+### 🔹 2. Planification machines - Jours de fonctionnement
+
+**Besoin :** Grouper productions par machine/jour (ex: toutes impressions lundi-mardi)
+
+**Enrichissement entité Machine :**
+```php
+// Machine - AJOUT Planning hebdomadaire
+- joursActivite: JSON {
+    "lundi": true,
+    "mardi": true,
+    "mercredi": false,  // Machine arrêtée mercredi
+    "jeudi": false,
+    "vendredi": true,
+    "samedi": false,
+    "dimanche": false
+  }
+
+- heuresOuverture: JSON {
+    "lundi": {"debut": "08:00", "fin": "18:00"},
+    "mardi": {"debut": "08:00", "fin": "18:00"},
+    // ...
+  }
+
+- capaciteJournaliere: integer (minutes/jour disponibles)
+```
+
+**Impact planning (Phase 2C) :**
+- Ordonnancement respecte jours activité machine
+- Groupage automatique productions similaires même jour
+- Optimisation setup (moins de changements)
+
+---
+
+### 🔹 3. Calepinage / Imposition automatique
+
+**Besoin :** Calcul nombre plaques nécessaires + faisabilité technique
+
+**Nouvelle entité : Calepinage**
+```php
+class Calepinage
+{
+    // SUPPORT (plaque, rouleau)
+    - typesupport: enum ('plaque', 'rouleau')
+    - largeurSupport: integer (mm)
+    - hauteurSupport: integer (mm, si plaque)
+    - longueurRouleau: integer (mm, si rouleau)
+
+    // PROJET CLIENT
+    - largeurPiece: integer (mm)
+    - hauteurPiece: integer (mm)
+    - quantite: integer
+    - margeSecurite: integer (mm, entre pièces)
+    - sensImposition: enum ('portrait', 'paysage', 'auto')
+
+    // RÉSULTAT CALCUL
+    - nbSupportsNecessaires: integer (calculé)
+    - nbPiecesParSupport: integer (calculé)
+    - chutePourcentage: float (calculé)
+    - faisable: boolean (calculé)
+    - schemaImposition: JSON (positions x,y de chaque pièce)
+}
+```
+
+**Service CalepinageCalculator :**
+```php
+class CalepinageCalculator
+{
+    /**
+     * Calcule imposition optimale (bin packing 2D)
+     * @return CalepinageResultDTO
+     */
+    public function calculerImposition(
+        int $largeurSupport,
+        int $hauteurSupport,
+        int $largeurPiece,
+        int $hauteurPiece,
+        int $quantite,
+        int $margeSecurite = 5
+    ): CalepinageResultDTO;
+
+    /**
+     * Vérifie faisabilité technique (dimensions max machine)
+     */
+    public function verifierFaisabilite(
+        Calepinage $calepinage,
+        Machine $machine
+    ): bool;
+
+    /**
+     * Génère PDF schéma d'imposition pour opérateur
+     */
+    public function genererSchemaImposition(Calepinage $calepinage): string;
+}
+```
+
+**Intégration devis :**
+- Dans configurateur produit catalogue : bouton "Calculer calepinage"
+- Affichage : "3 plaques nécessaires (rendement 87%)"
+- Si non faisable : alerte "Dimensions trop grandes pour machine X"
+- Schéma imposition ajouté en pièce jointe devis
+
+**Algorithme imposition :**
+- First Fit Decreasing (FFD)
+- Guillotine Cut (pour plaques)
+- Strip Packing (pour rouleaux)
+- Optimisation rotation pièces (90°, 180°)
+
+---
+
+### 🔹 4. Unités de mesure spécifiques métier
+
+**Standard métier signalétique :**
+- **Longueurs** : mm (millimètres)
+- **Surfaces** : m² (mètres carrés)
+- **Linéaires** : ml (mètres linéaires) pour rouleaux/rubans
+
+**Enrichissement entité Unite existante :**
+```php
+// Unite - AJOUT conversions automatiques
+- symbole: string ('mm', 'm²', 'ml', 'u', 'kg', ...)
+- typeUnite: enum ('longueur', 'surface', 'poids', 'volume', 'piece')
+- coefficientConversion: decimal (pour conversion base SI)
+
+// Exemples :
+// mm → typeUnite='longueur', coefficientConversion=0.001 (→ mètre)
+// m² → typeUnite='surface', coefficientConversion=1
+// ml → typeUnite='longueur', coefficientConversion=1 (mètre linéaire)
+```
+
+**Service UniteConverter :**
+```php
+class UniteConverter
+{
+    /**
+     * Convertit quantité d'une unité à une autre
+     * Ex: 2500mm → 2.5m
+     */
+    public function convertir(
+        float $quantite,
+        Unite $uniteSource,
+        Unite $uniteCible
+    ): float;
+
+    /**
+     * Calcul surface à partir dimensions (mm → m²)
+     * Ex: 2000mm × 1500mm → 3 m²
+     */
+    public function calculerSurface(
+        float $largeurMm,
+        float $hauteurMm
+    ): float;
+}
+```
+
+**Utilisation dans formules :**
+```php
+// Formule nomenclature avec conversion auto
+"surface_m2 = (largeur * hauteur) / 1000000"
+"longueur_ml = perimetre / 1000"
+```
+
+---
+
+### 🔹 5. Frais généraux entreprise
+
+**Besoin :** Dispatcher frais généraux sur devis (chauffage, loyer, assurances, etc.)
+
+**Nouvelle entité : FraisGeneraux**
+```php
+class FraisGeneraux
+{
+    - id
+    - libelle: string ('Loyer atelier', 'Assurances', 'Électricité', etc.)
+    - montantMensuel: decimal (€/mois)
+    - typeRepartition: enum ('volume_devis', 'ligne_cachee', 'coefficient_global', 'par_heure_mo')
+
+    // Si type='volume_devis'
+    - volumeDevisMensuelEstime: integer (nb devis/mois)
+    - montantParDevis: decimal (calculé = montantMensuel / volume)
+
+    // Si type='par_heure_mo'
+    - heuresMOMensuelles: integer (estimé)
+    - coutParHeureMO: decimal (calculé)
+
+    // Si type='coefficient_global'
+    - coefficientMajoration: decimal (ex: 1.15 pour +15%)
+
+    - actif: boolean
+    - periode: string ('2025-10', format année-mois)
+}
+```
+
+**Modes de répartition :**
+
+**A. Volume devis (automatique transparent)**
+```
+Frais généraux mensuels : 5000€
+Volume devis mensuel estimé : 100
+→ Montant par devis : 50€
+
+Lors génération devis :
+- Coût revient produits : 1000€
+- Frais généraux (calculé) : +50€
+- Coût revient total : 1050€
+- Marge 40% : 420€
+- Prix vente HT : 1470€
+```
+
+**B. Ligne cachée devis**
+```twig
+{# Dans PDF devis - ligne non affichée client #}
+<tr class="ligne-frais-generaux" style="display:none;">
+    <td>Frais généraux</td>
+    <td>1</td>
+    <td>50.00€</td>
+    <td>50.00€</td>
+</tr>
+
+{# Mais comptabilisé dans total #}
+Total HT : 1470€ (dont 50€ frais généraux)
+```
+
+**C. Coefficient majoration global**
+```php
+// Application coefficient sur coût revient
+$coutRevientBase = 1000;
+$coefficientFraisGeneraux = 1.15; // +15%
+$coutRevientMajore = $coutRevientBase * $coefficientFraisGeneraux; // 1150€
+$marge = 0.40;
+$prixVenteHT = $coutRevientMajore * (1 + $marge); // 1610€
+```
+
+**D. Par heure main d'œuvre**
+```
+Frais généraux mensuels : 5000€
+Heures MO mensuelles : 500h
+→ Coût supplémentaire : 10€/h MO
+
+Devis avec 10h MO :
+- Coût MO brut : 10h × 30€/h = 300€
+- Frais généraux MO : 10h × 10€/h = 100€
+- Coût MO total : 400€
+```
+
+**Interface admin Frais Généraux :**
+- Onglet "Configuration Système" → "Frais Généraux"
+- Tableau drag & drop pour réordonner
+- Activation/désactivation par période
+- Simulation impact sur devis test
+- Historique évolution (graphique)
+
+**Service FraisGenerauxCalculator :**
+```php
+class FraisGenerauxCalculator
+{
+    /**
+     * Calcule frais généraux applicables à un devis
+     * @return float montant frais généraux
+     */
+    public function calculerPourDevis(
+        Devis $devis,
+        float $coutRevientBase,
+        int $heuresMO
+    ): float;
+
+    /**
+     * Récupère frais généraux actifs pour période
+     */
+    public function getFraisActifs(string $periode = null): array;
+
+    /**
+     * Simule impact frais généraux sur prix vente
+     */
+    public function simulerImpact(
+        float $coutRevient,
+        float $marge
+    ): array; // ['sans_fg' => 1400, 'avec_fg' => 1470, 'ecart' => 70]
+}
+```
+
+---
+
+### 🔹 6. UX Configurateur "Caisse automatique"
+
+**Interface navigation produits catalogue (style kiosque) :**
+
+```twig
+{# Écran 1 : Sélection famille #}
+<div class="kiosque-familles">
+    <h2>Choisissez une catégorie</h2>
+    <div class="grid-familles">
+        <div class="carte-famille" onclick="selectFamille('signaletique')">
+            <i class="fas fa-store-alt fa-3x"></i>
+            <h3>Signalétique</h3>
+        </div>
+        <div class="carte-famille" onclick="selectFamille('imprimerie')">
+            <i class="fas fa-print fa-3x"></i>
+            <h3>Imprimerie</h3>
+        </div>
+        <div class="carte-famille" onclick="selectFamille('gravure')">
+            <i class="fas fa-gem fa-3x"></i>
+            <h3>Gravure</h3>
+        </div>
+        {# ... autres familles #}
+    </div>
+</div>
+
+{# Écran 2 : Sous-catégorie (si applicable) #}
+<div class="kiosque-sous-familles" style="display:none;">
+    <button onclick="retourFamilles()">← Retour</button>
+    <h2>Signalétique</h2>
+    <div class="grid-sous-familles">
+        <div class="carte-produit" onclick="selectProduit('enseigne-lumineuse')">
+            <img src="/img/produits/enseigne.jpg" alt="Enseigne">
+            <h4>Enseigne lumineuse</h4>
+        </div>
+        <div class="carte-produit" onclick="selectProduit('panneau-dibond')">
+            <img src="/img/produits/panneau.jpg" alt="Panneau">
+            <h4>Panneau Dibond</h4>
+        </div>
+        {# ... autres produits #}
+    </div>
+</div>
+
+{# Écran 3 : Configurateur paramètres #}
+<div class="kiosque-configurateur" style="display:none;">
+    <button onclick="retourProduits()">← Retour</button>
+    <h2>Enseigne lumineuse - Configuration</h2>
+
+    <form id="form-config-produit">
+        {# Paramètres dynamiques selon produit.configurateur JSON #}
+
+        <div class="form-group">
+            <label>Largeur (mm)</label>
+            <input type="number" name="largeur" min="100" max="4000"
+                   onchange="calculerPrixTempsReel()">
+            <small>Min: 100mm - Max: 4000mm</small>
+        </div>
+
+        <div class="form-group">
+            <label>Hauteur (mm)</label>
+            <input type="number" name="hauteur" min="100" max="2000"
+                   onchange="calculerPrixTempsReel()">
+            <small>Min: 100mm - Max: 2000mm</small>
+        </div>
+
+        <div class="form-group">
+            <label>Texte / Nombre de lettres</label>
+            <input type="text" name="texte" maxlength="50"
+                   onkeyup="compterLettres(); calculerPrixTempsReel()">
+            <small><span id="nb-lettres">0</span> lettres</small>
+        </div>
+
+        <div class="form-group">
+            <label>Matériau</label>
+            <select name="materiau" onchange="calculerPrixTempsReel()">
+                <option value="pvc-3mm">PVC 3mm</option>
+                <option value="pvc-19mm">PVC 19mm</option>
+                <option value="dibond-3mm">Dibond 3mm</option>
+            </select>
+        </div>
+
+        <div class="form-group">
+            <label>Éclairage</label>
+            <select name="eclairage" onchange="calculerPrixTempsReel()">
+                <option value="sans">Sans éclairage</option>
+                <option value="led-12v">LED 12V</option>
+                <option value="led-24v">LED 24V</option>
+            </select>
+        </div>
+
+        <button type="button" class="btn btn-lg btn-primary"
+                onclick="validerCalepinage()">
+            <i class="fas fa-calculator"></i> Vérifier calepinage
+        </button>
+    </form>
+
+    {# Zone résultat temps réel #}
+    <div class="resultat-config">
+        <div class="alerte-faisabilite" style="display:none;">
+            <i class="fas fa-exclamation-triangle"></i>
+            <span id="msg-faisabilite"></span>
+        </div>
+
+        <div class="detail-calcul">
+            <h4>Détail du calcul</h4>
+            <table>
+                <tr>
+                    <td>Surface totale</td>
+                    <td><span id="calc-surface">0</span> m²</td>
+                </tr>
+                <tr>
+                    <td>Nombre de plaques</td>
+                    <td><span id="calc-plaques">0</span></td>
+                </tr>
+                <tr>
+                    <td>Matières premières</td>
+                    <td><span id="calc-matieres">0</span> €</td>
+                </tr>
+                <tr>
+                    <td>Main d'œuvre</td>
+                    <td><span id="calc-mo">0</span> €</td>
+                </tr>
+                <tr>
+                    <td>Machines</td>
+                    <td><span id="calc-machines">0</span> €</td>
+                </tr>
+                <tr>
+                    <td>Frais généraux</td>
+                    <td><span id="calc-fg">0</span> €</td>
+                </tr>
+                <tr class="total-ligne">
+                    <td><strong>Coût de revient</strong></td>
+                    <td><strong><span id="calc-cout-revient">0</span> €</strong></td>
+                </tr>
+                <tr>
+                    <td>Marge (50%)</td>
+                    <td><span id="calc-marge">0</span> €</td>
+                </tr>
+                <tr class="prix-vente-ligne">
+                    <td><strong>Prix de vente HT</strong></td>
+                    <td><strong class="text-success">
+                        <span id="calc-prix-vente">0</span> €
+                    </strong></td>
+                </tr>
+            </table>
+
+            <button class="btn btn-success btn-lg w-100 mt-3"
+                    onclick="ajouterLigneDevis()">
+                <i class="fas fa-plus-circle"></i> Ajouter au devis
+            </button>
+        </div>
+    </div>
+</div>
+```
+
+**JavaScript calcul temps réel :**
+```javascript
+function calculerPrixTempsReel() {
+    const params = {
+        largeur: $('#largeur').val(),
+        hauteur: $('#hauteur').val(),
+        nb_lettres: $('#texte').val().length,
+        materiau: $('#materiau').val(),
+        eclairage: $('#eclairage').val()
+    };
+
+    // Appel AJAX au calculateur
+    $.post('/devis/calculer-produit-catalogue', {
+        produit_id: currentProduitId,
+        parametres: params
+    }, function(result) {
+        // Affichage résultats
+        $('#calc-surface').text(result.surface_m2.toFixed(2));
+        $('#calc-plaques').text(result.nb_plaques);
+        $('#calc-matieres').text(result.cout_matieres.toFixed(2));
+        $('#calc-mo').text(result.cout_mo.toFixed(2));
+        $('#calc-machines').text(result.cout_machines.toFixed(2));
+        $('#calc-fg').text(result.frais_generaux.toFixed(2));
+        $('#calc-cout-revient').text(result.cout_revient.toFixed(2));
+        $('#calc-marge').text(result.marge.toFixed(2));
+        $('#calc-prix-vente').text(result.prix_vente_ht.toFixed(2));
+
+        // Alerte faisabilité
+        if (!result.faisable) {
+            $('.alerte-faisabilite').show();
+            $('#msg-faisabilite').text(result.raison_non_faisabilite);
+        } else {
+            $('.alerte-faisabilite').hide();
+        }
+    });
+}
+
+// Debounce pour éviter trop d'appels
+const calculerPrixDebounced = _.debounce(calculerPrixTempsReel, 500);
+```
+
+---
+
+### 📊 RÉCAPITULATIF ENRICHISSEMENTS
+
+| Composant | Ajouts | Impact phases |
+|-----------|--------|---------------|
+| **Machine** | Jours activité, heures ouverture, capacité journalière | Phase 2A, 2C |
+| **Unite** | Conversions automatiques mm/m²/ml | Phase 1, 2A |
+| **Calepinage** | Nouvelle entité + algorithme imposition | Phase 2A |
+| **FraisGeneraux** | Nouvelle entité + 4 modes répartition | Phase 1 (admin) + 2A (calcul) |
+| **Configurateur UX** | Interface kiosque navigation | Phase 2A |
+| **Web-to-Print** | Préparation architecture e-commerce | Phase 3 (future) |
+
+---
+
+### 🎯 PLAN DE DÉVELOPPEMENT AJUSTÉ
+
+#### PHASE 1 : Produits simples (6-8 semaines)
+**AJOUT :**
+- ✅ Entité FraisGeneraux + interface admin
+- ✅ Enrichissement Unite (conversions)
+- ✅ Service UniteConverter
+- ✅ Service FraisGenerauxCalculator
+
+#### PHASE 2A : Produits catalogue - Configurateur (8-10 semaines) ← **+2 semaines**
+**AJOUT :**
+- ✅ Entité Calepinage
+- ✅ Service CalepinageCalculator (bin packing 2D)
+- ✅ Enrichissement Machine (jours activité)
+- ✅ UX Configurateur style "kiosque"
+- ✅ Calcul temps réel avec calepinage
+- ✅ Intégration frais généraux dans calcul
+
+#### PHASE 2B : Fiches de production (3-4 semaines)
+*Inchangé*
+
+#### PHASE 2C : Planning production (4-6 semaines)
+**AJOUT :**
+- ✅ Respect jours activité machines
+- ✅ Groupage productions par type/jour
+
+#### PHASE 3 : E-commerce & Web-to-Print (future)
+**Nouveau :**
+- Interface client en ligne
+- Upload fichiers + prévisualisation
+- Tunnel commande complet
+- Paiement en ligne
+
+---
+
+## ✅ VALIDATION FINALE V2
+
+**🔹 Architecture complétée avec :**
+1. ✅ IT/Bureautique (reporté Phase future)
+2. ✅ Entité Machine enrichie (jours activité, heures)
+3. ✅ Formules complexes (nombreux paramètres)
+4. ✅ UX kiosque navigation produits
+5. ✅ Calepinage/Imposition automatique
+6. ✅ Unités métier (mm, m², ml)
+7. ✅ Frais généraux (4 modes répartition)
+8. ✅ Web-to-Print (architecture préparée)
+
+**🔹 Prêt à démarrer Phase 1 ?**
+**✅ VALIDÉ - DÉMARRAGE PHASE 1**
+
+---
+
+## 🚀 PHASE 1 - DÉMARRAGE (03/10/2025)
+
+### 📋 Plan d'exécution Phase 1
+
+#### Semaine 1-2 : Entités et base de données
+- [x] Architecture validée
+- [ ] Enrichissement entité Produit
+- [ ] Création entité FamilleProduit
+- [ ] Création entité Fournisseur
+- [ ] Création entité ProduitFournisseur
+- [ ] Création entité ArticleLie
+- [ ] Enrichissement entité Unite
+- [ ] Création entité FraisGeneraux
+- [ ] Génération migrations Doctrine
+- [ ] Exécution migrations
+
+#### Semaine 3-4 : Services métier
+- [ ] Service UniteConverter
+- [ ] Service FraisGenerauxCalculator
+- [ ] Mise à jour calculs Produit (prix revient, marges)
+- [ ] Tests unitaires services
+
+#### Semaine 5-6 : Interfaces CRUD
+- [ ] Formulaire Produit (avec onglets)
+- [ ] CRUD FamilleProduit (admin)
+- [ ] CRUD Fournisseur
+- [ ] CRUD FraisGeneraux (admin)
+- [ ] Interface gestion images produit
+
+#### Semaine 7-8 : Intégration devis & finalisation
+- [ ] Autocomplete produits simples dans devis
+- [ ] Filtrage produits concurrent
+- [ ] Tests d'intégration
+- [ ] Documentation utilisateur
+- [ ] Recette utilisateur
+
+---
+
+### 🎬 DÉMARRAGE IMMÉDIAT
+
+**Première action : Enrichissement entité Produit**
+
+---
+
+*Document mis à jour le 03/10/2025 - Phase 1 démarrée*

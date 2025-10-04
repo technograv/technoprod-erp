@@ -20,8 +20,12 @@ class Adresse
     private ?string $nom = null;
 
     #[ORM\ManyToOne(targetEntity: Client::class, inversedBy: 'adresses')]
-    #[ORM\JoinColumn(nullable: false)]
+    #[ORM\JoinColumn(nullable: true)]
     private ?Client $client = null;
+
+    #[ORM\ManyToOne(targetEntity: Fournisseur::class, inversedBy: 'adresses')]
+    #[ORM\JoinColumn(nullable: true)]
+    private ?Fournisseur $fournisseur = null;
 
     #[ORM\Column(length: 200)]
     #[Assert\NotBlank(message: 'L\'adresse ligne 1 est obligatoire')]
@@ -159,6 +163,17 @@ class Adresse
     public function setClient(?Client $client): static
     {
         $this->client = $client;
+        return $this;
+    }
+
+    public function getFournisseur(): ?Fournisseur
+    {
+        return $this->fournisseur;
+    }
+
+    public function setFournisseur(?Fournisseur $fournisseur): static
+    {
+        $this->fournisseur = $fournisseur;
         return $this;
     }
 

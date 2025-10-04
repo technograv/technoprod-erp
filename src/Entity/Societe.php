@@ -102,6 +102,9 @@ class Societe
     #[ORM\Column(type: 'decimal', precision: 5, scale: 2, options: ['default' => '30.00'])]
     private ?string $acompteDefautPercent = '30.00'; // Pourcentage d'acompte par défaut pour les devis
 
+    #[ORM\Column(type: 'integer', options: ['default' => 30])]
+    private int $dureeValiditeDevisDefaut = 30; // Durée de validité par défaut des devis en jours
+
     #[ORM\OneToMany(mappedBy: 'societe', targetEntity: UserSocieteRole::class, orphanRemoval: true)]
     private Collection $userRoles;
 
@@ -548,6 +551,37 @@ class Societe
         return $this;
     }
 
+    public function getDureeValiditeDevisDefaut(): int
+    {
+        return $this->dureeValiditeDevisDefaut;
+    }
+
+    public function setDureeValiditeDevisDefaut(int $dureeValiditeDevisDefaut): self
+    {
+        $this->dureeValiditeDevisDefaut = $dureeValiditeDevisDefaut;
+        $this->updateTimestamp();
+        return $this;
+    }
+
+    /**
+     * Récupère la durée de validité des devis avec héritage de la société parent
+     */
+    public function getDureeValiditeDevisDefautAvecHeritage(): int
+    {
+        // Si on a une valeur positive
+        if ($this->dureeValiditeDevisDefaut > 0) {
+            return $this->dureeValiditeDevisDefaut;
+        }
+
+        // Si société fille et pas de valeur, hériter du parent
+        if ($this->societeParent) {
+            return $this->societeParent->getDureeValiditeDevisDefautAvecHeritage();
+        }
+
+        // Valeur par défaut
+        return 30;
+    }
+
     /**
      * Récupère un délai avec héritage de la société parent
      */
@@ -559,12 +593,12 @@ class Societe
             'frequence_visite_clients' => $this->frequenceVisiteClients,
             default => 0
         };
-        
+
         // Si pas de délai spécifique ET société fille, hériter du parent
         if ($delai === 0 && $this->societeParent) {
             return $this->societeParent->getDelaiAvecHeritage($type);
         }
-        
+
         return $delai ?: match($type) {
             'relance_devis' => 14,
             'facturation' => 1,

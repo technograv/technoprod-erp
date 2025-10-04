@@ -16,8 +16,12 @@ class Contact
     private ?int $id = null;
 
     #[ORM\ManyToOne(inversedBy: 'contacts')]
-    #[ORM\JoinColumn(nullable: false)]
+    #[ORM\JoinColumn(nullable: true)]
     private ?Client $client = null;
+
+    #[ORM\ManyToOne(targetEntity: Fournisseur::class, inversedBy: 'contacts')]
+    #[ORM\JoinColumn(nullable: true)]
+    private ?Fournisseur $fournisseur = null;
 
     #[ORM\Column(length: 100, nullable: true)]
     private ?string $nom = null;
@@ -81,6 +85,17 @@ class Contact
     public function setClient(?Client $client): static
     {
         $this->client = $client;
+        return $this;
+    }
+
+    public function getFournisseur(): ?Fournisseur
+    {
+        return $this->fournisseur;
+    }
+
+    public function setFournisseur(?Fournisseur $fournisseur): static
+    {
+        $this->fournisseur = $fournisseur;
         return $this;
     }
 
@@ -179,32 +194,34 @@ class Contact
 
     public function setIsFacturationDefault(bool $isFacturationDefault): static
     {
+        $entity = $this->client ?? $this->fournisseur;
+
         // Si on veut désactiver ce contact comme contact de facturation par défaut
-        if (!$isFacturationDefault && $this->isFacturationDefault && $this->client) {
+        if (!$isFacturationDefault && $this->isFacturationDefault && $entity) {
             // Vérifier s'il y a d'autres contacts qui peuvent prendre le relais
             $otherFacturationContacts = [];
-            foreach ($this->client->getContacts() as $contact) {
+            foreach ($entity->getContacts() as $contact) {
                 if ($contact !== $this) {
                     $otherFacturationContacts[] = $contact;
                 }
             }
-            
+
             // Si c'est le dernier contact ou s'il y a d'autres contacts disponibles
             if (empty($otherFacturationContacts)) {
                 throw new \InvalidArgumentException('Impossible de supprimer le dernier contact de facturation. Veuillez d\'abord en assigner un autre.');
             }
         }
-        
+
         // Si on définit ce contact comme contact de facturation par défaut
-        if ($isFacturationDefault && $this->client) {
-            // Désactiver tous les autres contacts de facturation par défaut pour ce client
-            foreach ($this->client->getContacts() as $contact) {
+        if ($isFacturationDefault && $entity) {
+            // Désactiver tous les autres contacts de facturation par défaut pour ce client/fournisseur
+            foreach ($entity->getContacts() as $contact) {
                 if ($contact !== $this && $contact->isFacturationDefault()) {
                     $contact->isFacturationDefault = false;
                 }
             }
         }
-        
+
         $this->isFacturationDefault = $isFacturationDefault;
         return $this;
     }
@@ -216,32 +233,34 @@ class Contact
 
     public function setIsLivraisonDefault(bool $isLivraisonDefault): static
     {
+        $entity = $this->client ?? $this->fournisseur;
+
         // Si on veut désactiver ce contact comme contact de livraison par défaut
-        if (!$isLivraisonDefault && $this->isLivraisonDefault && $this->client) {
+        if (!$isLivraisonDefault && $this->isLivraisonDefault && $entity) {
             // Vérifier s'il y a d'autres contacts qui peuvent prendre le relais
             $otherLivraisonContacts = [];
-            foreach ($this->client->getContacts() as $contact) {
+            foreach ($entity->getContacts() as $contact) {
                 if ($contact !== $this) {
                     $otherLivraisonContacts[] = $contact;
                 }
             }
-            
+
             // Si c'est le dernier contact ou s'il y a d'autres contacts disponibles
             if (empty($otherLivraisonContacts)) {
                 throw new \InvalidArgumentException('Impossible de supprimer le dernier contact de livraison. Veuillez d\'abord en assigner un autre.');
             }
         }
-        
+
         // Si on définit ce contact comme contact de livraison par défaut
-        if ($isLivraisonDefault && $this->client) {
-            // Désactiver tous les autres contacts de livraison par défaut pour ce client
-            foreach ($this->client->getContacts() as $contact) {
+        if ($isLivraisonDefault && $entity) {
+            // Désactiver tous les autres contacts de livraison par défaut pour ce client/fournisseur
+            foreach ($entity->getContacts() as $contact) {
                 if ($contact !== $this && $contact->isLivraisonDefault()) {
                     $contact->isLivraisonDefault = false;
                 }
             }
         }
-        
+
         $this->isLivraisonDefault = $isLivraisonDefault;
         return $this;
     }

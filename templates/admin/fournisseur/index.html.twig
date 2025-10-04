@@ -1,0 +1,144 @@
+{% extends 'base.html.twig' %}
+
+{% block title %}Fournisseurs - Administration{% endblock %}
+
+{% block body %}
+<div class="container-fluid mt-4">
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <h1><i class="fas fa-truck"></i> Fournisseurs</h1>
+        <a href="{{ path('admin_fournisseur_new') }}" class="btn btn-primary">
+            <i class="fas fa-plus"></i> Nouveau fournisseur
+        </a>
+    </div>
+
+    {% for message in app.flashes('success') %}
+        <div class="alert alert-success alert-dismissible fade show" role="alert">
+            {{ message }}
+            <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+        </div>
+    {% endfor %}
+
+    {% for message in app.flashes('error') %}
+        <div class="alert alert-danger alert-dismissible fade show" role="alert">
+            {{ message }}
+            <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+        </div>
+    {% endfor %}
+
+    <div class="card">
+        <div class="card-body">
+            {% if fournisseurs is empty %}
+                <div class="alert alert-info">
+                    <i class="fas fa-info-circle"></i> Aucun fournisseur n'a encore été créé.
+                </div>
+            {% else %}
+                <div class="table-responsive">
+                    <table class="table table-hover">
+                        <thead>
+                            <tr>
+                                <th>Code</th>
+                                <th>Raison sociale</th>
+                                <th>Contact</th>
+                                <th>Remise générale</th>
+                                <th>Statut</th>
+                                <th>Actions</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for fournisseur in fournisseurs %}
+                                <tr data-id="{{ fournisseur.id }}">
+                                    <td><strong>{{ fournisseur.code }}</strong></td>
+                                    <td>
+                                        {{ fournisseur.raisonSociale }}
+                                        {% if fournisseur.formeJuridique %}
+                                            <br><small class="text-muted">{{ fournisseur.formeJuridique.nom }}</small>
+                                        {% endif %}
+                                    </td>
+                                    <td>
+                                        {% if fournisseur.email %}
+                                            <i class="fas fa-envelope"></i> {{ fournisseur.email }}<br>
+                                        {% endif %}
+                                        {% if fournisseur.telephone %}
+                                            <i class="fas fa-phone"></i> {{ fournisseur.telephone }}
+                                        {% endif %}
+                                        {% if not fournisseur.email and not fournisseur.telephone %}
+                                            <span class="text-muted">-</span>
+                                        {% endif %}
+                                    </td>
+                                    <td>
+                                        {% if fournisseur.remiseGenerale and fournisseur.remiseGenerale != '0.00' %}
+                                            <span class="badge bg-success">{{ fournisseur.remiseGenerale }}%</span>
+                                        {% else %}
+                                            <span class="text-muted">-</span>
+                                        {% endif %}
+                                    </td>
+                                    <td>
+                                        {% if fournisseur.statut == 'actif' %}
+                                            <span class="badge bg-success">Actif</span>
+                                        {% elseif fournisseur.statut == 'inactif' %}
+                                            <span class="badge bg-secondary">Inactif</span>
+                                        {% else %}
+                                            <span class="badge bg-danger">Bloqué</span>
+                                        {% endif %}
+                                    </td>
+                                    <td>
+                                        <div class="btn-group btn-group-sm">
+                                            <a href="{{ path('admin_fournisseur_show', {id: fournisseur.id}) }}"
+                                               class="btn btn-outline-info" title="Voir">
+                                                <i class="fas fa-eye"></i>
+                                            </a>
+                                            <a href="{{ path('admin_fournisseur_edit', {id: fournisseur.id}) }}"
+                                               class="btn btn-outline-primary" title="Modifier">
+                                                <i class="fas fa-edit"></i>
+                                            </a>
+                                            <button type="button"
+                                                    class="btn btn-outline-{{ fournisseur.statut == 'actif' ? 'warning' : 'success' }}"
+                                                    onclick="toggleFournisseur({{ fournisseur.id }})"
+                                                    title="{{ fournisseur.statut == 'actif' ? 'Désactiver' : 'Activer' }}">
+                                                <i class="fas fa-{{ fournisseur.statut == 'actif' ? 'pause' : 'play' }}"></i>
+                                            </button>
+                                            <form method="post"
+                                                  action="{{ path('admin_fournisseur_delete', {id: fournisseur.id}) }}"
+                                                  style="display:inline;"
+                                                  onsubmit="return confirm('Confirmer la suppression ?');">
+                                                <input type="hidden" name="_token" value="{{ csrf_token('delete' ~ fournisseur.id) }}">
+                                                <button type="submit" class="btn btn-outline-danger" title="Supprimer">
+                                                    <i class="fas fa-trash"></i>
+                                                </button>
+                                            </form>
+                                        </div>
+                                    </td>
+                                </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+            {% endif %}
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block javascripts %}
+{{ parent() }}
+<script>
+function toggleFournisseur(id) {
+    fetch('/admin/fournisseur/' + id + '/toggle', {
+        method: 'POST',
+        headers: {
+            'X-Requested-With': 'XMLHttpRequest'
+        }
+    })
+    .then(function(response) { return response.json(); })
+    .then(function(data) {
+        if (data.success) {
+            location.reload();
+        }
+    })
+    .catch(function(error) {
+        console.error('Erreur:', error);
+        alert('Erreur lors du changement de statut');
+    });
+}
+</script>
+{% endblock %}

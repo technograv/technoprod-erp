@@ -97,7 +97,27 @@
                     </div>
                 </div>
             </div>
-            
+
+            <div class="row">
+                <div class="col-md-6">
+                    <div class="mb-3">
+                        <label for="duree-validite-devis-defaut" class="form-label">
+                            <i class="fas fa-calendar-days me-1"></i>Durée de validité des devis (jours)
+                        </label>
+                        <input type="number" class="form-control" id="duree-validite-devis-defaut"
+                               min="1" max="365"
+                               value="{{ current_societe.dureeValiditeDevisDefaut }}"
+                               placeholder="{{ is_societe_mere ? '30' : 'Hériter de la société mère (' ~ (current_societe.societeParent ? current_societe.societeParent.dureeValiditeDevisDefaut : 30) ~ ' jours)' }}">
+                        <small class="form-text text-muted">
+                            Durée de validité appliquée automatiquement lors de la création d'un devis (modifiable par l'utilisateur)
+                            {% if not is_societe_mere and current_societe.societeParent %}
+                                <br><strong>Valeur héritée :</strong> {{ current_societe.societeParent.dureeValiditeDevisDefaut }} jour{{ current_societe.societeParent.dureeValiditeDevisDefaut > 1 ? 's' : '' }}
+                            {% endif %}
+                        </small>
+                    </div>
+                </div>
+            </div>
+
             <div class="row">
                 <div class="col-12">
                     <button type="button" class="btn btn-primary" onclick="sauvegarderDelaisWorkflow()">
@@ -181,12 +201,14 @@ function sauvegarderDelaisWorkflow() {
     const delaiFacturation = document.getElementById('delai-facturation').value;
     const frequenceVisite = document.getElementById('frequence-visite-clients').value;
     const acompteDefaut = document.getElementById('acompte-defaut-percent').value;
-    
+    const dureeValiditeDevis = document.getElementById('duree-validite-devis-defaut').value;
+
     const data = {
         delaiRelanceDevis: delaiRelance ? parseInt(delaiRelance) : null,
         delaiFacturation: delaiFacturation ? parseInt(delaiFacturation) : null,
         frequenceVisiteClients: frequenceVisite ? parseInt(frequenceVisite) : null,
-        acompteDefautPercent: acompteDefaut ? parseFloat(acompteDefaut) : null
+        acompteDefautPercent: acompteDefaut ? parseFloat(acompteDefaut) : null,
+        dureeValiditeDevisDefaut: dureeValiditeDevis ? parseInt(dureeValiditeDevis) : null
     };
     
     fetch('/admin/parametres/delais-workflow', {

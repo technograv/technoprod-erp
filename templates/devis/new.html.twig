@@ -228,7 +228,7 @@
                                 <div class="mb-3">
                                     <label for="date_validite" class="form-label">Date de validité</label>
                                     <input type="date" class="form-control" id="date_validite"
-                                           name="date_validite" value="{{ '+30 days'|date('Y-m-d') }}"
+                                           name="date_validite" value="{{ ('+' ~ duree_validite_devis ~ ' days')|date('Y-m-d') }}"
                                            min="2020-01-01" max="2030-12-31">
                                 </div>
                             </div>

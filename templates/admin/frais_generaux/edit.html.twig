@@ -1,0 +1,194 @@
+{% extends 'base.html.twig' %}
+
+{% block title %}Modifier {{ frais.libelle }}{% endblock %}
+
+{% block body %}
+<div class="container-fluid mt-4">
+    <nav aria-label="breadcrumb">
+        <ol class="breadcrumb">
+            <li class="breadcrumb-item"><a href="{{ path('admin_frais_generaux_index') }}">Frais généraux</a></li>
+            <li class="breadcrumb-item active">{{ frais.libelle }}</li>
+        </ol>
+    </nav>
+
+    <h1 class="mb-4"><i class="fas fa-edit"></i> Modifier {{ frais.libelle }}</h1>
+
+    <div class="row">
+        <div class="col-md-8">
+            <div class="card">
+                <div class="card-body">
+                    {{ form_start(form) }}
+                        <div class="row">
+                            <div class="col-md-8">
+                                {{ form_row(form.libelle) }}
+                            </div>
+                            <div class="col-md-4">
+                                {{ form_row(form.montantMensuel) }}
+                            </div>
+                        </div>
+
+                        <div class="row">
+                            <div class="col-md-6">
+                                {{ form_row(form.typeRepartition) }}
+                            </div>
+                            <div class="col-md-3">
+                                {{ form_row(form.periode) }}
+                            </div>
+                            <div class="col-md-3">
+                                {{ form_row(form.ordre) }}
+                            </div>
+                        </div>
+
+                        <div id="fields-volume-devis" class="repartition-fields" style="display:none;">
+                            <div class="card bg-light mb-3">
+                                <div class="card-body">
+                                    <h6>Par volume de devis</h6>
+                                    {{ form_row(form.volumeDevisMensuelEstime) }}
+                                    <div id="calc-volume-devis" class="mt-2 text-primary"></div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div id="fields-par-heure-mo" class="repartition-fields" style="display:none;">
+                            <div class="card bg-light mb-3">
+                                <div class="card-body">
+                                    <h6>Par heure main d'œuvre</h6>
+                                    {{ form_row(form.heuresMOMensuelles) }}
+                                    <div id="calc-heure-mo" class="mt-2 text-primary"></div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div id="fields-coefficient-global" class="repartition-fields" style="display:none;">
+                            <div class="card bg-light mb-3">
+                                <div class="card-body">
+                                    <h6>Coefficient global</h6>
+                                    {{ form_row(form.coefficientMajoration) }}
+                                    <p class="small text-muted mt-2">
+                                        Ex: 1.15 = +15%, 1.05 = +5%
+                                    </p>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div id="fields-ligne-cachee" class="repartition-fields" style="display:none;">
+                            <div class="alert alert-warning">
+                                <i class="fas fa-eye-slash"></i>
+                                <strong>Ligne cachée:</strong> Ce montant sera ajouté automatiquement au devis mais n'apparaîtra pas sur le PDF client.
+                            </div>
+                        </div>
+
+                        {{ form_row(form.description) }}
+
+                        <div class="form-check mb-3">
+                            {{ form_widget(form.actif) }}
+                            {{ form_label(form.actif) }}
+                        </div>
+
+                        <div class="d-flex justify-content-between mt-4">
+                            <a href="{{ path('admin_frais_generaux_index') }}" class="btn btn-secondary">
+                                <i class="fas fa-arrow-left"></i> Retour
+                            </a>
+                            <button type="submit" class="btn btn-primary">
+                                <i class="fas fa-save"></i> Enregistrer
+                            </button>
+                        </div>
+                    {{ form_end(form) }}
+                </div>
+            </div>
+        </div>
+
+        <div class="col-md-4">
+            <div class="card bg-light mb-3">
+                <div class="card-header">
+                    <i class="fas fa-info-circle"></i> Informations
+                </div>
+                <div class="card-body">
+                    <p class="small mb-1"><strong>Période:</strong></p>
+                    <p>{{ frais.periode }}</p>
+                    <p class="small mb-1"><strong>Créé le:</strong></p>
+                    <p>{{ frais.createdAt|date('d/m/Y H:i') }}</p>
+                    <p class="small mb-1"><strong>Modifié le:</strong></p>
+                    <p class="mb-0">{{ frais.updatedAt|date('d/m/Y H:i') }}</p>
+                </div>
+            </div>
+
+            <div class="card bg-light">
+                <div class="card-header">
+                    <i class="fas fa-calculator"></i> Calculs
+                </div>
+                <div class="card-body">
+                    {% if frais.typeRepartition == 'volume_devis' and frais.montantParDevis %}
+                        <p class="mb-1"><strong>Coût par devis:</strong></p>
+                        <p class="fs-4 text-primary">{{ frais.montantParDevis|number_format(2, ',', ' ') }} €</p>
+                    {% elseif frais.typeRepartition == 'par_heure_mo' and frais.coutParHeureMO %}
+                        <p class="mb-1"><strong>Coût par heure MO:</strong></p>
+                        <p class="fs-4 text-primary">{{ frais.coutParHeureMO|number_format(2, ',', ' ') }} €</p>
+                    {% elseif frais.typeRepartition == 'coefficient_global' %}
+                        <p class="mb-1"><strong>Coefficient:</strong></p>
+                        <p class="fs-4 text-primary">{{ frais.coefficientMajoration }}</p>
+                    {% else %}
+                        <p class="text-muted">-</p>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block javascripts %}
+{{ parent() }}
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    var typeSelect = document.querySelector('select[name="frais_generaux[typeRepartition]"]');
+    var montantInput = document.querySelector('input[name="frais_generaux[montantMensuel]"]');
+
+    function updateFieldsVisibility() {
+        var type = typeSelect.value;
+        document.querySelectorAll('.repartition-fields').forEach(function(el) {
+            el.style.display = 'none';
+        });
+
+        if (type) {
+            var fieldsDiv = document.getElementById('fields-' + type.replace('_', '-'));
+            if (fieldsDiv) {
+                fieldsDiv.style.display = 'block';
+            }
+        }
+
+        calculatePreview();
+    }
+
+    function calculatePreview() {
+        var type = typeSelect.value;
+        var montant = parseFloat(montantInput.value) || 0;
+
+        if (type === 'volume_devis') {
+            var volume = parseInt(document.querySelector('input[name="frais_generaux[volumeDevisMensuelEstime]"]').value) || 0;
+            if (volume > 0) {
+                var parDevis = montant / volume;
+                document.getElementById('calc-volume-devis').textContent =
+                    'Coût par devis: ' + parDevis.toFixed(2) + ' €';
+            }
+        } else if (type === 'par_heure_mo') {
+            var heures = parseInt(document.querySelector('input[name="frais_generaux[heuresMOMensuelles]"]').value) || 0;
+            if (heures > 0) {
+                var parHeure = montant / heures;
+                document.getElementById('calc-heure-mo').textContent =
+                    'Coût par heure MO: ' + parHeure.toFixed(2) + ' €';
+            }
+        }
+    }
+
+    typeSelect.addEventListener('change', updateFieldsVisibility);
+    montantInput.addEventListener('input', calculatePreview);
+
+    document.querySelectorAll('input[name="frais_generaux[volumeDevisMensuelEstime]"], input[name="frais_generaux[heuresMOMensuelles]"]').forEach(function(input) {
+        input.addEventListener('input', calculatePreview);
+    });
+
+    updateFieldsVisibility();
+});
+</script>
+{% endblock %}

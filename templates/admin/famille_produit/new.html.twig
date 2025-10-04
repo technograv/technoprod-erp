@@ -1,0 +1,81 @@
+{% extends 'base.html.twig' %}
+
+{% block title %}Nouvelle famille de produit{% endblock %}
+
+{% block body %}
+<div class="container-fluid mt-4">
+    <nav aria-label="breadcrumb">
+        <ol class="breadcrumb">
+            <li class="breadcrumb-item"><a href="{{ path('admin_famille_produit_index') }}">Familles de produits</a></li>
+            <li class="breadcrumb-item active">Nouvelle famille</li>
+        </ol>
+    </nav>
+
+    <h1 class="mb-4"><i class="fas fa-plus"></i> Nouvelle famille de produit</h1>
+
+    <div class="row">
+        <div class="col-md-8">
+            <div class="card">
+                <div class="card-body">
+                    {{ form_start(form) }}
+                        <div class="row">
+                            <div class="col-md-4">
+                                {{ form_row(form.code) }}
+                            </div>
+                            <div class="col-md-8">
+                                {{ form_row(form.libelle) }}
+                            </div>
+                        </div>
+
+                        {{ form_row(form.description) }}
+
+                        <div class="row">
+                            <div class="col-md-8">
+                                {{ form_row(form.parent) }}
+                            </div>
+                            <div class="col-md-4">
+                                {{ form_row(form.ordre) }}
+                            </div>
+                        </div>
+
+                        <div class="form-check mb-3">
+                            {{ form_widget(form.actif) }}
+                            {{ form_label(form.actif) }}
+                        </div>
+
+                        <div class="d-flex justify-content-between">
+                            <a href="{{ path('admin_famille_produit_index') }}" class="btn btn-secondary">
+                                <i class="fas fa-arrow-left"></i> Retour
+                            </a>
+                            <button type="submit" class="btn btn-primary">
+                                <i class="fas fa-save"></i> Créer
+                            </button>
+                        </div>
+                    {{ form_end(form) }}
+                </div>
+            </div>
+        </div>
+
+        <div class="col-md-4">
+            <div class="card bg-light">
+                <div class="card-header">
+                    <i class="fas fa-info-circle"></i> Informations
+                </div>
+                <div class="card-body">
+                    <h6>Hiérarchie de familles</h6>
+                    <p class="small">
+                        Les familles de produits peuvent être organisées en arborescence illimitée.
+                        Sélectionnez une famille parente pour créer une sous-famille.
+                    </p>
+                    <hr>
+                    <h6>Code</h6>
+                    <p class="small">
+                        Le code doit être unique. Utilisez un format hiérarchique pour faciliter l'organisation
+                        (ex: SIGNA, SIGNA-ENSE, SIGNA-ENSE-LED).
+                    </p>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

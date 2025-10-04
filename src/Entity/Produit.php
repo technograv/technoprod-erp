@@ -88,10 +88,82 @@ class Produit
     #[ORM\OrderBy(['isDefault' => 'DESC', 'createdAt' => 'ASC'])]
     private Collection $images;
 
+    // PHASE 1 - Nouveaux champs produits simples
+    #[ORM\ManyToOne(targetEntity: FamilleProduit::class, inversedBy: 'produits')]
+    #[ORM\JoinColumn(nullable: true)]
+    private ?FamilleProduit $famille = null;
+
+    #[ORM\ManyToOne(targetEntity: Fournisseur::class, inversedBy: 'produitsCommeDefaut')]
+    #[ORM\JoinColumn(nullable: true)]
+    private ?Fournisseur $fournisseurPrincipal = null;
+
+    #[ORM\Column(type: Types::DECIMAL, precision: 5, scale: 2)]
+    private string $fraisPourcentage = '0.00';
+
+    #[ORM\Column(type: Types::DECIMAL, precision: 10, scale: 4)]
+    private string $quantiteDefaut = '1.0000';
+
+    #[ORM\Column]
+    private int $nombreDecimalesPrix = 2;
+
+    #[ORM\ManyToOne(targetEntity: Unite::class)]
+    #[ORM\JoinColumn(nullable: true)]
+    private ?Unite $uniteVente = null;
+
+    #[ORM\ManyToOne(targetEntity: Unite::class)]
+    #[ORM\JoinColumn(nullable: true)]
+    private ?Unite $uniteAchat = null;
+
+    // Comptabilité
+    #[ORM\Column(length: 50, nullable: true)]
+    private ?string $typeDestination = null; // MARCHANDISE, PRODUIT_FINI, MATIERE_PREMIERE, etc.
+
+    #[ORM\ManyToOne(targetEntity: ComptePCG::class)]
+    #[ORM\JoinColumn(name: 'compte_vente_numero', referencedColumnName: 'numero_compte', nullable: true)]
+    private ?ComptePCG $compteVente = null;
+
+    #[ORM\ManyToOne(targetEntity: ComptePCG::class)]
+    #[ORM\JoinColumn(name: 'compte_achat_numero', referencedColumnName: 'numero_compte', nullable: true)]
+    private ?ComptePCG $compteAchat = null;
+
+    #[ORM\ManyToOne(targetEntity: ComptePCG::class)]
+    #[ORM\JoinColumn(name: 'compte_stock_numero', referencedColumnName: 'numero_compte', nullable: true)]
+    private ?ComptePCG $compteStock = null;
+
+    #[ORM\ManyToOne(targetEntity: ComptePCG::class)]
+    #[ORM\JoinColumn(name: 'compte_variation_stock_numero', referencedColumnName: 'numero_compte', nullable: true)]
+    private ?ComptePCG $compteVariationStock = null;
+
+    // Phase 2 - Produits catalogue (à venir)
+    #[ORM\Column]
+    private bool $estCatalogue = false;
+
+    #[ORM\Column(length: 30, nullable: true)]
+    private ?string $typeProduction = null; // make_to_order, make_to_stock, assemble_to_order
+
+    #[ORM\Column(type: Types::JSON, nullable: true)]
+    private ?array $configurateur = null;
+
+    #[ORM\Column(length: 20, nullable: true)]
+    private ?string $complexite = null; // simple, moyen, complexe
+
+    // Produits concurrent (prospection)
+    #[ORM\Column]
+    private bool $estConcurrent = false;
+
+    // Collections
+    #[ORM\OneToMany(mappedBy: 'produit', targetEntity: ProduitFournisseur::class, cascade: ['persist', 'remove'], orphanRemoval: true)]
+    private Collection $fournisseurs;
+
+    #[ORM\OneToMany(mappedBy: 'produitPrincipal', targetEntity: ArticleLie::class, cascade: ['persist', 'remove'], orphanRemoval: true)]
+    private Collection $articlesLies;
+
     public function __construct()
     {
         $this->devisItems = new ArrayCollection();
         $this->images = new ArrayCollection();
+        $this->fournisseurs = new ArrayCollection();
+        $this->articlesLies = new ArrayCollection();
         $this->createdAt = new \DateTimeImmutable();
         $this->updatedAt = new \DateTimeImmutable();
     }
@@ -439,6 +511,307 @@ class Produit
         $image->setIsDefault(true);
 
         return $this;
+    }
+
+    // PHASE 1 - Nouveaux getters/setters
+
+    public function getFamille(): ?FamilleProduit
+    {
+        return $this->famille;
+    }
+
+    public function setFamille(?FamilleProduit $famille): static
+    {
+        $this->famille = $famille;
+        return $this;
+    }
+
+    public function getFournisseurPrincipal(): ?Fournisseur
+    {
+        return $this->fournisseurPrincipal;
+    }
+
+    public function setFournisseurPrincipal(?Fournisseur $fournisseurPrincipal): static
+    {
+        $this->fournisseurPrincipal = $fournisseurPrincipal;
+        return $this;
+    }
+
+    public function getFraisPourcentage(): string
+    {
+        return $this->fraisPourcentage;
+    }
+
+    public function setFraisPourcentage(string $fraisPourcentage): static
+    {
+        $this->fraisPourcentage = $fraisPourcentage;
+        return $this;
+    }
+
+    public function getQuantiteDefaut(): string
+    {
+        return $this->quantiteDefaut;
+    }
+
+    public function setQuantiteDefaut(string $quantiteDefaut): static
+    {
+        $this->quantiteDefaut = $quantiteDefaut;
+        return $this;
+    }
+
+    public function getNombreDecimalesPrix(): int
+    {
+        return $this->nombreDecimalesPrix;
+    }
+
+    public function setNombreDecimalesPrix(int $nombreDecimalesPrix): static
+    {
+        $this->nombreDecimalesPrix = $nombreDecimalesPrix;
+        return $this;
+    }
+
+    public function getUniteVente(): ?Unite
+    {
+        return $this->uniteVente;
+    }
+
+    public function setUniteVente(?Unite $uniteVente): static
+    {
+        $this->uniteVente = $uniteVente;
+        return $this;
+    }
+
+    public function getUniteAchat(): ?Unite
+    {
+        return $this->uniteAchat;
+    }
+
+    public function setUniteAchat(?Unite $uniteAchat): static
+    {
+        $this->uniteAchat = $uniteAchat;
+        return $this;
+    }
+
+    public function getTypeDestination(): ?string
+    {
+        return $this->typeDestination;
+    }
+
+    public function setTypeDestination(?string $typeDestination): static
+    {
+        $this->typeDestination = $typeDestination;
+        return $this;
+    }
+
+    public function getCompteVente(): ?ComptePCG
+    {
+        return $this->compteVente;
+    }
+
+    public function setCompteVente(?ComptePCG $compteVente): static
+    {
+        $this->compteVente = $compteVente;
+        return $this;
+    }
+
+    public function getCompteAchat(): ?ComptePCG
+    {
+        return $this->compteAchat;
+    }
+
+    public function setCompteAchat(?ComptePCG $compteAchat): static
+    {
+        $this->compteAchat = $compteAchat;
+        return $this;
+    }
+
+    public function getCompteStock(): ?ComptePCG
+    {
+        return $this->compteStock;
+    }
+
+    public function setCompteStock(?ComptePCG $compteStock): static
+    {
+        $this->compteStock = $compteStock;
+        return $this;
+    }
+
+    public function getCompteVariationStock(): ?ComptePCG
+    {
+        return $this->compteVariationStock;
+    }
+
+    public function setCompteVariationStock(?ComptePCG $compteVariationStock): static
+    {
+        $this->compteVariationStock = $compteVariationStock;
+        return $this;
+    }
+
+    public function isEstCatalogue(): bool
+    {
+        return $this->estCatalogue;
+    }
+
+    public function setEstCatalogue(bool $estCatalogue): static
+    {
+        $this->estCatalogue = $estCatalogue;
+        return $this;
+    }
+
+    public function getTypeProduction(): ?string
+    {
+        return $this->typeProduction;
+    }
+
+    public function setTypeProduction(?string $typeProduction): static
+    {
+        $this->typeProduction = $typeProduction;
+        return $this;
+    }
+
+    public function getConfigurateur(): ?array
+    {
+        return $this->configurateur;
+    }
+
+    public function setConfigurateur(?array $configurateur): static
+    {
+        $this->configurateur = $configurateur;
+        return $this;
+    }
+
+    public function getComplexite(): ?string
+    {
+        return $this->complexite;
+    }
+
+    public function setComplexite(?string $complexite): static
+    {
+        $this->complexite = $complexite;
+        return $this;
+    }
+
+    public function isEstConcurrent(): bool
+    {
+        return $this->estConcurrent;
+    }
+
+    public function setEstConcurrent(bool $estConcurrent): static
+    {
+        $this->estConcurrent = $estConcurrent;
+        return $this;
+    }
+
+    /**
+     * @return Collection<int, ProduitFournisseur>
+     */
+    public function getFournisseurs(): Collection
+    {
+        return $this->fournisseurs;
+    }
+
+    public function addFournisseur(ProduitFournisseur $fournisseur): static
+    {
+        if (!$this->fournisseurs->contains($fournisseur)) {
+            $this->fournisseurs->add($fournisseur);
+            $fournisseur->setProduit($this);
+        }
+
+        return $this;
+    }
+
+    public function removeFournisseur(ProduitFournisseur $fournisseur): static
+    {
+        if ($this->fournisseurs->removeElement($fournisseur)) {
+            if ($fournisseur->getProduit() === $this) {
+                $fournisseur->setProduit(null);
+            }
+        }
+
+        return $this;
+    }
+
+    /**
+     * @return Collection<int, ArticleLie>
+     */
+    public function getArticlesLies(): Collection
+    {
+        return $this->articlesLies;
+    }
+
+    public function addArticlesLie(ArticleLie $articlesLie): static
+    {
+        if (!$this->articlesLies->contains($articlesLie)) {
+            $this->articlesLies->add($articlesLie);
+            $articlesLie->setProduitPrincipal($this);
+        }
+
+        return $this;
+    }
+
+    public function removeArticlesLie(ArticleLie $articlesLie): static
+    {
+        if ($this->articlesLies->removeElement($articlesLie)) {
+            if ($articlesLie->getProduitPrincipal() === $this) {
+                $articlesLie->setProduitPrincipal(null);
+            }
+        }
+
+        return $this;
+    }
+
+    /**
+     * Calcule le prix de revient (prix achat + frais)
+     */
+    public function getPrixRevient(): ?string
+    {
+        if ($this->prixAchatHt === null || $this->prixAchatHt === '0.00') {
+            return null;
+        }
+
+        $pa = (float) $this->prixAchatHt;
+        $frais = (float) $this->fraisPourcentage;
+
+        return number_format($pa * (1 + $frais / 100), 4, '.', '');
+    }
+
+    /**
+     * Calcule le taux de marge (réel basé sur prix de revient)
+     */
+    public function getTauxMargeReel(): ?float
+    {
+        $pr = $this->getPrixRevient();
+        if ($pr === null || $pr === '0.0000') {
+            return null;
+        }
+
+        $pv = (float) $this->prixVenteHt;
+        $prFloat = (float) $pr;
+
+        if ($prFloat === 0.0) {
+            return null;
+        }
+
+        return (($pv - $prFloat) / $prFloat) * 100;
+    }
+
+    /**
+     * Calcule le taux de marque
+     */
+    public function getTauxMarque(): ?float
+    {
+        $pr = $this->getPrixRevient();
+        if ($pr === null) {
+            return null;
+        }
+
+        $pv = (float) $this->prixVenteHt;
+        if ($pv === 0.0) {
+            return null;
+        }
+
+        $prFloat = (float) $pr;
+        return (($pv - $prFloat) / $pv) * 100;
     }
 
     public function __toString(): string

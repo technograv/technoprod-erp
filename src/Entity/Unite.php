@@ -21,8 +21,11 @@ class Unite
     #[ORM\Column(length: 100)]
     private ?string $nom = null;
 
+    #[ORM\Column(length: 10, nullable: true)]
+    private ?string $symbole = null; // mm, m², ml, kg, u, etc.
+
     #[ORM\Column(length: 50, nullable: true)]
-    private ?string $type = null; // surface, longueur, volume, quantité, poids, etc.
+    private ?string $type = null; // longueur, surface, poids, volume, piece
 
     #[ORM\Column]
     private int $decimalesPrix = 2; // Nombre de décimales pour les prix dans cette unité
@@ -82,6 +85,17 @@ class Unite
     public function setNom(string $nom): static
     {
         $this->nom = $nom;
+        return $this;
+    }
+
+    public function getSymbole(): ?string
+    {
+        return $this->symbole;
+    }
+
+    public function setSymbole(?string $symbole): static
+    {
+        $this->symbole = $symbole;
         return $this;
     }
 

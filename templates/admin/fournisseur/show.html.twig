@@ -1,0 +1,209 @@
+{% extends 'base.html.twig' %}
+
+{% block title %}{{ fournisseur.raisonSociale }}{% endblock %}
+
+{% block body %}
+<div class="container-fluid mt-4">
+    <nav aria-label="breadcrumb">
+        <ol class="breadcrumb">
+            <li class="breadcrumb-item"><a href="{{ path('admin_fournisseur_index') }}">Fournisseurs</a></li>
+            <li class="breadcrumb-item active">{{ fournisseur.raisonSociale }}</li>
+        </ol>
+    </nav>
+
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <h1>
+            <i class="fas fa-truck"></i> {{ fournisseur.raisonSociale }}
+            {% if fournisseur.statut == 'actif' %}
+                <span class="badge bg-success">Actif</span>
+            {% elseif fournisseur.statut == 'inactif' %}
+                <span class="badge bg-secondary">Inactif</span>
+            {% else %}
+                <span class="badge bg-danger">Bloqué</span>
+            {% endif %}
+        </h1>
+        <div>
+            <a href="{{ path('admin_fournisseur_edit', {id: fournisseur.id}) }}" class="btn btn-primary">
+                <i class="fas fa-edit"></i> Modifier
+            </a>
+        </div>
+    </div>
+
+    <div class="row">
+        <div class="col-md-8">
+            <div class="card mb-3">
+                <div class="card-header">
+                    <i class="fas fa-info-circle"></i> Informations générales
+                </div>
+                <div class="card-body">
+                    <div class="row">
+                        <div class="col-md-6">
+                            <p><strong>Code:</strong> {{ fournisseur.code }}</p>
+                            <p><strong>Raison sociale:</strong> {{ fournisseur.raisonSociale }}</p>
+                            <p><strong>Forme juridique:</strong> {{ fournisseur.formeJuridique ? fournisseur.formeJuridique.nom : '-' }}</p>
+                        </div>
+                        <div class="col-md-6">
+                            <p><strong>SIREN:</strong> {{ fournisseur.siren ?? '-' }}</p>
+                            <p><strong>SIRET:</strong> {{ fournisseur.siret ?? '-' }}</p>
+                            <p><strong>N° TVA:</strong> {{ fournisseur.numeroTVA ?? '-' }}</p>
+                            <p><strong>Code NAF:</strong> {{ fournisseur.codeNAF ?? '-' }}</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="card mb-3">
+                <div class="card-header">
+                    <i class="fas fa-envelope"></i> Contact
+                </div>
+                <div class="card-body">
+                    <div class="row">
+                        <div class="col-md-4">
+                            <p><strong>Email:</strong></p>
+                            {% if fournisseur.email %}
+                                <p><a href="mailto:{{ fournisseur.email }}">{{ fournisseur.email }}</a></p>
+                            {% else %}
+                                <p class="text-muted">-</p>
+                            {% endif %}
+                        </div>
+                        <div class="col-md-4">
+                            <p><strong>Téléphone:</strong></p>
+                            {% if fournisseur.telephone %}
+                                <p><a href="tel:{{ fournisseur.telephone }}">{{ fournisseur.telephone }}</a></p>
+                            {% else %}
+                                <p class="text-muted">-</p>
+                            {% endif %}
+                        </div>
+                        <div class="col-md-4">
+                            <p><strong>Site web:</strong></p>
+                            {% if fournisseur.siteWeb %}
+                                <p><a href="{{ fournisseur.siteWeb }}" target="_blank">{{ fournisseur.siteWeb }}</a></p>
+                            {% else %}
+                                <p class="text-muted">-</p>
+                            {% endif %}
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="card mb-3">
+                <div class="card-header">
+                    <i class="fas fa-euro-sign"></i> Conditions commerciales
+                </div>
+                <div class="card-body">
+                    <div class="row">
+                        <div class="col-md-6">
+                            <p><strong>Conditions de paiement:</strong></p>
+                            <p>{{ fournisseur.conditionsPaiement ?? '-' }}</p>
+                            <p><strong>Mode de règlement:</strong></p>
+                            <p>{{ fournisseur.modeReglement ? fournisseur.modeReglement.nom : '-' }}</p>
+                        </div>
+                        <div class="col-md-6">
+                            <p><strong>Remise générale:</strong></p>
+                            {% if fournisseur.remiseGenerale and fournisseur.remiseGenerale != '0.00' %}
+                                <p class="text-success fs-4">{{ fournisseur.remiseGenerale }}%</p>
+                            {% else %}
+                                <p class="text-muted">Aucune remise</p>
+                            {% endif %}
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            {% if fournisseur.notesInternes %}
+                <div class="card mb-3">
+                    <div class="card-header">
+                        <i class="fas fa-sticky-note"></i> Notes internes
+                    </div>
+                    <div class="card-body">
+                        <p class="mb-0">{{ fournisseur.notesInternes|nl2br }}</p>
+                    </div>
+                </div>
+            {% endif %}
+
+            <div class="card mb-3">
+                <div class="card-header d-flex justify-content-between align-items-center">
+                    <span><i class="fas fa-address-book"></i> Contacts</span>
+                    <span class="badge bg-primary">{{ fournisseur.contacts|length }}</span>
+                </div>
+                <div class="card-body">
+                    {% if fournisseur.contacts is empty %}
+                        <p class="text-muted mb-0">Aucun contact enregistré</p>
+                    {% else %}
+                        <div class="list-group">
+                            {% for contact in fournisseur.contacts %}
+                                <div class="list-group-item">
+                                    <div class="d-flex justify-content-between">
+                                        <h6 class="mb-1">{{ contact.nomComplet }}</h6>
+                                        {% if not contact.actif %}
+                                            <span class="badge bg-secondary">Inactif</span>
+                                        {% endif %}
+                                    </div>
+                                    {% if contact.fonction %}
+                                        <p class="mb-1 small text-muted">{{ contact.fonction }}</p>
+                                    {% endif %}
+                                    <p class="mb-0 small">
+                                        {% if contact.email %}
+                                            <i class="fas fa-envelope"></i> {{ contact.email }}
+                                        {% endif %}
+                                        {% if contact.telephoneMobile %}
+                                            <i class="fas fa-mobile-alt ms-3"></i> {{ contact.telephoneMobile }}
+                                        {% endif %}
+                                    </p>
+                                </div>
+                            {% endfor %}
+                        </div>
+                    {% endif %}
+                </div>
+            </div>
+
+            <div class="card">
+                <div class="card-header d-flex justify-content-between align-items-center">
+                    <span><i class="fas fa-map-marker-alt"></i> Adresses</span>
+                    <span class="badge bg-primary">{{ fournisseur.adresses|length }}</span>
+                </div>
+                <div class="card-body">
+                    {% if fournisseur.adresses is empty %}
+                        <p class="text-muted mb-0">Aucune adresse enregistrée</p>
+                    {% else %}
+                        <div class="list-group">
+                            {% for adresse in fournisseur.adresses %}
+                                {% if adresse.actif %}
+                                    <div class="list-group-item">
+                                        <h6 class="mb-1">{{ adresse.nom }}</h6>
+                                        <p class="mb-0 small">{{ adresse.adresseComplete }}</p>
+                                    </div>
+                                {% endif %}
+                            {% endfor %}
+                        </div>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+
+        <div class="col-md-4">
+            <div class="card mb-3">
+                <div class="card-header">
+                    <i class="fas fa-box"></i> Produits
+                </div>
+                <div class="card-body">
+                    <p><strong>Fournisseur principal pour:</strong></p>
+                    <p class="fs-3 text-primary mb-0">{{ fournisseur.produitsCommeDefaut|length }} produit(s)</p>
+                </div>
+            </div>
+
+            <div class="card bg-light">
+                <div class="card-header">
+                    <i class="fas fa-clock"></i> Métadonnées
+                </div>
+                <div class="card-body">
+                    <p class="small mb-1"><strong>Créé le:</strong></p>
+                    <p>{{ fournisseur.createdAt|date('d/m/Y à H:i') }}</p>
+                    <p class="small mb-1"><strong>Modifié le:</strong></p>
+                    <p class="mb-0">{{ fournisseur.updatedAt|date('d/m/Y à H:i') }}</p>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

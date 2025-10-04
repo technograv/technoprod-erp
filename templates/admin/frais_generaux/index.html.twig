@@ -1,0 +1,209 @@
+{% extends 'base.html.twig' %}
+
+{% block title %}Frais généraux - Administration{% endblock %}
+
+{% block body %}
+<div class="container-fluid mt-4">
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <h1><i class="fas fa-calculator"></i> Frais généraux</h1>
+        <a href="{{ path('admin_frais_generaux_new') }}" class="btn btn-primary">
+            <i class="fas fa-plus"></i> Nouveaux frais
+        </a>
+    </div>
+
+    {% for message in app.flashes('success') %}
+        <div class="alert alert-success alert-dismissible fade show" role="alert">
+            {{ message }}
+            <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+        </div>
+    {% endfor %}
+
+    {% for message in app.flashes('error') %}
+        <div class="alert alert-danger alert-dismissible fade show" role="alert">
+            {{ message }}
+            <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+        </div>
+    {% endfor %}
+
+    <div class="card mb-3">
+        <div class="card-body">
+            <form method="get" class="row g-3">
+                <div class="col-auto">
+                    <label for="periode" class="form-label">Période:</label>
+                </div>
+                <div class="col-auto">
+                    <select name="periode" id="periode" class="form-select" onchange="this.form.submit()">
+                        {% for periode in periodes %}
+                            <option value="{{ periode }}" {{ periode == periode_courante ? 'selected' : '' }}>
+                                {{ periode }}
+                            </option>
+                        {% endfor %}
+                    </select>
+                </div>
+                <div class="col-auto">
+                    <button type="button" class="btn btn-outline-secondary" onclick="showDuplicateModal()">
+                        <i class="fas fa-copy"></i> Dupliquer vers nouvelle période
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <div class="card">
+        <div class="card-body">
+            {% if frais_generaux is empty %}
+                <div class="alert alert-info">
+                    <i class="fas fa-info-circle"></i> Aucun frais général pour la période {{ periode_courante }}.
+                </div>
+            {% else %}
+                {% set total_mensuel = 0 %}
+                <div class="table-responsive">
+                    <table class="table table-hover">
+                        <thead>
+                            <tr>
+                                <th>Libellé</th>
+                                <th>Montant mensuel</th>
+                                <th>Type de répartition</th>
+                                <th>Calcul</th>
+                                <th>Statut</th>
+                                <th>Actions</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for frais in frais_generaux %}
+                                {% set total_mensuel = total_mensuel + frais.montantMensuel %}
+                                <tr data-id="{{ frais.id }}">
+                                    <td><strong>{{ frais.libelle }}</strong></td>
+                                    <td class="text-end">{{ frais.montantMensuel|number_format(2, ',', ' ') }} €</td>
+                                    <td>
+                                        <span class="badge bg-{{ frais.typeRepartition == 'volume_devis' ? 'primary' : (frais.typeRepartition == 'par_heure_mo' ? 'info' : (frais.typeRepartition == 'coefficient_global' ? 'warning' : 'secondary')) }}">
+                                            {{ frais.typeRepartitionLibelle }}
+                                        </span>
+                                    </td>
+                                    <td class="small">
+                                        {% if frais.typeRepartition == 'volume_devis' %}
+                                            {{ frais.volumeDevisMensuelEstime }} devis/mois
+                                            {% if frais.montantParDevis %}
+                                                = <strong>{{ frais.montantParDevis|number_format(2, ',', ' ') }} €/devis</strong>
+                                            {% endif %}
+                                        {% elseif frais.typeRepartition == 'par_heure_mo' %}
+                                            {{ frais.heuresMOMensuelles }} h/mois
+                                            {% if frais.coutParHeureMO %}
+                                                = <strong>{{ frais.coutParHeureMO|number_format(2, ',', ' ') }} €/h</strong>
+                                            {% endif %}
+                                        {% elseif frais.typeRepartition == 'coefficient_global' %}
+                                            Coefficient: <strong>{{ frais.coefficientMajoration }}</strong>
+                                        {% else %}
+                                            Ligne cachée
+                                        {% endif %}
+                                    </td>
+                                    <td>
+                                        {% if frais.actif %}
+                                            <span class="badge bg-success">Actif</span>
+                                        {% else %}
+                                            <span class="badge bg-secondary">Inactif</span>
+                                        {% endif %}
+                                    </td>
+                                    <td>
+                                        <div class="btn-group btn-group-sm">
+                                            <a href="{{ path('admin_frais_generaux_edit', {id: frais.id}) }}"
+                                               class="btn btn-outline-primary" title="Modifier">
+                                                <i class="fas fa-edit"></i>
+                                            </a>
+                                            <button type="button"
+                                                    class="btn btn-outline-{{ frais.actif ? 'warning' : 'success' }}"
+                                                    onclick="toggleFrais({{ frais.id }})"
+                                                    title="{{ frais.actif ? 'Désactiver' : 'Activer' }}">
+                                                <i class="fas fa-{{ frais.actif ? 'pause' : 'play' }}"></i>
+                                            </button>
+                                            <form method="post"
+                                                  action="{{ path('admin_frais_generaux_delete', {id: frais.id}) }}"
+                                                  style="display:inline;"
+                                                  onsubmit="return confirm('Confirmer la suppression ?');">
+                                                <input type="hidden" name="_token" value="{{ csrf_token('delete' ~ frais.id) }}">
+                                                <button type="submit" class="btn btn-outline-danger" title="Supprimer">
+                                                    <i class="fas fa-trash"></i>
+                                                </button>
+                                            </form>
+                                        </div>
+                                    </td>
+                                </tr>
+                            {% endfor %}
+                        </tbody>
+                        <tfoot>
+                            <tr class="table-primary fw-bold">
+                                <td>TOTAL</td>
+                                <td class="text-end">{{ total_mensuel|number_format(2, ',', ' ') }} €</td>
+                                <td colspan="4"></td>
+                            </tr>
+                        </tfoot>
+                    </table>
+                </div>
+            {% endif %}
+        </div>
+    </div>
+</div>
+
+<div class="modal fade" id="duplicateModal" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">Dupliquer vers nouvelle période</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <form method="post" id="duplicateForm">
+                <div class="modal-body">
+                    <p>Cette action va dupliquer tous les frais généraux de <strong>{{ periode_courante }}</strong> vers une nouvelle période.</p>
+                    <div class="mb-3">
+                        <label for="nouvelle_periode" class="form-label">Nouvelle période (YYYY-MM):</label>
+                        <input type="text" class="form-control" id="nouvelle_periode" name="nouvelle_periode"
+                               pattern="\d{4}-\d{2}" placeholder="2025-11" required>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Annuler</button>
+                    <button type="submit" class="btn btn-primary">Dupliquer</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block javascripts %}
+{{ parent() }}
+<script>
+function toggleFrais(id) {
+    fetch('/admin/frais-generaux/' + id + '/toggle', {
+        method: 'POST',
+        headers: {
+            'X-Requested-With': 'XMLHttpRequest'
+        }
+    })
+    .then(function(response) { return response.json(); })
+    .then(function(data) {
+        if (data.success) {
+            location.reload();
+        }
+    })
+    .catch(function(error) {
+        console.error('Erreur:', error);
+        alert('Erreur lors du changement de statut');
+    });
+}
+
+function showDuplicateModal() {
+    var modal = new bootstrap.Modal(document.getElementById('duplicateModal'));
+    modal.show();
+}
+
+document.getElementById('duplicateForm').addEventListener('submit', function(e) {
+    e.preventDefault();
+    var nouvellePeriode = document.getElementById('nouvelle_periode').value;
+
+    // Dupliquer tous les frais de la période courante
+    // Cette action pourrait être améliorée pour dupliquer en masse via une seule requête
+    alert('Fonctionnalité de duplication en cours de développement');
+});
+</script>
+{% endblock %}

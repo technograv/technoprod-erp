@@ -2,10 +2,16 @@
 
 namespace App\Form;
 
+use App\Entity\FamilleProduit;
+use App\Entity\Fournisseur;
 use App\Entity\Produit;
+use App\Entity\Unite;
+use App\Entity\ComptePCG;
+use Symfony\Bridge\Doctrine\Form\Type\EntityType;
 use Symfony\Component\Form\AbstractType;
 use Symfony\Component\Form\Extension\Core\Type\ChoiceType;
 use Symfony\Component\Form\Extension\Core\Type\FileType;
+use Symfony\Component\Form\Extension\Core\Type\IntegerType;
 use Symfony\Component\Form\Extension\Core\Type\MoneyType;
 use Symfony\Component\Form\Extension\Core\Type\NumberType;
 use Symfony\Component\Form\Extension\Core\Type\TextareaType;
@@ -52,16 +58,55 @@ class ProduitType extends AbstractType
                 ],
                 'attr' => ['class' => 'form-select']
             ])
+            ->add('famille', EntityType::class, [
+                'class' => FamilleProduit::class,
+                'choice_label' => function (FamilleProduit $famille) {
+                    return $famille->getCheminComplet();
+                },
+                'label' => 'Famille de produit',
+                'required' => false,
+                'placeholder' => '-- Sélectionner une famille --',
+                'attr' => ['class' => 'form-select']
+            ])
+            ->add('fournisseurPrincipal', EntityType::class, [
+                'class' => Fournisseur::class,
+                'choice_label' => 'raisonSociale',
+                'label' => 'Fournisseur principal',
+                'required' => false,
+                'placeholder' => '-- Sélectionner un fournisseur --',
+                'attr' => ['class' => 'form-select']
+            ])
             ->add('categorie', TextType::class, [
-                'label' => 'Catégorie',
+                'label' => 'Catégorie (ancien champ)',
                 'required' => false,
                 'attr' => [
                     'class' => 'form-control',
                     'placeholder' => 'Ex: Informatique, Consulting, etc.'
-                ]
+                ],
+                'help' => 'À migrer vers "Famille de produit"'
+            ])
+            ->add('uniteVente', EntityType::class, [
+                'class' => Unite::class,
+                'choice_label' => function (Unite $unite) {
+                    return $unite->getNom() . ' (' . $unite->getSymbole() . ')';
+                },
+                'label' => 'Unité de vente',
+                'required' => false,
+                'placeholder' => '-- Sélectionner --',
+                'attr' => ['class' => 'form-select']
+            ])
+            ->add('uniteAchat', EntityType::class, [
+                'class' => Unite::class,
+                'choice_label' => function (Unite $unite) {
+                    return $unite->getNom() . ' (' . $unite->getSymbole() . ')';
+                },
+                'label' => 'Unité d\'achat',
+                'required' => false,
+                'placeholder' => '-- Sélectionner --',
+                'attr' => ['class' => 'form-select']
             ])
             ->add('unite', ChoiceType::class, [
-                'label' => 'Unité',
+                'label' => 'Unité (ancien champ)',
                 'choices' => [
                     'Unité' => 'unité',
                     'Heure' => 'heure',
@@ -74,7 +119,8 @@ class ProduitType extends AbstractType
                     'Forfait' => 'forfait'
                 ],
                 'data' => 'unité',
-                'attr' => ['class' => 'form-select']
+                'attr' => ['class' => 'form-select'],
+                'help' => 'À migrer vers "Unité de vente/achat"'
             ])
             ->add('prixAchatHt', MoneyType::class, [
                 'label' => 'Prix d\'achat HT',
@@ -92,6 +138,18 @@ class ProduitType extends AbstractType
                     'data-calculation' => 'vente'
                 ]
             ])
+            ->add('fraisPourcentage', NumberType::class, [
+                'label' => 'Frais supplémentaires (%)',
+                'scale' => 2,
+                'attr' => [
+                    'class' => 'form-control',
+                    'step' => '0.01',
+                    'min' => '0',
+                    'max' => '100',
+                    'placeholder' => '0.00'
+                ],
+                'help' => 'Pourcentage de frais supplémentaires sur prix d\'achat'
+            ])
             ->add('tvaPercent', NumberType::class, [
                 'label' => 'Taux TVA (%)',
                 'data' => 20.00,
@@ -102,6 +160,26 @@ class ProduitType extends AbstractType
                     'max' => '100'
                 ]
             ])
+            ->add('quantiteDefaut', NumberType::class, [
+                'label' => 'Quantité par défaut',
+                'scale' => 4,
+                'attr' => [
+                    'class' => 'form-control',
+                    'step' => '0.0001',
+                    'min' => '0',
+                    'value' => '1.0000'
+                ]
+            ])
+            ->add('nombreDecimalesPrix', IntegerType::class, [
+                'label' => 'Nombre de décimales pour les prix',
+                'attr' => [
+                    'class' => 'form-control',
+                    'min' => '0',
+                    'max' => '6',
+                    'value' => '2'
+                ],
+                'help' => 'Précision d\'affichage des prix (généralement 2)'
+            ])
             ->add('margePercent', NumberType::class, [
                 'label' => 'Marge (%)',
                 'required' => false,
@@ -110,6 +188,61 @@ class ProduitType extends AbstractType
                     'readonly' => true,
                     'data-calculation' => 'marge'
                 ]
+            ])
+            ->add('typeDestination', ChoiceType::class, [
+                'label' => 'Type de destination comptable',
+                'required' => false,
+                'choices' => [
+                    'Marchandise' => 'MARCHANDISE',
+                    'Produit fini' => 'PRODUIT_FINI',
+                    'Matière première' => 'MATIERE_PREMIERE',
+                    'Fourniture' => 'FOURNITURE',
+                    'Service' => 'SERVICE'
+                ],
+                'placeholder' => '-- Sélectionner --',
+                'attr' => ['class' => 'form-select']
+            ])
+            ->add('compteVente', EntityType::class, [
+                'class' => ComptePCG::class,
+                'choice_label' => 'libelleComplet',
+                'label' => 'Compte de vente',
+                'required' => false,
+                'placeholder' => '-- Sélectionner --',
+                'attr' => ['class' => 'form-select'],
+                'help' => 'Compte PCG pour les ventes (701xxx, 706xxx, 707xxx)'
+            ])
+            ->add('compteAchat', EntityType::class, [
+                'class' => ComptePCG::class,
+                'choice_label' => 'libelleComplet',
+                'label' => 'Compte d\'achat',
+                'required' => false,
+                'placeholder' => '-- Sélectionner --',
+                'attr' => ['class' => 'form-select'],
+                'help' => 'Compte PCG pour les achats (601xxx, 606xxx, 607xxx)'
+            ])
+            ->add('compteStock', EntityType::class, [
+                'class' => ComptePCG::class,
+                'choice_label' => 'libelleComplet',
+                'label' => 'Compte de stock',
+                'required' => false,
+                'placeholder' => '-- Sélectionner --',
+                'attr' => ['class' => 'form-select'],
+                'help' => 'Compte PCG pour le stock (3xxx)'
+            ])
+            ->add('compteVariationStock', EntityType::class, [
+                'class' => ComptePCG::class,
+                'choice_label' => 'libelleComplet',
+                'label' => 'Compte variation de stock',
+                'required' => false,
+                'placeholder' => '-- Sélectionner --',
+                'attr' => ['class' => 'form-select'],
+                'help' => 'Compte PCG pour variation de stock (603xxx)'
+            ])
+            ->add('estConcurrent', CheckboxType::class, [
+                'label' => 'Produit concurrent (prospection)',
+                'required' => false,
+                'attr' => ['class' => 'form-check-input'],
+                'help' => 'Cocher si ce produit est un produit concurrent (n\'apparaît pas dans les devis)'
             ])
             ->add('gestionStock', CheckboxType::class, [
                 'label' => 'Gestion du stock',
