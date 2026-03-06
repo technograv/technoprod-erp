@@ -17,21 +17,21 @@ NC='\033[0m' # No Color
 ERRORS=0
 WARNINGS=0
 
-# Patterns critiques à détecter (plus stricts pour éviter faux positifs)
+# Patterns critiques à détecter (très stricts - uniquement vrais secrets)
 declare -A CRITICAL_PATTERNS=(
-    ["APP_SECRET"]='APP_SECRET\s*=\s*[a-f0-9]{64}'
-    ["DB_PASSWORD"]='postgresql://[^:]+:[^@/]{3,}@'
-    ["MYSQL_PASSWORD"]='mysql://[^:]+:[^@/]{3,}@'
-    ["GOOGLE_API_KEY"]='GOOGLE[_-]?API[_-]?KEY\s*=\s*['\''"][A-Za-z0-9_-]{30,}['\''"]'
-    ["OAUTH_SECRET"]='OAUTH[_-]?SECRET\s*=\s*['\''"][A-Za-z0-9_-]{20,}['\''"]'
-    ["JWT_SECRET"]='JWT[_-]?SECRET\s*=\s*['\''"][A-Za-z0-9_-]{20,}['\''"]'
+    ["APP_SECRET"]='^\+.*APP_SECRET\s*=\s*[a-f0-9]{64}'
+    ["DB_PASSWORD"]='^\+.*(postgresql|postgres)://[^:]+:[^@/]{3,}@[^/]+/[^"\s]+'
+    ["MYSQL_PASSWORD"]='^\+.*mysql://[^:]+:[^@/]{3,}@[^/]+/[^"\s]+'
+    ["GITHUB_TOKEN"]='^\+.*(ghp_[A-Za-z0-9]{36}|github_pat_[A-Za-z0-9_]{82})'
+    ["GOOGLE_API_KEY"]='^\+.*GOOGLE[_-]?API[_-]?KEY\s*=\s*['\''"]AIza[A-Za-z0-9_-]{35}['\''"]'
+    ["OAUTH_SECRET"]='^\+.*OAUTH[_-]?CLIENT[_-]?SECRET\s*=\s*['\''"][A-Za-z0-9_-]{24,}['\''"]'
 )
 
-# Patterns d'avertissement (à vérifier manuellement)
+# Patterns d'avertissement (uniquement dans lignes ajoutées)
 declare -A WARNING_PATTERNS=(
-    ["PASSWORD"]='password\s*=\s*["\x27][^"\x27]{3,}["\x27]'
-    ["TOKEN"]='token\s*=\s*["\x27][^"\x27]{10,}["\x27]'
-    ["API_KEY"]='api[_-]?key\s*=\s*["\x27][^"\x27]{10,}["\x27]'
+    ["PASSWORD"]='^\+.*password\s*=\s*["\x27][^"\x27]{8,}["\x27]'
+    ["PRIVATE_KEY"]='^\+.*(BEGIN (RSA|EC|OPENSSH) PRIVATE KEY)'
+    ["AWS_SECRET"]='^\+.*(AWS_SECRET_ACCESS_KEY|aws_secret_access_key)\s*=\s*[A-Za-z0-9/+]{40}'
 )
 
 # Fichiers/dossiers à ignorer
