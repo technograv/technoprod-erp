@@ -13,6 +13,109 @@
 - **URL de développement :** http://127.0.0.1:8001
 - **Base de données :** `technoprod_db` (PostgreSQL)
 
+## 📋 MÉTHODOLOGIE NOTION (MCP) - WORKFLOW AUTOMATIQUE
+
+**IMPORTANT** : Lorsque l'utilisateur me demande de travailler sur un **ticket** ou mentionne **Notion**, je dois AUTOMATIQUEMENT suivre ce workflow :
+
+### 1️⃣ **Ouverture et Lecture (au début de la tâche)**
+
+```
+1. Rechercher le hub TechnoProd :
+   - Utiliser mcp__notion__API-post-search avec query="TechnoProd"
+
+2. Si ticket mentionné (ex: "P0", "P1", "ticket sécurité") :
+   - Rechercher le ticket : mcp__notion__API-post-search avec query du ticket
+   - Lire le ticket : mcp__notion__API-retrieve-a-page avec page_id
+   - Lire les blocs enfants si nécessaire : mcp__notion__API-get-block-children
+
+3. Lire la documentation pertinente :
+   - Chercher les pages de doc liées (ex: "05 - Sécurité & secrets")
+   - Utiliser mcp__notion__API-retrieve-a-page pour lire le contenu complet
+```
+
+### 2️⃣ **Mise à Jour (pendant et à la fin de la tâche)**
+
+```
+1. Mettre à jour le TICKET avec les résultats :
+   - Utiliser mcp__notion__API-patch-block-children pour ajouter des blocs
+   - Format : Problèmes détectés, Actions réalisées, Actions manuelles requises
+   - JAMAIS écrire de vrais secrets dans Notion (placeholders uniquement)
+
+2. Ajouter une entrée au Journal de dev :
+   - Base de données : "TechnoProd — Journal de dev" (database_id: 264c82b7-eec0-48e6-96fc-193901e9919b)
+   - Utiliser mcp__notion__API-post-page avec :
+     * Titre : Description courte de l'intervention
+     * Date : Date du jour
+     * Type : Feature/Bugfix/Infra/Doc/Refacto
+     * Zone : Auth/API/Admin/Données/UI/CI-CD/Autre
+     * Résumé : Description détaillée (2-3 phrases)
+     * Lien PR/commit : URL GitHub si applicable
+```
+
+### 3️⃣ **Règles de Sécurité Notion**
+
+```
+❌ INTERDICTIONS ABSOLUES :
+- Ne JAMAIS écrire de vrais secrets (APP_SECRET, mots de passe, tokens)
+- Ne JAMAIS copier des tokens GitHub, API keys, credentials
+
+✅ AUTORISÉ :
+- Placeholders : "[CONFIDENTIEL]", "[MASQUÉ]", "********"
+- Descriptions génériques : "Token GitHub rotaté", "Password changé"
+- Patterns détectés : "Détection APP_SECRET dans .env" (sans la valeur)
+```
+
+### 4️⃣ **Format des blocs Notion**
+
+```json
+// Exemple de structure pour patch-block-children
+{
+  "type": "paragraph",
+  "paragraph": {
+    "rich_text": [{
+      "type": "text",
+      "text": {"content": "Texte ici"},
+      "annotations": {"bold": true, "color": "red"}
+    }]
+  }
+}
+
+// Types de blocs disponibles : paragraph, heading_1, heading_2, heading_3,
+// bulleted_list_item, numbered_list_item, code, quote
+```
+
+### 5️⃣ **IDs Notion Importants**
+
+```
+Hub TechnoProd : b6c7b5c8-67c3-44a8-9222-97fbb816976c
+Journal de dev (database) : 264c82b7-eec0-48e6-96fc-193901e9919b
+Tickets (database) : f6287a4c-ded8-4506-bbe2-d3e7546e1bdd
+```
+
+### 🎯 **Cas d'Usage Typiques**
+
+**Scénario 1 : "Travaille sur le ticket P0 sécurité"**
+→ Rechercher "P0", lire ticket, lire doc "05 - Sécurité", faire le travail, mettre à jour ticket + journal
+
+**Scénario 2 : "Note dans Notion que j'ai corrigé le bug X"**
+→ Ajouter entrée au Journal de dev avec Type=Bugfix, décrire la correction
+
+**Scénario 3 : "Lis la doc Notion sur [sujet]"**
+→ Rechercher la page, utiliser retrieve-a-page pour lire le contenu
+
+### ⚡ **Exécution Automatique**
+
+Dès que l'utilisateur mentionne :
+- "ticket", "P0", "P1", "P2", "P3"
+- "Notion"
+- "note dans le journal"
+- "mets à jour la doc"
+- "lis la page [X]"
+
+→ Je dois PROACTIVEMENT utiliser les outils MCP Notion sans qu'il ait à le répéter.
+
+---
+
 ## Entités principales ACTUELLES
 
 1. **User** - Utilisateurs avec authentification Symfony + préférences personnalisées
