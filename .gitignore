@@ -83,3 +83,4 @@ yarn.lock
 /phpunit.xml
 /.phpunit.cache/
 ###< phpunit/phpunit ###
+/.env
