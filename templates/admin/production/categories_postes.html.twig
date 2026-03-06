@@ -1,0 +1,326 @@
+{% extends 'base.html.twig' %}
+
+{% block title %}{{ pageTitle }}{% endblock %}
+
+{% block stylesheets %}
+    {{ parent() }}
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/sortablejs@1.15.0/Sortable.min.css"/>
+    <style>
+        .categorie-item {
+            cursor: move;
+            transition: all 0.3s ease;
+        }
+        .categorie-item:hover {
+            background-color: #f8f9fa;
+        }
+        .categorie-item.sortable-ghost {
+            opacity: 0.4;
+        }
+        .categorie-icon {
+            width: 40px;
+            height: 40px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            border-radius: 5px;
+            font-size: 1.2rem;
+        }
+    </style>
+{% endblock %}
+
+{% block body %}
+<div class="container-fluid mt-4">
+    <!-- En-tête -->
+    <div class="row mb-4">
+        <div class="col-12">
+            <div class="d-flex justify-content-between align-items-center">
+                <div>
+                    <h1>
+                        <i class="fas fa-tags me-2 text-primary"></i>{{ pageTitle }}
+                    </h1>
+                    <p class="text-muted mb-0">Organisez vos postes par catégories</p>
+                </div>
+                <div>
+                    <a href="{{ path('app_admin_dashboard') }}#production" class="btn btn-secondary me-2">
+                        <i class="fas fa-arrow-left me-2"></i>Retour
+                    </a>
+                    <button type="button" class="btn btn-primary" id="btn-nouvelle-categorie">
+                        <i class="fas fa-plus me-2"></i>Nouvelle catégorie
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Statistiques -->
+    <div class="row mb-4">
+        <div class="col-md-6">
+            <div class="card border-0 shadow-sm">
+                <div class="card-body text-center">
+                    <h3 class="mb-0 text-primary">{{ categories|length }}</h3>
+                    <small class="text-muted">Catégories</small>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-6">
+            <div class="card border-0 shadow-sm">
+                <div class="card-body text-center">
+                    <h3 class="mb-0 text-info" id="total-postes">0</h3>
+                    <small class="text-muted">Postes total</small>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Liste des catégories -->
+    <div class="card shadow-sm">
+        <div class="card-header bg-primary text-white">
+            <h5 class="mb-0">
+                <i class="fas fa-grip-vertical me-2"></i>Liste des catégories (glisser-déposer pour réorganiser)
+            </h5>
+        </div>
+        <div class="card-body">
+            {% if categories|length > 0 %}
+            <div class="list-group" id="categories-list">
+                {% for categorie in categories %}
+                <div class="list-group-item categorie-item" data-id="{{ categorie.id }}">
+                    <div class="row align-items-center">
+                        <div class="col-auto">
+                            <i class="fas fa-grip-vertical text-muted"></i>
+                        </div>
+                        <div class="col-auto">
+                            <div class="categorie-icon" style="background-color: {{ categorie.couleur ?? '#dee2e6' }};">
+                                <i class="fas {{ categorie.icone ?? 'fa-tag' }} text-white"></i>
+                            </div>
+                        </div>
+                        <div class="col">
+                            <div>
+                                <strong>{{ categorie.code }}</strong> - {{ categorie.libelle }}
+                            </div>
+                            {% if categorie.description %}
+                            <small class="text-muted">{{ categorie.description }}</small>
+                            {% endif %}
+                        </div>
+                        <div class="col-auto">
+                            <span class="badge bg-info">{{ categorie.postes|length }} poste(s)</span>
+                        </div>
+                        <div class="col-auto">
+                            {% if categorie.actif %}
+                                <span class="badge bg-success">Actif</span>
+                            {% else %}
+                                <span class="badge bg-secondary">Inactif</span>
+                            {% endif %}
+                        </div>
+                        <div class="col-auto">
+                            <button class="btn btn-sm btn-outline-primary btn-edit" data-id="{{ categorie.id }}">
+                                <i class="fas fa-edit"></i>
+                            </button>
+                            <button class="btn btn-sm btn-outline-danger btn-delete" data-id="{{ categorie.id }}" data-nb-postes="{{ categorie.postes|length }}">
+                                <i class="fas fa-trash"></i>
+                            </button>
+                        </div>
+                    </div>
+                </div>
+                {% endfor %}
+            </div>
+            {% else %}
+            <div class="alert alert-info">
+                <i class="fas fa-info-circle me-2"></i>
+                Aucune catégorie créée. Cliquez sur "Nouvelle catégorie" pour commencer.
+            </div>
+            {% endif %}
+        </div>
+    </div>
+</div>
+
+<!-- Modal Création/Édition -->
+<div class="modal fade" id="modalCategorie" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">
+                    <i class="fas fa-tag me-2"></i><span id="modal-title">Nouvelle Catégorie</span>
+                </h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <input type="hidden" id="categorie-id">
+
+                <div class="mb-3">
+                    <label for="categorie-code" class="form-label">Code *</label>
+                    <input type="text" class="form-control" id="categorie-code" placeholder="Ex: IMPRESSION" required>
+                </div>
+
+                <div class="mb-3">
+                    <label for="categorie-libelle" class="form-label">Libellé *</label>
+                    <input type="text" class="form-control" id="categorie-libelle" placeholder="Ex: Impression" required>
+                </div>
+
+                <div class="mb-3">
+                    <label for="categorie-description" class="form-label">Description</label>
+                    <textarea class="form-control" id="categorie-description" rows="2" placeholder="Description de la catégorie..."></textarea>
+                </div>
+
+                <div class="row">
+                    <div class="col-md-6 mb-3">
+                        <label for="categorie-icone" class="form-label">Icône FontAwesome</label>
+                        <input type="text" class="form-control" id="categorie-icone" placeholder="Ex: fa-print">
+                        <small class="text-muted">Voir <a href="https://fontawesome.com/icons" target="_blank">fontawesome.com</a></small>
+                    </div>
+                    <div class="col-md-6 mb-3">
+                        <label for="categorie-couleur" class="form-label">Couleur</label>
+                        <input type="color" class="form-control" id="categorie-couleur" value="#3498db">
+                    </div>
+                </div>
+
+                <div class="form-check">
+                    <input class="form-check-input" type="checkbox" id="categorie-actif" checked>
+                    <label class="form-check-label" for="categorie-actif">
+                        Actif
+                    </label>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Annuler</button>
+                <button type="button" class="btn btn-primary" id="btn-save-categorie">
+                    <i class="fas fa-save me-2"></i>Enregistrer
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block javascripts %}
+    {{ parent() }}
+    <script src="https://cdn.jsdelivr.net/npm/sortablejs@1.15.0/Sortable.min.js"></script>
+    <script>
+        const modal = new bootstrap.Modal(document.getElementById('modalCategorie'));
+        let currentCategorieId = null;
+
+        // Initialiser Sortable pour le drag & drop
+        const categoriesList = document.getElementById('categories-list');
+        if (categoriesList) {
+            new Sortable(categoriesList, {
+                animation: 150,
+                handle: '.categorie-item',
+                onEnd: function(evt) {
+                    saveOrder();
+                }
+            });
+        }
+
+        // Sauvegarder l'ordre
+        function saveOrder() {
+            const items = document.querySelectorAll('.categorie-item');
+            const order = Array.from(items).map(item => item.dataset.id);
+
+            fetch('/admin/api/production/categories-postes/reorder', {
+                method: 'POST',
+                headers: {'Content-Type': 'application/json'},
+                body: JSON.stringify({order: order})
+            });
+        }
+
+        // Nouvelle catégorie
+        document.getElementById('btn-nouvelle-categorie').addEventListener('click', function() {
+            currentCategorieId = null;
+            document.getElementById('modal-title').textContent = 'Nouvelle Catégorie';
+            document.getElementById('categorie-id').value = '';
+            document.getElementById('categorie-code').value = '';
+            document.getElementById('categorie-libelle').value = '';
+            document.getElementById('categorie-description').value = '';
+            document.getElementById('categorie-icone').value = '';
+            document.getElementById('categorie-couleur').value = '#3498db';
+            document.getElementById('categorie-actif').checked = true;
+            modal.show();
+        });
+
+        // Éditer catégorie
+        document.querySelectorAll('.btn-edit').forEach(btn => {
+            btn.addEventListener('click', function() {
+                const categorieItem = this.closest('.categorie-item');
+                currentCategorieId = this.dataset.id;
+
+                // Charger les données depuis l'API
+                fetch('/admin/api/production/categories-postes/' + currentCategorieId)
+                    .then(response => response.json())
+                    .then(data => {
+                        document.getElementById('modal-title').textContent = 'Modifier Catégorie';
+                        document.getElementById('categorie-id').value = data.id;
+                        document.getElementById('categorie-code').value = data.code;
+                        document.getElementById('categorie-libelle').value = data.libelle;
+                        document.getElementById('categorie-description').value = data.description || '';
+                        document.getElementById('categorie-icone').value = data.icone || '';
+                        document.getElementById('categorie-couleur').value = data.couleur || '#3498db';
+                        document.getElementById('categorie-actif').checked = data.actif;
+                        modal.show();
+                    });
+            });
+        });
+
+        // Sauvegarder catégorie
+        document.getElementById('btn-save-categorie').addEventListener('click', function() {
+            const data = {
+                id: document.getElementById('categorie-id').value || null,
+                code: document.getElementById('categorie-code').value,
+                libelle: document.getElementById('categorie-libelle').value,
+                description: document.getElementById('categorie-description').value,
+                icone: document.getElementById('categorie-icone').value,
+                couleur: document.getElementById('categorie-couleur').value,
+                actif: document.getElementById('categorie-actif').checked
+            };
+
+            fetch('/admin/api/production/categories-postes', {
+                method: 'POST',
+                headers: {'Content-Type': 'application/json'},
+                body: JSON.stringify(data)
+            })
+            .then(response => response.json())
+            .then(result => {
+                if (result.success) {
+                    modal.hide();
+                    location.reload();
+                }
+            });
+        });
+
+        // Supprimer catégorie
+        document.querySelectorAll('.btn-delete').forEach(btn => {
+            btn.addEventListener('click', function() {
+                const nbPostes = parseInt(this.dataset.nbPostes);
+
+                if (nbPostes > 0) {
+                    alert('Impossible de supprimer : ' + nbPostes + ' poste(s) sont liés à cette catégorie');
+                    return;
+                }
+
+                if (!confirm('Supprimer cette catégorie ?')) return;
+
+                const id = this.dataset.id;
+                fetch('/admin/api/production/categories-postes/' + id, {
+                    method: 'DELETE'
+                })
+                .then(response => response.json())
+                .then(result => {
+                    if (result.success) {
+                        location.reload();
+                    } else {
+                        alert(result.message);
+                    }
+                });
+            });
+        });
+
+        // Calculer total postes
+        function updateTotalPostes() {
+            let total = 0;
+            document.querySelectorAll('.badge.bg-info').forEach(badge => {
+                const count = parseInt(badge.textContent);
+                total += count;
+            });
+            document.getElementById('total-postes').textContent = total;
+        }
+        updateTotalPostes();
+    </script>
+{% endblock %}

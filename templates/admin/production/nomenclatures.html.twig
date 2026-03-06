@@ -1,0 +1,393 @@
+{% extends 'base.html.twig' %}
+
+{% block title %}Nomenclatures - Administration{% endblock %}
+
+{% block stylesheets %}
+    {{ parent() }}
+    <style>
+        .nomenclature-card {
+            transition: all 0.3s ease;
+            border-left: 4px solid #dee2e6;
+        }
+        .nomenclature-card:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+        }
+        .nomenclature-card.actif {
+            border-left-color: #28a745;
+        }
+        .nomenclature-card.inactif {
+            border-left-color: #dc3545;
+            opacity: 0.7;
+        }
+        .badge-statut {
+            font-size: 0.85rem;
+            padding: 0.4rem 0.8rem;
+        }
+        .filter-btn.active {
+            background-color: #198754 !important;
+            color: white !important;
+        }
+        .tree-level-badge {
+            font-size: 0.75rem;
+            padding: 0.25rem 0.5rem;
+        }
+    </style>
+{% endblock %}
+
+{% block body %}
+<div class="container-fluid mt-4">
+    <!-- En-tête -->
+    <div class="row mb-4">
+        <div class="col-12">
+            <div class="d-flex justify-content-between align-items-center">
+                <div>
+                    <h1>
+                        <i class="fas fa-sitemap me-2 text-success"></i>Nomenclatures (BOM)
+                    </h1>
+                    <p class="text-muted mb-0">Gestion des nomenclatures (Bill of Materials) multi-niveaux</p>
+                </div>
+                <div>
+                    <a href="{{ path('app_admin_dashboard') }}#production" class="btn btn-secondary me-2">
+                        <i class="fas fa-arrow-left me-2"></i>Retour
+                    </a>
+                    <a href="{{ path('app_admin_nomenclature_new') }}" class="btn btn-success">
+                        <i class="fas fa-plus me-2"></i>Nouvelle nomenclature
+                    </a>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Statistiques rapides -->
+    <div class="row mb-4">
+        <div class="col-md-3">
+            <div class="card border-0 shadow-sm">
+                <div class="card-body text-center">
+                    <h3 class="mb-0 text-success">{{ nomenclatures|length }}</h3>
+                    <small class="text-muted">Nomenclatures total</small>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="card border-0 shadow-sm">
+                <div class="card-body text-center">
+                    <h3 class="mb-0 text-primary">{{ nomenclatures|filter(n => n.actif)|length }}</h3>
+                    <small class="text-muted">Actives</small>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="card border-0 shadow-sm">
+                <div class="card-body text-center">
+                    <h3 class="mb-0 text-info">{{ nomenclatures|filter(n => n.statut == 'VALIDEE')|length }}</h3>
+                    <small class="text-muted">Validées</small>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="card border-0 shadow-sm">
+                <div class="card-body text-center">
+                    <h3 class="mb-0 text-warning">{{ nomenclatures|filter(n => n.statut == 'BROUILLON')|length }}</h3>
+                    <small class="text-muted">Brouillons</small>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Filtres -->
+    <div class="card shadow-sm mb-4">
+        <div class="card-body">
+            <div class="row align-items-center">
+                <div class="col-md-6">
+                    <div class="input-group">
+                        <span class="input-group-text"><i class="fas fa-search"></i></span>
+                        <input type="text" class="form-control" id="searchInput" placeholder="Rechercher une nomenclature...">
+                    </div>
+                </div>
+                <div class="col-md-6">
+                    <div class="btn-group w-100" role="group">
+                        <button type="button" class="btn btn-outline-success filter-btn active" data-filter="all">
+                            Toutes ({{ nomenclatures|length }})
+                        </button>
+                        <button type="button" class="btn btn-outline-primary filter-btn" data-filter="actif">
+                            Actives ({{ nomenclatures|filter(n => n.actif)|length }})
+                        </button>
+                        <button type="button" class="btn btn-outline-danger filter-btn" data-filter="inactif">
+                            Inactives ({{ nomenclatures|filter(n => not n.actif)|length }})
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Liste des nomenclatures -->
+    <div class="row g-3">
+        {% if nomenclatures|length > 0 %}
+            {% for nomenclature in nomenclatures %}
+            <div class="col-md-6 col-lg-4 nomenclature-item"
+                 data-nomenclature-id="{{ nomenclature.id }}"
+                 data-actif="{{ nomenclature.actif ? 'true' : 'false' }}"
+                 data-search="{{ nomenclature.code|lower }} {{ nomenclature.libelle|lower }}">
+                <div class="card nomenclature-card {{ nomenclature.actif ? 'actif' : 'inactif' }} h-100">
+                    <div class="card-body">
+                        <div class="d-flex justify-content-between align-items-start mb-2">
+                            <div>
+                                <h6 class="mb-1">
+                                    <span class="badge bg-dark">{{ nomenclature.code }}</span>
+                                    {% if nomenclature.niveau > 0 %}
+                                        <span class="badge bg-secondary tree-level-badge">
+                                            Niveau {{ nomenclature.niveau }}
+                                        </span>
+                                    {% endif %}
+                                </h6>
+                                <p class="mb-0 fw-bold">{{ nomenclature.libelle }}</p>
+                            </div>
+                            <div class="form-check form-switch">
+                                <input class="form-check-input toggle-actif"
+                                       type="checkbox"
+                                       data-nomenclature-id="{{ nomenclature.id }}"
+                                       {{ nomenclature.actif ? 'checked' : '' }}>
+                            </div>
+                        </div>
+
+                        <hr class="my-2">
+
+                        <div class="mb-2">
+                            {% if nomenclature.statut == 'VALIDEE' %}
+                                <span class="badge bg-success badge-statut">
+                                    <i class="fas fa-check-circle me-1"></i>Validée
+                                </span>
+                            {% elseif nomenclature.statut == 'BROUILLON' %}
+                                <span class="badge bg-warning badge-statut">
+                                    <i class="fas fa-edit me-1"></i>Brouillon
+                                </span>
+                            {% else %}
+                                <span class="badge bg-danger badge-statut">
+                                    <i class="fas fa-times-circle me-1"></i>Obsolète
+                                </span>
+                            {% endif %}
+
+                            <small class="text-muted ms-2">Version {{ nomenclature.version }}</small>
+                        </div>
+
+                        {% if nomenclature.description %}
+                        <div class="mb-2">
+                            <small class="text-muted">{{ nomenclature.description|u.truncate(80, '...') }}</small>
+                        </div>
+                        {% endif %}
+
+                        <div class="row g-2 text-center small mb-2">
+                            <div class="col-6">
+                                <div class="bg-light p-2 rounded">
+                                    <div class="text-muted">Composants</div>
+                                    <div class="fw-bold">{{ nomenclature.lignes|length }}</div>
+                                </div>
+                            </div>
+                            <div class="col-6">
+                                <div class="bg-light p-2 rounded">
+                                    <div class="text-muted">Total récursif</div>
+                                    <div class="fw-bold">{{ nomenclature.compterLignes(true) }}</div>
+                                </div>
+                            </div>
+                        </div>
+
+                        {% if nomenclature.parent %}
+                        <div class="mb-2">
+                            <small class="text-muted">
+                                <i class="fas fa-level-up-alt me-1"></i>
+                                Parent: {{ nomenclature.parent.code }}
+                            </small>
+                        </div>
+                        {% endif %}
+
+                        {% if nomenclature.sousNomenclatures|length > 0 %}
+                        <div class="mb-2">
+                            <span class="badge bg-info">
+                                <i class="fas fa-sitemap me-1"></i>{{ nomenclature.sousNomenclatures|length }} sous-ensemble(s)
+                            </span>
+                        </div>
+                        {% endif %}
+
+                        {% if nomenclature.statut == 'VALIDEE' and nomenclature.dateValidation %}
+                        <div class="mb-2">
+                            <small class="text-muted">
+                                <i class="fas fa-calendar-check me-1"></i>
+                                Validée le {{ nomenclature.dateValidation|date('d/m/Y') }}
+                                {% if nomenclature.validePar %}
+                                    par {{ nomenclature.validePar }}
+                                {% endif %}
+                            </small>
+                        </div>
+                        {% endif %}
+
+                        <div class="mt-3">
+                            <a href="{{ path('app_admin_nomenclature_edit', {id: nomenclature.id}) }}" class="btn btn-sm btn-outline-primary w-100">
+                                <i class="fas fa-edit me-1"></i>Modifier
+                            </a>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            {% endfor %}
+        {% else %}
+            <div class="col-12">
+                <div class="alert alert-info">
+                    <i class="fas fa-info-circle me-2"></i>
+                    Aucune nomenclature disponible. Créez-en une pour commencer.
+                </div>
+            </div>
+        {% endif %}
+    </div>
+
+    <!-- Message si aucun résultat -->
+    <div id="noResults" class="alert alert-warning mt-3" style="display: none;">
+        <i class="fas fa-exclamation-triangle me-2"></i>
+        Aucune nomenclature ne correspond à votre recherche.
+    </div>
+</div>
+
+<!-- Modal Création/Édition -->
+<div class="modal fade" id="modalNomenclature" tabindex="-1">
+    <div class="modal-dialog modal-lg">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">
+                    <i class="fas fa-sitemap me-2"></i>Nouvelle Nomenclature
+                </h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <div class="alert alert-info">
+                    <i class="fas fa-info-circle me-2"></i>
+                    <strong>Formulaire en développement</strong>
+                    <p class="mb-0 mt-2">
+                        Le formulaire de création/édition sera implémenté prochainement avec :
+                    </p>
+                    <ul class="mb-0 mt-2">
+                        <li>Informations générales (code, libelle, description)</li>
+                        <li>Éditeur de lignes avec types (matière première, sous-ensemble, etc.)</li>
+                        <li>Éditeur de formules de quantité dynamiques</li>
+                        <li>Gestion des taux de chute et conditions d'affichage</li>
+                        <li>Hiérarchie parent/enfant pour sous-ensembles</li>
+                        <li>Validation et versioning</li>
+                    </ul>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Fermer</button>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block javascripts %}
+    {{ parent() }}
+    <script>
+        // Recherche
+        document.getElementById('searchInput').addEventListener('input', function(e) {
+            const search = e.target.value.toLowerCase();
+            filterNomenclatures();
+        });
+
+        // Filtres actif/inactif
+        document.querySelectorAll('.filter-btn').forEach(btn => {
+            btn.addEventListener('click', function() {
+                document.querySelectorAll('.filter-btn').forEach(b => b.classList.remove('active'));
+                this.classList.add('active');
+                filterNomenclatures();
+            });
+        });
+
+        function updateCounters() {
+            const allItems = document.querySelectorAll('.nomenclature-item');
+            let totalCount = allItems.length;
+            let actifCount = 0;
+            let inactifCount = 0;
+
+            allItems.forEach(item => {
+                if (item.dataset.actif === 'true') {
+                    actifCount++;
+                } else {
+                    inactifCount++;
+                }
+            });
+
+            // Mettre à jour les textes des boutons
+            document.querySelector('[data-filter="all"]').innerHTML = 'Toutes (' + totalCount + ')';
+            document.querySelector('[data-filter="actif"]').innerHTML = 'Actives (' + actifCount + ')';
+            document.querySelector('[data-filter="inactif"]').innerHTML = 'Inactives (' + inactifCount + ')';
+        }
+
+        function filterNomenclatures() {
+            const search = document.getElementById('searchInput').value.toLowerCase();
+            const filter = document.querySelector('.filter-btn.active').dataset.filter;
+            let visibleCount = 0;
+
+            document.querySelectorAll('.nomenclature-item').forEach(item => {
+                const searchText = item.dataset.search;
+                const actif = item.dataset.actif === 'true';
+
+                let show = true;
+
+                // Filtre recherche
+                if (search && !searchText.includes(search)) {
+                    show = false;
+                }
+
+                // Filtre actif/inactif
+                if (filter === 'actif' && !actif) show = false;
+                if (filter === 'inactif' && actif) show = false;
+
+                item.style.display = show ? '' : 'none';
+                if (show) visibleCount++;
+            });
+
+            // Message aucun résultat
+            document.getElementById('noResults').style.display = visibleCount === 0 ? '' : 'none';
+        }
+
+        // Toggle actif
+        document.querySelectorAll('.toggle-actif').forEach(toggle => {
+            toggle.addEventListener('change', function() {
+                const nomenclatureId = this.dataset.nomenclatureId;
+                const card = this.closest('.nomenclature-card');
+
+                fetch('/admin/api/production/nomenclatures/' + nomenclatureId + '/toggle', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    }
+                })
+                .then(response => response.json())
+                .then(data => {
+                    if (data.success) {
+                        const item = this.closest('.nomenclature-item');
+                        item.dataset.actif = data.actif ? 'true' : 'false';
+
+                        if (data.actif) {
+                            card.classList.remove('inactif');
+                            card.classList.add('actif');
+                        } else {
+                            card.classList.remove('actif');
+                            card.classList.add('inactif');
+                        }
+
+                        // Mettre à jour les compteurs
+                        updateCounters();
+
+                        // Réappliquer les filtres
+                        filterNomenclatures();
+                    }
+                })
+                .catch(error => {
+                    console.error('Erreur:', error);
+                    this.checked = !this.checked; // Rollback
+                });
+            });
+        });
+
+    </script>
+{% endblock %}

@@ -1,0 +1,377 @@
+{% extends 'base.html.twig' %}
+
+{% block title %}Postes de Travail - Administration{% endblock %}
+
+{% block stylesheets %}
+    {{ parent() }}
+    <style>
+        .badge-categorie {
+            font-size: 0.85rem;
+            padding: 0.4rem 0.8rem;
+        }
+        .poste-card {
+            transition: all 0.3s ease;
+            border-left: 4px solid #dee2e6;
+        }
+        .poste-card:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+        }
+        .poste-card.actif {
+            border-left-color: #28a745;
+        }
+        .poste-card.inactif {
+            border-left-color: #dc3545;
+            opacity: 0.7;
+        }
+        .cout-badge {
+            font-size: 1.1rem;
+            font-weight: 600;
+        }
+        .filter-btn.active {
+            background-color: #0d6efd !important;
+            color: white !important;
+        }
+    </style>
+{% endblock %}
+
+{% block body %}
+<div class="container-fluid mt-4">
+    <!-- En-tête -->
+    <div class="row mb-4">
+        <div class="col-12">
+            <div class="d-flex justify-content-between align-items-center">
+                <div>
+                    <h1>
+                        <i class="fas fa-cog me-2 text-primary"></i>Postes de Travail
+                    </h1>
+                    <p class="text-muted mb-0">Gestion des machines, équipements et postes manuels</p>
+                </div>
+                <div>
+                    <a href="{{ path('app_admin_dashboard') }}#production" class="btn btn-secondary me-2">
+                        <i class="fas fa-arrow-left me-2"></i>Retour
+                    </a>
+                    <a href="{{ path('app_admin_poste_new') }}" class="btn btn-primary">
+                        <i class="fas fa-plus me-2"></i>Nouveau poste
+                    </a>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Statistiques rapides -->
+    <div class="row mb-4">
+        <div class="col-md-3">
+            <div class="card border-0 shadow-sm">
+                <div class="card-body text-center">
+                    <h3 class="mb-0 text-primary">{{ postes|length }}</h3>
+                    <small class="text-muted">Postes total</small>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="card border-0 shadow-sm">
+                <div class="card-body text-center">
+                    <h3 class="mb-0 text-success">{{ postes|filter(p => p.actif)|length }}</h3>
+                    <small class="text-muted">Actifs</small>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="card border-0 shadow-sm">
+                <div class="card-body text-center">
+                    <h3 class="mb-0 text-info">{{ categories|length }}</h3>
+                    <small class="text-muted">Catégories</small>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="card border-0 shadow-sm">
+                <div class="card-body text-center">
+                    <h3 class="mb-0 text-warning">{{ postes|filter(p => p.polyvalent)|length }}</h3>
+                    <small class="text-muted">Polyvalents</small>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Filtres -->
+    <div class="card shadow-sm mb-4">
+        <div class="card-body">
+            <div class="row align-items-center">
+                <div class="col-md-6">
+                    <div class="input-group">
+                        <span class="input-group-text"><i class="fas fa-search"></i></span>
+                        <input type="text" class="form-control" id="searchInput" placeholder="Rechercher un poste...">
+                    </div>
+                </div>
+                <div class="col-md-6">
+                    <div class="btn-group w-100" role="group">
+                        <button type="button" class="btn btn-outline-primary filter-btn active" data-filter="all">
+                            Tous ({{ postes|length }})
+                        </button>
+                        <button type="button" class="btn btn-outline-success filter-btn" data-filter="actif">
+                            Actifs ({{ postes|filter(p => p.actif)|length }})
+                        </button>
+                        <button type="button" class="btn btn-outline-danger filter-btn" data-filter="inactif">
+                            Inactifs ({{ postes|filter(p => not p.actif)|length }})
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Liste des postes par catégorie -->
+    {% for categorie in categories %}
+    <div class="card shadow-sm mb-4 categorie-section" data-categorie="{{ categorie.code }}">
+        <div class="card-header" style="background-color: {{ categorie.couleur }}20; border-left: 4px solid {{ categorie.couleur }};">
+            <h5 class="mb-0">
+                <i class="fas {{ categorie.icone }} me-2" style="color: {{ categorie.couleur }};"></i>
+                {{ categorie.libelle }}
+                <span class="badge bg-secondary ms-2">
+                    {{ postes|filter(p => p.categorie.id == categorie.id)|length }} poste(s)
+                </span>
+            </h5>
+        </div>
+        <div class="card-body">
+            <div class="row g-3">
+                {% set postesCategorie = postes|filter(p => p.categorie.id == categorie.id) %}
+                {% if postesCategorie|length > 0 %}
+                    {% for poste in postesCategorie %}
+                    <div class="col-md-6 col-lg-4 poste-item"
+                         data-poste-id="{{ poste.id }}"
+                         data-actif="{{ poste.actif ? 'true' : 'false' }}"
+                         data-search="{{ poste.code|lower }} {{ poste.libelle|lower }}">
+                        <div class="card poste-card {{ poste.actif ? 'actif' : 'inactif' }} h-100">
+                            <div class="card-body">
+                                <div class="d-flex justify-content-between align-items-start mb-2">
+                                    <div>
+                                        <h6 class="mb-1">
+                                            <span class="badge bg-dark">{{ poste.code }}</span>
+                                        </h6>
+                                        <p class="mb-0 fw-bold">{{ poste.libelle }}</p>
+                                    </div>
+                                    <div class="form-check form-switch">
+                                        <input class="form-check-input toggle-actif"
+                                               type="checkbox"
+                                               data-poste-id="{{ poste.id }}"
+                                               {{ poste.actif ? 'checked' : '' }}>
+                                    </div>
+                                </div>
+
+                                <hr class="my-2">
+
+                                <div class="d-flex justify-content-between align-items-center mb-2">
+                                    <small class="text-muted">Coût horaire</small>
+                                    <span class="badge bg-success cout-badge">{{ poste.coutHoraire|number_format(2, ',', ' ') }} €/h</span>
+                                </div>
+
+                                <div class="row g-2 text-center small">
+                                    <div class="col-6">
+                                        <div class="bg-light p-2 rounded">
+                                            <div class="text-muted">Setup</div>
+                                            <div class="fw-bold">{{ poste.tempsSetup }} min</div>
+                                        </div>
+                                    </div>
+                                    <div class="col-6">
+                                        <div class="bg-light p-2 rounded">
+                                            <div class="text-muted">Nettoyage</div>
+                                            <div class="fw-bold">{{ poste.tempsNettoyage }} min</div>
+                                        </div>
+                                    </div>
+                                </div>
+
+                                {% if poste.polyvalent %}
+                                <div class="mt-2">
+                                    <span class="badge bg-info">
+                                        <i class="fas fa-star me-1"></i>Polyvalent
+                                    </span>
+                                </div>
+                                {% endif %}
+
+                                {% if poste.specifications %}
+                                <div class="mt-2">
+                                    <small class="text-muted d-block">Spécifications :</small>
+                                    {% for key, value in poste.specifications %}
+                                        <small class="badge bg-secondary me-1">{{ key }}: {{ value }}</small>
+                                    {% endfor %}
+                                </div>
+                                {% endif %}
+
+                                <div class="mt-3">
+                                    <a href="{{ path('app_admin_poste_edit', {id: poste.id}) }}" class="btn btn-sm btn-outline-primary w-100">
+                                        <i class="fas fa-edit me-1"></i>Modifier
+                                    </a>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    {% endfor %}
+                {% else %}
+                    <div class="col-12">
+                        <div class="alert alert-info mb-0">
+                            <i class="fas fa-info-circle me-2"></i>
+                            Aucun poste dans cette catégorie
+                        </div>
+                    </div>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+    {% endfor %}
+
+    <!-- Message si aucun résultat -->
+    <div id="noResults" class="alert alert-warning" style="display: none;">
+        <i class="fas fa-exclamation-triangle me-2"></i>
+        Aucun poste ne correspond à votre recherche.
+    </div>
+</div>
+
+<!-- Modal Création/Édition -->
+<div class="modal fade" id="modalPoste" tabindex="-1">
+    <div class="modal-dialog modal-lg">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">
+                    <i class="fas fa-cog me-2"></i>Nouveau Poste de Travail
+                </h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <div class="alert alert-info">
+                    <i class="fas fa-info-circle me-2"></i>
+                    <strong>Formulaire en développement</strong>
+                    <p class="mb-0 mt-2">
+                        Le formulaire de création/édition sera implémenté prochainement avec :
+                    </p>
+                    <ul class="mb-0 mt-2">
+                        <li>Sélection de catégorie</li>
+                        <li>Configuration des coûts et temps</li>
+                        <li>Édition des spécifications (JSON)</li>
+                        <li>Validation des données</li>
+                    </ul>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Fermer</button>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block javascripts %}
+    {{ parent() }}
+    <script>
+        // Recherche
+        document.getElementById('searchInput').addEventListener('input', function(e) {
+            const search = e.target.value.toLowerCase();
+            filterPostes();
+        });
+
+        // Filtres actif/inactif
+        document.querySelectorAll('.filter-btn').forEach(btn => {
+            btn.addEventListener('click', function() {
+                document.querySelectorAll('.filter-btn').forEach(b => b.classList.remove('active'));
+                this.classList.add('active');
+                filterPostes();
+            });
+        });
+
+        function updateCounters() {
+            const allItems = document.querySelectorAll('.poste-item');
+            let totalCount = allItems.length;
+            let actifCount = 0;
+            let inactifCount = 0;
+
+            allItems.forEach(item => {
+                if (item.dataset.actif === 'true') {
+                    actifCount++;
+                } else {
+                    inactifCount++;
+                }
+            });
+
+            // Mettre à jour les textes des boutons
+            document.querySelector('[data-filter="all"]').innerHTML = `Tous (${totalCount})`;
+            document.querySelector('[data-filter="actif"]').innerHTML = `Actifs (${actifCount})`;
+            document.querySelector('[data-filter="inactif"]').innerHTML = `Inactifs (${inactifCount})`;
+        }
+
+        function filterPostes() {
+            const search = document.getElementById('searchInput').value.toLowerCase();
+            const filter = document.querySelector('.filter-btn.active').dataset.filter;
+            let visibleCount = 0;
+
+            document.querySelectorAll('.poste-item').forEach(item => {
+                const searchText = item.dataset.search;
+                const actif = item.dataset.actif === 'true';
+
+                let show = true;
+
+                // Filtre recherche
+                if (search && !searchText.includes(search)) {
+                    show = false;
+                }
+
+                // Filtre actif/inactif
+                if (filter === 'actif' && !actif) show = false;
+                if (filter === 'inactif' && actif) show = false;
+
+                item.style.display = show ? '' : 'none';
+                if (show) visibleCount++;
+            });
+
+            // Afficher/masquer les catégories vides
+            document.querySelectorAll('.categorie-section').forEach(section => {
+                const visibleItems = section.querySelectorAll('.poste-item:not([style*="display: none"])');
+                section.style.display = visibleItems.length > 0 ? '' : 'none';
+            });
+
+            // Message aucun résultat
+            document.getElementById('noResults').style.display = visibleCount === 0 ? '' : 'none';
+        }
+
+        // Toggle actif
+        document.querySelectorAll('.toggle-actif').forEach(toggle => {
+            toggle.addEventListener('change', function() {
+                const posteId = this.dataset.posteId;
+                const card = this.closest('.poste-card');
+
+                fetch(`/admin/api/production/postes-travail/${posteId}/toggle`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    }
+                })
+                .then(response => response.json())
+                .then(data => {
+                    if (data.success) {
+                        const item = this.closest('.poste-item');
+                        item.dataset.actif = data.actif ? 'true' : 'false';
+
+                        if (data.actif) {
+                            card.classList.remove('inactif');
+                            card.classList.add('actif');
+                        } else {
+                            card.classList.remove('actif');
+                            card.classList.add('inactif');
+                        }
+
+                        // Mettre à jour les compteurs
+                        updateCounters();
+
+                        // Réappliquer les filtres
+                        filterPostes();
+                    }
+                })
+                .catch(error => {
+                    console.error('Erreur:', error);
+                    this.checked = !this.checked; // Rollback
+                });
+            });
+        });
+
+    </script>
+{% endblock %}

@@ -1,0 +1,516 @@
+{% extends 'base.html.twig' %}
+
+{% block title %}{{ pageTitle }}{% endblock %}
+
+{% block stylesheets %}
+    {{ parent() }}
+    <style>
+        .composant-item {
+            background: #fff;
+            border: 1px solid #dee2e6;
+            border-radius: 8px;
+            margin-bottom: 10px;
+            overflow: hidden;
+            transition: all 0.2s ease;
+        }
+        .composant-item:hover {
+            box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+        }
+        .composant-header {
+            background: linear-gradient(135deg, #17a2b8 0%, #138496 100%);
+            color: white;
+            padding: 12px 15px;
+            cursor: move;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+        .composant-header:hover {
+            background: linear-gradient(135deg, #138496 0%, #117a8b 100%);
+        }
+        .composant-header .grip {
+            font-size: 1.2rem;
+            opacity: 0.7;
+        }
+        .composant-title {
+            font-weight: 600;
+            flex-grow: 1;
+            margin: 0 15px;
+            cursor: pointer;
+        }
+        .composant-body {
+            padding: 20px;
+            display: none;
+            background: #f8f9fa;
+        }
+        .composant-body.show {
+            display: block;
+        }
+        .composant-badge {
+            font-size: 0.75rem;
+            padding: 4px 8px;
+        }
+        .sortable-ghost {
+            opacity: 0.4;
+            background: #e9ecef;
+        }
+        .modal-body .row {
+            margin-bottom: 15px;
+        }
+        .autocomplete-items {
+            position: absolute;
+            border: 1px solid #d4d4d4;
+            border-top: none;
+            z-index: 99;
+            top: 100%;
+            left: 0;
+            right: 0;
+            max-height: 200px;
+            overflow-y: auto;
+            background: white;
+        }
+        .autocomplete-items div {
+            padding: 10px;
+            cursor: pointer;
+            background-color: #fff;
+            border-bottom: 1px solid #d4d4d4;
+        }
+        .autocomplete-items div:hover {
+            background-color: #e9e9e9;
+        }
+        .autocomplete-active {
+            background-color: #0d6efd !important;
+            color: #ffffff;
+        }
+    </style>
+{% endblock %}
+
+{% block body %}
+<div class="container-fluid mt-4">
+    <div class="row mb-4">
+        <div class="col-12">
+            <div class="d-flex justify-content-between align-items-center">
+                <h1>
+                    <i class="fas fa-sitemap me-2 text-success"></i>{{ pageTitle }}
+                </h1>
+                <a href="{{ path('app_admin_nomenclatures') }}" class="btn btn-secondary">
+                    <i class="fas fa-arrow-left me-2"></i>Retour à la liste
+                </a>
+            </div>
+        </div>
+    </div>
+
+    {{ form_start(form) }}
+    <div class="row">
+        <!-- Colonne principale -->
+        <div class="col-lg-8">
+            <div class="card shadow-sm mb-4">
+                <div class="card-header bg-success text-white">
+                    <h5 class="mb-0">
+                        <i class="fas fa-info-circle me-2"></i>Informations générales
+                    </h5>
+                </div>
+                <div class="card-body">
+                    <div class="row">
+                        <div class="col-md-6 mb-3">
+                            {{ form_row(form.code) }}
+                        </div>
+                        <div class="col-md-6 mb-3">
+                            {{ form_row(form.version) }}
+                        </div>
+                    </div>
+
+                    <div class="mb-3">
+                        {{ form_row(form.libelle) }}
+                    </div>
+
+                    <div class="mb-3">
+                        {{ form_row(form.description) }}
+                    </div>
+                </div>
+            </div>
+
+            <!-- Composants -->
+            <div class="card shadow-sm">
+                <div class="card-header bg-info text-white">
+                    <div class="d-flex justify-content-between align-items-center">
+                        <h5 class="mb-0">
+                            <i class="fas fa-list me-2"></i>Composants (<span id="composants-count">0</span>)
+                        </h5>
+                        <button type="button" class="btn btn-sm btn-light" data-bs-toggle="modal" data-bs-target="#modalComposant">
+                            <i class="fas fa-plus me-1"></i>Ajouter un composant
+                        </button>
+                    </div>
+                </div>
+                <div class="card-body">
+                    <div id="composants-container" data-prototype="{{ form_widget(form.lignes.vars.prototype)|e('html_attr') }}" data-index="{{ form.lignes|length }}">
+                        {% for ligne in form.lignes %}
+                            {{ include('admin/production/_composant_item.html.twig', {'ligne': ligne, 'index': loop.index0}) }}
+                        {% endfor %}
+                    </div>
+
+                    <div id="no-composants" class="text-center text-muted py-4" style="display: {{ form.lignes|length > 0 ? 'none' : 'block' }}">
+                        Aucun composant ajouté. Cliquez sur "Ajouter un composant" pour commencer.
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Colonne latérale -->
+        <div class="col-lg-4">
+            <div class="card shadow-sm mb-4">
+                <div class="card-header bg-secondary text-white">
+                    <h5 class="mb-0">
+                        <i class="fas fa-cog me-2"></i>Paramètres
+                    </h5>
+                </div>
+                <div class="card-body">
+                    <div class="mb-3">
+                        {{ form_row(form.parent) }}
+                    </div>
+
+                    <div class="mb-3">
+                        {{ form_row(form.statut) }}
+                    </div>
+
+                    <div class="form-check mb-3">
+                        {{ form_widget(form.actif) }}
+                        {{ form_label(form.actif) }}
+                    </div>
+
+                    <div class="mb-3">
+                        {{ form_row(form.notes) }}
+                    </div>
+                </div>
+            </div>
+
+            <div class="card shadow-sm">
+                <div class="card-body">
+                    <div class="d-grid gap-2">
+                        <button type="submit" class="btn btn-success">
+                            <i class="fas fa-save me-2"></i>{{ nomenclature.id ? 'Modifier' : 'Créer' }}
+                        </button>
+                        <a href="{{ path('app_admin_nomenclatures') }}" class="btn btn-secondary">
+                            <i class="fas fa-times me-2"></i>Annuler
+                        </a>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    {{ form_end(form) }}
+</div>
+
+<!-- Modal Ajout Composant -->
+<div class="modal fade" id="modalComposant" tabindex="-1">
+    <div class="modal-dialog modal-lg">
+        <div class="modal-content">
+            <div class="modal-header bg-info text-white">
+                <h5 class="modal-title">
+                    <i class="fas fa-plus-circle me-2"></i>Ajouter un composant
+                </h5>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <div class="row">
+                    <div class="col-md-3">
+                        <label class="form-label">Ordre</label>
+                        <input type="number" class="form-control" id="modal-ordre" value="10">
+                    </div>
+                    <div class="col-md-4">
+                        <label class="form-label">Type *</label>
+                        <select class="form-select" id="modal-type">
+                            <option value="MATIERE_PREMIERE">Matière première</option>
+                            <option value="SOUS_ENSEMBLE">Sous-ensemble</option>
+                            <option value="FOURNITURE">Fourniture</option>
+                            <option value="MAIN_OEUVRE">Main d'œuvre</option>
+                        </select>
+                    </div>
+                    <div class="col-md-5">
+                        <label class="form-label">Désignation *</label>
+                        <input type="text" class="form-control" id="modal-designation" placeholder="Ex: Caisson aluminium">
+                    </div>
+                </div>
+
+                <div class="row">
+                    <div class="col-md-12">
+                        <label class="form-label">Produit / Marchandise</label>
+                        <div style="position: relative;">
+                            <input type="text" class="form-control" id="modal-produit-search" placeholder="Tapez au moins 2 caractères...">
+                            <input type="hidden" id="modal-produit" value="">
+                        </div>
+                        <small class="text-muted">Rechercher par référence ou désignation</small>
+                    </div>
+                </div>
+
+                <div class="row">
+                    <div class="col-md-3">
+                        <label class="form-label">Quantité *</label>
+                        <input type="number" class="form-control" id="modal-quantite" value="1" step="0.0001">
+                    </div>
+                    <div class="col-md-3">
+                        <label class="form-label">Unité</label>
+                        <select class="form-select" id="modal-unite">
+                            <option value="">-- Aucune --</option>
+                            {% for unite in unites %}
+                                <option value="{{ unite.id }}">{{ unite.nom }} ({{ unite.symbole }})</option>
+                            {% endfor %}
+                        </select>
+                    </div>
+                    <div class="col-md-3">
+                        <label class="form-label">Chute (%)</label>
+                        <input type="number" class="form-control" id="modal-chute" value="0" step="0.01">
+                    </div>
+                    <div class="col-md-3">
+                        <label class="form-label">Marge (%)</label>
+                        <input type="number" class="form-control" id="modal-marge" value="0" step="0.01">
+                    </div>
+                </div>
+
+                <div class="row">
+                    <div class="col-md-12">
+                        <div class="form-check">
+                            <input type="checkbox" class="form-check-input" id="modal-obligatoire">
+                            <label class="form-check-label" for="modal-obligatoire">Composant obligatoire</label>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Annuler</button>
+                <button type="button" class="btn btn-info" id="btn-add-composant">
+                    <i class="fas fa-check me-2"></i>Ajouter
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block javascripts %}
+    {{ parent() }}
+    <script src="https://cdn.jsdelivr.net/npm/sortablejs@1.15.0/Sortable.min.js"></script>
+    <script>
+        document.addEventListener('DOMContentLoaded', function() {
+            const container = document.getElementById('composants-container');
+            const addButton = document.getElementById('btn-add-composant');
+            const modal = new bootstrap.Modal(document.getElementById('modalComposant'));
+            let index = parseInt(container.dataset.index);
+
+            // Autocomplétion simple pour les produits
+            let currentFocus = -1;
+            let selectedProduit = null;
+            const searchInput = document.getElementById('modal-produit-search');
+            const hiddenInput = document.getElementById('modal-produit');
+
+            searchInput.addEventListener('input', function() {
+                const val = this.value;
+                closeAllLists();
+                if (!val || val.length < 2) return;
+
+                fetch('{{ path('app_api_produits_search') }}?q=' + encodeURIComponent(val))
+                    .then(response => response.json())
+                    .then(data => {
+                        if (data.results && data.results.length > 0) {
+                            const autocompleteDiv = document.createElement('div');
+                            autocompleteDiv.className = 'autocomplete-items';
+                            searchInput.parentNode.appendChild(autocompleteDiv);
+
+                            data.results.forEach(item => {
+                                const itemDiv = document.createElement('div');
+                                itemDiv.innerHTML = '<strong>' + item.reference + '</strong> - ' + item.designation;
+                                itemDiv.addEventListener('click', function() {
+                                    searchInput.value = item.text;
+                                    hiddenInput.value = item.id;
+                                    selectedProduit = item;
+
+                                    // Pré-remplir désignation et unité
+                                    if (!document.getElementById('modal-designation').value) {
+                                        document.getElementById('modal-designation').value = item.designation;
+                                    }
+                                    if (item.unite && item.unite.id) {
+                                        document.getElementById('modal-unite').value = item.unite.id;
+                                    }
+
+                                    closeAllLists();
+                                });
+                                autocompleteDiv.appendChild(itemDiv);
+                            });
+                        }
+                    })
+                    .catch(error => console.error('Erreur:', error));
+            });
+
+            function closeAllLists() {
+                const items = document.getElementsByClassName('autocomplete-items');
+                while(items.length > 0) {
+                    items[0].parentNode.removeChild(items[0]);
+                }
+            }
+
+            document.addEventListener('click', function(e) {
+                if (e.target !== searchInput) {
+                    closeAllLists();
+                }
+            });
+
+            // Initialiser SortableJS
+            const sortable = new Sortable(container, {
+                animation: 150,
+                handle: '.composant-header',
+                ghostClass: 'sortable-ghost',
+                onEnd: function(evt) {
+                    updateOrdres();
+                    updateComposantsCount();
+                }
+            });
+
+            // Ajouter un composant depuis la modal
+            addButton.addEventListener('click', function() {
+                const designation = document.getElementById('modal-designation').value;
+
+                if (!designation) {
+                    alert('La désignation est obligatoire');
+                    return;
+                }
+
+                const ordre = document.getElementById('modal-ordre').value;
+                const type = document.getElementById('modal-type').value;
+                const produitId = document.getElementById('modal-produit').value;
+                const quantite = document.getElementById('modal-quantite').value;
+                const chute = document.getElementById('modal-chute').value;
+                const marge = document.getElementById('modal-marge').value;
+                const obligatoire = document.getElementById('modal-obligatoire').checked;
+
+                addComposant(index, designation, ordre, type, produitId, quantite, chute, marge, obligatoire);
+
+                index++;
+                container.dataset.index = index;
+
+                // Réinitialiser la modal
+                document.getElementById('modal-designation').value = '';
+                document.getElementById('modal-produit-search').value = '';
+                document.getElementById('modal-produit').value = '';
+                document.getElementById('modal-quantite').value = '1';
+                document.getElementById('modal-chute').value = '0';
+                document.getElementById('modal-marge').value = '0';
+                document.getElementById('modal-obligatoire').checked = false;
+                document.getElementById('modal-ordre').value = (parseInt(ordre) + 10);
+
+                modal.hide();
+                updateComposantsCount();
+                document.getElementById('no-composants').style.display = 'none';
+            });
+
+            function addComposant(idx, designation, ordre, type, produitId, quantite, chute, marge, obligatoire) {
+                const prototype = container.dataset.prototype;
+                let newForm = prototype.replace(/__name__/g, idx);
+
+                const wrapper = document.createElement('div');
+                wrapper.classList.add('composant-item');
+                wrapper.dataset.composantIndex = idx;
+                wrapper.innerHTML = `
+                    <div class="composant-header">
+                        <i class="fas fa-grip-vertical grip"></i>
+                        <div class="composant-title" onclick="toggleComposant(this)">
+                            <i class="fas fa-chevron-right me-2 chevron"></i>
+                            <strong>${designation}</strong>
+                            <span class="badge composant-badge bg-light text-dark ms-2">${getTypeLabel(type)}</span>
+                        </div>
+                        <button type="button" class="btn btn-sm btn-danger" onclick="removeComposant(this)">
+                            <i class="fas fa-trash"></i>
+                        </button>
+                    </div>
+                    <div class="composant-body">
+                        ${newForm}
+                    </div>
+                `;
+
+                container.appendChild(wrapper);
+
+                // Pré-remplir les valeurs
+                const form = wrapper.querySelector('.composant-body');
+                form.querySelector('[id$="_designation"]').value = designation;
+                form.querySelector('[id$="_ordre"]').value = ordre;
+                form.querySelector('[id$="_type"]').value = type;
+
+                // Définir le produit si sélectionné
+                if (produitId) {
+                    form.querySelector('[id$="_produitSimple"]').value = produitId;
+                }
+
+                form.querySelector('[id$="_quantiteBase"]').value = quantite;
+                form.querySelector('[id$="_tauxChute"]').value = chute;
+                form.querySelector('[id$="_margeDefaut"]').value = marge;
+                form.querySelector('[id$="_obligatoire"]').checked = obligatoire;
+            }
+
+            function getTypeLabel(type) {
+                const labels = {
+                    'MATIERE_PREMIERE': 'Matière première',
+                    'SOUS_ENSEMBLE': 'Sous-ensemble',
+                    'FOURNITURE': 'Fourniture',
+                    'MAIN_OEUVRE': 'Main d\'œuvre'
+                };
+                return labels[type] || type;
+            }
+
+            function updateOrdres() {
+                const items = container.querySelectorAll('.composant-item');
+                items.forEach((item, idx) => {
+                    const ordreInput = item.querySelector('[id$="_ordre"]');
+                    if (ordreInput) {
+                        ordreInput.value = (idx + 1) * 10;
+                    }
+                });
+            }
+
+            function updateComposantsCount() {
+                const count = container.querySelectorAll('.composant-item').length;
+                document.getElementById('composants-count').textContent = count;
+            }
+
+            // Fonctions globales
+            window.toggleComposant = function(element) {
+                const item = element.closest('.composant-item');
+                const body = item.querySelector('.composant-body');
+                const chevron = element.querySelector('.chevron');
+
+                // Fermer tous les autres
+                document.querySelectorAll('.composant-body.show').forEach(other => {
+                    if (other !== body) {
+                        other.classList.remove('show');
+                        other.closest('.composant-item').querySelector('.chevron').classList.remove('fa-chevron-down');
+                        other.closest('.composant-item').querySelector('.chevron').classList.add('fa-chevron-right');
+                    }
+                });
+
+                // Toggle celui-ci
+                body.classList.toggle('show');
+                chevron.classList.toggle('fa-chevron-right');
+                chevron.classList.toggle('fa-chevron-down');
+            };
+
+            window.removeComposant = function(button) {
+                if (confirm('Supprimer ce composant ?')) {
+                    button.closest('.composant-item').remove();
+                    updateComposantsCount();
+
+                    if (container.querySelectorAll('.composant-item').length === 0) {
+                        document.getElementById('no-composants').style.display = 'block';
+                    }
+                }
+            };
+
+            // Mise à jour du compteur initial
+            updateComposantsCount();
+
+            // Attacher toggle aux composants existants
+            document.querySelectorAll('.composant-title').forEach(title => {
+                title.addEventListener('click', function() {
+                    toggleComposant(this);
+                });
+            });
+        });
+    </script>
+{% endblock %}

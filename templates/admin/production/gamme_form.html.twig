@@ -1,0 +1,213 @@
+{% extends 'base.html.twig' %}
+
+{% block title %}{{ pageTitle }}{% endblock %}
+
+{% block stylesheets %}
+    {{ parent() }}
+    <style>
+        .operation-row {
+            background: #fff3cd;
+            padding: 15px;
+            margin-bottom: 10px;
+            border-radius: 5px;
+            border-left: 3px solid #ffc107;
+        }
+        .operation-row:hover {
+            background: #ffe69c;
+        }
+    </style>
+{% endblock %}
+
+{% block body %}
+<div class="container-fluid mt-4">
+    <div class="row mb-4">
+        <div class="col-12">
+            <div class="d-flex justify-content-between align-items-center">
+                <h1>
+                    <i class="fas fa-route me-2 text-warning"></i>{{ pageTitle }}
+                </h1>
+                <a href="{{ path('app_admin_gammes') }}" class="btn btn-secondary">
+                    <i class="fas fa-arrow-left me-2"></i>Retour à la liste
+                </a>
+            </div>
+        </div>
+    </div>
+
+    {{ form_start(form) }}
+    <div class="row">
+        <div class="col-lg-8">
+            <div class="card shadow-sm mb-4">
+                <div class="card-header bg-warning">
+                    <h5 class="mb-0">
+                        <i class="fas fa-info-circle me-2"></i>Informations générales
+                    </h5>
+                </div>
+                <div class="card-body">
+                    <div class="row">
+                        <div class="col-md-6 mb-3">
+                            {{ form_row(form.code) }}
+                        </div>
+                        <div class="col-md-6 mb-3">
+                            {{ form_row(form.version) }}
+                        </div>
+                    </div>
+                    <div class="mb-3">
+                        {{ form_row(form.libelle) }}
+                    </div>
+                    <div class="mb-3">
+                        {{ form_row(form.description) }}
+                    </div>
+                </div>
+            </div>
+
+            <div class="card shadow-sm">
+                <div class="card-header bg-info text-white">
+                    <div class="d-flex justify-content-between align-items-center">
+                        <h5 class="mb-0">
+                            <i class="fas fa-tasks me-2"></i>Opérations
+                        </h5>
+                        <button type="button" class="btn btn-sm btn-light" id="add-operation">
+                            <i class="fas fa-plus me-1"></i>Ajouter une opération
+                        </button>
+                    </div>
+                </div>
+                <div class="card-body">
+                    <div id="operations-container" data-prototype="{{ form_widget(form.operations.vars.prototype)|e('html_attr') }}" data-index="{{ form.operations|length }}">
+                        {% for operation in form.operations %}
+                            <div class="operation-row">
+                                <div class="d-flex justify-content-between mb-2">
+                                    <strong>Opération #{{ loop.index }}</strong>
+                                    <button type="button" class="btn btn-sm btn-danger btn-remove-operation">
+                                        <i class="fas fa-trash"></i>
+                                    </button>
+                                </div>
+                                <div class="row">
+                                    <div class="col-md-2">
+                                        {{ form_row(operation.ordre) }}
+                                    </div>
+                                    <div class="col-md-3">
+                                        {{ form_row(operation.code) }}
+                                    </div>
+                                    <div class="col-md-7">
+                                        {{ form_row(operation.libelle) }}
+                                    </div>
+                                </div>
+                                <div class="row">
+                                    <div class="col-md-12">
+                                        {{ form_row(operation.posteTravail) }}
+                                    </div>
+                                </div>
+                                <div class="row">
+                                    <div class="col-md-4">
+                                        {{ form_row(operation.typeTemps) }}
+                                    </div>
+                                    <div class="col-md-4">
+                                        {{ form_row(operation.tempsFixe) }}
+                                    </div>
+                                    <div class="col-md-4">
+                                        <div class="form-check mt-4">
+                                            {{ form_widget(operation.tempsParallele) }}
+                                            {{ form_label(operation.tempsParallele) }}
+                                        </div>
+                                        <div class="form-check">
+                                            {{ form_widget(operation.controleQualite) }}
+                                            {{ form_label(operation.controleQualite) }}
+                                        </div>
+                                    </div>
+                                </div>
+                                <div class="row">
+                                    <div class="col-md-6">
+                                        {{ form_row(operation.formuleTemps) }}
+                                    </div>
+                                    <div class="col-md-6">
+                                        {{ form_row(operation.conditionExecution) }}
+                                    </div>
+                                </div>
+                                <div class="row">
+                                    <div class="col-md-12">
+                                        {{ form_row(operation.instructions) }}
+                                    </div>
+                                </div>
+                            </div>
+                        {% endfor %}
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="col-lg-4">
+            <div class="card shadow-sm mb-4">
+                <div class="card-header bg-secondary text-white">
+                    <h5 class="mb-0">
+                        <i class="fas fa-cog me-2"></i>Paramètres
+                    </h5>
+                </div>
+                <div class="card-body">
+                    <div class="mb-3">
+                        {{ form_row(form.statut) }}
+                    </div>
+                    <div class="form-check mb-3">
+                        {{ form_widget(form.actif) }}
+                        {{ form_label(form.actif) }}
+                    </div>
+                    <div class="mb-3">
+                        {{ form_row(form.notes) }}
+                    </div>
+                </div>
+            </div>
+
+            <div class="card shadow-sm">
+                <div class="card-body">
+                    <div class="d-grid gap-2">
+                        <button type="submit" class="btn btn-warning">
+                            <i class="fas fa-save me-2"></i>{{ gamme.id ? 'Modifier' : 'Créer' }}
+                        </button>
+                        <a href="{{ path('app_admin_gammes') }}" class="btn btn-secondary">
+                            <i class="fas fa-times me-2"></i>Annuler
+                        </a>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    {{ form_end(form) }}
+</div>
+{% endblock %}
+
+{% block javascripts %}
+    {{ parent() }}
+    <script>
+        document.addEventListener('DOMContentLoaded', function() {
+            const container = document.getElementById('operations-container');
+            const addButton = document.getElementById('add-operation');
+            let index = parseInt(container.dataset.index);
+
+            addButton.addEventListener('click', function() {
+                const prototype = container.dataset.prototype;
+                const newForm = prototype.replace(/__name__/g, index);
+
+                const wrapper = document.createElement('div');
+                wrapper.classList.add('operation-row');
+                wrapper.innerHTML = '<div class="d-flex justify-content-between mb-2"><strong>Opération #' + (index + 1) + '</strong><button type="button" class="btn btn-sm btn-danger btn-remove-operation"><i class="fas fa-trash"></i></button></div>' + newForm;
+
+                container.appendChild(wrapper);
+                index++;
+                container.dataset.index = index;
+
+                attachRemoveEvent(wrapper.querySelector('.btn-remove-operation'));
+            });
+
+            function attachRemoveEvent(button) {
+                button.addEventListener('click', function() {
+                    if (confirm('Supprimer cette opération ?')) {
+                        this.closest('.operation-row').remove();
+                    }
+                });
+            }
+
+            document.querySelectorAll('.btn-remove-operation').forEach(function(button) {
+                attachRemoveEvent(button);
+            });
+        });
+    </script>
+{% endblock %}

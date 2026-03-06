@@ -1,0 +1,326 @@
+{% extends 'base.html.twig' %}
+
+{% block title %}{{ pageTitle }}{% endblock %}
+
+{% block stylesheets %}
+    {{ parent() }}
+    <style>
+        .option-row {
+            background: #e7f3ff;
+            padding: 15px;
+            margin-bottom: 10px;
+            border-radius: 5px;
+            border-left: 3px solid #0dcaf0;
+        }
+        .option-row:hover {
+            background: #d0ebff;
+        }
+        .valeur-row {
+            background: #f8f9fa;
+            padding: 10px;
+            margin: 5px 0;
+            border-radius: 3px;
+        }
+        .regle-row {
+            background: #fff3cd;
+            padding: 15px;
+            margin-bottom: 10px;
+            border-radius: 5px;
+            border-left: 3px solid #ffc107;
+        }
+        .variable-row {
+            background: #d1ecf1;
+            padding: 15px;
+            margin-bottom: 10px;
+            border-radius: 5px;
+            border-left: 3px solid #17a2b8;
+        }
+        .nav-pills .nav-link {
+            border-radius: 0.25rem;
+            margin-right: 0.5rem;
+        }
+        .nav-pills .nav-link.active {
+            background-color: #0dcaf0;
+        }
+    </style>
+{% endblock %}
+
+{% block body %}
+<div class="container-fluid mt-4">
+    <div class="row mb-4">
+        <div class="col-12">
+            <div class="d-flex justify-content-between align-items-center">
+                <h1>
+                    <i class="fas fa-box-open me-2 text-info"></i>{{ pageTitle }}
+                </h1>
+                <a href="{{ path('app_admin_produits_catalogue') }}" class="btn btn-secondary">
+                    <i class="fas fa-arrow-left me-2"></i>Retour à la liste
+                </a>
+            </div>
+        </div>
+    </div>
+
+    {{ form_start(form) }}
+    <div class="row">
+        <div class="col-lg-8">
+            <!-- Onglets de navigation -->
+            <ul class="nav nav-pills mb-4" role="tablist">
+                <li class="nav-item">
+                    <a class="nav-link active" data-bs-toggle="pill" href="#tab-general">
+                        <i class="fas fa-info-circle me-1"></i>Général
+                    </a>
+                </li>
+                <li class="nav-item">
+                    <a class="nav-link" data-bs-toggle="pill" href="#tab-options">
+                        <i class="fas fa-sliders-h me-1"></i>Options
+                        <span class="badge bg-secondary ms-1" id="options-count">0</span>
+                    </a>
+                </li>
+                <li class="nav-item">
+                    <a class="nav-link" data-bs-toggle="pill" href="#tab-regles">
+                        <i class="fas fa-project-diagram me-1"></i>Règles
+                        <span class="badge bg-warning text-dark ms-1" id="regles-count">0</span>
+                    </a>
+                </li>
+                <li class="nav-item">
+                    <a class="nav-link" data-bs-toggle="pill" href="#tab-variables">
+                        <i class="fas fa-calculator me-1"></i>Variables
+                        <span class="badge bg-info text-dark ms-1" id="variables-count">0</span>
+                    </a>
+                </li>
+            </ul>
+
+            <!-- Contenu des onglets -->
+            <div class="tab-content">
+                <!-- Onglet Général -->
+                <div class="tab-pane fade show active" id="tab-general">
+                    <div class="card shadow-sm mb-4">
+                        <div class="card-header bg-info text-white">
+                            <h5 class="mb-0">
+                                <i class="fas fa-info-circle me-2"></i>Informations générales
+                            </h5>
+                        </div>
+                        <div class="card-body">
+                            <div class="mb-3">
+                                {{ form_row(form.produit) }}
+                            </div>
+                            <div class="row">
+                                <div class="col-md-6 mb-3">
+                                    {{ form_row(form.nomenclature) }}
+                                </div>
+                                <div class="col-md-6 mb-3">
+                                    {{ form_row(form.gamme) }}
+                                </div>
+                            </div>
+                            <div class="mb-3">
+                                {{ form_row(form.instructionsConfiguration) }}
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Onglet Options -->
+                <div class="tab-pane fade" id="tab-options">
+                    <div class="card shadow-sm">
+                        <div class="card-header bg-primary text-white">
+                            <div class="d-flex justify-content-between align-items-center">
+                                <h5 class="mb-0">
+                                    <i class="fas fa-sliders-h me-2"></i>Options du produit
+                                </h5>
+                                <button type="button" class="btn btn-sm btn-light" id="add-option">
+                                    <i class="fas fa-plus me-1"></i>Ajouter une option
+                                </button>
+                            </div>
+                        </div>
+                        <div class="card-body">
+                            <div class="alert alert-info">
+                                <i class="fas fa-info-circle me-2"></i>
+                                <strong>Guide des options :</strong>
+                                <ul class="mb-0 mt-2">
+                                    <li><strong>Dimensions</strong> : Longueur, largeur, hauteur (min/max/step)</li>
+                                    <li><strong>Select</strong> : Liste déroulante avec valeurs prédéfinies</li>
+                                    <li><strong>Multiselect</strong> : Sélection multiple (ex: finitions)</li>
+                                    <li><strong>Boolean</strong> : Case à cocher (oui/non)</li>
+                                    <li><strong>Couleur</strong> : Sélecteur de couleur avec palette</li>
+                                </ul>
+                            </div>
+                            <div id="options-container">
+                                <!-- Les options seront ajoutées ici dynamiquement -->
+                            </div>
+                            <div id="no-options" class="text-muted text-center py-4">
+                                Aucune option configurée. Cliquez sur "Ajouter une option" pour commencer.
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Onglet Règles -->
+                <div class="tab-pane fade" id="tab-regles">
+                    <div class="card shadow-sm">
+                        <div class="card-header bg-warning">
+                            <div class="d-flex justify-content-between align-items-center">
+                                <h5 class="mb-0">
+                                    <i class="fas fa-project-diagram me-2"></i>Règles de compatibilité
+                                </h5>
+                                <button type="button" class="btn btn-sm btn-dark" id="add-regle">
+                                    <i class="fas fa-plus me-1"></i>Ajouter une règle
+                                </button>
+                            </div>
+                        </div>
+                        <div class="card-body">
+                            <div class="alert alert-warning">
+                                <i class="fas fa-exclamation-triangle me-2"></i>
+                                <strong>Règles de compatibilité :</strong>
+                                <p class="mb-1 mt-2">Définissez les contraintes entre options. Exemples :</p>
+                                <ul class="mb-0">
+                                    <li>Si largeur > 2000, alors épaisseur >= 20</li>
+                                    <li>Si finition = "miroir", alors couleur in ["blanc", "noir"]</li>
+                                    <li>Si hauteur > 3000, alors nombre_supports >= 3</li>
+                                </ul>
+                            </div>
+                            <div id="regles-container">
+                                <!-- Les règles seront ajoutées ici -->
+                            </div>
+                            <div id="no-regles" class="text-muted text-center py-4">
+                                Aucune règle configurée. Définissez des règles pour contrôler la compatibilité des options.
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Onglet Variables calculées -->
+                <div class="tab-pane fade" id="tab-variables">
+                    <div class="card shadow-sm">
+                        <div class="card-header bg-info text-white">
+                            <div class="d-flex justify-content-between align-items-center">
+                                <h5 class="mb-0">
+                                    <i class="fas fa-calculator me-2"></i>Variables calculées
+                                </h5>
+                                <button type="button" class="btn btn-sm btn-light" id="add-variable">
+                                    <i class="fas fa-plus me-1"></i>Ajouter une variable
+                                </button>
+                            </div>
+                        </div>
+                        <div class="card-body">
+                            <div class="alert alert-info">
+                                <i class="fas fa-lightbulb me-2"></i>
+                                <strong>Variables calculées :</strong>
+                                <p class="mb-1 mt-2">Créez des variables dérivées pour faciliter les calculs. Exemples :</p>
+                                <ul class="mb-0">
+                                    <li><code>surface = largeur * hauteur</code></li>
+                                    <li><code>volume = largeur * hauteur * profondeur</code></li>
+                                    <li><code>perimetre = 2 * (largeur + hauteur)</code></li>
+                                    <li><code>poids = surface * densite_materiau</code></li>
+                                </ul>
+                            </div>
+                            <div id="variables-container">
+                                <!-- Les variables seront ajoutées ici -->
+                            </div>
+                            <div id="no-variables" class="text-muted text-center py-4">
+                                Aucune variable calculée. Ajoutez des formules pour dériver de nouvelles valeurs.
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="col-lg-4">
+            <div class="card shadow-sm mb-4">
+                <div class="card-header bg-secondary text-white">
+                    <h5 class="mb-0">
+                        <i class="fas fa-cog me-2"></i>Paramètres
+                    </h5>
+                </div>
+                <div class="card-body">
+                    <div class="mb-3">
+                        {{ form_row(form.margeDefaut) }}
+                    </div>
+                    <div class="form-check mb-3">
+                        {{ form_widget(form.personnalisable) }}
+                        {{ form_label(form.personnalisable) }}
+                    </div>
+                    <div class="form-check mb-3">
+                        {{ form_widget(form.afficherSurDevis) }}
+                        {{ form_label(form.afficherSurDevis) }}
+                    </div>
+                    <div class="form-check mb-3">
+                        {{ form_widget(form.actif) }}
+                        {{ form_label(form.actif) }}
+                    </div>
+                </div>
+            </div>
+
+            <div class="card shadow-sm">
+                <div class="card-body">
+                    <div class="d-grid gap-2">
+                        <button type="submit" class="btn btn-info">
+                            <i class="fas fa-save me-2"></i>{{ produitCatalogue.id ? 'Modifier' : 'Créer' }}
+                        </button>
+                        <a href="{{ path('app_admin_produits_catalogue') }}" class="btn btn-secondary">
+                            <i class="fas fa-times me-2"></i>Annuler
+                        </a>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Champs cachés pour stocker les données JSON -->
+    <input type="hidden" id="options-data" name="options" value="">
+    <input type="hidden" id="regles-data" name="regles" value="">
+    <input type="hidden" id="variables-data" name="variables" value="">
+    <input type="hidden" id="parametres-data" name="parametres" value="">
+
+    {{ form_end(form) }}
+</div>
+
+<!-- Modal Options -->
+<div class="modal fade" id="modalOption" tabindex="-1">
+    <div class="modal-dialog modal-lg">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">
+                    <i class="fas fa-sliders-h me-2"></i>Nouvelle Option
+                </h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <p class="text-muted">Fonctionnalité en développement - Configuration des options à venir</p>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Fermer</button>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block javascripts %}
+    {{ parent() }}
+    <script>
+        document.addEventListener('DOMContentLoaded', function() {
+            // Placeholder pour les fonctionnalités à venir
+            document.getElementById('add-option').addEventListener('click', function() {
+                alert('Éditeur d\'options en développement\n\nFonctionnalités prévues :\n- Types : dimensions, select, multiselect, boolean, couleur\n- Configuration valeurs avec prix\n- Contraintes min/max/step');
+            });
+
+            document.getElementById('add-regle').addEventListener('click', function() {
+                alert('Éditeur de règles en développement\n\nFonctionnalités prévues :\n- Conditions IF/THEN\n- Opérateurs : =, !=, <, >, <=, >=, IN\n- Combinaisons logiques AND/OR');
+            });
+
+            document.getElementById('add-variable').addEventListener('click', function() {
+                alert('Éditeur de variables en développement\n\nFonctionnalités prévues :\n- Formules mathématiques\n- Références aux options\n- Opérateurs : +, -, *, /, ^, sqrt, etc.');
+            });
+
+            // Mettre à jour les compteurs
+            function updateCounters() {
+                document.getElementById('options-count').textContent = '0';
+                document.getElementById('regles-count').textContent = '0';
+                document.getElementById('variables-count').textContent = '0';
+            }
+
+            updateCounters();
+        });
+    </script>
+{% endblock %}

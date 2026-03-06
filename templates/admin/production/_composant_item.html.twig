@@ -1,0 +1,24 @@
+<div class="composant-item" data-composant-index="{{ index }}">
+    <div class="composant-header">
+        <i class="fas fa-grip-vertical grip"></i>
+        <div class="composant-title">
+            <i class="fas fa-chevron-right me-2 chevron"></i>
+            <strong>{{ ligne.vars.value.designation ?? 'Nouveau composant' }}</strong>
+            <span class="badge composant-badge bg-light text-dark ms-2">
+                {% set type_value = ligne.vars.value.type %}
+                {% if type_value == 'MATIERE_PREMIERE' %}Matière première
+                {% elseif type_value == 'SOUS_ENSEMBLE' %}Sous-ensemble
+                {% elseif type_value == 'FOURNITURE' %}Fourniture
+                {% elseif type_value == 'MAIN_OEUVRE' %}Main d'œuvre
+                {% else %}{{ type_value }}
+                {% endif %}
+            </span>
+        </div>
+        <button type="button" class="btn btn-sm btn-danger" onclick="removeComposant(this)">
+            <i class="fas fa-trash"></i>
+        </button>
+    </div>
+    <div class="composant-body">
+        {{ form_widget(ligne) }}
+    </div>
+</div>

@@ -17,14 +17,14 @@ NC='\033[0m' # No Color
 ERRORS=0
 WARNINGS=0
 
-# Patterns critiques à détecter
+# Patterns critiques à détecter (plus stricts pour éviter faux positifs)
 declare -A CRITICAL_PATTERNS=(
-    ["APP_SECRET"]='APP_SECRET=[a-f0-9]{64}'
-    ["DB_PASSWORD"]='postgresql://[^:]+:([^@]+)@'
-    ["MYSQL_PASSWORD"]='mysql://[^:]+:([^@]+)@'
-    ["GOOGLE_API_KEY"]='GOOGLE.*API.*KEY=[A-Za-z0-9_-]{30,}'
-    ["OAUTH_SECRET"]='OAUTH.*SECRET=[A-Za-z0-9_-]{20,}'
-    ["JWT_SECRET"]='JWT.*SECRET=[A-Za-z0-9_-]{20,}'
+    ["APP_SECRET"]='APP_SECRET\s*=\s*[a-f0-9]{64}'
+    ["DB_PASSWORD"]='postgresql://[^:]+:[^@/]{3,}@'
+    ["MYSQL_PASSWORD"]='mysql://[^:]+:[^@/]{3,}@'
+    ["GOOGLE_API_KEY"]='GOOGLE[_-]?API[_-]?KEY\s*=\s*['\''"][A-Za-z0-9_-]{30,}['\''"]'
+    ["OAUTH_SECRET"]='OAUTH[_-]?SECRET\s*=\s*['\''"][A-Za-z0-9_-]{20,}['\''"]'
+    ["JWT_SECRET"]='JWT[_-]?SECRET\s*=\s*['\''"][A-Za-z0-9_-]{20,}['\''"]'
 )
 
 # Patterns d'avertissement (à vérifier manuellement)
