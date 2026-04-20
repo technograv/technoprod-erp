@@ -83,10 +83,12 @@ class ConfigurableDetector extends AbstractAlerteDetector
             ->select('e')
             ->from($entityClass, 'e');
 
-        // Pour les clients, filtrer automatiquement les clients inactifs
+        // Pour les clients, filtrer automatiquement les clients inactifs et archivés
         if ($entityClass === 'App\Entity\Client') {
             $qb->innerJoin('e.contacts', 'active_contacts')
                ->andWhere('active_contacts.actif = true')
+               ->andWhere('e.statut != :statutArchive')
+               ->setParameter('statutArchive', 'archivé')
                ->groupBy('e.id')
                ->having('COUNT(active_contacts.id) > 0');
         }
@@ -143,14 +145,23 @@ class ConfigurableDetector extends AbstractAlerteDetector
                 ->where("e.{$field} IS NOT NULL")
                 ->andWhere("e.{$field} != ''");
 
-            // Pour les clients, filtrer automatiquement les clients inactifs
+            // Pour les clients, filtrer les archivés ET ceux sans contacts actifs
             if ($entityClass === 'App\Entity\Client') {
                 $qb->innerJoin('e.contacts', 'active_contacts')
-                   ->andWhere('active_contacts.actif = true');
+                   ->andWhere('active_contacts.actif = true')
+                   ->andWhere('e.statut != :statutArchive')
+                   ->setParameter('statutArchive', 'archivé');
             }
 
-            $qb->groupBy("e.{$field}")
-               ->having("COUNT(e.id) > 1");
+            $qb->groupBy("e.{$field}");
+
+            // Pour les clients, ajouter le filtre HAVING sur les contacts actifs
+            // IMPORTANT: Utiliser COUNT(DISTINCT e.id) car un client avec plusieurs contacts serait compté plusieurs fois
+            if ($entityClass === 'App\Entity\Client') {
+                $qb->having("COUNT(DISTINCT e.id) > 1 AND COUNT(active_contacts.id) > 0");
+            } else {
+                $qb->having("COUNT(DISTINCT e.id) > 1");
+            }
 
             // Trouver les valeurs en doublon
             $duplicateValues = $qb->getQuery()->getResult();
@@ -169,10 +180,14 @@ class ConfigurableDetector extends AbstractAlerteDetector
                 ->where("e.{$field} IN (:values)")
                 ->setParameter('values', $values);
 
-            // Pour les clients, filtrer automatiquement les clients inactifs
+            // Pour les clients, filtrer les archivés ET ceux sans contacts actifs
             if ($entityClass === 'App\Entity\Client') {
                 $qb2->innerJoin('e.contacts', 'active_contacts2')
-                    ->andWhere('active_contacts2.actif = true');
+                    ->andWhere('active_contacts2.actif = true')
+                    ->andWhere('e.statut != :statutArchive2')
+                    ->setParameter('statutArchive2', 'archivé')
+                    ->groupBy('e.id')
+                    ->having('COUNT(active_contacts2.id) > 0');
             }
 
             $entities = $qb2->orderBy("e.{$field}", 'ASC')

@@ -1,0 +1,214 @@
+<div class="container-fluid mt-4">
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <h1 class="h3 mb-0">
+            <i class="fas fa-file-contract me-2"></i>Conditions Générales et Particulières de Vente
+        </h1>
+        <button type="button" class="btn btn-primary" data-bs-toggle="modal" data-bs-target="#cgvModal" onclick="openCreateModal()">
+            <i class="fas fa-plus me-2"></i>Nouvelle CGV/CPV
+        </button>
+    </div>
+
+    <div class="card">
+        <div class="card-body">
+            <table class="table table-hover" id="cgvTable">
+                <thead>
+                    <tr>
+                        <th style="width: 30px;"><i class="fas fa-grip-vertical text-muted"></i></th>
+                        <th style="width: 100px;">Code</th>
+                        <th>Nom</th>
+                        <th style="width: 200px;">Société</th>
+                        <th style="width: 100px;" class="text-center">Statut</th>
+                        <th style="width: 150px;" class="text-end">Actions</th>
+                    </tr>
+                </thead>
+                <tbody id="cgvTableBody">
+                    {% for cgv in conditionsVente %}
+                    <tr data-id="{{ cgv.id }}">
+                        <td class="drag-handle" style="cursor: move;"><i class="fas fa-grip-vertical text-muted"></i></td>
+                        <td><code>{{ cgv.code }}</code></td>
+                        <td>{{ cgv.nom }}</td>
+                        <td>
+                            {% if cgv.societe %}
+                                <span class="badge bg-info">{{ cgv.societe.nom }}</span>
+                            {% else %}
+                                <span class="text-muted">Toutes</span>
+                            {% endif %}
+                        </td>
+                        <td class="text-center">
+                            {% if cgv.actif %}
+                                <span class="badge bg-success">Actif</span>
+                            {% else %}
+                                <span class="badge bg-secondary">Inactif</span>
+                            {% endif %}
+                        </td>
+                        <td class="text-end">
+                            <button class="btn btn-sm btn-outline-primary" onclick="openEditModal({{ cgv.id }}, '{{ cgv.code|e('js') }}', '{{ cgv.nom|e('js') }}', '{{ cgv.contenu|e('js')|raw }}', '{{ cgv.notes|e('js')|raw }}', {{ cgv.societe ? cgv.societe.id : 'null' }}, {{ cgv.actif ? 'true' : 'false' }})">
+                                <i class="fas fa-edit"></i>
+                            </button>
+                            <button class="btn btn-sm btn-outline-danger" onclick="deleteCgv({{ cgv.id }})">
+                                <i class="fas fa-trash"></i>
+                            </button>
+                        </td>
+                    </tr>
+                    {% else %}
+                    <tr>
+                        <td colspan="6" class="text-center text-muted py-4">Aucune CGV/CPV enregistrée</td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+
+<!-- Modal CGV -->
+<div class="modal fade" id="cgvModal" tabindex="-1">
+    <div class="modal-dialog modal-xl">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title" id="cgvModalTitle">Nouvelle CGV/CPV</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <form id="cgvForm">
+                    <input type="hidden" id="cgv-id">
+                    <div class="row">
+                        <div class="col-md-4 mb-3">
+                            <label for="cgv-code" class="form-label">Code *</label>
+                            <input type="text" class="form-control" id="cgv-code" required>
+                        </div>
+                        <div class="col-md-4 mb-3">
+                            <label for="cgv-nom" class="form-label">Nom *</label>
+                            <input type="text" class="form-control" id="cgv-nom" required>
+                        </div>
+                        <div class="col-md-4 mb-3">
+                            <label for="cgv-societe" class="form-label">Société</label>
+                            <select class="form-select" id="cgv-societe">
+                                <option value="">Toutes les sociétés</option>
+                                {% for societe in societes %}
+                                <option value="{{ societe.id }}">{{ societe.nom }}</option>
+                                {% endfor %}
+                            </select>
+                        </div>
+                    </div>
+                    <div class="mb-3">
+                        <label for="cgv-contenu" class="form-label">Contenu des conditions</label>
+                        <textarea class="form-control" id="cgv-contenu" rows="10"></textarea>
+                    </div>
+                    <div class="mb-3">
+                        <label for="cgv-notes" class="form-label">Notes internes</label>
+                        <textarea class="form-control" id="cgv-notes" rows="3"></textarea>
+                    </div>
+                    <div class="form-check">
+                        <input class="form-check-input" type="checkbox" id="cgv-actif" checked>
+                        <label class="form-check-label" for="cgv-actif">
+                            CGV/CPV active
+                        </label>
+                    </div>
+                </form>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Annuler</button>
+                <button type="button" class="btn btn-primary" onclick="saveCgv()">Enregistrer</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/sortablejs@1.15.0/Sortable.min.js"></script>
+<script>
+// Drag & Drop pour réordonner
+const tbody = document.getElementById('cgvTableBody');
+const sortable = new Sortable(tbody, {
+    handle: '.drag-handle',
+    animation: 150,
+    onEnd: function(evt) {
+        const order = Array.from(tbody.querySelectorAll('tr[data-id]')).map(tr => tr.dataset.id);
+        
+        fetch('/admin/conditions-vente/reorder', {
+            method: 'POST',
+            headers: {'Content-Type': 'application/json'},
+            body: JSON.stringify({ order: order })
+        })
+        .then(r => r.json())
+        .then(data => {
+            if (data.success) {
+                showNotification('Ordre modifié', 'success');
+            }
+        });
+    }
+});
+
+function openCreateModal() {
+    document.getElementById('cgvModalTitle').textContent = 'Nouvelle CGV/CPV';
+    document.getElementById('cgvForm').reset();
+    document.getElementById('cgv-id').value = '';
+    document.getElementById('cgv-actif').checked = true;
+}
+
+function openEditModal(id, code, nom, contenu, notes, societeId, actif) {
+    document.getElementById('cgvModalTitle').textContent = 'Modifier CGV/CPV';
+    document.getElementById('cgv-id').value = id;
+    document.getElementById('cgv-code').value = code;
+    document.getElementById('cgv-nom').value = nom;
+    document.getElementById('cgv-contenu').value = contenu || '';
+    document.getElementById('cgv-notes').value = notes || '';
+    document.getElementById('cgv-societe').value = societeId || '';
+    document.getElementById('cgv-actif').checked = actif;
+
+    new bootstrap.Modal(document.getElementById('cgvModal')).show();
+}
+
+function saveCgv() {
+    const id = document.getElementById('cgv-id').value;
+    const data = {
+        code: document.getElementById('cgv-code').value,
+        nom: document.getElementById('cgv-nom').value,
+        contenu: document.getElementById('cgv-contenu').value,
+        notes: document.getElementById('cgv-notes').value,
+        societeId: document.getElementById('cgv-societe').value || null,
+        actif: document.getElementById('cgv-actif').checked
+    };
+
+    const url = id ? '/admin/conditions-vente/' + id : '/admin/conditions-vente/create';
+    const method = id ? 'PUT' : 'POST';
+
+    fetch(url, {
+        method: method,
+        headers: {'Content-Type': 'application/json'},
+        body: JSON.stringify(data)
+    })
+    .then(r => r.json())
+    .then(data => {
+        if (data.success) {
+            showNotification(data.message, 'success');
+            bootstrap.Modal.getInstance(document.getElementById('cgvModal')).hide();
+            location.reload();
+        } else {
+            showNotification(data.message, 'error');
+        }
+    });
+}
+
+function deleteCgv(id) {
+    if (!confirm('Êtes-vous sûr de vouloir supprimer cette CGV/CPV ?')) return;
+
+    fetch('/admin/conditions-vente/' + id, {
+        method: 'DELETE'
+    })
+    .then(r => r.json())
+    .then(data => {
+        if (data.success) {
+            showNotification(data.message, 'success');
+            location.reload();
+        } else {
+            showNotification(data.message, 'error');
+        }
+    });
+}
+
+function showNotification(message, type) {
+    // À adapter selon votre système de notifications
+    alert(message);
+}
+</script>

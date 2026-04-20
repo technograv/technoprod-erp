@@ -13,6 +13,7 @@ use Doctrine\ORM\EntityManagerInterface;
 use Symfony\Bundle\SecurityBundle\Security;
 use Symfony\Component\HttpFoundation\RequestStack;
 use Symfony\Component\HttpFoundation\Session\SessionInterface;
+use Psr\Log\LoggerInterface;
 
 class TenantService
 {
@@ -25,7 +26,8 @@ class TenantService
         private RequestStack $requestStack,
         private SocieteRepository $societeRepository,
         private UserSocieteRoleRepository $userSocieteRoleRepository,
-        private GroupeUtilisateurRepository $groupeUtilisateurRepository
+        private GroupeUtilisateurRepository $groupeUtilisateurRepository,
+        private LoggerInterface $logger
     ) {
     }
 
@@ -36,28 +38,32 @@ class TenantService
     {
         $session = $this->getSession();
         if (!$session) {
+            $this->logger->warning("🔍 getCurrentSociete - NO SESSION");
             return null;
         }
 
         $societeId = $session->get(self::SESSION_KEY_CURRENT_SOCIETE);
+        $this->logger->info("🔍 getCurrentSociete - Session contains societe_id: " . ($societeId ?: 'NULL'));
+
         if (!$societeId) {
-            // Aucune société sélectionnée, prendre la première disponible
-            $societe = $this->getDefaultSocieteForCurrentUser();
-            if ($societe) {
-                $this->setCurrentSociete($societe);
-                return $societe;
-            }
+            // IMPORTANT: Ne PAS définir automatiquement une société par défaut ici
+            // Cela écrase le choix de l'utilisateur à chaque requête !
+            // La sélection par défaut doit se faire via TenantRedirectListener
             return null;
         }
 
         $societe = $this->societeRepository->find($societeId);
-        
-        // Vérifier que l'utilisateur a encore accès à cette société
-        if ($societe && !$this->hasAccessToSociete($societe)) {
-            // Plus d'accès, réinitialiser
-            $session->remove(self::SESSION_KEY_CURRENT_SOCIETE);
-            return $this->getCurrentSociete(); // Récursif pour prendre la première disponible
+
+        if ($societe) {
+            $this->logger->info("✅ getCurrentSociete - Found société: {$societe->getId()} ({$societe->getNom()})");
+        } else {
+            $this->logger->warning("⚠️ getCurrentSociete - Société ID {$societeId} not found in database");
         }
+
+        // IMPORTANT : Ne PAS vérifier hasAccessToSociete() ici !
+        // Si une société est en session, c'est qu'elle a été validée lors du switchToSociete()
+        // Vérifier l'accès à chaque requête empêche la persistance et cause des problèmes
+        // La vérification d'accès doit se faire uniquement dans switchToSociete() et setCurrentSociete()
 
         return $societe;
     }
@@ -69,18 +75,21 @@ class TenantService
     {
         $session = $this->getSession();
         if (!$session) {
+            $this->logger->error("❌ setCurrentSociete - NO SESSION");
             return false;
         }
 
         if (!$this->hasAccessToSociete($societe)) {
+            $this->logger->error("❌ setCurrentSociete - NO ACCESS to société {$societe->getId()} ({$societe->getNom()})");
             return false;
         }
 
         $session->set(self::SESSION_KEY_CURRENT_SOCIETE, $societe->getId());
-        
+        $this->logger->info("✅ setCurrentSociete - Set société {$societe->getId()} in session");
+
         // Mettre à jour le cache des sociétés disponibles
         $this->refreshAvailableSocietes();
-        
+
         return true;
     }
 
@@ -205,25 +214,49 @@ class TenantService
     {
         $user = $this->getCurrentUser();
         if (!$user) {
+            $this->logger->warning("🔍 hasAccessToSociete - No user");
             return false;
         }
 
         if ($user->isSuperAdmin()) {
+            $this->logger->info("🔍 hasAccessToSociete({$societe->getNom()}) - User is super admin = TRUE");
             return true;
         }
 
-        // Vérifier accès via rôles directs
-        if ($user->hasAccessToSociete($societe)) {
-            return true;
-        }
+        // IMPORTANT : Ne PAS utiliser getAvailableSocietes() ici car elle dépend de la session
+        // Cela crée des problèmes lors du refresh où le cache n'est pas encore populé
+        // Au lieu de ça, vérifier directement en base de données
 
-        // Vérifier accès via les groupes
-        foreach ($user->getGroupes() as $groupe) {
-            if ($groupe->isActif() && $groupe->hasAccessToSociete($societe)) {
+        // 1. Vérifier via les groupes
+        $societesViaGroupes = $user->getAccessibleSocietesFromGroupes();
+        foreach ($societesViaGroupes as $s) {
+            if ($s->getId() === $societe->getId() && $s->isActive()) {
+                $this->logger->info("🔍 hasAccessToSociete({$societe->getNom()}) - Access via groupe = TRUE");
                 return true;
             }
         }
 
+        // 2. Vérifier via les permissions individuelles
+        foreach ($user->getPermissions() as $permission) {
+            if ($permission->isActif() && $permission->getSociete()->getId() === $societe->getId()) {
+                $this->logger->info("🔍 hasAccessToSociete({$societe->getNom()}) - Access via permission directe = TRUE");
+                return true;
+            }
+
+            // Si permission sur société mère, vérifier si société demandée est fille
+            if ($permission->isActif() && $permission->getSociete()->isMere()) {
+                $enfants = $this->entityManager->getRepository(Societe::class)
+                    ->findBy(['societeParent' => $permission->getSociete(), 'active' => true]);
+                foreach ($enfants as $enfant) {
+                    if ($enfant->getId() === $societe->getId()) {
+                        $this->logger->info("🔍 hasAccessToSociete({$societe->getNom()}) - Access via société mère = TRUE");
+                        return true;
+                    }
+                }
+            }
+        }
+
+        $this->logger->warning("🔍 hasAccessToSociete({$societe->getNom()}) - NO ACCESS = FALSE");
         return false;
     }
 
@@ -344,7 +377,7 @@ class TenantService
     /**
      * Récupère la société par défaut pour l'utilisateur actuel
      */
-    private function getDefaultSocieteForCurrentUser(): ?Societe
+    public function getDefaultSocieteForCurrentUser(): ?Societe
     {
         $user = $this->getCurrentUser();
         if (!$user) {
@@ -399,7 +432,16 @@ class TenantService
     private function getSession(): ?SessionInterface
     {
         $request = $this->requestStack->getCurrentRequest();
-        return $request?->getSession();
+        if (!$request || !$request->hasSession()) {
+            return null;
+        }
+
+        $session = $request->getSession();
+        if (!$session->isStarted()) {
+            $session->start();
+        }
+
+        return $session;
     }
 
     /**

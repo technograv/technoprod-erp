@@ -25,6 +25,7 @@ use Symfony\Component\HttpFoundation\Response;
 use Symfony\Component\Routing\Attribute\Route;
 use Symfony\Component\Security\Http\Attribute\IsGranted;
 use Symfony\Component\Routing\Generator\UrlGeneratorInterface;
+use Symfony\Component\DependencyInjection\Attribute\Autowire;
 use Symfony\Component\Mailer\MailerInterface;
 use Symfony\Component\Mime\Email;
 use App\Service\GmailMailerService;
@@ -46,7 +47,7 @@ final class DevisController extends AbstractController
         $dateDebut = $request->query->get('date_debut');
         $dateFin = $request->query->get('date_fin');
 
-        $criteria = [];
+        $criteria = ['deletedAt' => null]; // Exclure les devis archivés
         if ($statut) {
             $criteria['statut'] = $statut;
         }
@@ -57,6 +58,7 @@ final class DevisController extends AbstractController
         $stats = [
             'total' => count($devis),
             'brouillon' => count(array_filter($devis, fn($d) => $d->getStatut() === 'brouillon')),
+            'actualisation_demandee' => count(array_filter($devis, fn($d) => $d->getStatut() === 'actualisation_demandee')),
             'envoye' => count(array_filter($devis, fn($d) => $d->getStatut() === 'envoye')),
             'signe' => count(array_filter($devis, fn($d) => $d->getStatut() === 'signe')),
             'accepte' => count(array_filter($devis, fn($d) => $d->getStatut() === 'accepte')),
@@ -83,13 +85,14 @@ final class DevisController extends AbstractController
         // Auto-assignment du commercial à l'utilisateur connecté
         $user = $this->getUser();
         $devis->setCommercial($user);
-        
+
         // Définir le statut par défaut comme "brouillon"
         $devis->setStatut('brouillon');
-        
-        // Définir l'acompte par défaut depuis la configuration société
+
+        // Définir l'acompte par défaut depuis la configuration société et assigner la société au devis
         if ($user && $user->getSocietePrincipale()) {
             $societe = $user->getSocietePrincipale();
+            $devis->setSociete($societe);
             $acompteDefaut = $societe->getAcompteDefautPercentAvecHeritage();
             if ($acompteDefaut > 0) {
                 $devis->setAcomptePercent((string)$acompteDefaut);
@@ -397,10 +400,10 @@ final class DevisController extends AbstractController
     }
 
     #[Route('/{id}/edit', name: 'app_devis_edit', methods: ['GET', 'POST'], requirements: ['id' => '\d+'])]
-    public function edit(Request $request, Devis $devis, EntityManagerInterface $entityManager, DevisLoggerService $loggerService, \App\Service\DashboardService $dashboardService): Response
+    public function edit(Request $request, Devis $devis, EntityManagerInterface $entityManager, DevisLoggerService $loggerService, \App\Service\DashboardService $dashboardService, \App\Service\TenantService $tenantService): Response
     {
-        // Rediriger les devis non-brouillon vers la page de consultation
-        if ($devis->getStatut() !== 'brouillon') {
+        // Rediriger les devis non-éditables vers la page de consultation
+        if (!$devis->isEditable()) {
             $this->addFlash('warning', 'Ce devis a été envoyé et ne peut plus être modifié. Vous pouvez le consulter ci-dessous.');
             return $this->redirect($this->generateUrl('app_devis_show', ['id' => $devis->getId()]) . '#lignes');
         }
@@ -415,18 +418,28 @@ final class DevisController extends AbstractController
             $originalDevisData = $this->captureDevisState($devis);
         }
 
-        $form = $this->createForm(DevisType::class, $devis);
+        // Récupérer la société courante (depuis session) pour filtrer les templates accessibles
+        $userSociete = $tenantService->getCurrentSociete();
+
+        $form = $this->createForm(DevisType::class, $devis, [
+            'user_societe' => $userSociete
+        ]);
         
         // Debug: Log du client avant traitement du formulaire
         if ($request->isMethod('POST')) {
             error_log("=== DEBUG DEVIS EDIT POST ===");
             error_log("Devis ID: " . $devis->getId());
             error_log("Client actuel avant traitement: " . ($devis->getClient() ? $devis->getClient()->getId() . " - " . $devis->getClient()->getNomComplet() : "null"));
-            
+
             $devisData = $request->request->all('devis');
             error_log("Client ID dans données POST: " . ($devisData['client'] ?? 'non défini'));
+            error_log("notesClient dans POST: " . ($devisData['notesClient'] ?? 'NON PRESENT'));
+            error_log("notesInternes dans POST: " . ($devisData['notesInternes'] ?? 'NON PRESENT'));
         }
         
+        // Capturer la date de validité AVANT traitement du formulaire
+        $originalDateValidite = $devis->getDateValidite() ? clone $devis->getDateValidite() : null;
+
         $form->handleRequest($request);
 
         if ($form->isSubmitted() && $form->isValid()) {
@@ -438,9 +451,13 @@ final class DevisController extends AbstractController
             // Recalculer les totaux globaux
             $devis->calculateTotals();
 
-            // Mettre à jour automatiquement la date de validité si le devis est brouillon
-            // La date de validité = date de création + durée configurée
-            if ($devis->getStatut() === 'brouillon' && $devis->getDateCreation()) {
+            // Mettre à jour automatiquement la date de validité UNIQUEMENT si elle n'a pas été modifiée manuellement
+            // et que le devis est brouillon sans date de validité existante
+            $dateValiditeApresForm = $devis->getDateValidite();
+            $dateValiditeModifiee = ($originalDateValidite != $dateValiditeApresForm);
+
+            if ($devis->getStatut() === 'brouillon' && !$dateValiditeModifiee && !$originalDateValidite && $devis->getDateCreation()) {
+                // Seulement si aucune date n'existait et qu'elle n'a pas été saisie dans le formulaire
                 $societe = $this->getUser()->getSocietePrincipale();
                 $dureeValidite = $societe ? $societe->getDureeValiditeDevisDefautAvecHeritage() : 30;
                 $dateValiditeAuto = clone $devis->getDateCreation();
@@ -467,17 +484,13 @@ final class DevisController extends AbstractController
             // Vérifier si l'action est "save_and_send"
             $action = $request->request->get('action');
             if ($action === 'save_and_send') {
-                // Changer le statut en "envoyé" et rediriger vers la page show avec modal d'envoi
-                $devis->setStatut('envoye');
-                $entityManager->flush();
-
-                // Invalider à nouveau le cache car le statut a changé
-                $dashboardService->invalidateUserCache($this->getUser()->getId());
+                // Ne pas changer le statut maintenant - il sera changé lors de l'envoi effectif de l'email
+                // Juste enregistrer le devis et ouvrir la modal d'envoi
 
                 if ($shouldCreateVersion) {
-                    $this->addFlash('success', 'Devis modifié et marqué comme envoyé avec succès ! Une version a été créée pour conserver l\'historique.');
+                    $this->addFlash('success', 'Devis modifié avec succès ! Une version a été créée. Veuillez confirmer l\'envoi par email.');
                 } else {
-                    $this->addFlash('success', 'Devis modifié et marqué comme envoyé avec succès !');
+                    $this->addFlash('success', 'Devis enregistré avec succès ! Veuillez confirmer l\'envoi par email.');
                 }
 
                 // Rediriger vers la page show avec un paramètre pour ouvrir la modal d'envoi
@@ -703,27 +716,194 @@ final class DevisController extends AbstractController
     #[Route('/{id}/delete', name: 'app_devis_delete', methods: ['POST'], requirements: ['id' => '\d+'])]
     public function delete(Request $request, Devis $devis, EntityManagerInterface $entityManager): Response
     {
-        if ($this->isCsrfTokenValid('delete'.$devis->getId(), $request->getPayload()->getString('_token'))) {
-            $entityManager->remove($devis);
-            $entityManager->flush();
-            $this->addFlash('success', 'Devis supprimé avec succès !');
+        // Vérification CSRF
+        if (!$this->isCsrfTokenValid('delete'.$devis->getId(), $request->getPayload()->getString('_token'))) {
+            $this->addFlash('error', 'Token de sécurité invalide.');
+            return $this->redirectToRoute('app_devis_show', ['id' => $devis->getId()], Response::HTTP_SEE_OTHER);
         }
 
+        // Vérification permissions : admin OU commercial propriétaire
+        if (!$this->isGranted('ROLE_ADMIN') && $devis->getCommercial() !== $this->getUser()) {
+            $this->addFlash('error', 'Vous n\'avez pas les droits pour supprimer ce devis.');
+            return $this->redirectToRoute('app_devis_show', ['id' => $devis->getId()], Response::HTTP_SEE_OTHER);
+        }
+
+        // Empêcher suppression des devis signés
+        if ($devis->getDateSignature() !== null) {
+            $this->addFlash('error', 'Impossible de supprimer un devis signé.');
+            return $this->redirectToRoute('app_devis_show', ['id' => $devis->getId()], Response::HTTP_SEE_OTHER);
+        }
+
+        // Empêcher suppression des devis facturés (vérifier si relation Facture existe)
+        // TODO: Ajouter vérification si relation avec Facture implémentée
+        // if ($devis->getFacture() !== null) {
+        //     $this->addFlash('error', 'Impossible de supprimer un devis facturé.');
+        //     return $this->redirectToRoute('app_devis_show', ['id' => $devis->getId()], Response::HTTP_SEE_OTHER);
+        // }
+
+        // Soft delete au lieu de suppression définitive
+        $devis->setDeletedAt(new \DateTimeImmutable());
+        $entityManager->flush();
+
+        $this->addFlash('success', 'Devis archivé avec succès.');
         return $this->redirectToRoute('app_devis_index', [], Response::HTTP_SEE_OTHER);
     }
 
-    #[Route('/{id}/pdf', name: 'app_devis_pdf', methods: ['GET'], requirements: ['id' => '\d+'])]
-    public function generatePdf(Devis $devis): Response
+    #[Route('/{id}/duplicate', name: 'app_devis_duplicate', methods: ['POST'], requirements: ['id' => '\d+'])]
+    public function duplicate(Request $request, Devis $originalDevis, EntityManagerInterface $entityManager, DocumentNumerotationService $numerotationService): Response
     {
+        // Vérification CSRF
+        if (!$this->isCsrfTokenValid('duplicate'.$originalDevis->getId(), $request->getPayload()->getString('_token'))) {
+            $this->addFlash('error', 'Token de sécurité invalide.');
+            return $this->redirectToRoute('app_devis_show', ['id' => $originalDevis->getId()], Response::HTTP_SEE_OTHER);
+        }
+
+        // Créer un nouveau devis
+        $newDevis = new Devis();
+        $newDevis->setClient($originalDevis->getClient());
+        $newDevis->setContactFacturation($originalDevis->getContactFacturation());
+        $newDevis->setContactLivraison($originalDevis->getContactLivraison());
+        $newDevis->setAdresseFacturation($originalDevis->getAdresseFacturation());
+        $newDevis->setAdresseLivraison($originalDevis->getAdresseLivraison());
+        $newDevis->setCommercial($this->getUser());
+        $newDevis->setStatut('brouillon');
+
+        // Dates
+        $newDevis->setDateCreation(new \DateTime());
+        $newDevis->setDateValidite((new \DateTime())->modify('+30 days'));
+
+        // Copier les données commerciales
+        $newDevis->setRemiseGlobalePercent($originalDevis->getRemiseGlobalePercent());
+        $newDevis->setAcomptePercent($originalDevis->getAcomptePercent());
+        $newDevis->setNotesInternes($originalDevis->getNotesInternes());
+        $newDevis->setNotesClient($originalDevis->getNotesClient());
+        $newDevis->setNomProjet($originalDevis->getNomProjet() ? $originalDevis->getNomProjet() . ' (copie)' : null);
+        $newDevis->setDelaiLivraison($originalDevis->getDelaiLivraison());
+        $newDevis->setModeReglement($originalDevis->getModeReglement());
+        $newDevis->setModeleDocument($originalDevis->getModeleDocument());
+
+        // Copier les champs tiers
+        $newDevis->setTiersCivilite($originalDevis->getTiersCivilite());
+        $newDevis->setTiersNom($originalDevis->getTiersNom());
+        $newDevis->setTiersPrenom($originalDevis->getTiersPrenom());
+        $newDevis->setTiersAdresse($originalDevis->getTiersAdresse());
+        $newDevis->setTiersCodePostal($originalDevis->getTiersCodePostal());
+        $newDevis->setTiersVille($originalDevis->getTiersVille());
+        $newDevis->setTiersAdresseLivraison($originalDevis->getTiersAdresseLivraison());
+        $newDevis->setTiersCodePostalLivraison($originalDevis->getTiersCodePostalLivraison());
+        $newDevis->setTiersVilleLivraison($originalDevis->getTiersVilleLivraison());
+
+        // Générer nouveau numéro
+        $newDevis->setNumeroDevis($numerotationService->genererNumeroDevis());
+
+        // Copier les lignes
+        foreach ($originalDevis->getDevisItems() as $originalItem) {
+            $newItem = new DevisItem();
+            $newItem->setDevis($newDevis);
+            $newItem->setDesignation($originalItem->getDesignation());
+            $newItem->setDescription($originalItem->getDescription());
+            $newItem->setQuantite($originalItem->getQuantite());
+            $newItem->setPrixUnitaireHt($originalItem->getPrixUnitaireHt());
+            $newItem->setTauxTva($originalItem->getTauxTva());
+            $newItem->setOrdreAffichage($originalItem->getOrdreAffichage());
+            $newItem->setUnite($originalItem->getUnite());
+            $newItem->setProduit($originalItem->getProduit());
+            $newItem->setRemisePercent($originalItem->getRemisePercent());
+
+            $newDevis->addDevisItem($newItem);
+        }
+
+        // Recalculer les totaux
+        $newDevis->calculerTotaux();
+
+        $entityManager->persist($newDevis);
+        $entityManager->flush();
+
+        $this->addFlash('success', 'Devis dupliqué avec succès.');
+        return $this->redirectToRoute('app_devis_edit', ['id' => $newDevis->getId()], Response::HTTP_SEE_OTHER);
+    }
+
+    #[Route('/{id}/pdf', name: 'app_devis_pdf', methods: ['GET'], requirements: ['id' => '\d+'])]
+    public function generatePdf(Devis $devis, EntityManagerInterface $entityManager, \App\Service\TenantService $tenantService, #[Autowire('%kernel.project_dir%')] string $projectDir): Response
+    {
+        // IMPORTANT: Logo et couleurs viennent de la société ASSIGNÉE AU DEVIS (figée à la création)
+        // Les éléments du template (banque, CGV) viennent du template sélectionné
+
+        // Récupérer la société assignée au devis
+        $societe = $devis->getSociete();
+
+        // Fallback pour les anciens devis sans société assignée
+        if (!$societe) {
+            // Essayer d'abord la société courante de la session
+            $societe = $tenantService->getCurrentSociete();
+
+            if (!$societe) {
+                // Sinon société par défaut
+                $societe = $entityManager->getRepository(\App\Entity\Societe::class)
+                    ->findOneBy(['ordre' => 1, 'active' => true])
+                    ?: $entityManager->getRepository(\App\Entity\Societe::class)
+                        ->findOneBy(['active' => true], ['ordre' => 'ASC']);
+            }
+        }
+
+        // TODO: Vérifier que l'utilisateur a accès au template sélectionné selon hiérarchie
+        // Si template.societe = société mère, alors toutes les filles y ont accès
+
+        // Récupérer la banque (depuis le template ou banque par défaut)
+        $banque = null;
+        if ($devis->getTemplate() && $devis->getTemplate()->getBanque()) {
+            $banque = $devis->getTemplate()->getBanque();
+        } else {
+            // Banque par défaut (ordre = 1)
+            $banque = $entityManager->getRepository(\App\Entity\Banque::class)
+                ->findOneBy(['ordre' => 1, 'actif' => true])
+                ?: $entityManager->getRepository(\App\Entity\Banque::class)
+                    ->findOneBy(['actif' => true], ['ordre' => 'ASC']);
+        }
+
+        // Récupérer les CGV depuis le template
+        $conditionsVente = null;
+        if ($devis->getTemplate() && $devis->getTemplate()->getConditionsVente()) {
+            $conditionsVente = $devis->getTemplate()->getConditionsVente();
+        }
+
+        // Préparer le logo en base64 pour DomPDF
+        $logoBase64 = null;
+        if ($societe && $societe->getLogo()) {
+            $logoPath = $projectDir . '/public' . $societe->getLogo();
+            if (file_exists($logoPath)) {
+                $imageData = file_get_contents($logoPath);
+                $mimeType = mime_content_type($logoPath);
+                $logoBase64 = 'data:' . $mimeType . ';base64,' . base64_encode($imageData);
+            }
+        }
+
+        // Convertir couleur tertiaire en RGBA avec transparence pour les fonds
+        $couleurTertiaireRgba = 'rgba(40, 167, 69, 0.15)'; // Valeur par défaut
+        if ($societe && $societe->getCouleurTertiaire()) {
+            $hex = $societe->getCouleurTertiaire();
+            $hex = str_replace('#', '', $hex);
+            $r = hexdec(substr($hex, 0, 2));
+            $g = hexdec(substr($hex, 2, 2));
+            $b = hexdec(substr($hex, 4, 2));
+            $couleurTertiaireRgba = sprintf('rgba(%d, %d, %d, 0.15)', $r, $g, $b);
+        }
+
         $options = new Options();
         $options->set('isHtml5ParserEnabled', true);
         $options->set('isPhpEnabled', true);
         $options->set('defaultFont', 'Arial');
 
         $dompdf = new Dompdf($options);
-        
+
         $html = $this->renderView('devis/pdf.html.twig', [
-            'devis' => $devis
+            'devis' => $devis,
+            'projectDir' => $projectDir,
+            'societe' => $societe,
+            'logoBase64' => $logoBase64,
+            'banquePrincipale' => $banque,
+            'conditionsVente' => $conditionsVente,
+            'couleurTertiaireRgba' => $couleurTertiaireRgba
         ]);
 
         $dompdf->loadHtml($html);
@@ -742,7 +922,7 @@ final class DevisController extends AbstractController
 
     #[Route('/{id}/envoyer', name: 'app_devis_envoyer', methods: ['POST'])]
     #[Route('/{id}/resend', name: 'app_devis_resend', methods: ['POST'])]
-    public function envoyer(Request $request, Devis $devis, EntityManagerInterface $entityManager, GmailMailerService $gmailMailer, DevisLoggerService $loggerService, \App\Service\DashboardService $dashboardService): Response
+    public function envoyer(Request $request, Devis $devis, EntityManagerInterface $entityManager, GmailMailerService $gmailMailer, DevisLoggerService $loggerService, \App\Service\DashboardService $dashboardService, \App\Service\TenantService $tenantService, #[Autowire('%kernel.project_dir%')] string $projectDir): Response
     {
         $email = $request->request->get('email');
         $message = $request->request->get('message', '');
@@ -752,13 +932,78 @@ final class DevisController extends AbstractController
             return $this->redirectToRoute('app_devis_show', ['id' => $devis->getId()]);
         }
 
+        // Vérifier si la date de validité est déjà expirée
+        if ($devis->getDateValidite() && $devis->getDateValidite() < new \DateTime('today')) {
+            $this->addFlash('error', sprintf(
+                'Impossible d\'envoyer ce devis : la date de validité (%s) est déjà expirée. Veuillez mettre à jour la date de validité avant l\'envoi.',
+                $devis->getDateValidite()->format('d/m/Y')
+            ));
+            return $this->redirectToRoute('app_devis_show', ['id' => $devis->getId()]);
+        }
+
         try {
+            // Récupérer la société courante
+            $societe = $tenantService->getCurrentSociete();
+            if (!$societe) {
+                $societe = $entityManager->getRepository(\App\Entity\Societe::class)
+                    ->findOneBy(['ordre' => 1, 'active' => true])
+                    ?: $entityManager->getRepository(\App\Entity\Societe::class)
+                        ->findOneBy(['active' => true], ['ordre' => 'ASC']);
+            }
+
+            // Récupérer la banque
+            $banque = null;
+            if ($devis->getTemplate() && $devis->getTemplate()->getBanque()) {
+                $banque = $devis->getTemplate()->getBanque();
+            } else {
+                $banque = $entityManager->getRepository(\App\Entity\Banque::class)
+                    ->findOneBy(['ordre' => 1, 'actif' => true])
+                    ?: $entityManager->getRepository(\App\Entity\Banque::class)
+                        ->findOneBy(['actif' => true], ['ordre' => 'ASC']);
+            }
+
+            // Récupérer les CGV
+            $conditionsVente = null;
+            if ($devis->getTemplate() && $devis->getTemplate()->getConditionsVente()) {
+                $conditionsVente = $devis->getTemplate()->getConditionsVente();
+            }
+
+            // Préparer le logo en base64
+            $logoBase64 = null;
+            if ($societe && $societe->getLogo()) {
+                $logoPath = $projectDir . '/public' . $societe->getLogo();
+                if (file_exists($logoPath)) {
+                    $imageData = file_get_contents($logoPath);
+                    $mimeType = mime_content_type($logoPath);
+                    $logoBase64 = 'data:' . $mimeType . ';base64,' . base64_encode($imageData);
+                }
+            }
+
+            // Convertir couleur tertiaire en RGBA
+            $couleurTertiaireRgba = 'rgba(40, 167, 69, 0.15)';
+            if ($societe && $societe->getCouleurTertiaire()) {
+                $hex = $societe->getCouleurTertiaire();
+                $hex = str_replace('#', '', $hex);
+                $r = hexdec(substr($hex, 0, 2));
+                $g = hexdec(substr($hex, 2, 2));
+                $b = hexdec(substr($hex, 4, 2));
+                $couleurTertiaireRgba = sprintf('rgba(%d, %d, %d, 0.15)', $r, $g, $b);
+            }
+
             // Générer le PDF
             $options = new Options();
             $options->set('isHtml5ParserEnabled', true);
             $dompdf = new Dompdf($options);
-            
-            $html = $this->renderView('devis/pdf.html.twig', ['devis' => $devis]);
+
+            $html = $this->renderView('devis/pdf.html.twig', [
+                'devis' => $devis,
+                'projectDir' => $projectDir,
+                'societe' => $societe,
+                'logoBase64' => $logoBase64,
+                'banquePrincipale' => $banque,
+                'conditionsVente' => $conditionsVente,
+                'couleurTertiaireRgba' => $couleurTertiaireRgba
+            ]);
             $dompdf->loadHtml($html);
             $dompdf->setPaper('A4', 'portrait');
             $dompdf->render();
@@ -775,7 +1020,7 @@ final class DevisController extends AbstractController
 
             // Générer l'URL d'accès client AVANT l'envoi de l'email
             $baseUrl = $_ENV['APP_BASE_URL'] ?? 'https://test.decorpub.fr:8080';
-            $token = md5($devis->getId() . $devis->getCreatedAt()->format('Y-m-d'));
+            $token = $devis->getClientAccessToken();
             $urlAcces = $baseUrl . '/devis/' . $devis->getId() . '/client/' . $token;
             $devis->setUrlAccesClient($urlAcces);
 
@@ -802,77 +1047,7 @@ final class DevisController extends AbstractController
         return $this->redirectToRoute('app_devis_show', ['id' => $devis->getId()]);
     }
 
-    #[Route('/{id}/client/{token}', name: 'app_devis_client_acces', methods: ['GET', 'POST'])]
-    public function clientAcces(Request $request, Devis $devis, string $token, EntityManagerInterface $entityManager, DevisLoggerService $loggerService, \App\Service\DashboardService $dashboardService): Response
-    {
-        // Vérifier le token
-        $expectedToken = md5($devis->getId() . $devis->getCreatedAt()->format('Y-m-d'));
-        if ($token !== $expectedToken) {
-            throw $this->createNotFoundException('Accès non autorisé');
-        }
-
-        if ($request->isMethod('POST')) {
-            $action = $request->request->get('action');
-
-            if ($action === 'signer') {
-                $signatureNom = $request->request->get('signature_nom');
-                $signatureEmail = $request->request->get('signature_email');
-                $signatureData = $request->request->get('signature_data');
-
-                if ($signatureNom && $signatureEmail && $signatureData) {
-                    // 1. Capturer l'état actuel AVANT signature pour la version "non-signée"
-                    $currentState = $this->captureDevisState($devis);
-
-                    // 2. Créer une version qui archive l'état NON-SIGNÉ
-                    $lastVersionNumber = $this->getLastVersionNumber($devis, $entityManager);
-                    $newVersionNumber = $lastVersionNumber + 1;
-
-                    $version = $this->createDevisVersionFromState($devis, $entityManager, $currentState, 'Version archivée');
-                    $version->setVersionLabel('Version ' . $newVersionNumber);
-
-                    // 3. Appliquer la signature au devis actuel
-                    $oldStatus = $devis->getStatut();
-                    $devis->setSignatureNom($signatureNom);
-                    $devis->setSignatureEmail($signatureEmail);
-                    $devis->setSignatureData($signatureData);
-                    $devis->setDateSignature(new \DateTime());
-                    $devis->setStatut('signe');
-
-                    $entityManager->flush();
-
-                    // Invalider le cache du dashboard du commercial
-                    if ($devis->getCommercial()) {
-                        $dashboardService->invalidateUserCache($devis->getCommercial()->getId());
-                    }
-
-                    // 4. Marquer la version comme créée par signature
-                    $version->setVersionLabel('Signature du client');
-                    $version->setModificationReason('Signature client - archivage automatique');
-                    $entityManager->flush();
-
-                    // 5. Logger seulement la signature (pas de logs redondants)
-                    $loggerService->logSigned($devis, $signatureNom, $signatureEmail);
-
-                    $this->addFlash('success', 'Devis signé avec succès !');
-                }
-            } elseif ($action === 'refuser') {
-                $devis->setStatut('refuse');
-                $entityManager->flush();
-
-                // Invalider le cache du dashboard du commercial
-                if ($devis->getCommercial()) {
-                    $dashboardService->invalidateUserCache($devis->getCommercial()->getId());
-                }
-
-                $this->addFlash('info', 'Devis refusé.');
-            }
-        }
-
-        return $this->render('devis/client_acces.html.twig', [
-            'devis' => $devis,
-            'token' => $token
-        ]);
-    }
+    // Méthode supprimée - désormais gérée par DevisClientController pour éviter conflit avec #[IsGranted('ROLE_USER')] au niveau classe
 
     #[Route('/{id}/paiement-acompte', name: 'app_devis_paiement_acompte', methods: ['POST'])]
     public function paiementAcompte(Request $request, Devis $devis, EntityManagerInterface $entityManager, \App\Service\DashboardService $dashboardService): Response
@@ -1133,6 +1308,75 @@ final class DevisController extends AbstractController
         }
     }
 
+    #[Route('/ajax/templates-by-societe', name: 'app_devis_ajax_templates_by_societe', methods: ['GET'])]
+    public function ajaxTemplatesBySociete(Request $request, EntityManagerInterface $entityManager): JsonResponse
+    {
+        $societeId = $request->query->get('societe_id');
+
+        if (!$societeId) {
+            return new JsonResponse([
+                'success' => false,
+                'message' => 'ID de société manquant'
+            ], 400);
+        }
+
+        try {
+            $societe = $entityManager->getRepository(\App\Entity\Societe::class)->find($societeId);
+
+            if (!$societe) {
+                return new JsonResponse([
+                    'success' => false,
+                    'message' => 'Société introuvable'
+                ], 404);
+            }
+
+            // Récupérer les templates avec logique d'héritage mère/fille
+            $qb = $entityManager->getRepository(\App\Entity\Template::class)
+                ->createQueryBuilder('t')
+                ->where('t.actif = :actif')
+                ->andWhere('t.typeDocument = :typeDocument')
+                ->setParameter('actif', true)
+                ->setParameter('typeDocument', 'devis')
+                ->orderBy('t.ordre', 'ASC');
+
+            // Si société fille : inclure templates de la fille ET de la mère
+            if ($societe->getSocieteParent()) {
+                $qb->andWhere('t.societe = :societe OR t.societe = :societeParent')
+                    ->setParameter('societe', $societe)
+                    ->setParameter('societeParent', $societe->getSocieteParent());
+            }
+            // Si société mère : inclure templates de la mère ET de toutes ses filles
+            else {
+                $societeIds = [$societe->getId()];
+                foreach ($societe->getSocietesFilles() as $fille) {
+                    $societeIds[] = $fille->getId();
+                }
+                $qb->andWhere('t.societe IN (:societeIds)')
+                    ->setParameter('societeIds', $societeIds);
+            }
+
+            $templates = $qb->getQuery()->getResult();
+
+            $templateData = array_map(function($template) {
+                return [
+                    'id' => $template->getId(),
+                    'nom' => $template->getNom()
+                ];
+            }, $templates);
+
+            return new JsonResponse([
+                'success' => true,
+                'templates' => $templateData
+            ]);
+
+        } catch (\Exception $e) {
+            return new JsonResponse([
+                'success' => false,
+                'message' => 'Erreur lors de la récupération des templates: ' . $e->getMessage()
+            ], 500);
+        }
+    }
+
     #[Route('/ajax/create-contact', name: 'app_devis_api_contact_create', methods: ['POST'])]
     public function apiCreateContact(Request $request, EntityManagerInterface $entityManager, ClientRepository $clientRepository): JsonResponse
     {
@@ -1328,6 +1572,11 @@ final class DevisController extends AbstractController
             'remiseGlobalePercent' => $devis->getRemiseGlobalePercent(),
             'remiseGlobaleMontant' => $devis->getRemiseGlobaleMontant(),
             'nomProjet' => $devis->getNomProjet(),
+            // Signature information
+            'signatureNom' => $devis->getSignatureNom(),
+            'signatureEmail' => $devis->getSignatureEmail(),
+            'dateSignature' => $devis->getDateSignature() ? $devis->getDateSignature()->format('Y-m-d H:i:s') : null,
+            'signatureData' => $devis->getSignatureData(),
             // Client information for template compatibility
             'client' => $devis->getClient() ? [
                 'id' => $devis->getClient()->getId(),
@@ -1515,43 +1764,49 @@ final class DevisController extends AbstractController
         }
 
         $reason = $request->request->get('reason', 'Annulation manuelle');
-        $oldStatus = $devis->getStatut();
 
-        // Sauvegarder les informations de signature pour le log AVANT suppression
+        // 1. Sauvegarder les informations actuelles avant modification
         $signatureName = $devis->getSignatureNom();
         $signatureEmail = $devis->getSignatureEmail();
         $signatureDate = $devis->getDateSignature();
 
-        // Annuler la signature
+        // Récupérer le token actuel avant de le régénérer
+        $oldToken = $devis->getClientAccessToken();
+
+        // 2. Créer une version pour archiver l'état signé avec son token
+        $currentState = $this->captureDevisState($devis);
+        $signedVersion = $this->createDevisVersionFromState(
+            $devis,
+            $entityManager,
+            $currentState,
+            sprintf('Version signée par %s (%s) - Signature annulée : %s',
+                $signatureName,
+                $signatureEmail,
+                $reason
+            )
+        );
+
+        // Stocker le token de l'ancien lien dans la version signée
+        $signedVersion->setClientAccessToken($oldToken);
+        $signedVersion->setVersionLabel(sprintf('Version signée le %s', $signatureDate->format('d/m/Y')));
+
+        // 3. Modifier created_at pour générer un nouveau token
+        $newCreatedAt = new \DateTimeImmutable();
+        $devis->setCreatedAt($newCreatedAt);
+
+        // 4. Annuler la signature et remettre en brouillon
         $devis->setSignatureNom(null);
         $devis->setSignatureEmail(null);
         $devis->setSignatureData(null);
         $devis->setDateSignature(null);
-        $devis->setStatut('brouillon'); // Retour en mode éditable
+        $devis->setStatut('brouillon');
 
         $entityManager->flush();
 
-        // Supprimer la dernière version créée par signature
-        $lastVersion = $entityManager->getRepository(DevisVersion::class)
-            ->createQueryBuilder('dv')
-            ->where('dv.devis = :devis')
-            ->andWhere('dv.modificationReason LIKE :signature')
-            ->setParameter('devis', $devis)
-            ->setParameter('signature', '%Signature client%')
-            ->orderBy('dv.versionNumber', 'DESC')
-            ->setMaxResults(1)
-            ->getQuery()
-            ->getOneOrNullResult();
-
-        if ($lastVersion) {
-            $entityManager->remove($lastVersion);
-            $entityManager->flush();
-        }
-
-        // Logger l'annulation (pas de log de changement de statut redondant)
+        // 5. Logger l'annulation
         $loggerService->logSignatureCancelled($devis, $signatureName, $signatureEmail, $signatureDate, $reason);
 
-        $this->addFlash('success', 'Signature annulée avec succès. Le devis est de nouveau modifiable.');
+        $this->addFlash('success', 'Signature annulée avec succès. Une version a été créée pour conserver l\'historique. Le devis est de nouveau modifiable avec un nouveau lien de signature.');
 
         return $this->redirectToRoute('app_devis_show', ['id' => $devis->getId()]);
     }

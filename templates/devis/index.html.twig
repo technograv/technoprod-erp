@@ -48,6 +48,16 @@
         .badge-brouillon { background-color: #6c757d; color: white; }
         .badge-envoye { background-color: #17a2b8; color: white; }
         .badge-relance { background-color: #ffc107; color: #212529; }
+        .badge-actualisation_demandee {
+            background: linear-gradient(135deg, #ff6b6b 0%, #ee5a6f 100%);
+            color: white;
+            font-weight: 600;
+            animation: pulse 2s infinite;
+        }
+        @keyframes pulse {
+            0%, 100% { box-shadow: 0 0 0 0 rgba(255, 107, 107, 0.7); }
+            50% { box-shadow: 0 0 0 8px rgba(255, 107, 107, 0); }
+        }
         .badge-signe { background-color: #007bff; color: white; }
         .badge-acompte_regle { background-color: #28a745; color: white; }
         .badge-accepte { background-color: #28a745; color: white; }
@@ -93,6 +103,15 @@
                     <i class="fas fa-edit fa-2x text-secondary mb-2"></i>
                     <h3 class="text-secondary">{{ stats.brouillon }}</h3>
                     <p class="mb-0">Brouillons</p>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-2">
+            <div class="card stats-card" style="border: 2px solid #ff6b6b;">
+                <div class="card-body text-center">
+                    <i class="fas fa-bell fa-2x mb-2" style="color: #ff6b6b;"></i>
+                    <h3 style="color: #ff6b6b;">{{ stats.actualisation_demandee ?? 0 }}</h3>
+                    <p class="mb-0" style="font-weight: 600;">À actualiser</p>
                 </div>
             </div>
         </div>
@@ -143,6 +162,7 @@
                     <select name="statut" id="statut" class="form-select">
                         <option value="">Tous les statuts</option>
                         <option value="brouillon" {{ current_filters.statut == 'brouillon' ? 'selected' : '' }}>Brouillon</option>
+                        <option value="actualisation_demandee" {{ current_filters.statut == 'actualisation_demandee' ? 'selected' : '' }}>⚠️ Actualisation demandée</option>
                         <option value="envoye" {{ current_filters.statut == 'envoye' ? 'selected' : '' }}>Envoyé</option>
                         <option value="relance" {{ current_filters.statut == 'relance' ? 'selected' : '' }}>Relancé</option>
                         <option value="signe" {{ current_filters.statut == 'signe' ? 'selected' : '' }}>Signé</option>

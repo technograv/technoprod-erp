@@ -1,519 +1,954 @@
+{% set couleurPrimaire = societe and societe.couleurPrimaire ? societe.couleurPrimaire : '#3b82f6' %}
+{% set couleurSecondaire = societe and societe.couleurSecondaire ? societe.couleurSecondaire : '#6c757d' %}
+{% set couleurTertiaire = societe and societe.couleurTertiaire ? societe.couleurTertiaire : '#28a745' %}
 <!DOCTYPE html>
 <html>
 <head>
     <meta charset="utf-8">
     <title>Devis {{ devis.numeroDevis }}</title>
     <style>
-        body {
-            font-family: Arial, sans-serif;
-            font-size: 11px;
+        * {
             margin: 0;
-            padding: 15px;
-            color: #333;
-            line-height: 1.4;
+            padding: 0;
         }
-        
-        .header {
-            border-bottom: 3px solid #6f42c1;
-            padding-bottom: 15px;
-            margin-bottom: 25px;
-            position: relative;
-            min-height: 120px;
-        }
-        
-        .company-info {
-            float: left;
-            width: 45%;
-        }
-        
-        .company-info h1 {
-            color: #6f42c1;
-            margin: 0 0 8px 0;
-            font-size: 22px;
-            font-weight: bold;
-        }
-        
-        .company-info p {
-            margin: 2px 0;
+
+        body {
+            font-family: 'Segoe UI', Arial, sans-serif;
             font-size: 10px;
+            margin: 0;
+            padding: 20px 30px 20px 30px;
+            color: #2c3e50;
+            line-height: 1.5;
+            background-color: white;
         }
-        
+
+        .container {
+            background-color: white;
+            padding: 0;
+            border-radius: 0;
+            box-shadow: none;
+        }
+
+        /* En-tête */
+        .header {
+            margin-bottom: 20px;
+            padding-bottom: 0;
+            border-bottom: none;
+        }
+
+        .header:after {
+            content: "";
+            display: table;
+            clear: both;
+        }
+
+        .company-info {
+            display: inline-block;
+            vertical-align: top;
+            width: 30%;
+        }
+
+        .company-info .company-name-wrapper {
+            margin-bottom: 6px;
+        }
+
+        .company-info .company-name {
+            color: #2c3e50;
+            margin: 0;
+            font-size: 16px;
+            font-weight: 700;
+        }
+
+        .company-info .company-details {
+            margin-top: 6px;
+        }
+
+        .company-info .company-details p {
+            margin: 1px 0;
+            font-size: 10px;
+            color: #7f8c8d;
+            line-height: 1.3;
+        }
+
         .devis-info {
-            float: right;
-            width: 45%;
+            display: inline-block;
+            vertical-align: top;
+            width: 39%;
+            text-align: center;
+        }
+
+        .devis-info h2 {
+            color: #2c3e50;
+            margin: 0 0 4px 0;
+            font-size: 22px;
+            font-weight: 700;
+        }
+
+        .devis-info .validity {
+            color: {{ couleurPrimaire }};
+            font-size: 11px;
+            font-weight: 500;
+        }
+
+        .logo-info {
+            display: inline-block;
+            vertical-align: top;
+            width: 30%;
             text-align: right;
         }
-        
-        .devis-info h2 {
-            color: #6f42c1;
-            margin: 0 0 10px 0;
-            font-size: 18px;
-            text-transform: uppercase;
+
+        /* Métadonnées */
+        .metadata {
+            clear: both;
+            width: 100%;
+            margin-bottom: 20px;
         }
-        
-        .devis-info p {
+
+        .metadata:after {
+            content: "";
+            display: table;
+            clear: both;
+        }
+
+        .metadata-item {
+            float: left;
+            width: 21.4%;
+            margin-right: 1%;
+            background-color: {{ couleurTertiaireRgba }};
+            border-radius: 4px;
+            padding: 6px 10px;
+            box-sizing: border-box;
+        }
+
+        .metadata-item:last-child {
+            margin-right: 0;
+        }
+
+        .metadata-label {
+            font-size: 8px;
+            color: #9ca3af;
+            text-transform: none;
+            letter-spacing: 0.3px;
+            margin-bottom: 3px;
+            font-weight: 400;
+        }
+
+        .metadata-value {
+            font-size: 10px;
+            color: #2c3e50;
+            font-weight: 700;
+        }
+
+        /* Blocs Émetteur/Client */
+        .parties-section {
+            clear: both;
+            padding-top: 7px;
+            margin-bottom: 20px;
+        }
+
+        .parties-section:after {
+            content: "";
+            display: table;
+            clear: both;
+        }
+
+        .partie-box {
+            width: 100%;
+            background-color: {{ couleurTertiaireRgba }};
+            padding: 10px 12px;
+            border-radius: 4px;
+            box-sizing: border-box;
+        }
+
+        .partie-box h3 {
+            font-size: 8px;
+            color: #9ca3af;
+            margin-bottom: 3px;
+            font-weight: 400;
+            text-transform: none;
+            letter-spacing: 0.3px;
+        }
+
+        .partie-box p {
             margin: 2px 0;
             font-size: 10px;
+            color: #4b5563;
+            line-height: 1.4;
         }
-        
-        .client-section {
+
+        .partie-box p strong {
+            color: #2c3e50;
+            font-weight: 700;
+        }
+
+        .partie-box p:first-of-type {
+            font-size: 10px;
+            margin-bottom: 2px;
+        }
+
+        /* Proposition commerciale */
+        .proposition-box {
             clear: both;
-            margin-bottom: 25px;
-            padding: 15px;
-            background-color: #f8f9fa;
-            border-radius: 5px;
+            background-color: #eff6ff;
+            border-left: 3px solid {{ couleurPrimaire }};
+            padding: 10px 12px;
+            margin-bottom: 20px;
+            border-radius: 4px;
         }
-        
-        .client-section h3 {
-            color: #6f42c1;
-            margin: 0 0 10px 0;
+
+        .proposition-box h4 {
+            color: {{ couleurPrimaire }};
+            font-size: 11px;
+            margin-bottom: 10px;
+            font-weight: 700;
+        }
+
+        .proposition-box h4:before {
+            content: url('data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iMTQiIGhlaWdodD0iMTQiIHZpZXdCb3g9IjAgMCAxNCAxNCIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj48cmVjdCB4PSIyIiB5PSIyIiB3aWR0aD0iMTAiIGhlaWdodD0iMTAiIGZpbGw9Im5vbmUiIHN0cm9rZT0iIzNiODJmNiIgc3Ryb2tlLXdpZHRoPSIxLjUiIHJ4PSIxIi8+PGxpbmUgeDE9IjQiIHkxPSI1IiB4Mj0iMTAiIHkyPSI1IiBzdHJva2U9IiMzYjgyZjYiIHN0cm9rZS13aWR0aD0iMS4yIiBzdHJva2UtbGluZWNhcD0icm91bmQiLz48bGluZSB4MT0iNCIgeTE9IjgiIHgyPSIxMCIgeTI9IjgiIHN0cm9rZT0iIzNiODJmNiIgc3Ryb2tlLXdpZHRoPSIxLjIiIHN0cm9rZS1saW5lY2FwPSJyb3VuZCIvPjxsaW5lIHgxPSI0IiB5MT0iMTEiIHgyPSI4IiB5Mj0iMTEiIHN0cm9rZT0iIzNiODJmNiIgc3Ryb2tlLXdpZHRoPSIxLjIiIHN0cm9rZS1saW5lY2FwPSJyb3VuZCIvPjwvc3ZnPg==');
+            display: inline-block;
+            width: 14px;
+            height: 14px;
+            margin-right: 8px;
+            vertical-align: middle;
+        }
+
+        .proposition-box p {
+            font-size: 9px;
+            color: #4b5563;
+            line-height: 1.7;
+        }
+
+        /* Titre section */
+        .section-title {
             font-size: 14px;
-            border-bottom: 1px solid #dee2e6;
-            padding-bottom: 5px;
+            color: #2c3e50;
+            font-weight: 700;
+            margin-bottom: 15px;
+            padding-bottom: 0;
+            border-bottom: none;
         }
-        
-        .client-details {
-            display: flex;
-            justify-content: space-between;
-        }
-        
-        .client-col {
-            width: 48%;
-        }
-        
+
+        /* Tableau prestations */
         .items-table {
             width: 100%;
             border-collapse: collapse;
             margin-bottom: 20px;
-            font-size: 10px;
-        }
-        
-        .items-table th {
-            background-color: #6f42c1;
-            color: white;
-            padding: 8px 5px;
-            text-align: left;
-            font-weight: bold;
             font-size: 9px;
         }
-        
+
+        .items-table thead {
+            background-color: #2c3e50;
+            color: white;
+        }
+
+        .items-table th {
+            padding: 10px 8px;
+            text-align: left;
+            font-weight: 600;
+            font-size: 9px;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+
         .items-table td {
-            padding: 6px 5px;
-            border-bottom: 1px solid #dee2e6;
+            padding: 12px 8px;
+            border-bottom: 1px solid #ecf0f1;
             vertical-align: top;
         }
-        
+
+        .items-table tr:hover {
+            background-color: #fafbfc;
+        }
+
+        .items-table .designation {
+            font-weight: 600;
+            color: #2c3e50;
+            font-size: 10px;
+            margin-bottom: 4px;
+        }
+
+        .items-table .description {
+            color: #7f8c8d;
+            font-size: 8px;
+            line-height: 1.5;
+            margin-top: 3px;
+        }
+
         .items-table .text-center {
             text-align: center;
         }
-        
+
         .items-table .text-right {
             text-align: right;
         }
-        
-        .totals-section {
-            float: right;
-            width: 300px;
-            margin-top: 15px;
+
+        /* Sections bas de page */
+        .bottom-section {
+            clear: both;
+            margin-top: 20px;
+            padding-top: 7px;
         }
-        
-        .totals-table {
+
+        .bottom-section:after {
+            content: "";
+            display: table;
+            clear: both;
+        }
+
+        .conditions-box {
             width: 100%;
-            border-collapse: collapse;
-            font-size: 11px;
+            padding: 10px 12px;
+            background-color: {{ couleurTertiaireRgba }};
+            border-radius: 4px;
+            box-sizing: border-box;
         }
-        
-        .totals-table td {
-            padding: 5px 8px;
-            border-bottom: 1px solid #dee2e6;
+
+        .conditions-box h4 {
+            font-size: 10px;
+            color: #2c3e50;
+            margin-bottom: 8px;
+            font-weight: 700;
         }
-        
-        .totals-table .total-row {
-            background-color: #6f42c1;
+
+        .conditions-box p {
+            font-size: 8.5px;
+            color: #7f8c8d;
+            margin: 4px 0;
+            line-height: 1.5;
+        }
+
+        .synthese-box {
+            width: 100%;
+            padding: 10px 12px;
+            background-color: {{ couleurTertiaireRgba }};
+            border-radius: 4px;
+            box-sizing: border-box;
+        }
+
+        .synthese-box h4 {
+            font-size: 10px;
+            color: #2c3e50;
+            margin-bottom: 8px;
+            font-weight: 700;
+        }
+
+        .synthese-table {
+            width: 100%;
+        }
+
+        .synthese-table td {
+            padding: 6px 0;
+            font-size: 9px;
+        }
+
+        .synthese-table td:last-child {
+            text-align: right;
+            font-weight: 600;
+        }
+
+        .synthese-table .total-ht {
+            border-top: 1px solid #dee2e6;
+            padding-top: 8px;
+            font-weight: 700;
+            font-size: 10px;
+        }
+
+        .synthese-table .tva-line {
+            color: #7f8c8d;
+        }
+
+        .synthese-table .acompte-line {
+            border-top: 2px solid #dee2e6;
+            padding-top: 10px;
+            font-weight: 700;
+        }
+
+        .synthese-table .total-ttc {
+            background-color: #2c3e50;
             color: white;
-            font-weight: bold;
+            padding: 12px 10px;
+            margin-top: 8px;
+            border-radius: 5px;
+            font-size: 14px;
+            font-weight: 700;
         }
-        
-        .notes-section {
+
+        /* Sections finales */
+        .final-sections {
             clear: both;
             margin-top: 30px;
-            padding: 15px;
-            background-color: #f8f9fa;
+        }
+
+        .final-sections:after {
+            content: "";
+            display: table;
+            clear: both;
+        }
+
+        .acceptation-box {
+            width: 100%;
+            padding: 10px 12px;
+            background-color: {{ couleurTertiaireRgba }};
             border-radius: 5px;
+            box-sizing: border-box;
         }
-        
-        .notes-section h4 {
-            color: #6f42c1;
-            margin: 0 0 8px 0;
-            font-size: 12px;
-        }
-        
-        .conditions {
-            margin-top: 20px;
-            font-size: 9px;
-            color: #666;
-            border-top: 1px solid #dee2e6;
-            padding-top: 15px;
-        }
-        
-        .conditions h4 {
+
+        .acceptation-box h4 {
             font-size: 10px;
-            margin: 0 0 8px 0;
-            color: #333;
+            color: #2c3e50;
+            margin-bottom: 8px;
+            font-weight: 700;
         }
-        
-        .footer {
-            position: absolute;
-            bottom: 20px;
-            left: 20px;
-            right: 20px;
+
+        .acceptation-box p {
+            font-size: 8.5px;
+            color: #7f8c8d;
+            margin: 4px 0;
+            line-height: 1.5;
+        }
+
+        .coordonnees-box {
+            width: 100%;
+            padding: 10px 12px;
+            background-color: {{ couleurTertiaireRgba }};
+            border-radius: 4px;
+            box-sizing: border-box;
+        }
+
+        .coordonnees-box h4 {
+            font-size: 10px;
+            color: #2c3e50;
+            margin-bottom: 8px;
+            font-weight: 700;
+        }
+
+        .coordonnees-box p {
+            font-size: 8.5px;
+            color: #7f8c8d;
+            margin: 4px 0;
+            font-family: 'Courier New', monospace;
+        }
+
+        /* Section titre */
+        .section-row {
+            background-color: #ecf0f1;
+            padding: 12px 8px;
+            font-weight: 700;
+            color: #16a085;
+            font-size: 11px;
+            border-top: 2px solid #16a085;
+        }
+
+        /* Éléments spéciaux */
+        .line-break-row {
+            padding: 8px;
+            border: none;
+        }
+
+        .separator-row {
+            padding: 16px 8px;
             text-align: center;
-            font-size: 8px;
-            color: #666;
-            border-top: 1px solid #dee2e6;
-            padding-top: 10px;
+            border: none;
         }
-        
+
+        .separator-row hr {
+            border: none;
+            border-top: 3px double #16a085;
+            margin: 0;
+        }
+
+        .subtotal-row {
+            background-color: #ecf0f1;
+            padding: 10px 8px;
+            text-align: right;
+            border-top: 2px solid #16a085;
+            font-weight: 700;
+        }
+
+        .page-break {
+            page-break-after: always;
+        }
+
+        /* Badge statut */
+        .badge {
+            display: inline-block;
+            padding: 3px 8px;
+            font-size: 8px;
+            font-weight: 600;
+            border-radius: 12px;
+            color: white;
+        }
+
+        .badge-success { background-color: #27ae60; }
+        .badge-info { background-color: {{ couleurPrimaire }}; }
+        .badge-warning { background-color: #f39c12; color: #2c3e50; }
+
+        /* Signature */
         .signature-section {
             margin-top: 30px;
             border: 1px solid #dee2e6;
             padding: 15px;
             border-radius: 5px;
         }
-        
+
         .signature-box {
-            float: right;
-            width: 250px;
             text-align: center;
-            border: 1px dashed #6f42c1;
+            border: 1px dashed #16a085;
             padding: 20px;
             margin-top: 10px;
         }
-        
-        .page-break {
-            page-break-before: always;
-        }
-        
-        .badge {
-            display: inline-block;
-            padding: 3px 8px;
-            font-size: 9px;
-            font-weight: bold;
-            border-radius: 12px;
-            color: white;
-        }
-        
-        .badge-success { background-color: #28a745; }
-        .badge-info { background-color: #17a2b8; }
-        .badge-warning { background-color: #ffc107; color: #212529; }
-        
-        /* Styles pour le contenu HTML des descriptions WYSIWYG */
-        .items-table td strong { font-weight: bold; }
+
+        /* Styles contenu WYSIWYG */
+        .items-table td strong { font-weight: 700; }
         .items-table td em { font-style: italic; }
         .items-table td u { text-decoration: underline; }
         .items-table td ul { margin: 3px 0; padding-left: 15px; }
         .items-table td ol { margin: 3px 0; padding-left: 15px; }
-        .items-table td li { margin: 1px 0; font-size: 10px; }
+        .items-table td li { margin: 1px 0; font-size: 8px; }
         .items-table td p { margin: 3px 0; }
-        .items-table td br { line-height: 1.4; }
+
+        /* Styles Quill pour notes client (proposition-box) */
+        .proposition-box strong { font-weight: 700; }
+        .proposition-box em { font-style: italic; }
+        .proposition-box u { text-decoration: underline; }
+        .proposition-box ul { margin: 5px 0; padding-left: 20px; list-style-type: disc; }
+        .proposition-box ol { margin: 5px 0; padding-left: 20px; list-style-type: decimal; }
+        .proposition-box li { margin: 2px 0; font-size: 9px; }
+        .proposition-box p { margin: 5px 0; font-size: 9px; line-height: 1.6; }
+        .proposition-box h1 { font-size: 14px; font-weight: 700; margin: 8px 0 5px 0; }
+        .proposition-box h2 { font-size: 12px; font-weight: 700; margin: 7px 0 4px 0; }
+        .proposition-box h3 { font-size: 11px; font-weight: 700; margin: 6px 0 3px 0; }
+
+        /* Polices Quill */
+        .ql-font-arial, .proposition-box .ql-font-arial { font-family: Arial, sans-serif; }
+        .ql-font-helvetica, .proposition-box .ql-font-helvetica { font-family: Helvetica, sans-serif; }
+        .ql-font-times, .proposition-box .ql-font-times { font-family: 'Times New Roman', serif; }
+        .ql-font-georgia, .proposition-box .ql-font-georgia { font-family: Georgia, serif; }
+        .ql-font-verdana, .proposition-box .ql-font-verdana { font-family: Verdana, sans-serif; }
+        .ql-font-courier, .proposition-box .ql-font-courier { font-family: 'Courier New', monospace; }
+
+        /* Tailles Quill */
+        .ql-size-10px, .proposition-box .ql-size-10px { font-size: 10px; }
+        .ql-size-12px, .proposition-box .ql-size-12px { font-size: 12px; }
+        .ql-size-14px, .proposition-box .ql-size-14px { font-size: 14px; }
+        .ql-size-16px, .proposition-box .ql-size-16px { font-size: 16px; }
+        .ql-size-18px, .proposition-box .ql-size-18px { font-size: 18px; }
+        .ql-size-20px, .proposition-box .ql-size-20px { font-size: 20px; }
+        .ql-size-22px, .proposition-box .ql-size-22px { font-size: 22px; }
+        .ql-size-24px, .proposition-box .ql-size-24px { font-size: 24px; }
+
+        /* Alignements Quill */
+        .ql-align-center, .proposition-box .ql-align-center { text-align: center; }
+        .ql-align-right, .proposition-box .ql-align-right { text-align: right; }
+        .ql-align-justify, .proposition-box .ql-align-justify { text-align: justify; }
+
+        /* Styles WYSIWYG pour CGV */
+        .cgv-content strong { font-weight: 700; }
+        .cgv-content em { font-style: italic; }
+        .cgv-content u { text-decoration: underline; }
+        .cgv-content ul { margin: 5px 0; padding-left: 20px; }
+        .cgv-content ol { margin: 5px 0; padding-left: 20px; }
+        .cgv-content li { margin: 2px 0; }
+        .cgv-content h1 { font-size: 14px; font-weight: 700; margin: 10px 0 5px 0; }
+        .cgv-content h2 { font-size: 12px; font-weight: 700; margin: 8px 0 4px 0; }
+        .cgv-content h3 { font-size: 11px; font-weight: 700; margin: 6px 0 3px 0; }
+        .cgv-content p { margin: 4px 0; }
+
+        /* Polices Quill pour CGV */
+        .cgv-content .ql-font-arial { font-family: Arial, sans-serif; }
+        .cgv-content .ql-font-helvetica { font-family: Helvetica, sans-serif; }
+        .cgv-content .ql-font-times { font-family: 'Times New Roman', serif; }
+        .cgv-content .ql-font-georgia { font-family: Georgia, serif; }
+        .cgv-content .ql-font-verdana { font-family: Verdana, sans-serif; }
+        .cgv-content .ql-font-courier { font-family: 'Courier New', monospace; }
+
+        /* Tailles Quill pour CGV */
+        .cgv-content .ql-size-10px { font-size: 10px; }
+        .cgv-content .ql-size-12px { font-size: 12px; }
+        .cgv-content .ql-size-14px { font-size: 14px; }
+        .cgv-content .ql-size-16px { font-size: 16px; }
+        .cgv-content .ql-size-18px { font-size: 18px; }
+        .cgv-content .ql-size-20px { font-size: 20px; }
+        .cgv-content .ql-size-22px { font-size: 22px; }
+        .cgv-content .ql-size-24px { font-size: 24px; }
+
+        /* Alignements Quill pour CGV */
+        .cgv-content .ql-align-center { text-align: center; }
+        .cgv-content .ql-align-right { text-align: right; }
+        .cgv-content .ql-align-justify { text-align: justify; }
     </style>
 </head>
 <body>
-    <!-- En-tête -->
-    <div class="header">
-        <div class="company-info">
-            <h1>TechnoProd</h1>
-            <p><strong>Solutions technologiques innovantes</strong></p>
-            <p>123 Avenue de l'Innovation</p>
-            <p>75001 Paris, France</p>
-            <p>Tél: +33 1 23 45 67 89</p>
-            <p>Email: contact@technoprod.com</p>
-            <p>SIRET: 123 456 789 00012</p>
-            <p>TVA: FR12345678901</p>
-        </div>
-        
-        <div class="devis-info">
-            <h2>Devis</h2>
-            <p><strong>N° {{ devis.numeroDevis }}</strong></p>
-            <p>Date: {{ devis.dateCreation|date('d/m/Y') }}</p>
-            <p>Validité: {{ devis.dateValidite|date('d/m/Y') }}</p>
-            <p>Statut: <span class="badge badge-{{ devis.statutCouleur }}">{{ devis.statutLibelle }}</span></p>
-            {% if devis.commercial %}
-                <p>Commercial: {{ devis.commercial.fullName }}</p>
-            {% endif %}
-        </div>
-    </div>
+    <div class="container">
+        <!-- En-tête -->
+        <div class="header">
+            <div class="company-info">
+                {# Afficher la société mère en haut à gauche #}
+                <div class="company-name-wrapper">
+                    <h1 class="company-name">{{ societe and societe.societeParent ? societe.societeParent.nom : (societe ? societe.nom : 'TechnoProd') }}</h1>
+                </div>
+                <div class="company-details">
+                    {% if societe %}
+                        {% if societe.adresse %}<p>{{ societe.adresse }}</p>{% endif %}
+                        <p>{{ societe.codePostal }} {{ societe.ville }}</p>
+                        {% if societe.telephone %}<p>{{ societe.telephone }}</p>{% endif %}
+                        {% if societe.email %}<p>{{ societe.email }}</p>{% endif %}
+                    {% else %}
+                        <p>12 avenue des Entrepreneurs</p>
+                        <p>69003 Lyon</p>
+                        <p>04 72 00 18 22</p>
+                        <p>contact@salessuite.fr</p>
+                    {% endif %}
+                </div>
+            </div>
 
-    <!-- Informations client -->
-    <div class="client-section">
-        <h3>Informations client</h3>
-        <div class="client-details">
-            <div class="client-col">
+            <div class="devis-info">
+                <h2>Devis {{ devis.numeroDevis }}</h2>
+                <div class="validity">
+                    <span style="display: inline-block; width: 11px; height: 11px; border: 2px solid {{ couleurPrimaire }}; border-radius: 50%; position: relative; margin-right: 4px; vertical-align: middle;">
+                        <span style="position: absolute; width: 1px; height: 4px; background: {{ couleurPrimaire }}; left: 50%; top: 1px; transform: translateX(-50%);"></span>
+                        <span style="position: absolute; width: 3px; height: 1px; background: {{ couleurPrimaire }}; left: 5px; top: 50%; transform: translateY(-50%);"></span>
+                    </span>
+                    Valable jusqu'au {{ devis.dateValidite|date('d/m/Y') }}
+                </div>
+            </div>
+
+            <div class="logo-info">
+                {% if logoBase64 %}
+                    <img src="{{ logoBase64 }}" alt="Logo {{ societe.nom }}" style="max-height: 55px; max-width: 160px;">
+                {% endif %}
+            </div>
+        </div>
+
+        <!-- Métadonnées -->
+        <div class="metadata">
+            <div class="metadata-item">
+                <div class="metadata-label">Date d'émission</div>
+                <div class="metadata-value">{{ devis.dateCreation|date('d/m/Y') }}</div>
+            </div>
+            <div class="metadata-item">
+                <div class="metadata-label">Commercial</div>
+                <div class="metadata-value">{{ devis.commercial ? devis.commercial.fullName : '-' }}</div>
+            </div>
+            <div class="metadata-item">
+                <div class="metadata-label">Référence client</div>
+                <div class="metadata-value">{{ devis.client ? devis.client.code : '-' }}</div>
+            </div>
+            <div class="metadata-item">
+                <div class="metadata-label">Mode de règlement</div>
+                <div class="metadata-value">{{ devis.modeReglement ? devis.modeReglement.nom : 'Virement à 30 jours' }}</div>
+            </div>
+        </div>
+
+        <!-- Contact de livraison / Contact de facturation -->
+        <div class="parties-section">
+            <div class="partie-box" style="float: left; width: 46%; margin-right: 1%;">
+                <h3>Contact de livraison</h3>
+                {% if devis.client %}
+                    {% if devis.contactLivraison and devis.contactLivraison.id != devis.contactFacturation.id %}
+                        <p><strong>{{ devis.client.nomComplet }}</strong></p>
+                        <p>À l'attention de {{ devis.contactLivraison.nomComplet }}</p>
+                        {% if devis.adresseLivraison %}
+                            <p>{{ devis.adresseLivraison.ligne1 }}</p>
+                            {% if devis.adresseLivraison.ligne2 %}<p>{{ devis.adresseLivraison.ligne2 }}</p>{% endif %}
+                            <p>{{ devis.adresseLivraison.codePostal }} {{ devis.adresseLivraison.ville }}</p>
+                        {% endif %}
+                    {% else %}
+                        <p><em>Identique au contact de facturation</em></p>
+                    {% endif %}
+                {% else %}
+                    <p>-</p>
+                {% endif %}
+            </div>
+            <div class="partie-box" style="float: left; width: 46%; margin-right: 0;">
+                <h3>Contact de facturation</h3>
                 {% if devis.client %}
                     <p><strong>{{ devis.client.nomComplet }}</strong></p>
-                    {% if devis.client.formeJuridique and not devis.client.formeJuridique.isPersonnePhysique() %}
-                        <p>{{ devis.client.formeJuridique }}</p>
+                    {% if devis.contactFacturation %}
+                        <p>À l'attention de {{ devis.contactFacturation.nomComplet }}</p>
                     {% endif %}
-                {% endif %}
-                
-                {% if devis.contactFacturation %}
-                    <p><strong>Contact:</strong> {{ devis.contactFacturation.nomComplet }}</p>
-                    {% if devis.contactFacturation.fonction %}<p>{{ devis.contactFacturation.fonction }}</p>{% endif %}
-                    {% if devis.contactFacturation.email %}<p>Email: {{ devis.contactFacturation.email }}</p>{% endif %}
-                    {% if devis.contactFacturation.telephone %}<p>Tél: {{ devis.contactFacturation.telephone }}</p>{% endif %}
-                {% endif %}
-            </div>
-            <div class="client-col">
-                {% if devis.adresseFacturation %}
-                    <p><strong>Adresse de facturation:</strong></p>
-                    <p>{{ devis.adresseFacturation.ligne1 }}</p>
-                    {% if devis.adresseFacturation.ligne2 %}<p>{{ devis.adresseFacturation.ligne2 }}</p>{% endif %}
-                    {% if devis.adresseFacturation.ligne3 %}<p>{{ devis.adresseFacturation.ligne3 }}</p>{% endif %}
-                    <p>{{ devis.adresseFacturation.codePostal }} {{ devis.adresseFacturation.ville }}</p>
-                    <p>{{ devis.adresseFacturation.pays }}</p>
+                    {% if devis.adresseFacturation %}
+                        <p>{{ devis.adresseFacturation.ligne1 }}</p>
+                        {% if devis.adresseFacturation.ligne2 %}<p>{{ devis.adresseFacturation.ligne2 }}</p>{% endif %}
+                        <p>{{ devis.adresseFacturation.codePostal }} {{ devis.adresseFacturation.ville }}</p>
+                    {% endif %}
+                {% else %}
+                    <p>-</p>
                 {% endif %}
             </div>
         </div>
-    </div>
 
-    <!-- Lignes de devis -->
-    <table class="items-table">
-        <thead>
-            <tr>
-                <th style="width: 25%;">Désignation</th>
-                <th style="width: 40%;">Description</th>
-                <th style="width: 7%;" class="text-center">Qté</th>
-                <th style="width: 10%;" class="text-right">Prix unit. HT</th>
-                <th style="width: 6%;" class="text-center">TVA</th>
-                <th style="width: 12%;" class="text-right">Total HT</th>
-            </tr>
-        </thead>
-        <tbody>
-            {% for element in devis.elementsOrdered %}
-                {% if element.type == 'product' %}
-                    <tr>
-                        <td>
-                            <strong>{{ element.designation }}</strong>
-                            {% if element.produit %}
-                                <br><small style="color: #666;">Réf: {{ element.produit.reference }}</small>
-                            {% endif %}
-                            {% if element.imageVisible and element.productImage %}
-                                <br>
-                                <img src="{{ element.productImage.base64Image }}" 
-                                     style="width: 100%; max-height: 80px; object-fit: contain; border: 1px solid #ddd; border-radius: 4px; margin-top: 4px;" 
-                                     alt="{{ element.productImage.alt ?: element.designation }}" />
-                            {% endif %}
-                        </td>
-                        <td>
-                            {{ element.description|raw }}
-                        </td>
-                        <td class="text-center">{{ element.quantite }}</td>
-                        <td class="text-right">{{ element.prixUnitaireHt }}€</td>
-                        <td class="text-center">{{ element.tvaPercent }}%</td>
-                        <td class="text-right"><strong>{{ element.totalLigneHt }}€</strong></td>
-                    </tr>
-                {% elseif element.type == 'section_title' %}
-                    <tr>
-                        <td colspan="6" style="background-color: #f8f9fa; padding: 12px; border-top: 2px solid #6f42c1;">
-                            <strong style="color: #6f42c1; font-size: 13px;">{{ element.titre }}</strong>
-                        </td>
-                    </tr>
-                {% elseif element.type == 'line_break' %}
-                    <tr>
-                        <td colspan="6" style="padding: 8px; border: none;">
-                            <!-- Saut de ligne invisible -->
-                        </td>
-                    </tr>
-                {% elseif element.type == 'page_break' %}
-                    </tbody>
-                </table>
-                
-                <div style="page-break-after: always;"></div>
-                
-                <table class="items-table">
-                    <thead>
-                        <tr>
-                            <th style="width: 25%;">Désignation</th>
-                            <th style="width: 40%;">Description</th>
-                            <th style="width: 7%;" class="text-center">Qté</th>
-                            <th style="width: 10%;" class="text-right">Prix unit. HT</th>
-                            <th style="width: 6%;" class="text-center">TVA</th>
-                            <th style="width: 12%;" class="text-right">Total HT</th>
-                        </tr>
-                    </thead>
-                    <tbody>
-                {% elseif element.type == 'separator' %}
-                    <tr>
-                        <td colspan="6" style="padding: 16px; text-align: center; border: none;">
-                            <hr style="border: none; border-top: 3px double #6f42c1; margin: 0;">
-                        </td>
-                    </tr>
-                {% elseif element.type == 'subtotal' %}
-                    <tr>
-                        <td colspan="5" style="background-color: #e9ecef; padding: 10px; text-align: right; border-top: 2px solid #6f42c1;">
-                            <strong>{{ element.titre ?: 'Sous-total' }} :</strong>
-                        </td>
-                        <td style="background-color: #e9ecef; padding: 10px; text-align: right; border-top: 2px solid #6f42c1;">
-                            <strong>{{ devis.calculateSubtotalUpTo(element.position) }}€</strong>
-                        </td>
-                    </tr>
-                {% endif %}
-            {% else %}
+        <!-- Proposition commerciale -->
+        {% if devis.notesClient and devis.notesClient|striptags|trim != '' %}
+        <div class="proposition-box">
+            <h4>Proposition commerciale personnalisée</h4>
+            <div>{{ devis.notesClient|raw }}</div>
+        </div>
+        {% endif %}
+
+        <!-- Détail des prestations -->
+        <div class="section-title">Détail des prestations</div>
+
+        <table class="items-table">
+            <thead>
                 <tr>
-                    <td colspan="6" class="text-center" style="color: #666; padding: 20px;">
-                        Aucune ligne de devis
-                    </td>
+                    <th style="width: 36%;">Désignation</th>
+                    <th style="width: 9%;" class="text-center">Unité</th>
+                    <th style="width: 8%;" class="text-center">Qté</th>
+                    <th style="width: 12%;" class="text-right">Prix unit. HT</th>
+                    <th style="width: 8%;" class="text-center">Remise</th>
+                    <th style="width: 12%;" class="text-right">Total HT</th>
+                    <th style="width: 8%;" class="text-center">TVA</th>
                 </tr>
-            {% endfor %}
-        </tbody>
-    </table>
-
-    <!-- Totaux -->
-    <div class="totals-section">
-        <table class="totals-table">
-            {% if devis.remiseGlobalePercent or devis.remiseGlobaleMontant %}
-                {% set sousTotal = 0 %}
+            </thead>
+            <tbody>
                 {% for element in devis.elementsOrdered %}
                     {% if element.type == 'product' %}
-                        {% set sousTotal = sousTotal + element.totalLigneHt %}
-                    {% endif %}
-                {% endfor %}
-                <tr>
-                    <td>Sous-total HT:</td>
-                    <td class="text-right">{{ sousTotal|number_format(2, ',', ' ') }}€</td>
-                </tr>
-                {% if devis.remiseGlobalePercent and devis.remiseGlobalePercent > 0 %}
-                    <tr>
-                        <td>Remise globale ({{ devis.remiseGlobalePercent }}%):</td>
-                        <td class="text-right">-{{ (sousTotal * devis.remiseGlobalePercent / 100)|number_format(2, ',', ' ') }}€</td>
-                    </tr>
-                {% elseif devis.remiseGlobaleMontant and devis.remiseGlobaleMontant > 0 %}
-                    <tr>
-                        <td>Remise globale:</td>
-                        <td class="text-right">-{{ devis.remiseGlobaleMontant|number_format(2, ',', ' ') }}€</td>
-                    </tr>
-                {% endif %}
-            {% endif %}
-            <tr>
-                <td><strong>Total HT:</strong></td>
-                <td class="text-right"><strong>{{ devis.totalHt|number_format(2, ',', ' ') }}€</strong></td>
-            </tr>
-            {# Récapitulatif TVA détaillé par taux #}
-            {% set tvaDetailsByRate = devis.getTvaDetailsByRate() %}
-            {# Compter uniquement les taux avec montant > 0 #}
-            {% set tvaRatesWithAmount = 0 %}
-            {% for taux, detail in tvaDetailsByRate %}
-                {% if detail.totalTva > 0.001 %}
-                    {% set tvaRatesWithAmount = tvaRatesWithAmount + 1 %}
-                {% endif %}
-            {% endfor %}
-            {% if tvaRatesWithAmount > 1 %}
-                {# Plusieurs taux de TVA : afficher le détail (seulement les montants > 0) #}
-                {% for taux, detail in tvaDetailsByRate %}
-                    {% if detail.totalTva > 0.001 %}
                         <tr>
-                            <td>TVA {{ taux }}%:</td>
-                            <td class="text-right">{{ detail.totalTva|number_format(2, ',', ' ') }}€</td>
+                            <td>
+                                {% if element.imageVisible and element.productImage and element.productImage.filename %}
+                                    {% set imagePath = projectDir ~ '/public/uploads/products/' ~ element.productImage.filename %}
+                                    <img src="{{ imagePath|base64_image }}" alt="" style="max-width: 60px; max-height: 60px; float: left; margin-right: 10px;">
+                                {% endif %}
+                                <div class="designation">{{ element.designation }}</div>
+                                {% if element.description %}
+                                    <div class="description">{{ element.description|striptags|raw }}</div>
+                                {% endif %}
+                                {% if element.produit %}
+                                    <div class="description">Réf: {{ element.produit.reference }}</div>
+                                {% endif %}
+                            </td>
+                            <td class="text-center">
+                                {% if element.produit and element.produit.uniteVente %}
+                                    {{ element.produit.uniteVente.nom }}
+                                {% elseif element.produit and element.produit.unite %}
+                                    {{ element.produit.unite }}
+                                {% else %}
+                                    -
+                                {% endif %}
+                            </td>
+                            <td class="text-center">{{ element.quantite }}</td>
+                            <td class="text-right">{{ element.prixUnitaireHt|number_format(2, ',', ' ') }} €</td>
+                            <td class="text-center">
+                                {% if element.remisePercent > 0 %}
+                                    {{ element.remisePercent }}%
+                                {% else %}
+                                    -
+                                {% endif %}
+                            </td>
+                            <td class="text-right"><strong>{{ element.totalLigneHt|number_format(2, ',', ' ') }} €</strong></td>
+                            <td class="text-center">{{ element.tvaPercent }}%</td>
+                        </tr>
+                    {% elseif element.type == 'section_title' %}
+                        <tr>
+                            <td colspan="7" class="section-row">
+                                {{ element.titre }}
+                            </td>
+                        </tr>
+                    {% elseif element.type == 'line_break' %}
+                        <tr>
+                            <td colspan="7" class="line-break-row"></td>
+                        </tr>
+                    {% elseif element.type == 'page_break' %}
+                        </tbody>
+                    </table>
+
+                    <div class="page-break"></div>
+
+                    <table class="items-table">
+                        <thead>
+                            <tr>
+                                <th style="width: 36%;">Désignation</th>
+                                <th style="width: 9%;" class="text-center">Unité</th>
+                                <th style="width: 8%;" class="text-center">Qté</th>
+                                <th style="width: 12%;" class="text-right">Prix unit. HT</th>
+                                <th style="width: 8%;" class="text-center">Remise</th>
+                                <th style="width: 12%;" class="text-right">Total HT</th>
+                                <th style="width: 8%;" class="text-center">TVA</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                    {% elseif element.type == 'separator' %}
+                        <tr>
+                            <td colspan="7" class="separator-row">
+                                <hr>
+                            </td>
+                        </tr>
+                    {% elseif element.type == 'subtotal' %}
+                        <tr>
+                            <td colspan="6" class="subtotal-row">
+                                <strong>{{ element.titre ?: 'Sous-total' }} :</strong>
+                            </td>
+                            <td class="subtotal-row">
+                                <strong>{{ devis.calculateSubtotalUpTo(element.position)|number_format(2, ',', ' ') }} €</strong>
+                            </td>
                         </tr>
                     {% endif %}
+                {% else %}
+                    <tr>
+                        <td colspan="7" class="text-center" style="color: #95a5a6; padding: 30px;">
+                            Aucune ligne de devis
+                        </td>
+                    </tr>
                 {% endfor %}
-                <tr style="border-top: 1px solid #dee2e6;">
-                    <td><strong>Total TVA:</strong></td>
-                    <td class="text-right"><strong>{{ devis.totalTva|number_format(2, ',', ' ') }}€</strong></td>
-                </tr>
-            {% else %}
-                {# Un seul taux de TVA : affichage simple #}
-                <tr>
-                    <td>TVA:</td>
-                    <td class="text-right">{{ devis.totalTva|number_format(2, ',', ' ') }}€</td>
-                </tr>
-            {% endif %}
-            <tr class="total-row">
-                <td><strong>TOTAL TTC:</strong></td>
-                <td class="text-right"><strong>{{ devis.totalTtc|number_format(2, ',', ' ') }}€</strong></td>
-            </tr>
-            {% if devis.acomptePercent or devis.acompteMontant %}
-                <tr style="border-top: 2px solid #6f42c1;">
-                    <td><strong>Acompte à la commande:</strong></td>
-                    <td class="text-right"><strong>{{ devis.calculateAcompte }}€</strong></td>
-                </tr>
-                <tr>
-                    <td>Solde à la livraison:</td>
-                    <td class="text-right">{{ (devis.totalTtc - devis.calculateAcompte)|number_format(2, ',', ' ') }}€</td>
-                </tr>
-            {% endif %}
+            </tbody>
         </table>
-    </div>
 
-    {# Notes client supprimées du PDF - utilisées dans l'email #}
-    {# {% if devis.notesClient %}
-        <div class="notes-section">
-            <h4>Notes</h4>
-            <p>{{ devis.notesClient|nl2br }}</p>
-        </div>
-    {% endif %} #}
+        <!-- Bloc indissociable : tout le bas du devis -->
+        <div style="page-break-inside: avoid;">
 
-    <!-- Section signature -->
-    {% if devis.statut in ['envoye', 'relance'] %}
-        <div class="signature-section">
-            <p><strong>Pour accepter ce devis:</strong></p>
-            <p>1. Signez et datez ce document</p>
-            {% if devis.acomptePercent or devis.acompteMontant %}
-                <p>2. Réglez l'acompte de {{ devis.calculateAcompte }}€</p>
-            {% endif %}
-            <p>3. Retournez-nous ce document signé</p>
-            
-            <div style="clear: both; margin-top: 20px;">
-                <div style="float: left; width: 45%;">
-                    <p><strong>TechnoProd</strong></p>
-                    <p>Date: {{ devis.dateCreation|date('d/m/Y') }}</p>
-                    <br><br>
-                    <p>Signature:</p>
+        <!-- Colonne gauche et droite -->
+        <div class="bottom-section">
+            <!-- Wrapper colonne gauche : Récapitulatif TVA (si plusieurs taux) + Conditions + Coordonnées bancaires -->
+            <div style="float: left; width: 46%; margin-right: 4.5%; box-sizing: border-box;">
+                {% set tvaDetailsByRate = devis.getTvaDetailsByRate() %}
+                {% set tvaRatesWithAmount = 0 %}
+                {% for taux, detail in tvaDetailsByRate %}
+                    {% if detail.totalTva > 0.001 %}
+                        {% set tvaRatesWithAmount = tvaRatesWithAmount + 1 %}
+                    {% endif %}
+                {% endfor %}
+
+                {% if tvaRatesWithAmount > 1 %}
+                <div class="conditions-box" style="margin-bottom: 10px;">
+                    <h4>Récapitulatif TVA</h4>
+                    <table style="width: 100%; font-size: 10px; border-collapse: collapse;">
+                        <thead>
+                            <tr style="border-bottom: 1px solid #ddd;">
+                                <th style="padding: 5px 0; text-align: left; font-weight: bold;">Taux</th>
+                                <th style="padding: 5px 0; text-align: right; font-weight: bold;">Base HT</th>
+                                <th style="padding: 5px 0; text-align: right; font-weight: bold;">Montant TVA</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for taux, detail in tvaDetailsByRate %}
+                                {% if detail.totalTva > 0.001 %}
+                                <tr>
+                                    <td style="padding: 3px 0;">{{ taux }}%</td>
+                                    <td style="padding: 3px 0; text-align: right;">{{ detail.totalHt|number_format(2, ',', ' ') }} €</td>
+                                    <td style="padding: 3px 0; text-align: right;">{{ detail.totalTva|number_format(2, ',', ' ') }} €</td>
+                                </tr>
+                                {% endif %}
+                            {% endfor %}
+                        </tbody>
+                    </table>
                 </div>
-                <div style="float: right; width: 45%;">
-                    <p><strong>Client</strong></p>
-                    <p>Date: ___________</p>
-                    <br><br>
-                    <p>Signature précédée de la mention "Bon pour accord":</p>
+                {% endif %}
+
+                <div class="acceptation-box" style="margin-top: 10px;">
+                    <h4>Acceptation du devis</h4>
+                    <p>Signature précédée de la mention : Lu et approuvé, bon pour accord</p>
+                    {% if devis.dateSignature %}
+                        <p style="margin-top: 10px;"><strong>Signé par:</strong> {{ devis.signatureNom }} ({{ devis.signatureEmail }})</p>
+                        <p><strong>Date:</strong> {{ devis.dateSignature|date('d/m/Y à H:i:s') }}</p>
+                    {% else %}
+                        <div style="margin-top: 15px;">
+                            <p style="font-size: 8px; color: #7f8c8d; margin: 3px 0;">A ....................................................., le .......................................................</p>
+                        </div>
+                        <div style="margin-top: 10px; border: 1px dashed #bdc3c7; padding: 40px 20px; min-height: 60px;">
+                        </div>
+                    {% endif %}
                 </div>
             </div>
-            <div style="clear: both;"></div>
-        </div>
-    {% endif %}
 
-    {% if devis.dateSignature %}
-        <div class="signature-section">
-            <h4>Signature électronique</h4>
-            <p><strong>Signé par:</strong> {{ devis.signatureNom }} ({{ devis.signatureEmail }})</p>
-            <p><strong>Date de signature:</strong> {{ devis.dateSignature|date('d/m/Y à H:i:s') }}</p>
-            {% if devis.signatureData %}
-                <div style="text-align: center; margin-top: 10px;">
-                    <img src="{{ devis.signatureData }}" style="max-height: 80px; border: 1px solid #ddd;">
+            <!-- Colonne droite : Synthèse financière -->
+            <div style="float: left; width: 46%; margin-right: 0; box-sizing: border-box;">
+                <div class="synthese-box">
+                <h4>Synthèse financière</h4>
+                <table class="synthese-table">
+                    {% if devis.remiseGlobalePercent or devis.remiseGlobaleMontant %}
+                        {% set sousTotal = 0 %}
+                        {% for element in devis.elementsOrdered %}
+                            {% if element.type == 'product' %}
+                                {% set sousTotal = sousTotal + element.totalLigneHt %}
+                            {% endif %}
+                        {% endfor %}
+                        <tr>
+                            <td>Sous-total HT</td>
+                            <td>{{ sousTotal|number_format(2, ',', ' ') }} €</td>
+                        </tr>
+                        {% if devis.remiseGlobalePercent and devis.remiseGlobalePercent > 0 %}
+                            <tr>
+                                <td>Remise ({{ devis.remiseGlobalePercent }}%)</td>
+                                <td>-{{ (sousTotal * devis.remiseGlobalePercent / 100)|number_format(2, ',', ' ') }} €</td>
+                            </tr>
+                        {% elseif devis.remiseGlobaleMontant and devis.remiseGlobaleMontant > 0 %}
+                            <tr>
+                                <td>Remise</td>
+                                <td>-{{ devis.remiseGlobaleMontant|number_format(2, ',', ' ') }} €</td>
+                            </tr>
+                        {% endif %}
+                    {% endif %}
+                    <tr class="total-ht">
+                        <td>Total HT</td>
+                        <td>{{ devis.totalHt|number_format(2, ',', ' ') }} €</td>
+                    </tr>
+                    <tr class="tva-line">
+                        <td>Total TVA</td>
+                        <td>{{ devis.totalTva|number_format(2, ',', ' ') }} €</td>
+                    </tr>
+                    {% if devis.acomptePercent or devis.acompteMontant %}
+                        <tr class="acompte-line">
+                            <td>Acompte à la commande</td>
+                            <td>{{ devis.calculateAcompte|number_format(2, ',', ' ') }} € TTC</td>
+                        </tr>
+                    {% endif %}
+                    <tr>
+                        <td colspan="2" class="total-ttc">
+                            Total TTC&nbsp;&nbsp;&nbsp;&nbsp;{{ devis.totalTtc|number_format(2, ',', ' ') }} €
+                        </td>
+                    </tr>
+                </table>
                 </div>
-            {% endif %}
+            </div>
         </div>
-    {% endif %}
 
-    <!-- Conditions générales -->
-    <div class="conditions">
-        <h4>Conditions générales de vente</h4>
-        <p><strong>Validité:</strong> Ce devis est valable {{ (devis.dateValidite.diff(devis.dateCreation).days) }} jours à compter de sa date d'émission.</p>
-        
-        <p><strong>Paiement:</strong> {% if devis.acomptePercent or devis.acompteMontant %}Acompte de {{ devis.calculateAcompte }}€ à la commande, {% endif %}solde à la livraison. Règlement par virement bancaire, chèque ou carte bancaire.</p>
-        
-        <p><strong>Livraison:</strong> Les délais de livraison sont donnés à titre indicatif et ne sont pas contractuels. Les marchandises voyagent aux risques et périls du destinataire.</p>
-        
-        <p><strong>Garantie:</strong> Nos produits sont garantis 12 mois pièces et main d'œuvre contre tout vice de fabrication.</p>
-        
-        <p><strong>Propriété:</strong> Nous conservons la propriété des marchandises jusqu'au complet paiement de la facture.</p>
-        
-        <p><strong>Juridiction:</strong> Tout litige relève de la compétence exclusive du Tribunal de Commerce de Paris.</p>
-    </div>
+        </div><!-- Fin du bloc indissociable -->
 
-    <!-- Pied de page -->
-    <div class="footer">
-        <p>TechnoProd - SARL au capital de 50 000€ - SIRET: 123 456 789 00012 - TVA: FR12345678901</p>
-        <p>123 Avenue de l'Innovation, 75001 Paris - Tél: +33 1 23 45 67 89 - Email: contact@technoprod.com</p>
+        <!-- Footer avec mentions légales -->
+        <div style="position: fixed; bottom: 20px; left: 30px; right: 30px; padding-top: 15px; border-top: 1px solid #dee2e6; font-size: 8px; color: #7f8c8d; line-height: 1.4; background-color: white; text-align: center;">
+            <p style="margin: 3px 0;">Devis gratuit. Les prix TTC sont établis sur la base des taux de TVA en vigueur à la date de remise de l'offre. Toute variation de ces taux sera répercutée sur les prix.
+            {% if devis.acomptePercent %}
+                Un acompte de {{ devis.acomptePercent }}% du prix TTC sera demandé afin de valider toute commande.
+            {% elseif devis.acompteMontant %}
+                Un acompte de {{ ((devis.acompteMontant / devis.totalTtc * 100)|number_format(0)) }}% du prix TTC sera demandé afin de valider toute commande.
+            {% else %}
+                Un acompte de 30% du prix TTC sera demandé afin de valider toute commande.
+            {% endif %}
+            L'acceptation de ce devis vaut acceptation de nos Conditions Générales et Particulières de Vente figurant en annexe.
+            </p>
+            <p style="margin: 10px 0 5px 0; font-size: 11px; font-weight: 600; color: #2c3e50;">Coordonnées bancaires</p>
+            <p style="margin: 0; font-size: 10px; color: #2c3e50; font-weight: 500;">
+                <span style="font-weight: 700;">IBAN :</span>
+                {% if banquePrincipale and banquePrincipale.iban %}
+                    {{ banquePrincipale.iban }}
+                {% else %}
+                    FR76 3000 4000 5000 6000 7000 189
+                {% endif %}
+                &nbsp;&nbsp;•&nbsp;&nbsp;
+                <span style="font-weight: 700;">BIC :</span>
+                {% if banquePrincipale and banquePrincipale.bic %}
+                    {{ banquePrincipale.bic }}
+                {% else %}
+                    BNPAFRPPXXX
+                {% endif %}
+            </p>
+        </div>
+
+        <!-- CGV sur nouvelle page -->
+        {% if conditionsVente and conditionsVente.contenu and conditionsVente.contenu|striptags|trim != '' %}
+        <div class="page-break"></div>
+
+        <div style="margin-top: 30px;">
+            <h2 style="font-size: 16px; color: {{ couleurPrimaire }}; margin-bottom: 20px; text-align: center; text-transform: uppercase; letter-spacing: 1px;">
+                Conditions Générales de Vente
+            </h2>
+            <div class="cgv-content" style="font-size: 9px; line-height: 1.6; color: #2c3e50;">
+                {{ conditionsVente.contenu|nl2br|raw }}
+            </div>
+        </div>
+        {% endif %}
+
     </div>
 </body>
 </html>

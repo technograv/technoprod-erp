@@ -84,6 +84,7 @@
             padding-bottom: 1rem;
             border-bottom: 2px solid #dc3545;
         }
+
         
         .quick-action-btn {
             background: linear-gradient(135deg, #dc3545 0%, #e83e53 100%);
@@ -153,78 +154,53 @@
         {% endif %}
         
         <ul class="nav nav-tabs nav-tabs-admin" role="tablist" id="main-admin-tabs">
+            <!-- 1. SOCIÉTÉS (société mère uniquement) -->
+            {% if is_societe_mere %}
             <li class="nav-item">
-                <a class="nav-link active" data-bs-toggle="tab" href="#dashboard" role="tab">
-                    <i class="fas fa-tachometer-alt me-2"></i>Dashboard
+                <a class="nav-link active" data-bs-toggle="tab" href="#gestion-societes" role="tab">
+                    <i class="fas fa-building me-2"></i>Sociétés
                 </a>
             </li>
-            
-            <!-- Onglet Juridique & Comptable (société mère uniquement) -->
-            {% if is_societe_mere %}
+
+            <!-- 2. JURIDIQUE & COMPTABLE -->
             <li class="nav-item">
                 <a class="nav-link" data-bs-toggle="tab" href="#juridique-comptable" role="tab">
                     <i class="fas fa-balance-scale me-2"></i>Juridique & Comptable
                 </a>
             </li>
-            {% endif %}
-            
-            
-            <!-- Onglets Gestion Globale (société mère uniquement) -->
-            {% if is_societe_mere %}
-            <li class="nav-item">
-                <a class="nav-link" data-bs-toggle="tab" href="#gestion-societes" role="tab">
-                    <i class="fas fa-building-user me-2"></i>Société
-                </a>
-            </li>
+
+            <!-- 3. SECTEURS ET COMMERCIAUX -->
             <li class="nav-item">
                 <a class="nav-link" data-bs-toggle="tab" href="#secteurs" role="tab">
                     <i class="fas fa-map me-2"></i>Secteurs et commerciaux
                 </a>
             </li>
-            {% else %}
-            <!-- Onglet Paramètres Enseigne pour société fille -->
-            <li class="nav-item">
-                <a class="nav-link" data-bs-toggle="tab" href="#parametres-enseigne" role="tab">
-                    <i class="fas fa-cog me-2"></i>Paramètres Enseigne
-                </a>
-            </li>
-            {% endif %}
-            
-            <li class="nav-item">
-                <a class="nav-link" data-bs-toggle="tab" href="#transporteurs" role="tab">
-                    <i class="fas fa-truck me-2"></i>Transporteurs
-                </a>
-            </li>
-            <li class="nav-item">
-                <a class="nav-link" data-bs-toggle="tab" href="#frais-port" role="tab">
-                    <i class="fas fa-shipping-fast me-2"></i>Frais de Port
-                </a>
-            </li>
-            {% if is_societe_mere %}
-            <li class="nav-item">
-                <a class="nav-link" data-bs-toggle="tab" href="#produits" role="tab">
-                    <i class="fas fa-box me-2"></i>Produits
-                </a>
-            </li>
-            {% endif %}
-            {% if is_societe_mere %}
-            <li class="nav-item">
-                <a class="nav-link" data-bs-toggle="tab" href="#unites" role="tab">
-                    <i class="fas fa-ruler me-2"></i>Unités
-                </a>
-            </li>
-            {% endif %}
-            {% if is_societe_mere %}
-            <li class="nav-item">
-                <a class="nav-link" data-bs-toggle="tab" href="#tags-clients" role="tab">
-                    <i class="fas fa-tags me-2"></i>Tags Clients
-                </a>
-            </li>
-            {% endif %}
-            {% if is_societe_mere %}
+
+            <!-- 4. CONFIGURATION SYSTÈME -->
             <li class="nav-item">
                 <a class="nav-link" data-bs-toggle="tab" href="#parametres" role="tab">
-                    <i class="fas fa-server me-2"></i>Configuration Système
+                    <i class="fas fa-cog me-2"></i>Configuration Système
+                </a>
+            </li>
+
+            <!-- 5. PRODUITS & SERVICES -->
+            <li class="nav-item">
+                <a class="nav-link" data-bs-toggle="tab" href="#produits-services" role="tab">
+                    <i class="fas fa-box me-2"></i>Produits & Services
+                </a>
+            </li>
+
+            <!-- 6. TIERS -->
+            <li class="nav-item">
+                <a class="nav-link" data-bs-toggle="tab" href="#tiers" role="tab">
+                    <i class="fas fa-handshake me-2"></i>Tiers
+                </a>
+            </li>
+            {% else %}
+            <!-- Pour société fille : Paramètres Enseigne uniquement -->
+            <li class="nav-item">
+                <a class="nav-link active" data-bs-toggle="tab" href="#parametres-enseigne" role="tab">
+                    <i class="fas fa-cog me-2"></i>Paramètres Enseigne
                 </a>
             </li>
             {% endif %}
@@ -232,200 +208,6 @@
     </div>
 
     <div class="tab-content">
-        <!-- Dashboard -->
-        <div class="tab-pane fade show active" id="dashboard" role="tabpanel">
-            <!-- Statistiques -->
-            <div class="row mb-4">
-                <div class="col-md-3 mb-3">
-                    <div class="stats-card">
-                        <div class="stats-number">{{ stats.users }}</div>
-                        <div class="stats-label">Utilisateurs</div>
-                    </div>
-                </div>
-                <div class="col-md-3 mb-3">
-                    <div class="stats-card">
-                        <div class="stats-number">{{ stats.users_actifs }}</div>
-                        <div class="stats-label">Actifs</div>
-                    </div>
-                </div>
-                <div class="col-md-3 mb-3">
-                    <div class="stats-card">
-                        <div class="stats-number">{{ stats.admins }}</div>
-                        <div class="stats-label">Administrateurs</div>
-                    </div>
-                </div>
-                <div class="col-md-3 mb-3">
-                    <div class="stats-card">
-                        <div class="stats-number">{{ stats.groupes_utilisateurs }}</div>
-                        <div class="stats-label">Groupes Utilisateurs</div>
-                    </div>
-                </div>
-            </div>
-            <div class="row mb-4">
-                <div class="col-md-3 mb-3">
-                    <div class="stats-card">
-                        <div class="stats-number">{{ stats.groupes_actifs }}</div>
-                        <div class="stats-label">Groupes Actifs</div>
-                    </div>
-                </div>
-                <div class="col-md-3 mb-3">
-                    <div class="stats-card">
-                        <div class="stats-number">{{ stats.formes_juridiques }}</div>
-                        <div class="stats-label">Formes Juridiques</div>
-                    </div>
-                </div>
-            </div>
-            <div class="row mb-4">
-                <div class="col-md-4 mb-3">
-                    <div class="stats-card">
-                        <div class="stats-number">{{ stats.secteurs }}</div>
-                        <div class="stats-label">Secteurs</div>
-                    </div>
-                </div>
-                <div class="col-md-4 mb-3">
-                    <div class="stats-card">
-                        <div class="stats-number">{{ stats.produits }}</div>
-                        <div class="stats-label">Produits</div>
-                    </div>
-                </div>
-            </div>
-            <div class="row mb-4">
-                <div class="col-md-3 mb-3">
-                    <div class="stats-card">
-                        <div class="stats-number">{{ stats.tags }}</div>
-                        <div class="stats-label">Tags Clients</div>
-                    </div>
-                </div>
-                <div class="col-md-3 mb-3">
-                    <div class="stats-card">
-                        <div class="stats-number">{{ stats.modes_paiement }}</div>
-                        <div class="stats-label">Moyens Paiement</div>
-                    </div>
-                </div>
-                <div class="col-md-3 mb-3">
-                    <div class="stats-card">
-                        <div class="stats-number">{{ stats.modes_reglement }}</div>
-                        <div class="stats-label">Modes Règlement</div>
-                    </div>
-                </div>
-                <div class="col-md-3 mb-3">
-                    <div class="stats-card">
-                        <div class="stats-number">{{ stats.banques }}</div>
-                        <div class="stats-label">Banques</div>
-                    </div>
-                </div>
-            </div>
-            <div class="row mb-4">
-                <div class="col-md-3 mb-3">
-                    <div class="stats-card">
-                        <div class="stats-number">{{ stats.taux_tva }}</div>
-                        <div class="stats-label">Taux TVA</div>
-                    </div>
-                </div>
-                <div class="col-md-3 mb-3">
-                    <div class="stats-card">
-                        <div class="stats-number">{{ stats.unites }}</div>
-                        <div class="stats-label">Unités</div>
-                    </div>
-                </div>
-                <div class="col-md-3 mb-3">
-                    <div class="stats-card">
-                        <div class="stats-number">{{ stats.civilites }}</div>
-                        <div class="stats-label">Civilités</div>
-                    </div>
-                </div>
-            </div>
-            <div class="row mb-4">
-                <div class="col-md-6 mb-3">
-                    <div class="stats-card">
-                        <div class="stats-number">{{ stats.transporteurs }}</div>
-                        <div class="stats-label">Transporteurs</div>
-                    </div>
-                </div>
-                <div class="col-md-6 mb-3">
-                    <div class="stats-card">
-                        <div class="stats-number">{{ stats.frais_port }}</div>
-                        <div class="stats-label">Frais de Port</div>
-                    </div>
-                </div>
-            </div>
-
-            <!-- Statistiques Sociétés -->
-            {% if is_societe_mere %}
-            <div class="row mb-4">
-                <div class="col-md-6 mb-3">
-                    <div class="stats-card">
-                        <div class="stats-number">{{ stats.societes_meres }}</div>
-                        <div class="stats-label">Sociétés Mères</div>
-                    </div>
-                </div>
-                <div class="col-md-6 mb-3">
-                    <div class="stats-card">
-                        <div class="stats-number">{{ stats.societes_filles }}</div>
-                        <div class="stats-label">Sociétés Filles / Enseignes</div>
-                    </div>
-                </div>
-            </div>
-            {% endif %}
-
-            <!-- Actions rapides -->
-            <div class="admin-section">
-                <h3 class="section-title">
-                    <i class="fas fa-bolt me-2"></i>Actions Rapides
-                </h3>
-                <div class="row">
-                    <div class="col-md-6">
-                        <h5 class="mb-3">Gestion des Utilisateurs</h5>
-                        <a href="#users" class="quick-action-btn" data-bs-toggle="tab">
-                            <i class="fas fa-users me-2"></i>Gérer les Utilisateurs
-                        </a>
-                        <a href="#" class="quick-action-btn" onclick="alert('Fonctionnalité à venir')">
-                            <i class="fas fa-user-plus me-2"></i>Nouvel Utilisateur
-                        </a>
-                    </div>
-                    <div class="col-md-6">
-                        <h5 class="mb-3">Configuration Métier</h5>
-                        <a href="#formes-juridiques" class="quick-action-btn" data-bs-toggle="tab">
-                            <i class="fas fa-building me-2"></i>Formes Juridiques
-                        </a>
-                        <a href="#secteurs" class="quick-action-btn" data-bs-toggle="tab">
-                            <i class="fas fa-map me-2"></i>Secteurs
-                        </a>
-                        {% if is_societe_mere %}
-                        <a href="#produits" class="quick-action-btn" data-bs-toggle="tab">
-                            <i class="fas fa-box me-2"></i>Produits
-                        </a>
-                        <a href="#unites" class="quick-action-btn" data-bs-toggle="tab">
-                            <i class="fas fa-ruler me-2"></i>Unités
-                        </a>
-                        <a href="#parametres" class="quick-action-btn" data-bs-toggle="tab">
-                            <i class="fas fa-server me-2"></i>Configuration Système
-                        </a>
-                        {% endif %}
-                    </div>
-                </div>
-            </div>
-
-            <!-- Informations système -->
-            <div class="admin-section">
-                <h3 class="section-title">
-                    <i class="fas fa-info-circle me-2"></i>Informations Système
-                </h3>
-                <div class="row">
-                    <div class="col-md-6">
-                        <p><strong>Version PHP :</strong> {{ constant('PHP_VERSION') }}</p>
-                        <p><strong>Version Symfony :</strong> {{ constant('Symfony\\Component\\HttpKernel\\Kernel::VERSION') }}</p>
-                        <p><strong>Environnement :</strong> {{ app.environment }}</p>
-                    </div>
-                    <div class="col-md-6">
-                        <p><strong>Debug :</strong> {{ app.debug ? 'Activé' : 'Désactivé' }}</p>
-                        <p><strong>Utilisateur connecté :</strong> {{ app.user.fullName }}</p>
-                        <p><strong>Rôles :</strong> {{ app.user.roles|join(', ') }}</p>
-                    </div>
-                </div>
-            </div>
-        </div>
-
         <!-- Juridique & Comptable (société mère uniquement) -->
         {% if is_societe_mere %}
         <div class="tab-pane fade" id="juridique-comptable" role="tabpanel">
@@ -460,8 +242,18 @@
                                 </a>
                             </li>
                             <li class="nav-item">
+                                <a class="nav-link" data-bs-toggle="pill" href="#cgv-content" role="tab">
+                                    <i class="fas fa-file-contract me-2"></i>CGV/CPV
+                                </a>
+                            </li>
+                            <li class="nav-item">
                                 <a class="nav-link" data-bs-toggle="pill" href="#taux-tva-content" role="tab">
                                     <i class="fas fa-percent me-2"></i>Taux TVA
+                                </a>
+                            </li>
+                            <li class="nav-item">
+                                <a class="nav-link" data-bs-toggle="pill" href="#unites-content" role="tab">
+                                    <i class="fas fa-ruler me-2"></i>Unités
                                 </a>
                             </li>
                         </ul>
@@ -500,12 +292,28 @@
                                     <p class="text-muted mt-2">Chargement des banques...</p>
                                 </div>
                             </div>
+                            <div class="tab-pane fade" id="cgv-content" role="tabpanel">
+                                <div class="text-center">
+                                    <div class="spinner-border text-primary" role="status">
+                                        <span class="visually-hidden">Chargement...</span>
+                                    </div>
+                                    <p class="text-muted mt-2">Chargement des CGV/CPV...</p>
+                                </div>
+                            </div>
                             <div class="tab-pane fade" id="taux-tva-content" role="tabpanel">
                                 <div class="text-center">
                                     <div class="spinner-border text-primary" role="status">
                                         <span class="visually-hidden">Chargement...</span>
                                     </div>
                                     <p class="text-muted mt-2">Chargement des taux TVA...</p>
+                                </div>
+                            </div>
+                            <div class="tab-pane fade" id="unites-content" role="tabpanel">
+                                <div class="text-center">
+                                    <div class="spinner-border text-primary" role="status">
+                                        <span class="visually-hidden">Chargement...</span>
+                                    </div>
+                                    <p class="text-muted mt-2">Chargement des unités...</p>
                                 </div>
                             </div>
                         </div>
@@ -515,21 +323,21 @@
         </div>
         {% endif %}
 
-        <!-- Gestion des sociétés -->
-        <div class="tab-pane fade" id="gestion-societes" role="tabpanel">
+        <!-- Sociétés -->
+        <div class="tab-pane fade show active" id="gestion-societes" role="tabpanel">
             <div class="admin-section">
                 <h3 class="section-title">
-                    <i class="fas fa-building-user me-2"></i>Gestion des sociétés
+                    <i class="fas fa-building me-2"></i>Sociétés
                 </h3>
-                <p class="text-muted mb-4">Configuration multi-société et gestion des utilisateurs</p>
-                
-                <!-- Sous-navigation pour Gestion des sociétés -->
+                <p class="text-muted mb-4">Gestion des marques, utilisateurs et groupes</p>
+
+                <!-- Sous-navigation pour Sociétés -->
                 <div class="row">
                     <div class="col-12">
                         <ul class="nav nav-pills nav-pills-admin justify-content-center" role="tablist" id="societes-sub-tabs">
                             <li class="nav-item">
                                 <a class="nav-link active" href="#societes-content" role="tab">
-                                    <i class="fas fa-building me-2"></i>Sociétés
+                                    <i class="fas fa-building me-2"></i>Marques
                                 </a>
                             </li>
                             <li class="nav-item">
@@ -539,17 +347,7 @@
                             </li>
                             <li class="nav-item">
                                 <a class="nav-link" href="#groupes-users-content" role="tab">
-                                    <i class="fas fa-users-cog me-2"></i>Groupes Utilisateurs
-                                </a>
-                            </li>
-                            <li class="nav-item">
-                                <a class="nav-link" href="#themes-couleurs-content" role="tab">
-                                    <i class="fas fa-palette me-2"></i>Thèmes & Couleurs
-                                </a>
-                            </li>
-                            <li class="nav-item">
-                                <a class="nav-link" href="#templates-documents-content" role="tab">
-                                    <i class="fas fa-file-alt me-2"></i>Templates de documents
+                                    <i class="fas fa-users-cog me-2"></i>Groupes
                                 </a>
                             </li>
                         </ul>
@@ -578,136 +376,6 @@
                                         <span class="visually-hidden">Chargement...</span>
                                     </div>
                                     <p class="text-muted mt-2">Chargement des groupes d'utilisateurs...</p>
-                                </div>
-                            </div>
-                            <div class="tab-pane fade" id="themes-couleurs-content" role="tabpanel">
-                                <div class="admin-section">
-                                    <h5 class="section-title">
-                                        <i class="fas fa-palette me-2"></i>Thèmes & Couleurs
-                                    </h5>
-                                            <div class="row">
-                                                <div class="col-md-8">
-                                                    <h5>Configuration des Couleurs</h5>
-                                                    {% if is_societe_mere %}
-                                                        <p class="text-muted">Couleurs par défaut utilisées par toutes les sociétés filles.</p>
-                                                    {% else %}
-                                                        <p class="text-muted">Couleurs spécifiques à cette enseigne. Hérite de la société mère si non défini.</p>
-                                                    {% endif %}
-                                                    
-                                                    <form id="colors-form" class="mb-4">
-                                                        <div class="row">
-                                                            <div class="col-md-4 mb-3">
-                                                                <label for="primary-color" class="form-label">Couleur Primaire</label>
-                                                                <input type="color" class="form-control form-control-color" id="primary-color" name="primary" value="#dc3545" title="Couleur primaire">
-                                                                <div class="form-text">Couleur principale de l'interface</div>
-                                                            </div>
-                                                            <div class="col-md-4 mb-3">
-                                                                <label for="secondary-color" class="form-label">Couleur Secondaire</label>
-                                                                <input type="color" class="form-control form-control-color" id="secondary-color" name="secondary" value="#6c757d" title="Couleur secondaire">
-                                                                <div class="form-text">Couleur pour les éléments secondaires</div>
-                                                            </div>
-                                                            <div class="col-md-4 mb-3">
-                                                                <label for="tertiary-color" class="form-label">Couleur Tertiaire</label>
-                                                                <input type="color" class="form-control form-control-color" id="tertiary-color" name="tertiary" value="#28a745" title="Couleur tertiaire">
-                                                                <div class="form-text">Couleur d'accent et succès</div>
-                                                            </div>
-                                                        </div>
-                                                        
-                                                        <div class="row">
-                                                            <div class="col-md-6 mb-3">
-                                                                <label for="theme-select" class="form-label">Thème Prédéfini</label>
-                                                                <select class="form-select" id="theme-select">
-                                                                    <option value="default">Défaut (Rouge)</option>
-                                                                    <option value="blue">Bleu (TechnoGrav)</option>
-                                                                    <option value="green">Vert (TechnoPrint)</option>
-                                                                    <option value="yellow">Jaune (TechnoBuro)</option>
-                                                                </select>
-                                                                <div class="form-text">Applique un thème prédéfini</div>
-                                                            </div>
-                                                            <div class="col-md-6 mb-3">
-                                                                <label class="form-label">Actions</label><br>
-                                                                <button type="submit" class="btn btn-primary me-2">
-                                                                    <i class="fas fa-save"></i> Enregistrer
-                                                                </button>
-                                                                <button type="button" class="btn btn-outline-secondary" id="reset-colors">
-                                                                    <i class="fas fa-undo"></i> Réinitialiser
-                                                                </button>
-                                                            </div>
-                                                        </div>
-                                                    </form>
-                                                    
-                                                    <h5 class="mt-4">Gestion du Logo</h5>
-                                                    <div id="logo-management">
-                                                        <div class="row">
-                                                            <div class="col-md-6">
-                                                                <div class="border rounded p-3 text-center" id="logo-preview">
-                                                                    <div id="logo-current" style="display: none;">
-                                                                        <img id="logo-image" src="" alt="Logo actuel" class="img-thumbnail mb-2" style="max-height: 100px;">
-                                                                        <br>
-                                                                        <button type="button" class="btn btn-outline-danger btn-sm" id="delete-logo">
-                                                                            <i class="fas fa-trash"></i> Supprimer
-                                                                        </button>
-                                                                    </div>
-                                                                    <div id="logo-placeholder">
-                                                                        <i class="fas fa-image fa-3x text-muted mb-2"></i>
-                                                                        <p class="text-muted">Aucun logo défini</p>
-                                                                    </div>
-                                                                </div>
-                                                            </div>
-                                                            <div class="col-md-6">
-                                                                <div class="mb-3">
-                                                                    <label for="logo-upload" class="form-label">Télécharger un nouveau logo</label>
-                                                                    <input type="file" class="form-control" id="logo-upload" accept="image/*">
-                                                                    <div class="form-text">Formats acceptés: JPG, PNG, GIF (max 2MB)</div>
-                                                                </div>
-                                                                <button type="button" class="btn btn-success" id="upload-logo" disabled>
-                                                                    <i class="fas fa-upload"></i> Télécharger
-                                                                </button>
-                                                            </div>
-                                                        </div>
-                                                    </div>
-                                                </div>
-                                                
-                                                <div class="col-md-4">
-                                                    <h5>Prévisualisation</h5>
-                                                    <div id="theme-preview" class="border rounded p-3">
-                                                        <div class="preview-navbar mb-3" style="background: var(--bs-primary, #dc3545); color: white; padding: 10px; border-radius: 4px;">
-                                                            <strong>Navigation</strong>
-                                                        </div>
-                                                        <div class="preview-content">
-                                                            <button class="btn btn-primary mb-2">Bouton Principal</button><br>
-                                                            <button class="btn btn-secondary mb-2">Bouton Secondaire</button><br>
-                                                            <button class="btn btn-success mb-2">Bouton Succès</button><br>
-                                                            <div class="alert alert-primary" role="alert">Exemple d'alerte primaire</div>
-                                                        </div>
-                                                    </div>
-                                                    
-                                                    <div class="mt-3">
-                                                        <h6>Informations d'héritage</h6>
-                                                        <div id="inheritance-info">
-                                                            <small class="text-muted">Chargement...</small>
-                                                        </div>
-                                                    </div>
-                                                </div>
-                                            </div>
-                                        </div>
-                                </div>
-                            </div>
-                            <div class="tab-pane fade" id="templates-documents-content" role="tabpanel">
-                                <div class="admin-section">
-                                    <h5 class="section-title">
-                                        <i class="fas fa-file-alt me-2"></i>Templates de documents
-                                    </h5>
-                                    <div class="row">
-                                        <div class="col-12">
-                                            {% if is_societe_mere %}
-                                                <p class="text-muted">Templates de base utilisés par défaut par toutes les sociétés.</p>
-                                            {% else %}
-                                                <p class="text-muted">Templates spécifiques à cette enseigne (surcharge optionnelle).</p>
-                                            {% endif %}
-                                            <div id="templates-documents-container" style="position: relative; overflow: hidden;"></div>
-                                        </div>
-                                    </div>
                                 </div>
                             </div>
                         </div>
@@ -763,18 +431,6 @@
         </div>
 
 
-        <!-- Configuration Système (société mère uniquement) -->
-        {% if is_societe_mere %}
-        <div class="tab-pane fade" id="parametres" role="tabpanel">
-            <div class="admin-section">
-                <div class="text-center">
-                    <div class="spinner-border text-primary" role="status">
-                        <span class="visually-hidden">Chargement...</span>
-                    </div>
-                </div>
-            </div>
-        </div>
-        {% endif %}
 
         <div class="tab-pane fade" id="users" role="tabpanel">
             <div class="admin-section">
@@ -818,8 +474,128 @@
             </script>
         </div>
 
+        <!-- Configuration Système (société mère uniquement) -->
+        <div class="tab-pane fade" id="parametres" role="tabpanel">
+            <div class="admin-section">
+                <h3 class="section-title">
+                    <i class="fas fa-cog me-2"></i>Configuration Système
+                </h3>
+                <p class="text-muted mb-4">Alertes, Maintenance et Templates</p>
 
-        <!-- Produits (société mère uniquement) -->
+                <!-- Sous-navigation pour Configuration Système -->
+                <div class="row">
+                    <div class="col-12">
+                        <ul class="nav nav-pills nav-pills-admin justify-content-center" role="tablist" id="parametres-sub-tabs">
+                            <li class="nav-item">
+                                <a class="nav-link active" data-bs-toggle="pill" href="#alertes-content" role="tab">
+                                    <i class="fas fa-bell me-2"></i>Alertes
+                                </a>
+                            </li>
+                            <li class="nav-item">
+                                <a class="nav-link" data-bs-toggle="pill" href="#maintenance-content" role="tab">
+                                    <i class="fas fa-tools me-2"></i>Maintenance
+                                </a>
+                            </li>
+                            <li class="nav-item">
+                                <a class="nav-link" data-bs-toggle="pill" href="#templates-content" role="tab">
+                                    <i class="fas fa-file-invoice me-2"></i>Templates
+                                </a>
+                            </li>
+                        </ul>
+
+                        <!-- Contenu des sous-onglets Configuration Système -->
+                        <div class="tab-content mt-4">
+                            <div class="tab-pane fade show active" id="alertes-content" role="tabpanel">
+                                <!-- Contenu chargé dynamiquement via AJAX -->
+                            </div>
+                            <div class="tab-pane fade" id="maintenance-content" role="tabpanel">
+                                <!-- Contenu chargé dynamiquement via AJAX -->
+                            </div>
+                            <div class="tab-pane fade" id="templates-content" role="tabpanel">
+                                <!-- Contenu chargé dynamiquement via AJAX -->
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Produits & Services (société mère uniquement) -->
+        <div class="tab-pane fade" id="produits-services" role="tabpanel">
+            <div class="admin-section">
+                <h3 class="section-title">
+                    <i class="fas fa-box me-2"></i>Produits & Services
+                </h3>
+                <p class="text-muted mb-4">Catalogue de produits et services (à développer)</p>
+                <div class="alert alert-info">
+                    <i class="fas fa-info-circle me-2"></i>
+                    Module en cours de développement
+                </div>
+            </div>
+        </div>
+
+        <!-- Tiers (société mère uniquement) -->
+        <div class="tab-pane fade" id="tiers" role="tabpanel">
+            <div class="admin-section">
+                <h3 class="section-title">
+                    <i class="fas fa-handshake me-2"></i>Tiers
+                </h3>
+                <p class="text-muted mb-4">Gestion des transporteurs, frais de port et tags clients</p>
+
+                <!-- Sous-navigation pour Tiers -->
+                <div class="row">
+                    <div class="col-12">
+                        <ul class="nav nav-pills nav-pills-admin justify-content-center" role="tablist" id="tiers-sub-tabs">
+                            <li class="nav-item">
+                                <a class="nav-link active" href="#transporteurs-content" role="tab">
+                                    <i class="fas fa-truck me-2"></i>Transporteurs
+                                </a>
+                            </li>
+                            <li class="nav-item">
+                                <a class="nav-link" href="#frais-port-content" role="tab">
+                                    <i class="fas fa-shipping-fast me-2"></i>Frais de Port
+                                </a>
+                            </li>
+                            <li class="nav-item">
+                                <a class="nav-link" href="#tags-clients-content" role="tab">
+                                    <i class="fas fa-tags me-2"></i>Tags Clients
+                                </a>
+                            </li>
+                        </ul>
+
+                        <!-- Contenu des sous-onglets Tiers -->
+                        <div class="tab-content">
+                            <div class="tab-pane fade show active" id="transporteurs-content" role="tabpanel">
+                                <div class="text-center">
+                                    <div class="spinner-border text-primary" role="status">
+                                        <span class="visually-hidden">Chargement...</span>
+                                    </div>
+                                    <p class="text-muted mt-2">Chargement des transporteurs...</p>
+                                </div>
+                            </div>
+                            <div class="tab-pane fade" id="frais-port-content" role="tabpanel">
+                                <div class="text-center">
+                                    <div class="spinner-border text-primary" role="status">
+                                        <span class="visually-hidden">Chargement...</span>
+                                    </div>
+                                    <p class="text-muted mt-2">Chargement des frais de port...</p>
+                                </div>
+                            </div>
+                            <div class="tab-pane fade" id="tags-clients-content" role="tabpanel">
+                                <div class="text-center">
+                                    <div class="spinner-border text-primary" role="status">
+                                        <span class="visually-hidden">Chargement...</span>
+                                    </div>
+                                    <p class="text-muted mt-2">Chargement des tags clients...</p>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Produits (ancien - obsolète, à supprimer) -->
         {% if is_societe_mere %}
         <div class="tab-pane fade" id="produits" role="tabpanel">
             <div class="admin-section">
@@ -947,37 +723,6 @@
             </div>
         </div>
 
-        <!-- Transporteurs -->
-        <div class="tab-pane fade" id="transporteurs" role="tabpanel">
-            <div class="admin-section">
-                <h3 class="section-title">
-                    <i class="fas fa-truck me-2"></i>Gestion des Transporteurs
-                </h3>
-                <p class="text-muted">Chargement en cours...</p>
-                <div class="text-center">
-                    <div class="spinner-border text-primary" role="status">
-                        <span class="visually-hidden">Chargement...</span>
-                    </div>
-                </div>
-            </div>
-        </div>
-
-        <!-- Frais de Port -->
-        <div class="tab-pane fade" id="frais-port" role="tabpanel">
-            <div class="admin-section">
-                <h3 class="section-title">
-                    <i class="fas fa-shipping-fast me-2"></i>Gestion des Frais de Port
-                </h3>
-                <p class="text-muted">Chargement en cours...</p>
-                <div class="text-center">
-                    <div class="spinner-border text-primary" role="status">
-                        <span class="visually-hidden">Chargement...</span>
-                    </div>
-                </div>
-            </div>
-        </div>
-
-        
         <!-- Section Paramètres Enseigne (société fille uniquement) -->
         {% if not is_societe_mere %}
         <div class="tab-pane fade" id="parametres-enseigne" role="tabpanel">
@@ -1032,13 +777,17 @@
             modes_paiement: '{{ path("app_admin_modes_paiement") }}',
             modes_reglement: '{{ path("app_admin_modes_reglement") }}',
             banques: '{{ path("app_admin_banques") }}',
+            cgv: '{{ path("app_admin_conditions_vente_index") }}',
             taux_tva: '{{ path("app_admin_taux_tva") }}',
             produits: '{{ path("app_admin_produits") }}',
             unites: '{{ path("app_admin_unites") }}',
             tags: '{{ path("app_admin_tags") }}',
             transporteurs: '{{ path("app_admin_transporteurs") }}',
             frais_port: '{{ path("app_admin_frais_port") }}',
-            parametres: '{{ path("app_admin_parametres") }}'
+            parametres: '{{ path("app_admin_parametres") }}',
+            templates: '{{ path("app_admin_templates_index") }}',
+            alertes: '{{ path("app_admin_alertes") }}',
+            maintenance: '{{ path("app_admin_maintenance") }}'
         };
     </script>
     <script src="{{ asset('js/services/DragDropService.js') }}?v={{ 'now'|date('Ymd-His') }}"></script>

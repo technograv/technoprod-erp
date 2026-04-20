@@ -156,7 +156,36 @@
             color: #6c757d;
             line-height: 1.1;
         }
-        
+
+        /* Champ de recherche */
+        #searchInput {
+            border-left: none;
+            padding-right: 40px;
+        }
+        #searchInput:focus {
+            box-shadow: 0 0 0 0.2rem rgba(40, 167, 69, 0.25);
+            border-color: #28a745;
+        }
+        .search-clear-btn {
+            position: absolute;
+            right: 10px;
+            top: 50%;
+            transform: translateY(-50%);
+            background: none;
+            border: none;
+            color: #6c757d;
+            cursor: pointer;
+            padding: 5px;
+            display: none;
+            z-index: 10;
+        }
+        .search-clear-btn:hover {
+            color: #dc3545;
+        }
+        .search-wrapper {
+            position: relative;
+        }
+
         /* Responsive table adjustments */
         @media (max-width: 1200px) {
             .clients-table th, .clients-table td {
@@ -309,6 +338,32 @@
     <!-- Tableau des clients -->
     {% if clients|length > 0 %}
         <div class="card">
+            <!-- Champ de recherche -->
+            <div class="p-3 border-bottom bg-light">
+                <div class="row align-items-center">
+                    <div class="col-md-6">
+                        <div class="search-wrapper">
+                            <div class="input-group">
+                                <span class="input-group-text bg-white">
+                                    <i class="fas fa-search text-muted"></i>
+                                </span>
+                                <input type="text"
+                                       id="searchInput"
+                                       class="form-control"
+                                       placeholder="Rechercher un client (nom, code, contact, ville, commercial...)">
+                            </div>
+                            <button type="button" class="search-clear-btn" id="clearSearch" title="Effacer la recherche">
+                                <i class="fas fa-times-circle"></i>
+                            </button>
+                        </div>
+                    </div>
+                    <div class="col-md-6 text-end">
+                        <small class="text-muted">
+                            <span id="visibleCount">{{ clients|length }}</span> / {{ clients|length }} résultat(s)
+                        </small>
+                    </div>
+                </div>
+            </div>
             <div class="card-header bg-light">
                 <div class="row align-items-center">
                     <div class="col-md-8">
@@ -980,6 +1035,65 @@ document.addEventListener('DOMContentLoaded', function() {
             }
         });
     });
+
+    // ============================================
+    // Système de recherche instantanée
+    // ============================================
+    const searchInput = document.getElementById('searchInput');
+    const clearButton = document.getElementById('clearSearch');
+    const tableBody = document.querySelector('#clients-table tbody');
+    const visibleCount = document.getElementById('visibleCount');
+
+    if (searchInput && tableBody) {
+        const rows = tableBody.querySelectorAll('tr.client-row');
+
+        // Fonction de recherche
+        function performSearch() {
+            const searchTerm = searchInput.value.toLowerCase().trim();
+            let visibleRows = 0;
+
+            rows.forEach(function(row) {
+                const rowText = row.textContent.toLowerCase();
+                if (rowText.includes(searchTerm)) {
+                    row.style.display = '';
+                    visibleRows++;
+                } else {
+                    row.style.display = 'none';
+                }
+            });
+
+            if (visibleCount) {
+                visibleCount.textContent = visibleRows;
+            }
+
+            if (clearButton) {
+                clearButton.style.display = searchTerm ? 'block' : 'none';
+            }
+        }
+
+        // Event listener sur le champ de recherche
+        searchInput.addEventListener('input', performSearch);
+
+        // Event listener sur le bouton clear
+        if (clearButton) {
+            clearButton.addEventListener('click', function() {
+                searchInput.value = '';
+                performSearch();
+                searchInput.focus();
+            });
+        }
+
+        // Support de la touche Escape pour effacer
+        searchInput.addEventListener('keydown', function(e) {
+            if (e.key === 'Escape') {
+                searchInput.value = '';
+                performSearch();
+            }
+        });
+
+        // Focus automatique sur le champ de recherche (optionnel)
+        // searchInput.focus();
+    }
 });
 </script>
 {% endblock %}

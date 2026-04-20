@@ -10,15 +10,23 @@ class ClientSansContactDetector extends AbstractAlerteDetector
     public function detect(AlerteType $alerteType): array
     {
         // Détecter les clients qui n'ont AUCUN contact actif
-        // LEFT JOIN pour trouver ceux sans contact actif
+        // MAIS on exclut les clients archivés (soft delete)
+
+        // D'abord, trouver les clients NON archivés sans aucun contact actif
         $qb = $this->entityManager->createQueryBuilder()
             ->select('c')
             ->from(Client::class, 'c')
             ->leftJoin('c.contacts', 'contact', 'WITH', 'contact.actif = true')
+            ->where('c.archived = false')
             ->groupBy('c.id')
             ->having('COUNT(contact.id) = 0');
 
-        $clients = $qb->getQuery()->getResult();
+        $clientsSansContactActif = $qb->getQuery()->getResult();
+
+        // Filtrer pour garder seulement ceux qui n'ont AUCUN contact (actif ou inactif)
+        $clients = array_filter($clientsSansContactActif, function(Client $client) {
+            return $client->getContacts()->count() === 0;
+        });
 
         $instances = [];
         $currentEntityIds = [];

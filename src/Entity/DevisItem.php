@@ -5,6 +5,7 @@ namespace App\Entity;
 use App\Repository\DevisItemRepository;
 use Doctrine\DBAL\Types\Types;
 use Doctrine\ORM\Mapping as ORM;
+use Symfony\Component\Validator\Constraints as Assert;
 
 #[ORM\Entity(repositoryClass: DevisItemRepository::class)]
 class DevisItem
@@ -29,12 +30,21 @@ class DevisItem
     private ?string $description = null;
 
     #[ORM\Column(type: Types::DECIMAL, precision: 10, scale: 2)]
+    #[Assert\NotBlank(message: 'La quantité est obligatoire')]
+    #[Assert\Positive(message: 'La quantité doit être supérieure à 0')]
     private ?string $quantite = '1.00';
 
     #[ORM\Column(type: Types::DECIMAL, precision: 10, scale: 2)]
+    #[Assert\NotBlank(message: 'Le prix unitaire est obligatoire')]
+    #[Assert\PositiveOrZero(message: 'Le prix unitaire doit être supérieur ou égal à 0')]
     private ?string $prixUnitaireHt = '0.00';
 
     #[ORM\Column(type: Types::DECIMAL, precision: 6, scale: 3, nullable: true)]
+    #[Assert\Range(
+        min: 0,
+        max: 100,
+        notInRangeMessage: 'La remise doit être comprise entre {{ min }}% et {{ max }}%'
+    )]
     private ?string $remisePercent = null;
 
     #[ORM\Column(type: Types::DECIMAL, precision: 10, scale: 2, nullable: true)]

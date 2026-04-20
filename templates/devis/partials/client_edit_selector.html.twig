@@ -225,10 +225,10 @@
                 </div>
             </div>
         </div>
-        
-        <!-- Email d'envoi automatique et Modèle de document -->
+
+        <!-- Email d'envoi automatique -->
         <div class="row">
-            <div class="col-md-6">
+            <div class="col-md-12">
                 {{ form_row(form.emailEnvoiAutomatique, {
                     'label': 'Email d\'envoi automatique',
                     'label_attr': {'class': 'form-label'},
@@ -236,16 +236,6 @@
                 }) }}
                 <small class="text-muted">
                     <i class="fas fa-paper-plane me-1"></i>Ce devis sera envoyé automatiquement à cette adresse
-                </small>
-            </div>
-            <div class="col-md-6">
-                {{ form_row(form.modeleDocument, {
-                    'label': 'Modèle de document',
-                    'label_attr': {'class': 'form-label'},
-                    'attr': {'class': 'form-select'}
-                }) }}
-                <small class="text-muted">
-                    <i class="fas fa-info-circle me-1"></i>Le modèle sélectionné sera utilisé lors de la génération PDF du devis.
                 </small>
             </div>
         </div>

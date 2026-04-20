@@ -705,7 +705,10 @@ class CommercialDashboard {
 
     async fermerAlerte(alerteId) {
         try {
-            const response = await fetch('/workflow/dashboard/alerte/' + alerteId + '/dismiss', {
+            // Extraire l'ID numérique (retirer le préfixe 'auto_' ou 'manual_')
+            const alerteNumericId = alerteId.replace(/^(auto_|manual_)/, '');
+
+            const response = await fetch('/workflow/dashboard/alerte/' + alerteNumericId + '/dismiss', {
                 method: 'POST',
                 headers: {
                     'X-Requested-With': 'XMLHttpRequest',

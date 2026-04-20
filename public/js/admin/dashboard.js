@@ -71,9 +71,9 @@ class AdminDashboard {
     }
 
     cleanupParasiteContent() {
-        // CORRECTION: Masquer immédiatement tout le contenu parasite au chargement, sauf dashboard actif
+        // CORRECTION: Masquer immédiatement tout le contenu parasite au chargement, sauf premier onglet actif
         setTimeout(() => {
-            document.querySelectorAll('.tab-pane:not(#dashboard)').forEach(pane => {
+            document.querySelectorAll('.tab-pane:not(#gestion-societes)').forEach(pane => {
                 if (!pane.id.includes('-content')) { // Garder les sous-onglets
                     pane.classList.remove('show', 'active');
                     pane.style.display = 'none';
@@ -105,15 +105,15 @@ class AdminDashboard {
                 }
             });
         });
-        
+
         // Gérer les sous-onglets avec chargement conditionnel
         document.querySelectorAll('[data-bs-toggle="pill"]').forEach((pill) => {
             pill.addEventListener('shown.bs.tab', (e) => {
                 const targetTab = e.target.getAttribute('href');
                 console.log('🔄 Sub-tab switched to:', targetTab);
-                
+
                 // Certains sous-onglets nécessitent un chargement spécial
-                if (targetTab === '#templates-documents-content' || 
+                if (targetTab === '#templates-documents-content' ||
                     targetTab === '#themes-couleurs-content') {
                     if (this.tabManager) {
                         this.tabManager.loadTabContent(targetTab);
@@ -121,8 +121,18 @@ class AdminDashboard {
                 }
             });
         });
-        
+
         console.log('🔧 Tab system initialized with', document.querySelectorAll('#main-admin-tabs [data-bs-toggle="tab"]').length, 'main tabs');
+
+        // Charger automatiquement le premier onglet actif au démarrage
+        setTimeout(() => {
+            const activeTab = document.querySelector('#main-admin-tabs .nav-link.active');
+            if (activeTab && this.tabManager) {
+                const targetTab = activeTab.getAttribute('href');
+                console.log('🔄 Loading initial active tab:', targetTab);
+                this.tabManager.loadTabContent(targetTab);
+            }
+        }, 100);
     }
 }
 

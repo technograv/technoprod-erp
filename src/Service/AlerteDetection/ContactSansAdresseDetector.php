@@ -10,11 +10,17 @@ class ContactSansAdresseDetector extends AbstractAlerteDetector
     public function detect(AlerteType $alerteType): array
     {
         // Détecter les contacts actifs qui n'ont pas d'adresse assignée
+        // MAIS on exclut :
+        // - les contacts inactifs (actif = false) = contacts archivés
+        // - les contacts dont le client parent a le statut "archivé"
         $contactsQuery = $this->entityManager->createQueryBuilder()
             ->select('c')
             ->from(Contact::class, 'c')
+            ->leftJoin('c.client', 'client')
             ->where('c.actif = true')
             ->andWhere('c.adresse IS NULL')
+            ->andWhere('client.statut != :statutArchive OR client.statut IS NULL')
+            ->setParameter('statutArchive', 'archivé')
             ->getQuery();
 
         $contacts = $contactsQuery->getResult();
@@ -28,7 +34,7 @@ class ContactSansAdresseDetector extends AbstractAlerteDetector
                 $instances[] = $this->createInstance($alerteType, $contact->getId(), [
                     'contact_nom' => $contact->getNom(),
                     'contact_prenom' => $contact->getPrenom(),
-                    'client_nom' => $contact->getClient()?->getNom(),
+                    'client_nom' => $contact->getClient()?->getNomEntreprise(),
                     'client_id' => $contact->getClient()?->getId(),
                 ]);
             }

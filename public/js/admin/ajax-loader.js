@@ -102,10 +102,11 @@ class AdminAjaxLoader {
         
         // Déterminer le conteneur parent des sous-onglets
         let parentContainer = null;
-        if (tabId.includes('juridique') || tabId.includes('formes-') || tabId.includes('moyens-') || 
-            tabId.includes('modes-') || tabId.includes('banques-') || tabId.includes('taux-')) {
+        if (tabId.includes('juridique') || tabId.includes('formes-') || tabId.includes('moyens-') ||
+            tabId.includes('modes-') || tabId.includes('banques-') || tabId.includes('cgv-') ||
+            tabId.includes('taux-')) {
             parentContainer = '#juridique-comptable';
-        } else if (tabId.includes('societes-') || tabId.includes('users-') || tabId.includes('groupes-') || 
+        } else if (tabId.includes('societes-') || tabId.includes('users-') || tabId.includes('groupes-') ||
                    tabId.includes('themes-') || tabId.includes('templates-')) {
             parentContainer = '#gestion-societes';
         }

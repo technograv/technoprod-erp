@@ -140,7 +140,8 @@ class DevisLog
             'converted_to_invoice' => 'Transféré en facture',
             'payment_received' => 'Paiement reçu',
             'cancelled' => 'Devis annulé',
-            'signature_cancelled' => ''  // Pas de préfixe pour cette action
+            'signature_cancelled' => '',  // Pas de préfixe pour cette action
+            'actualisation_demandee' => ''  // Pas de préfixe (détails contiennent déjà tout)
         ];
 
         return $actionLabels[$this->action] ?? $this->action;

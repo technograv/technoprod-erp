@@ -44,6 +44,9 @@ class DevisVersion
     #[ORM\Column(length: 20)]
     private ?string $statutAtTime = null;
 
+    #[ORM\Column(length: 32, nullable: true)]
+    private ?string $clientAccessToken = null;
+
     #[ORM\PrePersist]
     public function setCreatedAtValue(): void
     {
@@ -151,6 +154,17 @@ class DevisVersion
     public function setStatutAtTime(string $statutAtTime): static
     {
         $this->statutAtTime = $statutAtTime;
+        return $this;
+    }
+
+    public function getClientAccessToken(): ?string
+    {
+        return $this->clientAccessToken;
+    }
+
+    public function setClientAccessToken(?string $clientAccessToken): static
+    {
+        $this->clientAccessToken = $clientAccessToken;
         return $this;
     }
 

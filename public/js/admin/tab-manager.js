@@ -79,6 +79,15 @@ class AdminTabManager {
             case '#parametres':
                 this.setupParametresTab();
                 break;
+            case '#tiers':
+                this.setupTiersTab();
+                break;
+            case '#produits-services':
+                this.setupProduitsServicesTab();
+                break;
+            case '#templates-content':
+                this.setupTemplatesTab();
+                break;
             default:
                 this.setupGenericTab(tabId);
         }
@@ -272,18 +281,49 @@ class AdminTabManager {
     setupParametresTab() {
         console.log('🔍 DEBUG: Setting up Paramètres tab');
         this.activateTab('#parametres');
-        
-        // Charger le contenu AJAX
-        const parametresSection = document.querySelector('#parametres .admin-section');
-        if (parametresSection && window.adminRoutes && window.adminRoutes.parametres) {
+
+        if (typeof setupParametresSubTabsFixed === 'function') {
+            console.log('✅ setupParametresSubTabsFixed found, calling it');
+            setupParametresSubTabsFixed();
+        } else {
+            console.error('❌ setupParametresSubTabsFixed function not available!');
+        }
+    }
+
+    setupTiersTab() {
+        console.log('🔍 DEBUG: Setting up Tiers tab');
+        this.activateTab('#tiers');
+
+        if (typeof setupTiersSubTabsFixed === 'function') {
+            console.log('✅ setupTiersSubTabsFixed found, calling it');
+            setupTiersSubTabsFixed();
+        } else {
+            console.error('❌ setupTiersSubTabsFixed function not available!');
+        }
+    }
+
+    setupProduitsServicesTab() {
+        console.log('🔍 DEBUG: Setting up Produits & Services tab');
+        this.activateTab('#produits-services');
+
+        // Afficher le message de placeholder pour le moment
+        this.showTabMessage('#produits-services', 'Produits & Services', 'Gestion des produits et services. Fonctionnalité en cours de développement.');
+    }
+
+    setupTemplatesTab() {
+        console.log('🔍 DEBUG: Setting up Templates tab');
+        this.activateTab('#templates-content');
+
+        const templatesSection = document.querySelector('#templates-content .admin-section');
+        if (templatesSection && window.adminRoutes && window.adminRoutes.templates) {
             window.adminAjaxLoader.loadContentIntoElementFixed(
-                window.adminRoutes.parametres, 
-                parametresSection, 
-                '#parametres'
+                window.adminRoutes.templates,
+                templatesSection,
+                '#templates-content'
             );
         } else {
-            console.log('⚠️ Route paramètres non configurée, affichage du contenu par défaut');
-            this.showTabMessage('#parametres', 'Paramètres Système', 'Configuration générale du système et paramètres globaux.');
+            console.log('⚠️ Route templates non configurée, affichage du contenu par défaut');
+            this.showTabMessage('#templates-content', 'Gestion des Templates', 'Interface de gestion des templates en développement.');
         }
     }
 

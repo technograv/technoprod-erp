@@ -115,7 +115,13 @@
                                 <small>{{ societe.couleurSecondaire }}</small>
                             </div>
                         {% endif %}
-                        {% if not societe.couleurPrimaire and not societe.couleurSecondaire %}
+                        {% if societe.couleurTertiaire %}
+                            <div class="d-flex align-items-center mt-1">
+                                <div class="me-2" style="width: 20px; height: 20px; border-radius: 50%; background-color: {{ societe.couleurTertiaire }}; border: 1px solid #ddd;"></div>
+                                <small>{{ societe.couleurTertiaire }}</small>
+                            </div>
+                        {% endif %}
+                        {% if not societe.couleurPrimaire and not societe.couleurSecondaire and not societe.couleurTertiaire %}
                             <span class="text-muted small">Couleurs par défaut</span>
                         {% endif %}
                     </td>
@@ -241,19 +247,81 @@
                             </div>
                         </div>
                     </div>
-                    
+
                     <div class="row">
-                        <div class="col-md-6 mb-3">
+                        <div class="col-md-12 mb-3">
+                            <label for="societe-logo" class="form-label">Logo</label>
+                            <input type="file" class="form-control" id="societe-logo" accept="image/png, image/jpeg, image/jpg, image/svg+xml">
+                            <small class="text-muted">Formats acceptés : PNG, JPG, SVG. Taille maximale : 2 Mo.</small>
+                            <div id="logo-preview" class="mt-2" style="display: none;">
+                                <img id="logo-preview-img" src="" alt="Aperçu du logo" style="max-height: 100px; max-width: 200px;" class="border rounded p-1">
+                                <button type="button" class="btn btn-sm btn-outline-danger ms-2" id="remove-logo">
+                                    <i class="fas fa-times"></i> Supprimer
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="row">
+                        <div class="col-md-4 mb-3">
                             <label for="societe-couleur-primaire" class="form-label">Couleur Primaire</label>
                             <input type="color" class="form-control form-control-color" id="societe-couleur-primaire">
                         </div>
-                        <div class="col-md-6 mb-3">
+                        <div class="col-md-4 mb-3">
                             <label for="societe-couleur-secondaire" class="form-label">Couleur Secondaire</label>
                             <input type="color" class="form-control form-control-color" id="societe-couleur-secondaire">
                         </div>
+                        <div class="col-md-4 mb-3">
+                            <label for="societe-couleur-tertiaire" class="form-label">Couleur Tertiaire</label>
+                            <input type="color" class="form-control form-control-color" id="societe-couleur-tertiaire">
+                        </div>
                     </div>
-                    
-                    
+
+                    <hr class="my-4">
+                    <h6 class="mb-3"><i class="fas fa-cogs me-2"></i>Configuration du Workflow Commercial</h6>
+
+                    <div class="row">
+                        <div class="col-md-4 mb-3">
+                            <label for="societe-delai-relance" class="form-label">Délai de relance devis (jours)</label>
+                            <input type="number" class="form-control" id="societe-delai-relance" value="14" min="1">
+                            <small class="text-muted">Nombre de jours avant relance d'un devis non signé</small>
+                        </div>
+                        <div class="col-md-4 mb-3">
+                            <label for="societe-frequence-visite" class="form-label">Fréquence visite client (jours)</label>
+                            <input type="number" class="form-control" id="societe-frequence-visite" value="365" min="1">
+                            <small class="text-muted">Intervalle de temps entre deux visites client</small>
+                        </div>
+                        <div class="col-md-4 mb-3">
+                            <label for="societe-duree-validite-devis" class="form-label">Validité devis (jours)</label>
+                            <input type="number" class="form-control" id="societe-duree-validite-devis" value="30" min="1">
+                            <small class="text-muted">Durée de validité par défaut des devis</small>
+                        </div>
+                    </div>
+
+                    <div class="row">
+                        <div class="col-md-6 mb-3">
+                            <label for="societe-delai-facturation" class="form-label">Délai facturation (jours)</label>
+                            <input type="number" class="form-control" id="societe-delai-facturation" value="1" min="0">
+                            <small class="text-muted">Délai après livraison pour facturer</small>
+                        </div>
+                        <div class="col-md-6 mb-3">
+                            <label for="societe-acompte-defaut" class="form-label">Acompte par défaut (%)</label>
+                            <input type="number" class="form-control" id="societe-acompte-defaut" value="30" min="0" max="100" step="0.01">
+                            <small class="text-muted">Pourcentage d'acompte demandé par défaut</small>
+                        </div>
+                    </div>
+
+                    <hr class="my-4">
+                    <h6 class="mb-3"><i class="fas fa-envelope me-2"></i>Configuration Email</h6>
+
+                    <div class="row">
+                        <div class="col-12 mb-3">
+                            <label for="societe-signature-mail" class="form-label">Signature email par défaut</label>
+                            <textarea class="form-control" id="societe-signature-mail" rows="4" placeholder="Signature qui apparaîtra dans les emails envoyés depuis cette société"></textarea>
+                            <small class="text-muted">Utilisé pour les devis, factures et emails automatiques</small>
+                        </div>
+                    </div>
+
                 </form>
             </div>
             <div class="modal-footer">
@@ -398,6 +466,44 @@ function handleSocietesClick(e) {
     }
 }
 
+// Gestion de la prévisualisation du logo
+document.addEventListener('DOMContentLoaded', function() {
+    const logoInput = document.getElementById('societe-logo');
+    const logoPreview = document.getElementById('logo-preview');
+    const logoPreviewImg = document.getElementById('logo-preview-img');
+    const removeLogoBtn = document.getElementById('remove-logo');
+
+    if (logoInput) {
+        logoInput.addEventListener('change', function(e) {
+            const file = e.target.files[0];
+            if (file) {
+                // Vérifier la taille (2 Mo max)
+                if (file.size > 2 * 1024 * 1024) {
+                    showNotification('Le fichier est trop volumineux. Taille maximale : 2 Mo.', 'error');
+                    logoInput.value = '';
+                    return;
+                }
+
+                // Afficher la prévisualisation
+                const reader = new FileReader();
+                reader.onload = function(e) {
+                    logoPreviewImg.src = e.target.result;
+                    logoPreview.style.display = 'block';
+                };
+                reader.readAsDataURL(file);
+            }
+        });
+    }
+
+    if (removeLogoBtn) {
+        removeLogoBtn.addEventListener('click', function() {
+            logoInput.value = '';
+            logoPreview.style.display = 'none';
+            logoPreviewImg.src = '';
+        });
+    }
+});
+
 // Fonction pour gérer les changements dans les formulaires
 function handleSocietesChange(e) {
     if (e.target.id === 'societe-type') {
@@ -457,48 +563,62 @@ function handleSaveSociete(e) {
     console.log('🔍 DEBUG: *** FONCTION SAVE RÉELLE APPELÉE ***');
     e.preventDefault();
     e.stopPropagation();
-    
+
     const societeId = document.getElementById('societe-id').value;
     const isEdit = societeId && societeId !== '';
-    
+
     console.log('🔍 DEBUG: Mode édition:', isEdit, 'ID:', societeId);
-    
+
     // Validation côté client
     const nom = document.getElementById('societe-nom').value.trim();
     if (!nom) {
         showNotification('Le nom de la société est obligatoire', 'error');
         return;
     }
-    
-    const data = {
-        nom: nom,
-        type: document.getElementById('societe-type').value,
-        societeParentId: document.getElementById('societe-parente').value || null,
-        adresse: document.getElementById('societe-adresse').value.trim(),
-        codePostal: document.getElementById('societe-code-postal').value.trim(),
-        ville: document.getElementById('societe-ville').value.trim(),
-        telephone: document.getElementById('societe-telephone').value.trim(),
-        email: document.getElementById('societe-email').value.trim(),
-        siret: document.getElementById('societe-siret').value.trim(),
-        couleurPrimaire: document.getElementById('societe-couleur-primaire').value || null,
-        couleurSecondaire: document.getElementById('societe-couleur-secondaire').value || null,
-        active: document.getElementById('societe-active').checked
-    };
-    
-    console.log('🔍 DEBUG: Données à envoyer:', data);
-    
+
+    // Utiliser FormData pour supporter l'upload de fichier
+    const formData = new FormData();
+    formData.append('nom', nom);
+    formData.append('type', document.getElementById('societe-type').value);
+    formData.append('societeParentId', document.getElementById('societe-parente').value || '');
+    formData.append('adresse', document.getElementById('societe-adresse').value.trim());
+    formData.append('codePostal', document.getElementById('societe-code-postal').value.trim());
+    formData.append('ville', document.getElementById('societe-ville').value.trim());
+    formData.append('telephone', document.getElementById('societe-telephone').value.trim());
+    formData.append('email', document.getElementById('societe-email').value.trim());
+    formData.append('siret', document.getElementById('societe-siret').value.trim());
+    formData.append('couleurPrimaire', document.getElementById('societe-couleur-primaire').value || '');
+    formData.append('couleurSecondaire', document.getElementById('societe-couleur-secondaire').value || '');
+    formData.append('couleurTertiaire', document.getElementById('societe-couleur-tertiaire').value || '');
+    formData.append('active', document.getElementById('societe-active').checked ? '1' : '0');
+    formData.append('delaiRelanceDevis', parseInt(document.getElementById('societe-delai-relance').value) || 14);
+    formData.append('frequenceVisiteClients', parseInt(document.getElementById('societe-frequence-visite').value) || 365);
+    formData.append('dureeValiditeDevisDefaut', parseInt(document.getElementById('societe-duree-validite-devis').value) || 30);
+    formData.append('delaiFacturation', parseInt(document.getElementById('societe-delai-facturation').value) || 1);
+    formData.append('acompteDefautPercent', parseFloat(document.getElementById('societe-acompte-defaut').value) || 30.00);
+    formData.append('signatureMailDefaut', document.getElementById('societe-signature-mail').value.trim() || '');
+
+    // Ajouter le fichier logo si présent
+    const logoInput = document.getElementById('societe-logo');
+    if (logoInput.files && logoInput.files[0]) {
+        formData.append('logo', logoInput.files[0]);
+    }
+
+    console.log('🔍 DEBUG: FormData préparé avec logo:', logoInput.files && logoInput.files[0] ? logoInput.files[0].name : 'aucun');
+
     const url = isEdit ? '/admin/societes/' + societeId : '/admin/societes';
-    const method = isEdit ? 'PUT' : 'POST';
-    
-    console.log('🔍 DEBUG: URL:', url, 'Method:', method);
-    
+    // IMPORTANT: Toujours POST avec FormData car PUT ne parse pas multipart/form-data
+    const method = 'POST';
+
+    console.log('🔍 DEBUG: URL:', url, 'Method:', method, 'isEdit:', isEdit);
+
     fetch(url, {
         method: method,
         headers: {
-            'Content-Type': 'application/json',
             'X-Requested-With': 'XMLHttpRequest'
+            // NE PAS définir Content-Type pour FormData, le navigateur le fait automatiquement
         },
-        body: JSON.stringify(data)
+        body: formData
     })
     .then(response => {
         console.log('🔍 DEBUG: Response status:', response.status);
@@ -589,6 +709,9 @@ function modifierSocieteModal(societeId) {
 }
 
 function remplirFormulaireSociete(societe, readonly = false) {
+    console.log('🔍 DEBUG remplirFormulaireSociete - societe.parentId:', societe.parentId);
+    console.log('🔍 DEBUG remplirFormulaireSociete - societe:', societe);
+
     document.getElementById('societe-id').value = societe.id;
     document.getElementById('societe-nom').value = societe.nom || '';
     document.getElementById('societe-type').value = societe.type || 'fille';
@@ -599,13 +722,38 @@ function remplirFormulaireSociete(societe, readonly = false) {
     document.getElementById('societe-telephone').value = societe.telephone || '';
     document.getElementById('societe-email').value = societe.email || '';
     document.getElementById('societe-siret').value = societe.siret || '';
+
+    // Afficher le logo existant si présent (input file ne peut pas avoir de value)
+    if (societe.logo) {
+        const logoPreview = document.getElementById('logo-preview');
+        const logoPreviewImg = document.getElementById('logo-preview-img');
+        logoPreviewImg.src = societe.logo;
+        logoPreview.style.display = 'block';
+    } else {
+        document.getElementById('logo-preview').style.display = 'none';
+    }
+
     document.getElementById('societe-couleur-primaire').value = societe.couleurPrimaire || '#dc3545';
     document.getElementById('societe-couleur-secondaire').value = societe.couleurSecondaire || '#6c757d';
-    
+    document.getElementById('societe-couleur-tertiaire').value = societe.couleurTertiaire || '#28a745';
+
+    // Champs de configuration workflow commercial
+    document.getElementById('societe-delai-relance').value = societe.delaiRelanceDevis || 14;
+    document.getElementById('societe-frequence-visite').value = societe.frequenceVisiteClients || 365;
+    document.getElementById('societe-duree-validite-devis').value = societe.dureeValiditeDevisDefaut || 30;
+    document.getElementById('societe-delai-facturation').value = societe.delaiFacturation || 1;
+    document.getElementById('societe-acompte-defaut').value = societe.acompteDefautPercent || 30.00;
+    document.getElementById('societe-signature-mail').value = societe.signatureMailDefaut || '';
+
+    // Sauvegarder parentId avant le callback
+    const parentId = societe.parentId;
+    console.log('🔍 DEBUG - parentId sauvegardé avant loadSocietesMeres:', parentId);
+
     // Charger les sociétés mères et appliquer la logique d'affichage
     loadSocietesMeres().then(() => {
         // Après chargement, remplir la valeur et gérer l'affichage
-        document.getElementById('societe-parente').value = societe.parentId || '';
+        console.log('🔍 DEBUG - Réapplication parentId après loadSocietesMeres:', parentId);
+        document.getElementById('societe-parente').value = parentId || '';
         toggleSocieteParente();
     });
     document.getElementById('societe-active').checked = societe.active;
@@ -1359,17 +1507,21 @@ function loadSocietesMeres() {
             const parser = new DOMParser();
             const doc = parser.parseFromString(html, 'text/html');
             const rows = doc.querySelectorAll('#societesTable tbody tr');
-            
+
             const societeParenteSelect = document.getElementById('societe-parente');
             if (!societeParenteSelect) return;
-            
+
+            // IMPORTANT: Sauvegarder la valeur actuelle avant de vider le select
+            const currentValue = societeParenteSelect.value;
+            console.log('🔍 DEBUG loadSocietesMeres - valeur actuelle sauvegardée:', currentValue);
+
             // Vider et remplir le select
             societeParenteSelect.innerHTML = '<option value="">Sélectionner une société mère...</option>';
-            
+
             rows.forEach(row => {
                 const societeId = row.getAttribute('data-id');
                 const typeBadge = row.querySelector('.badge');
-                
+
                 if (typeBadge && typeBadge.textContent.includes('Société Mère')) {
                     const nomElement = row.querySelector('td:nth-child(2) strong');
                     if (nomElement && societeId) {
@@ -1381,6 +1533,12 @@ function loadSocietesMeres() {
                     }
                 }
             });
+
+            // Restaurer la valeur sauvegardée
+            if (currentValue) {
+                societeParenteSelect.value = currentValue;
+                console.log('🔍 DEBUG loadSocietesMeres - valeur restaurée:', societeParenteSelect.value);
+            }
         })
         .catch(error => {
             console.error('Erreur lors du chargement des sociétés mères:', error);

@@ -815,13 +815,13 @@ class WorkflowController extends AbstractController
         $user = $this->getUser();
         
         try {
-            // Récupérer les devis en statut brouillon pour l'utilisateur connecté
+            // Récupérer les devis en statut brouillon ou actualisation demandée pour l'utilisateur connecté
             $devisBrouillons = $this->entityManager->getRepository(Devis::class)
                 ->createQueryBuilder('d')
                 ->leftJoin('d.client', 'c')
-                ->where('d.statut = :statut')
+                ->where('d.statut IN (:statuts)')
                 ->andWhere('d.commercial = :commercial')
-                ->setParameter('statut', 'brouillon')
+                ->setParameter('statuts', ['brouillon', 'actualisation_demandee'])
                 ->setParameter('commercial', $user)
                 ->orderBy('d.updatedAt', 'DESC')
                 ->getQuery()
@@ -1128,13 +1128,28 @@ class WorkflowController extends AbstractController
                 ]);
             }
 
+            // Vérifications avant de fermer l'alerte
+            if (!$alerte->isDismissible()) {
+                return $this->json([
+                    'success' => false,
+                    'message' => 'Cette alerte ne peut pas être fermée (configuration)'
+                ]);
+            }
+
+            if ($this->alerteService->isAlerteDismissedByUser($alerte, $user)) {
+                return $this->json([
+                    'success' => false,
+                    'message' => 'Vous avez déjà fermé cette alerte'
+                ]);
+            }
+
             // Utiliser le service pour fermer l'alerte
             $success = $this->alerteService->dismissAlertForUser($alerte, $user);
 
             if (!$success) {
                 return $this->json([
                     'success' => false,
-                    'message' => 'Cette alerte ne peut pas être fermée'
+                    'message' => 'Erreur lors de la fermeture de l\'alerte'
                 ]);
             }
 
@@ -1182,8 +1197,23 @@ class WorkflowController extends AbstractController
             $userRoles = $user->getRoles();
             $userSociete = $user->getSocietePrincipale();
 
-            $cibles = $alerte->getCibles() ?? [];
-            $societesCibles = $alerte->getSocietesCibles() ?? [];
+            // Pour les alertes automatiques, récupérer les cibles depuis AlerteType
+            $cibles = $alerte->getCibles();
+            $societesCibles = $alerte->getSocietesCibles();
+
+            if ($alerte->getDetectorClass()) {
+                // Alerte automatique : récupérer les cibles depuis AlerteType
+                $alerteType = $this->entityManager->getRepository(\App\Entity\AlerteType::class)
+                    ->findOneBy(['classeDetection' => $alerte->getDetectorClass()]);
+
+                if ($alerteType) {
+                    $cibles = $alerteType->getRolesCibles();
+                    $societesCibles = $alerteType->getSocietesCibles();
+                }
+            }
+
+            $cibles = $cibles ?? [];
+            $societesCibles = $societesCibles ?? [];
 
             // Vérifier les rôles
             $roleMatch = empty($cibles) || array_intersect($userRoles, $cibles);

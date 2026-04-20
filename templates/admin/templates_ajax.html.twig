@@ -1,0 +1,341 @@
+{# Template pour le chargement AJAX - pas d'extension de base #}
+<div class="admin-section">
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <h3 class="section-title">
+            <i class="fas fa-file-invoice me-2"></i>Templates de Documents
+        </h3>
+        <button type="button" class="btn btn-primary" data-bs-toggle="modal" data-bs-target="#templateModal" onclick="openCreateModal()">
+            <i class="fas fa-plus me-2"></i>Nouveau Template
+        </button>
+    </div>
+
+    <div class="card">
+        <div class="card-body">
+            <table class="table table-hover" id="templateTable">
+                <thead>
+                    <tr>
+                        <th style="width: 30px;"><i class="fas fa-grip-vertical text-muted"></i></th>
+                        <th>Nom</th>
+                        <th style="width: 150px;">Type Document</th>
+                        <th style="width: 200px;">Société</th>
+                        <th style="width: 150px;">CGV/CPV</th>
+                        <th style="width: 150px;">Banque</th>
+                        <th style="width: 100px;" class="text-center">Statut</th>
+                        <th style="width: 150px;" class="text-end">Actions</th>
+                    </tr>
+                </thead>
+                <tbody id="templateTableBody">
+                    {% for template in templates %}
+                    <tr data-id="{{ template.id }}">
+                        <td class="drag-handle" style="cursor: move;"><i class="fas fa-grip-vertical text-muted"></i></td>
+                        <td>{{ template.nom }}</td>
+                        <td><span class="badge bg-primary">{{ template.typeDocument }}</span></td>
+                        <td>
+                            {% if template.societe %}
+                                <span class="badge bg-info">{{ template.societe.nom }}</span>
+                            {% else %}
+                                <span class="text-muted">-</span>
+                            {% endif %}
+                        </td>
+                        <td>
+                            {% if template.conditionsVente %}
+                                {{ template.conditionsVente.nom }}
+                            {% else %}
+                                <span class="text-muted">-</span>
+                            {% endif %}
+                        </td>
+                        <td>
+                            {% if template.banque %}
+                                {{ template.banque.nom }}
+                            {% else %}
+                                <span class="text-muted">-</span>
+                            {% endif %}
+                        </td>
+                        <td class="text-center">
+                            {% if template.actif %}
+                                <span class="badge bg-success">Actif</span>
+                            {% else %}
+                                <span class="badge bg-secondary">Inactif</span>
+                            {% endif %}
+                        </td>
+                        <td class="text-end">
+                            <button class="btn btn-sm btn-outline-primary" onclick="openEditModal({{ template.id }})">
+                                <i class="fas fa-edit"></i>
+                            </button>
+                            <button class="btn btn-sm btn-outline-danger" onclick="deleteTemplate({{ template.id }})">
+                                <i class="fas fa-trash"></i>
+                            </button>
+                        </td>
+                    </tr>
+                    {% else %}
+                    <tr>
+                        <td colspan="8" class="text-center text-muted py-4">Aucun template enregistré</td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+
+<!-- Modal Template -->
+<div class="modal fade" id="templateModal" tabindex="-1">
+    <div class="modal-dialog modal-xl">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title" id="templateModalTitle">Nouveau Template</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <form id="templateForm">
+                    <input type="hidden" id="template-id">
+                    <div class="row">
+                        <div class="col-md-6 mb-3">
+                            <label for="template-nom" class="form-label">Nom du template *</label>
+                            <input type="text" class="form-control" id="template-nom" required placeholder="Ex: Template Devis Standard">
+                        </div>
+                        <div class="col-md-6 mb-3">
+                            <label for="template-typeDocument" class="form-label">Type de document *</label>
+                            <select class="form-select" id="template-typeDocument" required>
+                                <option value="">Sélectionner un type</option>
+                                <option value="devis">Devis</option>
+                                <option value="facture">Facture</option>
+                                <option value="bon_commande">Bon de commande</option>
+                                <option value="avoir">Avoir</option>
+                            </select>
+                        </div>
+                    </div>
+
+                    <div class="row">
+                        <div class="col-md-4 mb-3">
+                            <label for="template-societe" class="form-label">Société *</label>
+                            <select class="form-select" id="template-societe" required>
+                                <option value="">Sélectionner une société</option>
+                                {% for societe in societes %}
+                                <option value="{{ societe.id }}">{{ societe.nom }}</option>
+                                {% endfor %}
+                            </select>
+                        </div>
+                        <div class="col-md-4 mb-3">
+                            <label for="template-cgv" class="form-label">CGV/CPV</label>
+                            <select class="form-select" id="template-cgv">
+                                <option value="">Aucune</option>
+                                {% for cgv in conditionsVente %}
+                                <option value="{{ cgv.id }}">{{ cgv.nom }}</option>
+                                {% endfor %}
+                            </select>
+                        </div>
+                        <div class="col-md-4 mb-3">
+                            <label for="template-banque" class="form-label">Banque</label>
+                            <select class="form-select" id="template-banque">
+                                <option value="">Aucune</option>
+                                {% for banque in banques %}
+                                <option value="{{ banque.id }}">{{ banque.nom }}</option>
+                                {% endfor %}
+                            </select>
+                        </div>
+                    </div>
+
+                    <div class="mb-3">
+                        <div class="form-check">
+                            <input class="form-check-input" type="checkbox" id="template-actif" checked>
+                            <label class="form-check-label" for="template-actif">
+                                Template actif
+                            </label>
+                        </div>
+                    </div>
+                </form>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Annuler</button>
+                <button type="button" class="btn btn-primary" onclick="saveTemplate()">Enregistrer</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/sortablejs@1.15.0/Sortable.min.js"></script>
+<script>
+// Variables globales
+let editMode = false;
+let currentTemplateId = null;
+
+// Initialiser SortableJS
+const initTemplatesSortable = function() {
+    const tbody = document.getElementById('templateTableBody');
+    if (tbody && tbody.children.length > 1) {
+        new Sortable(tbody, {
+            handle: '.drag-handle',
+            animation: 150,
+            onEnd: function(evt) {
+                updateOrdre();
+            }
+        });
+    }
+};
+
+// Initialiser au chargement
+setTimeout(initTemplatesSortable, 100);
+
+function openCreateModal() {
+    editMode = false;
+    currentTemplateId = null;
+    document.getElementById('templateModalTitle').textContent = 'Nouveau Template';
+    document.getElementById('templateForm').reset();
+    document.getElementById('template-id').value = '';
+    document.getElementById('template-actif').checked = true;
+}
+
+function openEditModal(id) {
+    editMode = true;
+    currentTemplateId = id;
+    document.getElementById('templateModalTitle').textContent = 'Modifier le Template';
+
+    // Charger les données depuis l'API
+    fetch('/admin/templates/' + id)
+        .then(response => response.json())
+        .then(data => {
+            document.getElementById('template-id').value = data.id;
+            document.getElementById('template-nom').value = data.nom;
+            document.getElementById('template-typeDocument').value = data.typeDocument;
+            document.getElementById('template-societe').value = data.societe?.id || '';
+            document.getElementById('template-cgv').value = data.conditionsVente?.id || '';
+            document.getElementById('template-banque').value = data.banque?.id || '';
+            document.getElementById('template-actif').checked = data.actif;
+
+            // Ouvrir le modal
+            new bootstrap.Modal(document.getElementById('templateModal')).show();
+        })
+        .catch(error => {
+            console.error('Erreur:', error);
+            alert('Erreur lors du chargement des données');
+        });
+}
+
+function saveTemplate() {
+    const form = document.getElementById('templateForm');
+    if (!form.checkValidity()) {
+        form.reportValidity();
+        return;
+    }
+
+    const id = document.getElementById('template-id').value;
+    const url = id ? '/admin/templates/' + id : '/admin/templates/create';
+    const method = id ? 'PUT' : 'POST';
+
+    const data = {
+        nom: document.getElementById('template-nom').value,
+        typeDocument: document.getElementById('template-typeDocument').value,
+        societeId: document.getElementById('template-societe').value,
+        conditionsVenteId: document.getElementById('template-cgv').value || null,
+        banqueId: document.getElementById('template-banque').value || null,
+        actif: document.getElementById('template-actif').checked
+    };
+
+    fetch(url, {
+        method: method,
+        headers: {
+            'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(data)
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.success) {
+            bootstrap.Modal.getInstance(document.getElementById('templateModal')).hide();
+            // Recharger uniquement le contenu de l'onglet Templates
+            if (window.adminAjaxLoader && window.adminRoutes && window.adminRoutes.templates) {
+                const templatesSection = document.querySelector('#templates-content .admin-section');
+                if (templatesSection) {
+                    window.adminAjaxLoader.loadContentIntoElementFixed(
+                        window.adminRoutes.templates,
+                        templatesSection,
+                        '#templates-content'
+                    );
+                }
+            } else {
+                location.reload();
+            }
+        } else {
+            alert('Erreur: ' + data.message);
+        }
+    })
+    .catch(error => {
+        console.error('Erreur:', error);
+        alert('Erreur lors de l\'enregistrement');
+    });
+}
+
+function deleteTemplate(id) {
+    if (!confirm('Êtes-vous sûr de vouloir supprimer ce template ?')) {
+        return;
+    }
+
+    fetch('/admin/templates/' + id, {
+        method: 'DELETE'
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.success) {
+            // Recharger uniquement le contenu de l'onglet Templates
+            if (window.adminAjaxLoader && window.adminRoutes && window.adminRoutes.templates) {
+                const templatesSection = document.querySelector('#templates-content .admin-section');
+                if (templatesSection) {
+                    window.adminAjaxLoader.loadContentIntoElementFixed(
+                        window.adminRoutes.templates,
+                        templatesSection,
+                        '#templates-content'
+                    );
+                }
+            } else {
+                location.reload();
+            }
+        } else {
+            alert('Erreur: ' + data.message);
+        }
+    })
+    .catch(error => {
+        console.error('Erreur:', error);
+        alert('Erreur lors de la suppression');
+    });
+}
+
+function updateOrdre() {
+    const tbody = document.getElementById('templateTableBody');
+    const rows = tbody.querySelectorAll('tr[data-id]');
+    const ordre = Array.from(rows).map(row => row.getAttribute('data-id'));
+
+    fetch('/admin/templates/reorder', {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ ordre: ordre })
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (!data.success) {
+            console.error('Erreur lors de la mise à jour de l\'ordre');
+        }
+    })
+    .catch(error => {
+        console.error('Erreur:', error);
+    });
+}
+</script>
+
+<style>
+.drag-handle {
+    cursor: move !important;
+}
+
+.sortable-ghost {
+    opacity: 0.4;
+    background-color: #f8f9fa;
+}
+
+.form-control-color {
+    width: 100%;
+    height: 38px;
+}
+</style>

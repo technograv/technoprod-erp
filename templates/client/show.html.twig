@@ -665,7 +665,15 @@
                 <a href="{{ path('app_client_edit', {'id': client.id}) }}" class="btn btn-light">
                     <i class="fas fa-edit me-1"></i>Modifier
                 </a>
-                
+
+                {% if not client.actif %}
+                    <form method="post" action="{{ path('app_client_unarchive', {'id': client.id}) }}" style="display: inline;">
+                        <button type="submit" class="btn btn-success" onclick="return confirm('Êtes-vous sûr de vouloir désarchiver ce client ?');">
+                            <i class="fas fa-undo me-1"></i>Désarchiver
+                        </button>
+                    </form>
+                {% endif %}
+
                 {% set contactFactu = null %}
                 {% for contact in client.contactsActifs %}
                     {% if contact.isFacturationDefault %}

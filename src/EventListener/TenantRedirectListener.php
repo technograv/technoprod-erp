@@ -10,7 +10,7 @@ use Symfony\Component\HttpKernel\Event\RequestEvent;
 use Symfony\Component\HttpKernel\KernelEvents;
 use Symfony\Component\Routing\Generator\UrlGeneratorInterface;
 
-#[AsEventListener(event: KernelEvents::REQUEST, priority: 10)]
+#[AsEventListener(event: KernelEvents::REQUEST, priority: 20)]
 class TenantRedirectListener
 {
     private const EXCLUDED_ROUTES = [
@@ -19,6 +19,8 @@ class TenantRedirectListener
         'app_tenant_context',
         'app_tenant_refresh',
         'app_tenant_theme',
+        'app_tenant_debug',
+        'app_tenant_force_switch',
         'app_logout',
         'app_login',
         'app_oauth_google_connect',
@@ -82,24 +84,15 @@ class TenantRedirectListener
             $currentSociete = $this->tenantService->getCurrentSociete();
             
             if (!$currentSociete) {
-                // Vérifier s'il y a des sociétés disponibles
-                $availableSocietes = $this->tenantService->getAvailableSocietes();
-                
-                if (empty($availableSocietes)) {
+                // Sélectionner automatiquement la société par défaut
+                $defaultSociete = $this->tenantService->getDefaultSocieteForCurrentUser();
+
+                if (!$defaultSociete) {
                     // Aucune société disponible - ne pas rediriger, laisser l'application gérer l'erreur
                     return;
                 }
 
-                if (count($availableSocietes) === 1) {
-                    // Une seule société disponible, la sélectionner automatiquement
-                    $this->tenantService->setCurrentSociete($availableSocietes[0]);
-                    return;
-                }
-
-                // Plusieurs sociétés disponibles, rediriger vers la page de sélection
-                $redirectUrl = $this->urlGenerator->generate('app_tenant_select');
-                $response = new RedirectResponse($redirectUrl);
-                $event->setResponse($response);
+                $this->tenantService->setCurrentSociete($defaultSociete);
                 return;
             }
 

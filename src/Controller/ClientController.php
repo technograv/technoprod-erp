@@ -376,6 +376,7 @@ final class ClientController extends AbstractController
                 'nom' => $contact->getNom(),
                 'fonction' => $contact->getFonction(),
                 'email' => $contact->getEmail(),
+                'telephone' => $contact->getTelephone(),
                 'is_facturation_default' => $contact->isFacturationDefault(),
                 'is_livraison_default' => $contact->isLivraisonDefault(),
                 'actif' => $contact->isActif()
@@ -386,14 +387,23 @@ final class ClientController extends AbstractController
     }
 
     #[Route('/{id}/addresses', name: 'app_client_addresses', methods: ['GET'])]
-    public function getAddresses(Client $client): JsonResponse
+    public function getAddresses(Client $client, Request $request): JsonResponse
     {
+        $includeArchived = $request->query->getBoolean('include_archived', false);
         $addresses = [];
 
-        // Retourner seulement les adresses actives du client
-        foreach ($client->getAdressesActives() as $adresse) {
+        // Récupérer toutes les adresses ou seulement les actives
+        $adressesList = $includeArchived ? $client->getAdresses() : $client->getAdressesActives();
+
+        foreach ($adressesList as $adresse) {
             $addresses[] = [
                 'id' => $adresse->getId(),
+                'nom' => $adresse->getNom(),
+                'ligne1' => $adresse->getLigne1(),
+                'code_postal' => $adresse->getCodePostal(),
+                'ville' => $adresse->getVille(),
+                'pays' => $adresse->getPays(),
+                'actif' => $adresse->isActif(),
                 'label' => $adresse->getDisplayLabel()
             ];
         }
@@ -805,24 +815,41 @@ final class ClientController extends AbstractController
     #[Route('/{id}/archive', name: 'app_client_archive', methods: ['POST'])]
     public function archive(Client $client, EntityManagerInterface $entityManager, ClientLoggerService $clientLogger): Response
     {
-        // Archiver le client (le marquer comme inactif)
-        // Marquer tous les contacts comme inactifs (équivalent ancien setActif)
-        foreach ($client->getContacts() as $contact) {
-            $contact->setActif(false);
-        }
-        
+        // Archiver le client avec le champ dédié
+        $client->setArchived(true);
+
         try {
             $entityManager->flush();
-            
+
             // Logger l'archivage
             $clientLogger->logArchived($client);
-            
-            $this->addFlash('success', 'Client archivé avec succès ! Il est maintenant inactif.');
+
+            $this->addFlash('success', 'Client archivé avec succès ! Il n\'apparaîtra plus dans les listes actives.');
         } catch (\Exception $e) {
             $this->addFlash('error', 'Erreur lors de l\'archivage : ' . $e->getMessage());
         }
-        
+
         return $this->redirectToRoute('app_client_index');
+    }
+
+    #[Route('/{id}/unarchive', name: 'app_client_unarchive', methods: ['POST'])]
+    public function unarchive(Client $client, EntityManagerInterface $entityManager, ClientLoggerService $clientLogger): Response
+    {
+        // Désarchiver le client
+        $client->setArchived(false);
+
+        try {
+            $entityManager->flush();
+
+            // Logger la désarchivage
+            $clientLogger->logUnarchived($client);
+
+            $this->addFlash('success', 'Client désarchivé avec succès ! Il est de nouveau actif.');
+        } catch (\Exception $e) {
+            $this->addFlash('error', 'Erreur lors de la désarchivage : ' . $e->getMessage());
+        }
+
+        return $this->redirectToRoute('app_client_show', ['id' => $client->getId()]);
     }
 
     #[Route('/api/clients/search', name: 'app_api_clients_search', methods: ['GET'])]
@@ -952,11 +979,14 @@ final class ClientController extends AbstractController
     {
         try {
             $contact = $entityManager->getRepository(Contact::class)->find($contactId);
-            
+
             if (!$contact || $contact->getClient() !== $client) {
                 return $this->json(['success' => false, 'message' => 'Contact non trouvé']);
             }
-            
+
+            // Rafraîchir l'entité depuis la base de données pour obtenir l'état le plus récent
+            $entityManager->refresh($contact);
+
             // Vérifier si le contact peut être archivé (pas contact par défaut)
             if ($contact->isFacturationDefault() || $contact->isLivraisonDefault()) {
                 return $this->json(['success' => false, 'message' => 'Impossible d\'archiver un contact par défaut. Veuillez d\'abord désigner un autre contact par défaut.']);
@@ -988,6 +1018,49 @@ final class ClientController extends AbstractController
         }
     }
 
+
+    #[Route('/{id}/address/add', name: 'app_client_address_add', methods: ['POST'])]
+    public function addAddress(Client $client, Request $request, EntityManagerInterface $entityManager, ClientLoggerService $clientLogger): JsonResponse
+    {
+        try {
+            $data = json_decode($request->getContent(), true);
+
+            if (!$data || !isset($data['nom']) || !isset($data['ligne1']) || !isset($data['ville']) || !isset($data['code_postal'])) {
+                return $this->json(['success' => false, 'message' => 'Données incomplètes']);
+            }
+
+            // Créer la nouvelle adresse
+            $adresse = new Adresse();
+            $adresse->setNom($data['nom']);
+            $adresse->setLigne1($data['ligne1']);
+            $adresse->setCodePostal($data['code_postal']);
+            $adresse->setVille($data['ville']);
+            $adresse->setPays($data['pays'] ?? 'France');
+            $adresse->setClient($client);
+
+            $entityManager->persist($adresse);
+            $entityManager->flush();
+
+            // Logger l'ajout
+            $clientLogger->logAddressAdded($client, $adresse);
+
+            return $this->json([
+                'success' => true,
+                'message' => 'Adresse ajoutée avec succès',
+                'adresse' => [
+                    'id' => $adresse->getId(),
+                    'nom' => $adresse->getNom(),
+                    'ligne1' => $adresse->getLigne1(),
+                    'code_postal' => $adresse->getCodePostal(),
+                    'ville' => $adresse->getVille(),
+                    'pays' => $adresse->getPays()
+                ]
+            ]);
+
+        } catch (\Exception $e) {
+            return $this->json(['success' => false, 'message' => 'Erreur lors de l\'ajout : ' . $e->getMessage()]);
+        }
+    }
 
     #[Route('/{id}/address/{addressId}/delete', name: 'app_client_address_delete', methods: ['POST'])]
     public function deleteAddress(Client $client, int $addressId, EntityManagerInterface $entityManager, ClientLoggerService $clientLogger): JsonResponse
@@ -1449,5 +1522,258 @@ final class ClientController extends AbstractController
             'defaultAddressLivraison' => $defaultAddressLivraison?->getId(),
             'defaultAddressFacturation' => $defaultAddressFacturation?->getId()
         ]);
+    }
+
+    #[Route('/{id}/contact/add', name: 'app_client_contact_add', methods: ['POST'])]
+    public function addContact(Client $client, Request $request, EntityManagerInterface $entityManager, ClientLoggerService $clientLogger): JsonResponse
+    {
+        try {
+            $data = json_decode($request->getContent(), true);
+
+            if (!$data || !isset($data['nom'])) {
+                return $this->json(['success' => false, 'message' => 'Le nom est obligatoire']);
+            }
+
+            // Créer le nouveau contact
+            $contact = new Contact();
+            $contact->setNom($data['nom']);
+            $contact->setPrenom($data['prenom'] ?? null);
+            $contact->setEmail($data['email'] ?? null);
+            $contact->setTelephone($data['telephone'] ?? null);
+            $contact->setFonction($data['fonction'] ?? null);
+            $contact->setClient($client);
+
+            // Associer l'adresse si fournie
+            if (isset($data['adresse_id']) && $data['adresse_id']) {
+                $adresse = $entityManager->getRepository(Adresse::class)->find($data['adresse_id']);
+                if ($adresse && $adresse->getClient() === $client) {
+                    $contact->setAdresse($adresse);
+                }
+            }
+
+            $entityManager->persist($contact);
+            $entityManager->flush();
+
+            // Logger l'ajout
+            $clientLogger->logContactAdded($client, $contact);
+
+            return $this->json([
+                'success' => true,
+                'message' => 'Contact ajouté avec succès',
+                'contact' => [
+                    'id' => $contact->getId(),
+                    'nom' => $contact->getNom(),
+                    'prenom' => $contact->getPrenom(),
+                    'email' => $contact->getEmail(),
+                    'telephone' => $contact->getTelephone(),
+                    'fonction' => $contact->getFonction(),
+                    'adresse_id' => $contact->getAdresse() ? $contact->getAdresse()->getId() : null,
+                    'adresse_nom' => $contact->getAdresse() ? $contact->getAdresse()->getNom() : null
+                ]
+            ]);
+
+        } catch (\Exception $e) {
+            return $this->json(['success' => false, 'message' => 'Erreur lors de l\'ajout : ' . $e->getMessage()]);
+        }
+    }
+
+    #[Route('/{id}/contact/{contactId}/unarchive', name: 'app_client_contact_unarchive', methods: ['POST'])]
+    public function unarchiveContact(Client $client, int $contactId, EntityManagerInterface $entityManager, ClientLoggerService $clientLogger): JsonResponse
+    {
+        try {
+            $contact = $entityManager->getRepository(Contact::class)->find($contactId);
+
+            if (!$contact) {
+                return $this->json(['success' => false, 'message' => 'Contact introuvable']);
+            }
+
+            if ($contact->getClient() !== $client) {
+                return $this->json(['success' => false, 'message' => 'Ce contact n\'appartient pas à ce client']);
+            }
+
+            if ($contact->isActif()) {
+                return $this->json(['success' => false, 'message' => 'Ce contact est déjà actif']);
+            }
+
+            // Réactiver le contact
+            $contact->setActif(true);
+            $contact->setUpdatedAt(new \DateTimeImmutable());
+
+            $entityManager->flush();
+
+            // Logger la réactivation
+            $clientLogger->logContactUpdated($client, $contact, ['actif' => true]);
+
+            return $this->json([
+                'success' => true,
+                'message' => 'Contact réactivé avec succès'
+            ]);
+
+        } catch (\Exception $e) {
+            return $this->json(['success' => false, 'message' => 'Erreur lors de la réactivation : ' . $e->getMessage()]);
+        }
+    }
+
+    #[Route('/{id}/contact/update-defaults', name: 'app_client_contact_update_defaults', methods: ['POST'])]
+    public function updateContactDefaults(Client $client, Request $request, EntityManagerInterface $entityManager, ClientLoggerService $clientLogger): JsonResponse
+    {
+        try {
+            $data = json_decode($request->getContent(), true);
+
+            if (!isset($data['type']) || !in_array($data['type'], ['facturation', 'livraison'])) {
+                return $this->json(['success' => false, 'message' => 'Type invalide']);
+            }
+
+            $contactId = $data['contact_id'] ?? null;
+            $type = $data['type'];
+
+            // Désactiver tous les contacts par défaut de ce type
+            foreach ($client->getContactsActifs() as $contact) {
+                if ($type === 'facturation' && $contact->isFacturationDefault()) {
+                    $contact->setIsFacturationDefault(false);
+                } elseif ($type === 'livraison' && $contact->isLivraisonDefault()) {
+                    $contact->setIsLivraisonDefault(false);
+                }
+            }
+
+            // Activer le nouveau contact par défaut si un ID est fourni
+            if ($contactId) {
+                $contact = $entityManager->getRepository(Contact::class)->find($contactId);
+
+                if (!$contact) {
+                    return $this->json(['success' => false, 'message' => 'Contact introuvable']);
+                }
+
+                if ($contact->getClient() !== $client) {
+                    return $this->json(['success' => false, 'message' => 'Ce contact n\'appartient pas à ce client']);
+                }
+
+                if ($type === 'facturation') {
+                    $contact->setIsFacturationDefault(true);
+                } else {
+                    $contact->setIsLivraisonDefault(true);
+                }
+
+                $contact->setUpdatedAt(new \DateTimeImmutable());
+            }
+
+            $entityManager->flush();
+
+            // Logger la modification
+            $clientLogger->logContactUpdated($client, $contact ?? null, [$type . '_default' => true]);
+
+            return $this->json([
+                'success' => true,
+                'message' => 'Contact par défaut mis à jour'
+            ]);
+
+        } catch (\Exception $e) {
+            return $this->json(['success' => false, 'message' => 'Erreur lors de la mise à jour : ' . $e->getMessage()]);
+        }
+    }
+
+    #[Route('/{id}/contact/{contactId}/update', name: 'app_client_contact_update', methods: ['POST'])]
+    public function updateContact(Client $client, int $contactId, Request $request, EntityManagerInterface $entityManager, ClientLoggerService $clientLogger): JsonResponse
+    {
+        try {
+            $contact = $entityManager->getRepository(Contact::class)->find($contactId);
+
+            if (!$contact) {
+                return $this->json(['success' => false, 'message' => 'Contact introuvable']);
+            }
+
+            if ($contact->getClient() !== $client) {
+                return $this->json(['success' => false, 'message' => 'Ce contact n\'appartient pas à ce client']);
+            }
+
+            $data = json_decode($request->getContent(), true);
+
+            // Mettre à jour les champs fournis
+            if (isset($data['nom'])) {
+                $contact->setNom($data['nom']);
+            }
+            if (isset($data['prenom'])) {
+                $contact->setPrenom($data['prenom']);
+            }
+            if (isset($data['email'])) {
+                $contact->setEmail($data['email']);
+            }
+            if (isset($data['telephone'])) {
+                $contact->setTelephone($data['telephone']);
+            }
+            if (isset($data['adresse_id'])) {
+                if ($data['adresse_id']) {
+                    $adresse = $entityManager->getRepository(Adresse::class)->find($data['adresse_id']);
+                    if ($adresse && $adresse->getClient() === $client) {
+                        $contact->setAdresse($adresse);
+                    }
+                } else {
+                    $contact->setAdresse(null);
+                }
+            }
+
+            $contact->setUpdatedAt(new \DateTimeImmutable());
+            $entityManager->flush();
+
+            // Logger la modification
+            $clientLogger->logContactUpdated($client, $contact, $data);
+
+            return $this->json([
+                'success' => true,
+                'message' => 'Contact mis à jour'
+            ]);
+
+        } catch (\Exception $e) {
+            return $this->json(['success' => false, 'message' => 'Erreur : ' . $e->getMessage()]);
+        }
+    }
+
+    #[Route('/{id}/address/{addressId}/update', name: 'app_client_address_update', methods: ['POST'])]
+    public function updateAddress(Client $client, int $addressId, Request $request, EntityManagerInterface $entityManager, ClientLoggerService $clientLogger): JsonResponse
+    {
+        try {
+            $adresse = $entityManager->getRepository(Adresse::class)->find($addressId);
+
+            if (!$adresse) {
+                return $this->json(['success' => false, 'message' => 'Adresse introuvable']);
+            }
+
+            if ($adresse->getClient() !== $client) {
+                return $this->json(['success' => false, 'message' => 'Cette adresse n\'appartient pas à ce client']);
+            }
+
+            $data = json_decode($request->getContent(), true);
+
+            // Mettre à jour les champs fournis
+            if (isset($data['nom'])) {
+                $adresse->setNom($data['nom']);
+            }
+            if (isset($data['ligne1'])) {
+                $adresse->setLigne1($data['ligne1']);
+            }
+            if (isset($data['code_postal'])) {
+                $adresse->setCodePostal($data['code_postal']);
+            }
+            if (isset($data['ville'])) {
+                $adresse->setVille($data['ville']);
+            }
+            if (isset($data['pays'])) {
+                $adresse->setPays($data['pays']);
+            }
+
+            $adresse->setUpdatedAt(new \DateTimeImmutable());
+            $entityManager->flush();
+
+            // Logger la modification
+            $clientLogger->logAddressUpdated($client, $adresse, $data);
+
+            return $this->json([
+                'success' => true,
+                'message' => 'Adresse mise à jour'
+            ]);
+
+        } catch (\Exception $e) {
+            return $this->json(['success' => false, 'message' => 'Erreur : ' . $e->getMessage()]);
+        }
     }
 }

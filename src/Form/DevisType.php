@@ -8,6 +8,8 @@ use App\Entity\Devis;
 use App\Entity\Client;
 use App\Entity\User;
 use App\Entity\ModeReglement;
+use App\Entity\Template;
+use App\Entity\Societe;
 use Symfony\Bridge\Doctrine\Form\Type\EntityType;
 use Symfony\Component\Form\AbstractType;
 use Symfony\Component\Form\Extension\Core\Type\ChoiceType;
@@ -58,6 +60,7 @@ class DevisType extends AbstractType
                     'Brouillon' => 'brouillon',
                     'Envoyé' => 'envoye',
                     'Relancé' => 'relance',
+                    'Actualisation demandée' => 'actualisation_demandee',
                     'Signé' => 'signe',
                     'Acompte réglé' => 'acompte_regle',
                     'Accepté' => 'accepte',
@@ -67,7 +70,21 @@ class DevisType extends AbstractType
                 'data' => 'brouillon',
                 'attr' => ['class' => 'form-select']
             ])
-            
+            ->add('societe', EntityType::class, [
+                'class' => Societe::class,
+                'choice_label' => 'nom',
+                'placeholder' => '-- Sélectionner une société --',
+                'label' => 'Société / Marque',
+                'required' => true,
+                'query_builder' => function($repository) {
+                    return $repository->createQueryBuilder('s')
+                        ->where('s.active = :active')
+                        ->setParameter('active', true)
+                        ->orderBy('s.ordre', 'ASC');
+                },
+                'attr' => ['class' => 'form-select']
+            ])
+
             // Section Tiers
             ->add('client', EntityType::class, [
                 'class' => Client::class,
@@ -294,16 +311,43 @@ class DevisType extends AbstractType
                     'placeholder' => 'email@example.com'
                 ]
             ])
-            ->add('modeleDocument', ChoiceType::class, [
-                'label' => 'Modèle de document',
-                'choices' => [
-                    'Modèle standard' => 'standard',
-                    'Modèle moderne' => 'moderne',
-                    'Modèle classique' => 'classique',
-                    'Modèle personnalisé' => 'personnalise'
-                ],
+            ->add('template', EntityType::class, [
+                'class' => Template::class,
+                'choice_label' => 'nom',
                 'placeholder' => 'Choisir un modèle...',
-                'required' => false,
+                'label' => 'Modèle de document',
+                'required' => true,
+                'query_builder' => function($repository) use ($options) {
+                    $qb = $repository->createQueryBuilder('t')
+                        ->where('t.actif = :actif')
+                        ->andWhere('t.typeDocument = :typeDocument')
+                        ->setParameter('actif', true)
+                        ->setParameter('typeDocument', 'devis')
+                        ->orderBy('t.ordre', 'ASC');
+
+                    // Filtrer selon la société du devis avec héritage mère/fille
+                    if (isset($options['data']) && $options['data'] instanceof \App\Entity\Devis && $options['data']->getSociete()) {
+                        $societe = $options['data']->getSociete();
+
+                        // Si société fille : inclure templates de la fille ET de la mère
+                        if ($societe->getSocieteParent()) {
+                            $qb->andWhere('t.societe = :societe OR t.societe = :societeParent')
+                                ->setParameter('societe', $societe)
+                                ->setParameter('societeParent', $societe->getSocieteParent());
+                        }
+                        // Si société mère : inclure templates de la mère ET de toutes ses filles
+                        else {
+                            $societeIds = [$societe->getId()];
+                            foreach ($societe->getSocietesFilles() as $fille) {
+                                $societeIds[] = $fille->getId();
+                            }
+                            $qb->andWhere('t.societe IN (:societeIds)')
+                                ->setParameter('societeIds', $societeIds);
+                        }
+                    }
+
+                    return $qb;
+                },
                 'attr' => ['class' => 'form-select']
             ])
             
@@ -325,6 +369,9 @@ class DevisType extends AbstractType
     {
         $resolver->setDefaults([
             'data_class' => Devis::class,
+            'user_societe' => null,
         ]);
+
+        $resolver->setAllowedTypes('user_societe', ['null', \App\Entity\Societe::class]);
     }
 }

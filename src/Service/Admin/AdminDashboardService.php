@@ -81,7 +81,7 @@ class AdminDashboardService implements AdminDashboardServiceInterface
             $item->expiresAfter(600); // 10 minutes (moins fréquent)
 
             $sql = '
-                SELECT 
+                SELECT
                     (SELECT COUNT(*) FROM mode_reglement) as modes_reglement,
                     (SELECT COUNT(*) FROM mode_paiement) as modes_paiement,
                     (SELECT COUNT(*) FROM banque) as banques,
@@ -92,7 +92,6 @@ class AdminDashboardService implements AdminDashboardServiceInterface
                     (SELECT COUNT(*) FROM frais_port) as frais_port,
                     (SELECT COUNT(*) FROM transporteur) as transporteurs,
                     (SELECT COUNT(*) FROM methode_expedition) as methodes_expedition,
-                    (SELECT COUNT(*) FROM modele_document) as modeles_document,
                     (SELECT COUNT(*) FROM division_administrative WHERE actif = true) as divisions_administratives,
                     (SELECT COUNT(*) FROM type_secteur WHERE actif = true) as types_secteur,
                     (SELECT COUNT(*) FROM attribution_secteur) as attributions_secteur,
@@ -117,7 +116,6 @@ class AdminDashboardService implements AdminDashboardServiceInterface
                 'frais_port' => (int)$result['frais_port'],
                 'transporteurs' => (int)$result['transporteurs'],
                 'methodes_expedition' => (int)$result['methodes_expedition'],
-                'modeles_document' => (int)$result['modeles_document'],
                 'divisions_administratives' => (int)$result['divisions_administratives'],
                 'types_secteur' => (int)$result['types_secteur'],
                 'attributions_secteur' => (int)$result['attributions_secteur'],

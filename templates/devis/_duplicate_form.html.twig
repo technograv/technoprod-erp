@@ -1,0 +1,6 @@
+<form method="post" action="{{ path('app_devis_duplicate', {'id': devis.id}) }}" style="display: inline;">
+    <input type="hidden" name="_token" value="{{ csrf_token('duplicate' ~ devis.id) }}">
+    <button type="submit" class="btn btn-outline-primary btn-sm">
+        <i class="fas fa-copy"></i> Dupliquer
+    </button>
+</form>

@@ -550,5 +550,118 @@ Le projet TechnoProd est maintenant **mature et prêt pour la production** avec 
 - ✅ Système d'alertes avancé opérationnel
 - ⚠️ Documentation à renforcer pour maintenabilité optimale
 
+## SESSION DE TRAVAIL - 09/03/2026 🎯
+
+### ✅ CORRECTION CRITIQUE - SYSTÈME WYSIWYG NOTES DEVIS
+**OBJECTIF MAJEUR ATTEINT : Résolution complète de tous les bugs critiques du système WYSIWYG**
+
+#### **🐛 4 PROBLÈMES MAJEURS IDENTIFIÉS ET RÉSOLUS :**
+
+**1. 💾 Sauvegarde notes WYSIWYG défaillante :**
+**Symptômes :** Notes client non sauvegardées malgré message succès "devis modifié avec succès"
+- Utilisateur rapportait "toujours pas sauvegardé" après plusieurs tentatives
+- Investigation longue avec logs console et network tab
+
+**Causes racines :**
+- Duplication champs : `form_rest()` générait champs Symfony + composant créait hidden inputs
+- Event submit non déclenché : boutons hors form avec `form="devis-form"`, submit standard ne marchait pas
+
+**Solutions appliquées :**
+```twig
+{# edit.html.twig lignes 266-268 #}
+{% do form.notesClient.setRendered() %}
+{% do form.notesInternes.setRendered() %}
+```
+
+```javascript
+// WysiwygNotesManager.js lignes 141-148
+const submitButtons = document.querySelectorAll('button[type="submit"][form="devis-form"]');
+submitButtons.forEach(btn => {
+    btn.addEventListener('click', (e) => {
+        this.syncBeforeSubmit();
+    });
+});
+```
+
+**2. 🎨 Formatage WYSIWYG invisible :**
+**Symptômes :** Utilisateur voyait formatage dans éditeur mais pas sur pages show/client_acces/PDF
+- "je ne vois rien" dans onglet notes du devis
+- Polices, tailles, couleurs, gras/italique non affichés
+
+**Cause racine :** CSS Quill non chargé sur pages d'affichage, classes `.ql-font-arial`, `.ql-size-14px` sans styles
+
+**Solutions appliquées :**
+- Ajout CDN Quill CSS dans show.html.twig et client_acces.html.twig
+- Création CSS personnalisé complet pour toutes classes Quill (44 lignes)
+- PDF : CSS inline DomPDF-compatible (34 lignes)
+
+**3. 💥 Page édition cassée avec formatage :**
+**Symptômes :** "dès que je met en forme ca fait bugger la page d'édition"
+- HTML brut affiché en dehors WYSIWYG
+- Problème empirait à chaque rechargement
+- "vraiment le bazarre !"
+
+**Causes multiples :**
+- HTML dans `value=""` : contenu avec guillemets cassait attribut
+- IDs non préfixés : conflits entre toolbars/éditeurs
+- 249 lignes code obsolète (initQuillEditorsNotes) créaient conflits
+
+**Solutions appliquées :**
+1. Changement `value="{{ content|raw }}"` → `data-initial-value="{{ content|e('html_attr') }}"`
+2. Ajout `{{ prefix }}` à tous IDs dans wysiwyg_notes.html.twig
+3. JavaScript : template literals avec `this.prefix` (`` `#toolbar-note-publique-${this.prefix}` ``)
+4. Suppression 124 lignes JS obsolète (fonction initQuillEditorsNotes)
+5. Suppression 125 lignes CSS obsolète (suffixe -edit)
+
+**4. 🎛️ Dropdowns toolbar trop étroits :**
+**Symptômes :** "les 2 premiers [boutons] sont trop étroits maintenant"
+- Utilisateur : "tu n'as pas assez élargi les menu déroulants"
+- Puis : "tu as bien élargi le dropdown déplié mais pas la partie fixe"
+- 3 itérations nécessaires
+
+**Cause racine :** Suppression CSS obsolète → largeurs dropdowns perdues
+
+**Solution finale :**
+```css
+/* edit.html.twig lignes 5165-5194 */
+[id^="toolbar-note-"] span.ql-picker.ql-font {
+    min-width: 220px !important;
+    width: 220px !important;
+}
+
+[id^="toolbar-note-"] span.ql-picker.ql-size {
+    min-width: 180px !important;
+    width: 180px !important;
+}
+```
+
+#### **📊 RÉSULTATS FINALS :**
+- **✅ Sauvegarde fiable** : Notes persistées correctement avec synchronisation robuste
+- **✅ Formatage visible partout** : Pages web (show, client_acces) + PDF
+- **✅ Page édition stable** : Plus de casse avec formatage HTML
+- **✅ UI toolbar optimale** : Dropdowns lisibles et fonctionnels
+
+#### **🎯 FICHIERS MODIFIÉS (7 fichiers) :**
+- `/public/js/components/WysiwygNotesManager.js` - Event listeners, prefix, data-initial-value, fixPickerWidths
+- `/templates/components/wysiwyg_notes.html.twig` - Prefix sur tous IDs, data-initial-value
+- `/templates/devis/edit.html.twig` - setRendered(), suppression 249 lignes, CSS dropdowns
+- `/templates/devis/show.html.twig` - CDN Quill + CSS formatage (44 lignes)
+- `/templates/devis/client_acces.html.twig` - CDN Quill + CSS formatage (44 lignes)
+- `/templates/devis/pdf.html.twig` - CSS inline DomPDF (34 lignes)
+
+#### **🔑 PATTERNS TECHNIQUES CLÉS RÉUTILISABLES :**
+1. **Attributs data-* pour HTML sûr** : Jamais `value="{{ html }}"` mais `data-initial-value="{{ html|e('html_attr') }}"`
+2. **Système de prefix** : Composants réutilisables avec IDs uniques (#editor-note-publique-edit, #editor-note-publique-new)
+3. **Event listeners externes** : Boutons avec `form="id"` nécessitent `querySelectorAll` + `addEventListener`
+4. **Symfony setRendered()** : Empêche `form_rest()` de recréer champs déjà rendus manuellement
+5. **CSS attribute selectors** : `[id^="toolbar-note-"]` cible tous toolbars quel que soit le prefix
+
+### 🚀 **SYSTÈME WYSIWYG MAINTENANT 100% OPÉRATIONNEL**
+Le système de notes WYSIWYG pour devis TechnoProd est maintenant **parfaitement stable et fiable** :
+- Architecture composant réutilisable robuste
+- Gestion sécurisée du HTML avec échappement approprié
+- Synchronisation formulaires infaillible
+- Affichage cohérent sur toutes les plateformes (web + PDF)
+
 ---
-*Dernière mise à jour : 29/09/2025 - Audit complet et système d'alertes finalisé*
+*Dernière mise à jour : 09/03/2026 - Système WYSIWYG notes devis finalisé*

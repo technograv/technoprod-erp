@@ -55,6 +55,7 @@ desktop.ini
 ngrok*
 *.tgz
 *.zip
+*.deb
 
 # Documentation files de travail et fichiers de debug
 DEBUG_*.md

@@ -13,6 +13,9 @@ security:
         dev:
             pattern: ^/(_(profiler|wdt)|css|images|js)/
             security: false
+        client_access:
+            pattern: ^/devis/[^/]+/client/[^/]+
+            security: false
         main:
             lazy: true
             provider: app_user_provider
@@ -41,6 +44,7 @@ security:
         - { path: ^/api/test/, roles: PUBLIC_ACCESS }
         - { path: ^/theme/, roles: PUBLIC_ACCESS }
         - { path: ^/admin/environment/preview-css, roles: PUBLIC_ACCESS }
+        - { path: ^/devis/[^/]+/client/[^/]+, roles: PUBLIC_ACCESS }
         - { path: ^/secteur/api/, roles: ROLE_USER }
         - { path: ^/, roles: ROLE_USER }
 

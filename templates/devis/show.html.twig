@@ -6,6 +6,8 @@
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/css/bootstrap.min.css" rel="stylesheet">
     <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
     <link href="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/css/select2.min.css" rel="stylesheet">
+    <!-- Quill CSS pour affichage du contenu WYSIWYG -->
+    <link href="https://cdn.quilljs.com/1.3.6/quill.snow.css" rel="stylesheet">
     <style>
         .devis-tabs {
             background-color: #f8f9fa;
@@ -227,6 +229,51 @@
             border: 1px solid #ced4da;
             border-radius: 0.375rem;
         }
+
+        /* Styles Quill pour mise en forme du contenu WYSIWYG */
+        .wysiwyg-content strong { font-weight: 700; }
+        .wysiwyg-content em { font-style: italic; }
+        .wysiwyg-content u { text-decoration: underline; }
+        .wysiwyg-content s { text-decoration: line-through; }
+
+        /* Polices Quill */
+        .wysiwyg-content .ql-font-arial { font-family: Arial, sans-serif; }
+        .wysiwyg-content .ql-font-helvetica { font-family: Helvetica, sans-serif; }
+        .wysiwyg-content .ql-font-times { font-family: 'Times New Roman', serif; }
+        .wysiwyg-content .ql-font-georgia { font-family: Georgia, serif; }
+        .wysiwyg-content .ql-font-verdana { font-family: Verdana, sans-serif; }
+        .wysiwyg-content .ql-font-courier { font-family: 'Courier New', monospace; }
+
+        /* Tailles Quill */
+        .wysiwyg-content .ql-size-10px { font-size: 10px; }
+        .wysiwyg-content .ql-size-12px { font-size: 12px; }
+        .wysiwyg-content .ql-size-14px { font-size: 14px; }
+        .wysiwyg-content .ql-size-16px { font-size: 16px; }
+        .wysiwyg-content .ql-size-18px { font-size: 18px; }
+        .wysiwyg-content .ql-size-20px { font-size: 20px; }
+        .wysiwyg-content .ql-size-22px { font-size: 22px; }
+        .wysiwyg-content .ql-size-24px { font-size: 24px; }
+
+        /* Alignements Quill */
+        .wysiwyg-content .ql-align-center { text-align: center; display: block; }
+        .wysiwyg-content .ql-align-right { text-align: right; display: block; }
+        .wysiwyg-content .ql-align-justify { text-align: justify; display: block; }
+
+        /* Couleurs de texte Quill */
+        .wysiwyg-content .ql-color-red { color: #e74c3c; }
+        .wysiwyg-content .ql-color-orange { color: #e67e22; }
+        .wysiwyg-content .ql-color-yellow { color: #f1c40f; }
+        .wysiwyg-content .ql-color-green { color: #27ae60; }
+        .wysiwyg-content .ql-color-blue { color: #3498db; }
+        .wysiwyg-content .ql-color-purple { color: #9b59b6; }
+
+        /* Couleurs de fond Quill */
+        .wysiwyg-content .ql-bg-red { background-color: #e74c3c; color: white; padding: 2px 4px; }
+        .wysiwyg-content .ql-bg-orange { background-color: #e67e22; color: white; padding: 2px 4px; }
+        .wysiwyg-content .ql-bg-yellow { background-color: #f1c40f; padding: 2px 4px; }
+        .wysiwyg-content .ql-bg-green { background-color: #27ae60; color: white; padding: 2px 4px; }
+        .wysiwyg-content .ql-bg-blue { background-color: #3498db; color: white; padding: 2px 4px; }
+        .wysiwyg-content .ql-bg-purple { background-color: #9b59b6; color: white; padding: 2px 4px; }
     </style>
 {% endblock %}
 
@@ -400,7 +447,7 @@
                                     {% if devis.urlAccesClient %}
                                         <p class="mb-1">
                                             <a href="{{ devis.urlAccesClient }}" target="_blank" class="btn btn-sm btn-outline-success">
-                                                <i class="fas fa-pen-fancy me-1"></i>Signature électronique
+                                                <i class="fas fa-external-link-alt me-1"></i>Lien client
                                             </a>
                                         </p>
                                     {% endif %}
@@ -501,12 +548,12 @@
                             <tr>
                                 <th style="width: 100px;">Code</th>
                                 <th>Désignation</th>
-                                <th>Description</th>
+                                <th class="text-center" style="width: 80px;">Unité</th>
                                 <th class="text-center" style="width: 80px;">Qté</th>
                                 <th class="text-end" style="width: 100px;">Prix unit. HT</th>
                                 <th class="text-center" style="width: 80px;">Remise</th>
-                                <th class="text-center" style="width: 70px;">TVA</th>
                                 <th class="text-end" style="width: 100px;">Total HT</th>
+                                <th class="text-center" style="width: 70px;">TVA</th>
                             </tr>
                         </thead>
                         <tbody>
@@ -524,12 +571,17 @@
                                         {% if element.produit %}
                                             <br><small class="text-muted">Réf: {{ element.produit.reference }}</small>
                                         {% endif %}
-                                    </td>
-                                    <td>
                                         {% if element.description %}
-                                            {{ element.description|raw }}
+                                            <br><small>{{ element.description|raw }}</small>
+                                        {% endif %}
+                                    </td>
+                                    <td class="text-center">
+                                        {% if element.produit and element.produit.uniteVente %}
+                                            {{ element.produit.uniteVente.nom }}
+                                        {% elseif element.produit and element.produit.unite %}
+                                            {{ element.produit.unite }}
                                         {% else %}
-                                            <span class="text-muted">-</span>
+                                            -
                                         {% endif %}
                                     </td>
                                     <td class="text-center">{{ element.quantite }}</td>
@@ -541,8 +593,8 @@
                                             -
                                         {% endif %}
                                     </td>
-                                    <td class="text-center">{{ element.tvaPercent }}%</td>
                                     <td class="text-end"><strong>{{ element.totalLigneHt }}€</strong></td>
+                                    <td class="text-center">{{ element.tvaPercent }}%</td>
                                 </tr>
                                 {% endif %}
                                 
@@ -563,10 +615,10 @@
                                 </tr>
                                 {% endif %}
                                 
-                                {% if element.type == 'text' or element.type == 'title' %}
+                                {% if element.type == 'text' or element.type == 'title' or element.type == 'section_title' %}
                                 <tr class="table-light">
                                     <td colspan="7">
-                                        {% if element.type == 'title' %}
+                                        {% if element.type == 'title' or element.type == 'section_title' %}
                                             <strong class="text-primary">{{ element.titre }}</strong>
                                         {% else %}
                                             {{ element.contenu|raw }}
@@ -578,81 +630,47 @@
                             {% endfor %}
                         </tbody>
                         <tfoot>
-                            <tr>
-                                <th colspan="7" class="text-end">Total HT :</th>
-                                <th class="text-end">{{ devis.totalHt }}€</th>
-                            </tr>
                             {% if devis.remiseGlobalePercent or devis.remiseGlobaleMontant %}
-                            <tr class="table-warning">
-                                <th colspan="7" class="text-end">
-                                    Remise globale
-                                    {% if devis.remiseGlobalePercent %}({{ devis.remiseGlobalePercent }}%){% endif %}
-                                    :
-                                </th>
-                                <th class="text-end">
-                                    -{% if devis.remiseGlobaleMontant %}{{ devis.remiseGlobaleMontant }}{% else %}{{ (devis.totalHt * devis.remiseGlobalePercent / 100)|number_format(2, '.', '') }}{% endif %}€
-                                </th>
-                            </tr>
-                            <tr>
-                                <th colspan="7" class="text-end">Total HT remisé :</th>
-                                <th class="text-end">
-                                    {% set totalHtRemise = devis.totalHt %}
-                                    {% if devis.remiseGlobaleMontant %}
-                                        {% set totalHtRemise = devis.totalHt - devis.remiseGlobaleMontant %}
-                                    {% elseif devis.remiseGlobalePercent %}
-                                        {% set totalHtRemise = devis.totalHt - (devis.totalHt * devis.remiseGlobalePercent / 100) %}
-                                    {% endif %}
-                                    {{ totalHtRemise|number_format(2, '.', '') }}€
-                                </th>
-                            </tr>
-                            {% endif %}
-                            {% set tvaDetails = devis.tvaDetailsByRate %}
-                            {# Compter uniquement les taux avec montant > 0 #}
-                            {% set tvaRatesWithAmount = 0 %}
-                            {% for taux, detail in tvaDetails %}
-                                {% if detail.totalTva > 0.001 %}
-                                    {% set tvaRatesWithAmount = tvaRatesWithAmount + 1 %}
-                                {% endif %}
-                            {% endfor %}
-                            {% if tvaRatesWithAmount > 1 %}
-                                {# Plusieurs taux de TVA : affichage détaillé (sans les montants à 0) #}
-                                {% for taux, detail in tvaDetails %}
-                                    {% if detail.totalTva > 0.001 %}
-                                    <tr>
-                                        <th colspan="7" class="text-end">TVA {{ taux }}% :</th>
-                                        <th class="text-end">{{ detail.totalTva|number_format(2, '.', '') }}€</th>
-                                    </tr>
+                                {% set sousTotal = 0 %}
+                                {% for element in devis.elementsOrdered %}
+                                    {% if element.type == 'product' %}
+                                        {% set sousTotal = sousTotal + element.totalLigneHt %}
                                     {% endif %}
                                 {% endfor %}
                                 <tr>
-                                    <th colspan="7" class="text-end">Total TVA :</th>
-                                    <th class="text-end">{{ devis.totalTva }}€</th>
+                                    <th colspan="7" class="text-end">Sous-total HT :</th>
+                                    <th class="text-end">{{ sousTotal|number_format(2, '.', '') }}€</th>
                                 </tr>
-                            {% else %}
-                                {# Un seul taux : affichage simple #}
-                                <tr>
-                                    <th colspan="7" class="text-end">TVA :</th>
-                                    <th class="text-end">{{ devis.totalTva }}€</th>
-                                </tr>
+                                {% if devis.remiseGlobalePercent and devis.remiseGlobalePercent > 0 %}
+                                    <tr class="table-warning">
+                                        <th colspan="7" class="text-end">Remise ({{ devis.remiseGlobalePercent }}%) :</th>
+                                        <th class="text-end">-{{ (sousTotal * devis.remiseGlobalePercent / 100)|number_format(2, '.', '') }}€</th>
+                                    </tr>
+                                {% elseif devis.remiseGlobaleMontant and devis.remiseGlobaleMontant > 0 %}
+                                    <tr class="table-warning">
+                                        <th colspan="7" class="text-end">Remise :</th>
+                                        <th class="text-end">-{{ devis.remiseGlobaleMontant|number_format(2, '.', '') }}€</th>
+                                    </tr>
+                                {% endif %}
                             {% endif %}
-                            <tr class="table-success">
-                                <th colspan="7" class="text-end">Total TTC :</th>
-                                <th class="text-end">{{ devis.totalTtc }}€</th>
+                            <tr>
+                                <th colspan="7" class="text-end">Total HT :</th>
+                                <th class="text-end">{{ devis.totalHt|number_format(2, '.', '') }}€</th>
+                            </tr>
+                            <tr>
+                                <th colspan="7" class="text-end">Total TVA :</th>
+                                <th class="text-end">{{ devis.totalTva|number_format(2, '.', '') }}€</th>
                             </tr>
                             {% if devis.acomptePercent or devis.acompteMontant %}
                             <tr class="table-info">
-                                <th colspan="7" class="text-end">
-                                    Acompte
-                                    {% if devis.acomptePercent %}({{ devis.acomptePercent }}%){% endif %}
-                                    :
-                                </th>
-                                <th class="text-end">{{ devis.calculateAcompte }}€</th>
-                            </tr>
-                            <tr class="table-primary">
-                                <th colspan="7" class="text-end">Reste à payer :</th>
-                                <th class="text-end">{{ (devis.totalTtc - devis.calculateAcompte)|number_format(2, '.', '') }}€</th>
+                                <th colspan="7" class="text-end">Acompte à la commande :</th>
+                                <th class="text-end">{{ devis.calculateAcompte|number_format(2, '.', '') }}€ TTC</th>
                             </tr>
                             {% endif %}
+                            <tr class="table-success">
+                                <th colspan="7" class="text-end">Total TTC :</th>
+                                <th class="text-end">{{ devis.totalTtc|number_format(2, '.', '') }}€</th>
+                            </tr>
                         </tfoot>
                     </table>
                 </div>
@@ -767,7 +785,7 @@
                         {% for log in logs %}
                             <div class="timeline-item completed">
                                 <div class="timeline-marker {{ log.action == 'signature_cancelled' ? 'bg-danger' : '' }}">
-                                    <i class="fas fa-{{ log.action == 'created' ? 'plus' : (log.action == 'sent' or log.action == 'resent' ? 'paper-plane' : (log.action == 'signed' ? 'signature' : (log.action == 'signature_cancelled' ? 'signature' : (log.action == 'version_created' ? 'copy' : (log.action == 'status_changed' ? 'exchange-alt' : (log.action == 'updated' ? 'edit' : 'check')))))) }}"></i>
+                                    <i class="fas fa-{{ log.action == 'created' ? 'plus' : (log.action == 'sent' or log.action == 'resent' ? 'paper-plane' : (log.action == 'signed' ? 'signature' : (log.action == 'signature_cancelled' ? 'signature' : (log.action == 'version_created' ? 'copy' : (log.action == 'status_changed' ? 'exchange-alt' : (log.action == 'actualisation_demandee' ? 'sync' : (log.action == 'updated' ? 'edit' : 'check'))))))) }}"></i>
                                 </div>
                                 <div class="timeline-content">
                                     <div class="d-flex justify-content-between align-items-start">
@@ -803,6 +821,9 @@
                                                     {% else %}
                                                         {{ log.formattedAction }}
                                                     {% endif %}
+                                                {% elseif log.action == 'actualisation_demandee' %}
+                                                    {# Pour les demandes d'actualisation, afficher seulement les détails avec retours à la ligne #}
+                                                    {{ log.details|nl2br|raw }}
                                                 {% else %}
                                                     {{ log.formattedAction }}
                                                     {% if log.details %}
@@ -810,7 +831,7 @@
                                                     {% endif %}
                                                 {% endif %}
                                             </h6>
-                                            {% if log.action != 'signed' %}
+                                            {% if log.action != 'signed' and log.action != 'actualisation_demandee' %}
                                             <small class="text-muted">
                                                 <i class="fas fa-user me-1"></i>Par {{ log.userName }}
                                                 le {{ log.createdAt|date('d/m/Y') }} à {{ log.createdAt|date('H:i') }}
@@ -1011,7 +1032,6 @@
                         • Modifié le {{ devis.updatedAt|date('d/m/Y') }}
                     {% endif %}
                 </span>
-                {{ include('devis/_delete_form.html.twig') }}
             </div>
         </div>
     </div>
@@ -1181,49 +1201,72 @@
 <div class="floating-action-bar" id="floating-actions">
     <div class="container-fluid">
         <div class="d-flex justify-content-between align-items-center">
-            <div>
-                <span class="text-white me-3">
+            <!-- Gauche : Numéro/Statut + Actions principales -->
+            <div class="d-flex gap-2 align-items-center">
+                <span class="text-white me-2">
                     <i class="fas fa-file-invoice me-2"></i>
                     <strong>{{ devis.numeroDevis }}</strong>
                     <span class="badge bg-{{ devis.statutCouleur }} ms-2">{{ devis.statutLibelle }}</span>
                 </span>
+
+                {% if devis.canCancelSignature %}
+                    {# Devis signé : bouton d'annulation de signature au lieu de modifier #}
+                    <button type="button" class="btn btn-warning btn-sm" data-bs-toggle="modal" data-bs-target="#cancelSignatureModal">
+                        <i class="fas fa-ban me-1"></i>Annuler signature
+                    </button>
+                {% elseif devis.statut in ['envoye', 'relance'] %}
+                    {# Devis envoyé/relancé : création de version pour modification #}
+                    <button type="button" class="btn btn-light btn-sm" data-bs-toggle="modal" data-bs-target="#versionModal">
+                        <i class="fas fa-edit me-1"></i>Modifier
+                    </button>
+                {% elseif devis.isEditable %}
+                    {# Devis brouillon : modification directe #}
+                    <a href="{{ path('app_devis_edit', {'id': devis.id}) }}" class="btn btn-light btn-sm">
+                        <i class="fas fa-edit me-1"></i>Modifier
+                    </a>
+                {% endif %}
+
+                <form method="post" action="{{ path('app_devis_duplicate', {'id': devis.id}) }}" style="display: inline;">
+                    <input type="hidden" name="_token" value="{{ csrf_token('duplicate' ~ devis.id) }}">
+                    <button type="submit" class="btn btn-outline-light btn-sm">
+                        <i class="fas fa-copy me-1"></i>Dupliquer
+                    </button>
+                </form>
+
+                {% if is_granted('ROLE_ADMIN') or devis.commercial == app.user %}
+                    {% if devis.dateSignature is null %}
+                        <form method="post" action="{{ path('app_devis_delete', {'id': devis.id}) }}" onsubmit="return confirm('Êtes-vous sûr de vouloir archiver ce devis ?');" style="display: inline;">
+                            <input type="hidden" name="_token" value="{{ csrf_token('delete' ~ devis.id) }}">
+                            <button type="submit" class="btn btn-danger btn-sm">
+                                <i class="fas fa-trash me-1"></i>Archiver
+                            </button>
+                        </form>
+                    {% endif %}
+                {% endif %}
             </div>
-            <div class="text-center flex-grow-1">
+
+            <!-- Centre : Nom du projet -->
+            <div class="text-center">
                 {% if devis.nomProjet %}
                     <span class="text-white fw-bold fs-5">
                         {{ devis.nomProjet }}
                     </span>
                 {% endif %}
             </div>
+
+            <!-- Droite : Envoyer/PDF/Retour -->
             <div class="d-flex gap-2">
-                {% if devis.canCancelSignature %}
-                    {# Devis signé : bouton d'annulation de signature au lieu de modifier #}
-                    <button type="button" class="btn btn-warning" data-bs-toggle="modal" data-bs-target="#cancelSignatureModal">
-                        <i class="fas fa-ban me-1"></i>Annuler signature
-                    </button>
-                {% elseif devis.statut in ['envoye', 'relance'] %}
-                    {# Devis envoyé/relancé : création de version pour modification #}
-                    <button type="button" class="btn btn-light" data-bs-toggle="modal" data-bs-target="#versionModal">
-                        <i class="fas fa-edit me-1"></i>Modifier
-                    </button>
-                {% elseif devis.isEditable %}
-                    {# Devis brouillon : modification directe #}
-                    <a href="{{ path('app_devis_edit', {'id': devis.id}) }}" class="btn btn-light">
-                        <i class="fas fa-edit me-1"></i>Modifier
-                    </a>
-                {% endif %}
-                
-                <a href="{{ path('app_devis_pdf', {'id': devis.id}) }}" target="_blank" class="btn btn-info">
-                    <i class="fas fa-file-pdf me-1"></i>PDF
-                </a>
-                
                 {% if devis.statut in ['brouillon', 'envoye', 'relance'] %}
                     <button type="button" class="btn btn-success" data-bs-toggle="modal" data-bs-target="#envoyerModal">
                         <i class="fas fa-paper-plane me-1"></i>
                         {% if devis.statut == 'envoye' or devis.statut == 'relance' %}Renvoyer{% else %}Envoyer{% endif %}
                     </button>
                 {% endif %}
-                
+
+                <a href="{{ path('app_devis_pdf', {'id': devis.id}) }}" target="_blank" class="btn btn-info">
+                    <i class="fas fa-file-pdf me-1"></i>PDF
+                </a>
+
                 <a href="{{ path('app_devis_index') }}" class="btn btn-outline-light">
                     <i class="fas fa-arrow-left me-1"></i>Retour
                 </a>
@@ -1546,8 +1589,35 @@ document.addEventListener('DOMContentLoaded', function() {
 // Ouvrir automatiquement la modal d'envoi si demandé
 {% if app.request.query.get('open_send_modal') %}
 document.addEventListener('DOMContentLoaded', function() {
-    const envoyerModal = new bootstrap.Modal(document.getElementById('envoyerModal'));
-    envoyerModal.show();
+    const envoyerModalElement = document.getElementById('envoyerModal');
+    if (envoyerModalElement) {
+        const envoyerModal = new bootstrap.Modal(envoyerModalElement, {
+            backdrop: true,
+            keyboard: true,
+            focus: true
+        });
+
+        // Nettoyer le backdrop et l'URL quand le modal est fermé
+        envoyerModalElement.addEventListener('hidden.bs.modal', function() {
+            // Supprimer le backdrop manuellement au cas où
+            const backdrop = document.querySelector('.modal-backdrop');
+            if (backdrop) {
+                backdrop.remove();
+            }
+            // Retirer le body class
+            document.body.classList.remove('modal-open');
+            document.body.style.removeProperty('overflow');
+            document.body.style.removeProperty('padding-right');
+
+            // Nettoyer l'URL pour éviter la réouverture
+            const url = new URL(window.location);
+            url.searchParams.delete('open_send_modal');
+            window.history.replaceState({}, '', url);
+        }, { once: true });
+
+        // Ouvrir le modal
+        envoyerModal.show();
+    }
 });
 {% endif %}
 

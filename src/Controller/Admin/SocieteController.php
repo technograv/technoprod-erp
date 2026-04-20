@@ -6,7 +6,6 @@ use App\Entity\Societe;
 use App\Entity\User;
 use App\Repository\SocieteRepository;
 use App\Service\TenantService;
-use App\Service\InheritanceService;
 use Doctrine\ORM\EntityManagerInterface;
 use Symfony\Bundle\FrameworkBundle\Controller\AbstractController;
 use Symfony\Component\HttpFoundation\Request;
@@ -21,8 +20,7 @@ final class SocieteController extends AbstractController
 {
     public function __construct(
         private EntityManagerInterface $entityManager,
-        private TenantService $tenantService,
-        private InheritanceService $inheritanceService
+        private TenantService $tenantService
     ) {}
 
     // ================================
@@ -60,8 +58,16 @@ final class SocieteController extends AbstractController
             'telephone' => $societe->getTelephone(),
             'email' => $societe->getEmail(),
             'siret' => $societe->getSiret(),
+            'logo' => $societe->getLogo(),
             'couleurPrimaire' => $societe->getCouleurPrimaire(),
             'couleurSecondaire' => $societe->getCouleurSecondaire(),
+            'couleurTertiaire' => $societe->getCouleurTertiaire(),
+            'delaiRelanceDevis' => $societe->getDelaiRelanceDevis(),
+            'frequenceVisiteClients' => $societe->getFrequenceVisiteClients(),
+            'dureeValiditeDevisDefaut' => $societe->getDureeValiditeDevisDefaut(),
+            'delaiFacturation' => $societe->getDelaiFacturation(),
+            'acompteDefautPercent' => $societe->getAcompteDefautPercent(),
+            'signatureMailDefaut' => $societe->getSignatureMailDefaut(),
             'active' => $societe->isActive(),
             'ordre' => $societe->getOrdre()
         ]);
@@ -71,9 +77,16 @@ final class SocieteController extends AbstractController
     public function createSociete(Request $request): JsonResponse
     {
         try {
-            $data = json_decode($request->getContent(), true);
+            // Supporter à la fois JSON et FormData
+            $contentType = $request->headers->get('Content-Type');
+            if ($contentType && strpos($contentType, 'application/json') !== false) {
+                $data = json_decode($request->getContent(), true);
+            } else {
+                // FormData
+                $data = $request->request->all();
+            }
 
-            if (!isset($data['nom'])) {
+            if (!isset($data['nom']) || empty($data['nom'])) {
                 return $this->json(['error' => 'Nom obligatoire'], 400);
             }
 
@@ -85,9 +98,32 @@ final class SocieteController extends AbstractController
             $societe->setTelephone($data['telephone'] ?? '');
             $societe->setEmail($data['email'] ?? '');
             $societe->setSiret($data['siret'] ?? '');
+
+            // Gestion de l'upload du logo
+            $logoFile = $request->files->get('logo');
+            if ($logoFile) {
+                $uploadsDir = $this->getParameter('kernel.project_dir') . '/public/uploads/logos';
+                if (!is_dir($uploadsDir)) {
+                    mkdir($uploadsDir, 0755, true);
+                }
+
+                $newFilename = uniqid() . '.' . $logoFile->guessExtension();
+                $logoFile->move($uploadsDir, $newFilename);
+                $societe->setLogo('/uploads/logos/' . $newFilename);
+            } else {
+                $societe->setLogo($data['logo'] ?? null);
+            }
+
             $societe->setCouleurPrimaire($data['couleurPrimaire'] ?? '#dc3545');
             $societe->setCouleurSecondaire($data['couleurSecondaire'] ?? '#6c757d');
-            $societe->setActive($data['active'] ?? true);
+            $societe->setCouleurTertiaire($data['couleurTertiaire'] ?? '#28a745');
+            $societe->setDelaiRelanceDevis(intval($data['delaiRelanceDevis'] ?? 14));
+            $societe->setFrequenceVisiteClients(intval($data['frequenceVisiteClients'] ?? 365));
+            $societe->setDureeValiditeDevisDefaut(intval($data['dureeValiditeDevisDefaut'] ?? 30));
+            $societe->setDelaiFacturation(intval($data['delaiFacturation'] ?? 1));
+            $societe->setAcompteDefautPercent(floatval($data['acompteDefautPercent'] ?? 30.00));
+            $societe->setSignatureMailDefaut($data['signatureMailDefaut'] ?? null);
+            $societe->setActive(($data['active'] ?? '1') === '1' || $data['active'] === true);
 
             // Gestion du type et société parent
             if (isset($data['type']) && $data['type'] === 'mere') {
@@ -123,11 +159,24 @@ final class SocieteController extends AbstractController
         }
     }
 
-    #[Route('/societes/{id}', name: 'app_admin_societe_update', methods: ['PUT'], requirements: ['id' => '\d+'])]
+    #[Route('/societes/{id}', name: 'app_admin_societe_update', methods: ['PUT', 'POST'], requirements: ['id' => '\d+'])]
     public function updateSociete(Request $request, Societe $societe): JsonResponse
     {
         try {
-            $data = json_decode($request->getContent(), true);
+            // Supporter à la fois JSON et FormData
+            $contentType = $request->headers->get('Content-Type');
+
+            error_log("🔍 DEBUG updateSociete - Société ID: {$societe->getId()}, Content-Type: $contentType");
+
+            if ($contentType && strpos($contentType, 'application/json') !== false) {
+                $data = json_decode($request->getContent(), true);
+            } else {
+                // FormData avec POST (PUT ne marche pas avec multipart/form-data)
+                $data = $request->request->all();
+                error_log("🔍 DEBUG: POST FormData reçu, keys: " . implode(', ', array_keys($data)));
+            }
+
+            error_log("🔍 DEBUG: Data - nom: " . ($data['nom'] ?? 'MANQUANT') . ", adresse: " . ($data['adresse'] ?? 'MANQUANT') . ", couleurPrimaire: " . ($data['couleurPrimaire'] ?? 'MANQUANT'));
 
             if (isset($data['nom'])) {
                 $societe->setNom($data['nom']);
@@ -150,11 +199,52 @@ final class SocieteController extends AbstractController
             if (isset($data['siret'])) {
                 $societe->setSiret($data['siret']);
             }
+
+            // Gestion de l'upload du logo
+            $logoFile = $request->files->get('logo');
+            if ($logoFile) {
+                // Supprimer l'ancien logo si existe
+                if ($societe->getLogo() && file_exists($this->getParameter('kernel.project_dir') . '/public' . $societe->getLogo())) {
+                    unlink($this->getParameter('kernel.project_dir') . '/public' . $societe->getLogo());
+                }
+
+                $uploadsDir = $this->getParameter('kernel.project_dir') . '/public/uploads/logos';
+                if (!is_dir($uploadsDir)) {
+                    mkdir($uploadsDir, 0755, true);
+                }
+
+                $newFilename = uniqid() . '.' . $logoFile->guessExtension();
+                $logoFile->move($uploadsDir, $newFilename);
+                $societe->setLogo('/uploads/logos/' . $newFilename);
+            } elseif (isset($data['logo'])) {
+                $societe->setLogo($data['logo']);
+            }
             if (isset($data['couleurPrimaire'])) {
                 $societe->setCouleurPrimaire($data['couleurPrimaire']);
             }
             if (isset($data['couleurSecondaire'])) {
                 $societe->setCouleurSecondaire($data['couleurSecondaire']);
+            }
+            if (isset($data['couleurTertiaire'])) {
+                $societe->setCouleurTertiaire($data['couleurTertiaire']);
+            }
+            if (isset($data['delaiRelanceDevis'])) {
+                $societe->setDelaiRelanceDevis($data['delaiRelanceDevis']);
+            }
+            if (isset($data['frequenceVisiteClients'])) {
+                $societe->setFrequenceVisiteClients($data['frequenceVisiteClients']);
+            }
+            if (isset($data['dureeValiditeDevisDefaut'])) {
+                $societe->setDureeValiditeDevisDefaut($data['dureeValiditeDevisDefaut']);
+            }
+            if (isset($data['delaiFacturation'])) {
+                $societe->setDelaiFacturation($data['delaiFacturation']);
+            }
+            if (isset($data['acompteDefautPercent'])) {
+                $societe->setAcompteDefautPercent($data['acompteDefautPercent']);
+            }
+            if (isset($data['signatureMailDefaut'])) {
+                $societe->setSignatureMailDefaut($data['signatureMailDefaut']);
             }
             if (isset($data['active'])) {
                 $societe->setActive($data['active']);

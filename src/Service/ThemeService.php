@@ -7,8 +7,7 @@ use App\Entity\Societe;
 class ThemeService
 {
     public function __construct(
-        private TenantService $tenantService,
-        private InheritanceService $inheritanceService
+        private TenantService $tenantService
     ) {
     }
 

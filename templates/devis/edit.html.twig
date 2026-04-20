@@ -123,6 +123,31 @@
                             }) }}
                         </div>
                     </div>
+
+                    <div class="row mt-3">
+                        <div class="col-md-6">
+                            {{ form_row(form.societe, {
+                                'label': 'Société / Marque',
+                                'label_attr': {'class': 'form-label'},
+                                'attr': {'class': 'form-select'}
+                            }) }}
+                            <small class="form-text text-muted">
+                                <i class="fas fa-info-circle"></i> La société détermine les couleurs et le logo du devis
+                            </small>
+                        </div>
+                        <div class="col-md-6">
+                            <div id="template-field-wrapper">
+                                {{ form_row(form.template, {
+                                    'label': 'Modèle de document',
+                                    'label_attr': {'class': 'form-label'},
+                                    'attr': {'class': 'form-select'}
+                                }) }}
+                            </div>
+                            <small class="form-text text-muted">
+                                <i class="fas fa-info-circle"></i> Le modèle détermine les CGV et les informations bancaires
+                            </small>
+                        </div>
+                    </div>
                 </div>
             </div>
             
@@ -249,8 +274,7 @@
         {{ form_widget(form.devisItems) }}
         {{ form_widget(form.adresseFacturation, {'value': devis.adresseFacturation ? devis.adresseFacturation.id : ''}) }}
         {{ form_widget(form.adresseLivraison, {'value': devis.adresseLivraison ? devis.adresseLivraison.id : ''}) }}
-        {{ form_widget(form.notesClient) }}
-        
+
         {# Masquer tous les champs indésirables après les conditions commerciales #}
         {{ form_widget(form.tiersCivilite) }}
         {{ form_widget(form.tiersNom) }}
@@ -262,9 +286,12 @@
         {{ form_widget(form.modePaiement) }}
         {{ form_widget(form.signatureNom) }}
         {{ form_widget(form.signatureEmail) }}
-        {{ form_widget(form.notesInternes) }}
     </div>
-    
+
+    {# Marquer les champs notes comme rendus sans les afficher (le composant WYSIWYG s'en occupe) #}
+    {% do form.notesClient.setRendered() %}
+    {% do form.notesInternes.setRendered() %}
+
     <!-- Section Notes publiques et privées -->
     <div class="form-section mb-4">
         <div class="form-section-header">
@@ -280,10 +307,6 @@
                 "public_field_name": "devis[notesClient]",
                 "private_field_name": "devis[notesInternes]"
             }) }}
-
-            <!-- Champs cachés pour synchroniser avec le formulaire Symfony -->
-            <textarea name="devis[notesClient]" style="display: none;">{{ devis.notesClient|raw }}</textarea>
-            <textarea name="devis[notesInternes]" style="display: none;">{{ devis.notesInternes|raw }}</textarea>
         </div>
     </div>
 
@@ -382,11 +405,7 @@
                         <i class="fas fa-paper-plane me-1"></i>Enregistrer et envoyer
                     </button>
                 {% endif %}
-                
-                <a href="{{ path('app_devis_show', {'id': devis.id}) }}" class="btn btn-secondary">
-                    <i class="fas fa-eye me-1"></i>Voir
-                </a>
-                
+
                 <a href="{{ path('app_devis_pdf', {'id': devis.id}) }}" target="_blank" class="btn btn-info">
                     <i class="fas fa-file-pdf me-1"></i>PDF
                 </a>
@@ -4470,131 +4489,6 @@ function imageHandler() {
     showImageDimensionsModalForNotesClient();
 }
 
-// Variables globales pour les éditeurs de notes (édition)
-let quillNotePubliqueEdit = null;
-let quillNotePriveeEdit = null;
-
-// Fonction pour initialiser les éditeurs WYSIWYG des notes publiques et privées
-function initQuillEditorsNotes() {
-    console.log('🎯 Initialisation éditeurs WYSIWYG notes publiques et privées...');
-
-    // Configuration Quill (comme dans new.html.twig)
-    const Font = Quill.import('formats/font');
-    Font.whitelist = ['arial', 'helvetica', 'times', 'georgia', 'verdana', 'courier'];
-    Quill.register(Font, true);
-
-    const Size = Quill.import('formats/size');
-    Size.whitelist = ['10px', '12px', '14px', '16px', '18px', '20px', '22px', '24px'];
-    Quill.register(Size, true);
-
-    // Options communes
-    const quillOptions = {
-        theme: 'snow',
-        modules: {
-            toolbar: {
-                handlers: {
-                    'image': imageHandler
-                }
-            }
-        }
-    };
-
-    // Initialisation de l'éditeur pour note publique
-    const optionsNotePublique = {...quillOptions};
-    optionsNotePublique.modules.toolbar.container = '#toolbar-note-publique-edit';
-    optionsNotePublique.placeholder = '';
-
-    quillNotePubliqueEdit = new Quill('#editor-note-publique-edit', optionsNotePublique);
-
-    // Initialisation de l'éditeur pour note privée
-    const optionsNotePrivee = {...quillOptions};
-    optionsNotePrivee.modules.toolbar.container = '#toolbar-note-privee-edit';
-    optionsNotePrivee.placeholder = '';
-
-    quillNotePriveeEdit = new Quill('#editor-note-privee-edit', optionsNotePrivee);
-
-    // Charger le contenu existant depuis les champs cachés Symfony
-    const notesClientField = document.querySelector('textarea[name="devis[notesClient]"]');
-    const notesInternesField = document.querySelector('textarea[name="devis[notesInternes]"]');
-
-    if (notesClientField && notesClientField.value) {
-        quillNotePubliqueEdit.root.innerHTML = notesClientField.value;
-    }
-
-    if (notesInternesField && notesInternesField.value) {
-        quillNotePriveeEdit.root.innerHTML = notesInternesField.value;
-    }
-
-    // Synchronisation des éditeurs avec les champs cachés du formulaire
-    quillNotePubliqueEdit.on('text-change', function() {
-        const content = quillNotePubliqueEdit.root.innerHTML;
-        if (notesClientField) {
-            notesClientField.value = content === '<p><br></p>' ? '' : content;
-        }
-    });
-
-    quillNotePriveeEdit.on('text-change', function() {
-        const content = quillNotePriveeEdit.root.innerHTML;
-        if (notesInternesField) {
-            notesInternesField.value = content === '<p><br></p>' ? '' : content;
-        }
-    });
-
-    // Validation avant soumission du formulaire
-    const form = document.getElementById('devis-form');
-    if (form) {
-        form.addEventListener('submit', function() {
-            // Synchroniser les contenus avant soumission
-            if (notesClientField && quillNotePubliqueEdit) {
-                const content = quillNotePubliqueEdit.root.innerHTML;
-                notesClientField.value = content === '<p><br></p>' ? '' : content;
-            }
-
-            if (notesInternesField && quillNotePriveeEdit) {
-                const content = quillNotePriveeEdit.root.innerHTML;
-                notesInternesField.value = content === '<p><br></p>' ? '' : content;
-            }
-        });
-    }
-
-    // Correction forcée des largeurs des dropdowns après initialisation (comme dans new.html.twig)
-    setTimeout(() => {
-        // Pour la note publique
-        const fontPickerPublique = document.querySelector('#toolbar-note-publique-edit .ql-font .ql-picker');
-        const sizePickerPublique = document.querySelector('#toolbar-note-publique-edit .ql-size .ql-picker');
-
-        if (fontPickerPublique) {
-            fontPickerPublique.style.width = '180px';
-            fontPickerPublique.style.minWidth = '180px';
-            fontPickerPublique.style.maxWidth = '180px';
-        }
-
-        if (sizePickerPublique) {
-            sizePickerPublique.style.width = '140px';
-            sizePickerPublique.style.minWidth = '140px';
-            sizePickerPublique.style.maxWidth = '140px';
-        }
-
-        // Pour la note privée
-        const fontPickerPrivee = document.querySelector('#toolbar-note-privee-edit .ql-font .ql-picker');
-        const sizePickerPrivee = document.querySelector('#toolbar-note-privee-edit .ql-size .ql-picker');
-
-        if (fontPickerPrivee) {
-            fontPickerPrivee.style.width = '180px';
-            fontPickerPrivee.style.minWidth = '180px';
-            fontPickerPrivee.style.maxWidth = '180px';
-        }
-
-        if (sizePickerPrivee) {
-            sizePickerPrivee.style.width = '140px';
-            sizePickerPrivee.style.minWidth = '140px';
-            sizePickerPrivee.style.maxWidth = '140px';
-        }
-    }, 500);
-
-    console.log('✅ Éditeurs WYSIWYG notes complètement initialisés !');
-}
-
 // Initialiser Quill Editor
 function initQuillEditor() {
     
@@ -5289,47 +5183,21 @@ $(document).ready(function() {
     padding: 2rem;
 }
 
-/* Styles pour les éditeurs WYSIWYG des notes */
-#toolbar-note-publique-edit .ql-picker-label,
-#toolbar-note-privee-edit .ql-picker-label {
-    white-space: nowrap !important;
-    overflow: hidden !important;
-    text-overflow: ellipsis !important;
-    min-width: 120px !important;
-    max-width: 150px !important;
+/* Styles pour les éditeurs WYSIWYG - largeur des dropdowns */
+[id^="toolbar-note-"] span.ql-picker.ql-font {
+    min-width: 220px !important;
+    width: 220px !important;
+    max-width: 220px !important;
 }
 
-#toolbar-note-publique-edit .ql-font .ql-picker-label,
-#toolbar-note-privee-edit .ql-font .ql-picker-label {
-    min-width: 140px !important;
-    max-width: 160px !important;
-}
-
-#toolbar-note-publique-edit .ql-size .ql-picker-label,
-#toolbar-note-privee-edit .ql-size .ql-picker-label {
-    min-width: 100px !important;
-    max-width: 120px !important;
-}
-
-/* Styles pour les éditeurs WYSIWYG des notes - identique à new.html.twig */
-#toolbar-note-publique-edit .ql-font .ql-picker,
-#toolbar-note-privee-edit .ql-font .ql-picker {
+[id^="toolbar-note-"] span.ql-picker.ql-size {
     min-width: 180px !important;
     width: 180px !important;
     max-width: 180px !important;
 }
 
-#toolbar-note-publique-edit .ql-size .ql-picker,
-#toolbar-note-privee-edit .ql-size .ql-picker {
-    min-width: 140px !important;
-    width: 140px !important;
-    max-width: 140px !important;
-}
-
-#toolbar-note-publique-edit .ql-font .ql-picker-label,
-#toolbar-note-publique-edit .ql-size .ql-picker-label,
-#toolbar-note-privee-edit .ql-font .ql-picker-label,
-#toolbar-note-privee-edit .ql-size .ql-picker-label {
+[id^="toolbar-note-"] .ql-font .ql-picker-label,
+[id^="toolbar-note-"] .ql-size .ql-picker-label {
     width: 100% !important;
     min-width: 100% !important;
     padding: 4px 8px !important;
@@ -5337,82 +5205,13 @@ $(document).ready(function() {
     white-space: nowrap !important;
     overflow: hidden !important;
     text-overflow: ellipsis !important;
-    box-sizing: border-box !important;
 }
 
-#toolbar-note-publique-edit .ql-font .ql-picker-options,
-#toolbar-note-publique-edit .ql-size .ql-picker-options,
-#toolbar-note-privee-edit .ql-font .ql-picker-options,
-#toolbar-note-privee-edit .ql-size .ql-picker-options {
-    min-width: 180px !important;
-    width: 180px !important;
-}
-
-/* Forcer la largeur avec une approche CSS plus agressive */
-#toolbar-note-publique-edit span.ql-picker[class*="ql-font"],
-#toolbar-note-privee-edit span.ql-picker[class*="ql-font"] {
-    width: 180px !important;
-    min-width: 180px !important;
-}
-
-#toolbar-note-publique-edit span.ql-picker[class*="ql-size"],
-#toolbar-note-privee-edit span.ql-picker[class*="ql-size"] {
-    width: 140px !important;
-    min-width: 140px !important;
-}
-
-/* Préserver les color pickers - taille normale */
-#toolbar-note-publique-edit .ql-color .ql-picker,
-#toolbar-note-publique-edit .ql-background .ql-picker,
-#toolbar-note-publique-edit .ql-align .ql-picker,
-#toolbar-note-privee-edit .ql-color .ql-picker,
-#toolbar-note-privee-edit .ql-background .ql-picker,
-#toolbar-note-privee-edit .ql-align .ql-picker {
-    min-width: 28px !important;
-    width: 28px !important;
-    max-width: 28px !important;
-}
-
-/* Prévisualisation des polices dans les selects */
-#toolbar-note-publique-edit select.ql-font option[value="arial"],
-#toolbar-note-privee-edit select.ql-font option[value="arial"] {
-    font-family: Arial, sans-serif;
-}
-
-#toolbar-note-publique-edit select.ql-font option[value="helvetica"],
-#toolbar-note-privee-edit select.ql-font option[value="helvetica"] {
-    font-family: Helvetica, sans-serif;
-}
-
-#toolbar-note-publique-edit select.ql-font option[value="times"],
-#toolbar-note-privee-edit select.ql-font option[value="times"] {
-    font-family: 'Times New Roman', serif;
-}
-
-#toolbar-note-publique-edit select.ql-font option[value="georgia"],
-#toolbar-note-privee-edit select.ql-font option[value="georgia"] {
-    font-family: Georgia, serif;
-}
-
-#toolbar-note-publique-edit select.ql-font option[value="verdana"],
-#toolbar-note-privee-edit select.ql-font option[value="verdana"] {
-    font-family: Verdana, sans-serif;
-}
-
-#toolbar-note-publique-edit select.ql-font option[value="courier"],
-#toolbar-note-privee-edit select.ql-font option[value="courier"] {
-    font-family: 'Courier New', monospace;
-}
-
-/* Assurer que les toolbars ont suffisamment d'espace */
-#toolbar-note-publique-edit,
-#toolbar-note-privee-edit {
-    display: flex !important;
-    flex-wrap: wrap !important;
-    align-items: center !important;
-    padding: 8px 12px !important;
-    gap: 6px !important;
-    min-height: 50px !important;
+/* Options déroulées */
+[id^="toolbar-note-"] .ql-font .ql-picker-options,
+[id^="toolbar-note-"] .ql-size .ql-picker-options {
+    min-width: 220px !important;
+    width: 220px !important;
 }
 
 </style>
@@ -5850,6 +5649,61 @@ function hideImagePreview() {
 // Code d'autocomplétion maintenant intégré dans le DOMContentLoaded principal
 
 console.log('🔍 DEBUG: Fin second script (images produits) edit.html.twig');
+
+// ========================================
+// Gestion du changement de société pour filtrer les templates
+// ========================================
+document.addEventListener('DOMContentLoaded', function() {
+    const societeSelect = document.getElementById('devis_societe');
+    const templateSelect = document.getElementById('devis_template');
+
+    if (societeSelect && templateSelect) {
+        societeSelect.addEventListener('change', function() {
+            const societeId = this.value;
+
+            if (!societeId) {
+                // Vider les templates si aucune société sélectionnée
+                templateSelect.innerHTML = '<option value="">-- Aucun modèle --</option>';
+                return;
+            }
+
+            // Appel AJAX pour récupérer les templates de la société
+            fetch('/devis/ajax/templates-by-societe?societe_id=' + societeId, {
+                method: 'GET',
+                headers: {
+                    'X-Requested-With': 'XMLHttpRequest'
+                }
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.success) {
+                    // Vider le dropdown
+                    templateSelect.innerHTML = '<option value="">-- Aucun modèle --</option>';
+
+                    // Ajouter les nouveaux templates
+                    data.templates.forEach(function(template) {
+                        const option = document.createElement('option');
+                        option.value = template.id;
+                        option.textContent = template.nom;
+                        templateSelect.appendChild(option);
+                    });
+
+                    console.log('✅ Templates chargés pour la société ' + societeId + ': ' + data.templates.length + ' template(s)');
+                } else {
+                    console.error('Erreur récupération templates:', data.message);
+                    alert('Erreur lors du chargement des modèles: ' + data.message);
+                }
+            })
+            .catch(error => {
+                console.error('Erreur AJAX templates:', error);
+                alert('Erreur lors du chargement des modèles de document');
+            });
+        });
+
+        console.log('✅ Gestionnaire changement société initialisé');
+    }
+});
+
 </script>
 
 

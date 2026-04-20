@@ -15,7 +15,7 @@
         <i class="fas fa-eye me-1"></i>Note publique (visible par le client)
     </label>
             <!-- Toolbar WYSIWYG pour note publique -->
-            <div id="toolbar-note-publique" style="border: 1px solid #ced4da; border-bottom: none; background: #f8f9fa;">
+            <div id="toolbar-note-publique-{{ prefix }}" style="border: 1px solid #ced4da; border-bottom: none; background: #f8f9fa;">
                 <select class="ql-font">
                     <option value="">Police par défaut</option>
                     <option value="arial">Arial</option>
@@ -62,10 +62,10 @@
                 <button class="ql-clean"></button>
             </div>
             <!-- Éditeur WYSIWYG pour note publique -->
-            <div id="editor-note-publique" class="border border-top-0" style="min-height: 120px;">
+            <div id="editor-note-publique-{{ prefix }}" class="border border-top-0" style="min-height: 120px;">
             </div>
     <!-- Champ caché pour synchroniser avec le formulaire -->
-    <input type="hidden" id="note-publique-{{ prefix }}" name="{{ public_field_name }}" value="{{ public_content|raw }}">
+    <input type="hidden" id="note-publique-{{ prefix }}" name="{{ public_field_name }}" data-initial-value="{{ public_content|e('html_attr') }}">
 </div>
 
 <!-- Notes privées -->
@@ -74,7 +74,7 @@
         <i class="fas fa-eye-slash me-1"></i>Note privée (équipe interne uniquement)
     </label>
             <!-- Toolbar WYSIWYG pour note privée -->
-            <div id="toolbar-note-privee" style="border: 1px solid #ced4da; border-bottom: none; background: #f8f9fa;">
+            <div id="toolbar-note-privee-{{ prefix }}" style="border: 1px solid #ced4da; border-bottom: none; background: #f8f9fa;">
                 <select class="ql-font">
                     <option value="">Police par défaut</option>
                     <option value="arial">Arial</option>
@@ -121,8 +121,8 @@
                 <button class="ql-clean"></button>
             </div>
             <!-- Éditeur WYSIWYG pour note privée -->
-            <div id="editor-note-privee" class="border border-top-0" style="min-height: 120px;">
+            <div id="editor-note-privee-{{ prefix }}" class="border border-top-0" style="min-height: 120px;">
             </div>
     <!-- Champ caché pour synchroniser avec le formulaire -->
-    <input type="hidden" id="note-privee-{{ prefix }}" name="{{ private_field_name }}" value="{{ private_content|raw }}">
+    <input type="hidden" id="note-privee-{{ prefix }}" name="{{ private_field_name }}" data-initial-value="{{ private_content|e('html_attr') }}">
 </div>

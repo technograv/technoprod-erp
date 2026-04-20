@@ -105,6 +105,9 @@ class Societe
     #[ORM\Column(type: 'integer', options: ['default' => 30])]
     private int $dureeValiditeDevisDefaut = 30; // Durée de validité par défaut des devis en jours
 
+    #[ORM\Column(type: 'text', nullable: true)]
+    private ?string $signatureMailDefaut = null; // Signature email par défaut pour cette société
+
     #[ORM\OneToMany(mappedBy: 'societe', targetEntity: UserSocieteRole::class, orphanRemoval: true)]
     private Collection $userRoles;
 
@@ -615,14 +618,42 @@ class Societe
         if ($this->acompteDefautPercent && (float)$this->acompteDefautPercent > 0) {
             return (float)$this->acompteDefautPercent;
         }
-        
+
         // Si société fille et pas de valeur, hériter du parent
         if ($this->societeParent) {
             return $this->societeParent->getAcompteDefautPercentAvecHeritage();
         }
-        
+
         // Valeur par défaut si aucune société parent
         return 30.00;
+    }
+
+    public function getSignatureMailDefaut(): ?string
+    {
+        return $this->signatureMailDefaut;
+    }
+
+    public function setSignatureMailDefaut(?string $signatureMailDefaut): self
+    {
+        $this->signatureMailDefaut = $signatureMailDefaut;
+        $this->updateTimestamp();
+        return $this;
+    }
+
+    public function getSignatureMailDefautAvecHeritage(): ?string
+    {
+        // Si on a une valeur
+        if ($this->signatureMailDefaut) {
+            return $this->signatureMailDefaut;
+        }
+
+        // Si société fille et pas de valeur, hériter du parent
+        if ($this->societeParent) {
+            return $this->societeParent->getSignatureMailDefautAvecHeritage();
+        }
+
+        // Pas de signature par défaut
+        return null;
     }
 
     public function __toString(): string

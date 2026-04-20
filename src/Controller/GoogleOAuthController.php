@@ -18,6 +18,12 @@ class GoogleOAuthController extends AbstractController
     #[Route('/google-oauth/start', name: 'google_oauth_start')]
     public function start(SessionInterface $session): Response
     {
+        // Vérifier que Google OAuth est configuré
+        if (!isset($_ENV['GOOGLE_OAUTH_CLIENT_ID']) || !isset($_ENV['GOOGLE_OAUTH_CLIENT_SECRET'])) {
+            $this->addFlash('error', 'Google OAuth n\'est pas configuré. Veuillez définir GOOGLE_OAUTH_CLIENT_ID et GOOGLE_OAUTH_CLIENT_SECRET dans .env.local');
+            return $this->redirectToRoute('app_login');
+        }
+
         $client_id = $_ENV['GOOGLE_OAUTH_CLIENT_ID'];
         $redirect_uri = 'https://test.decorpub.fr:8080/google-oauth/callback';
         $state = bin2hex(random_bytes(16));
@@ -62,7 +68,13 @@ class GoogleOAuthController extends AbstractController
             $this->addFlash('error', 'État OAuth invalide');
             return $this->redirectToRoute('app_login');
         }
-        
+
+        // Vérifier que Google OAuth est configuré
+        if (!isset($_ENV['GOOGLE_OAUTH_CLIENT_ID']) || !isset($_ENV['GOOGLE_OAUTH_CLIENT_SECRET'])) {
+            $this->addFlash('error', 'Google OAuth n\'est pas configuré');
+            return $this->redirectToRoute('app_login');
+        }
+
         // Échanger le code contre un token
         $client_id = $_ENV['GOOGLE_OAUTH_CLIENT_ID'];
         $client_secret = $_ENV['GOOGLE_OAUTH_CLIENT_SECRET'];

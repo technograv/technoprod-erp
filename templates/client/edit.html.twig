@@ -552,10 +552,17 @@
             </span>
         </div>
         <div class="action-right">
-            <button type="button" class="btn btn-warning btn-sm me-2" onclick="archiverClient({{ client.id }})" 
-                    title="Archiver ce client (le rendre inactif)">
-                <i class="fas fa-archive me-1"></i>Archiver
-            </button>
+            {% if client.actif %}
+                <button type="button" class="btn btn-warning btn-sm me-2" onclick="archiverClient({{ client.id }})"
+                        title="Archiver ce client (le rendre inactif)">
+                    <i class="fas fa-archive me-1"></i>Archiver
+                </button>
+            {% else %}
+                <button type="button" class="btn btn-success btn-sm me-2" onclick="desarchiverClient({{ client.id }})"
+                        title="Désarchiver ce client (le rendre actif)">
+                    <i class="fas fa-undo me-1"></i>Désarchiver
+                </button>
+            {% endif %}
             <button type="submit" form="client-form" class="btn btn-success btn-sm">
                 <i class="fas fa-save me-1"></i>Enregistrer
             </button>
@@ -596,6 +603,19 @@
                     <div class="mt-3">
                         <label class="form-label">Fonction</label>
                         <input type="text" class="form-control" id="contact-fonction">
+                    </div>
+                    <div class="mt-3">
+                        <label class="form-label">Adresse du contact</label>
+                        <div class="d-flex align-items-center gap-2">
+                            <select class="form-select" id="contact-adresse" name="contact_adresse" style="flex-grow: 1;">
+                                <option value="">Choisir une adresse...</option>
+                            </select>
+                            <button type="button" class="btn btn-success btn-sm"
+                                    id="btn-create-address-from-contact"
+                                    title="Ajouter une nouvelle adresse">
+                                <i class="fas fa-plus"></i>
+                            </button>
+                        </div>
                     </div>
                 </form>
             </div>
@@ -649,7 +669,7 @@
             </div>
             <div class="modal-footer">
                 <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Annuler</button>
-                <button type="button" class="btn btn-success" onclick="addAddress()">
+                <button type="button" class="btn btn-success" id="btn-add-address">
                     <i class="fas fa-plus"></i> Ajouter
                 </button>
             </div>
@@ -679,9 +699,100 @@ function generateAddressOptions() {
         return '';
     }
     
-    return window.availableAddresses.map(adresse => 
+    return window.availableAddresses.map(adresse =>
         `<option value="${adresse.id}">${adresse.nom} - ${adresse.ville}</option>`
     ).join('');
+}
+
+function setupAutoSaveContacts() {
+    // Sauvegarder automatiquement les modifications sur les champs de contacts
+    document.querySelectorAll('input[name^="contacts["]').forEach(input => {
+        // Ignorer les checkboxes (gérées séparément)
+        if (input.type === 'checkbox') return;
+
+        input.addEventListener('blur', function() {
+            const contactId = this.closest('tr').dataset.contactId;
+            if (!contactId || contactId.startsWith('new_')) return;
+
+            const fieldName = this.name.match(/\[(\w+)\]$/)[1];
+            const value = this.value;
+
+            autoSaveContact(contactId, fieldName, value);
+        });
+    });
+
+    // Sauvegarder automatiquement les changements de dropdown d'adresse
+    document.querySelectorAll('select[name^="contacts["][name$="[adresse_id]"]').forEach(select => {
+        select.addEventListener('change', function() {
+            const contactId = this.closest('tr').dataset.contactId;
+            if (!contactId || contactId.startsWith('new_')) return;
+
+            autoSaveContact(contactId, 'adresse_id', this.value);
+        });
+    });
+}
+
+function autoSaveContact(contactId, fieldName, value) {
+    const clientId = getClientId();
+    const data = {};
+    data[fieldName] = value;
+
+    fetch('/client/' + clientId + '/contact/' + contactId + '/update', {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json',
+            'X-Requested-With': 'XMLHttpRequest'
+        },
+        body: JSON.stringify(data)
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (!data.success) {
+            console.error('Erreur sauvegarde contact:', data.message);
+        }
+    })
+    .catch(error => {
+        console.error('Erreur:', error);
+    });
+}
+
+function setupAutoSaveAddresses() {
+    // Sauvegarder automatiquement les modifications sur les champs d'adresses
+    document.querySelectorAll('input[name^="adresses["]').forEach(input => {
+        input.addEventListener('blur', function() {
+            const addressId = this.closest('tr').dataset.addressId;
+            if (!addressId || addressId.startsWith('new_')) return;
+
+            const fieldName = this.name.match(/\[(\w+)\]$/)[1];
+            const value = this.value;
+
+            autoSaveAddress(addressId, fieldName, value);
+        });
+    });
+}
+
+function autoSaveAddress(addressId, fieldName, value) {
+    const clientId = getClientId();
+    const data = {};
+    data[fieldName] = value;
+
+    fetch('/client/' + clientId + '/address/' + addressId + '/update', {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json',
+            'X-Requested-With': 'XMLHttpRequest'
+        },
+        body: JSON.stringify(data)
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (!data.success) {
+            console.error('Erreur sauvegarde adresse:', data.message);
+        }
+    })
+    .catch(error => {
+        console.error('Erreur:', error);
+    });
 }
 
 document.addEventListener('DOMContentLoaded', function() {
@@ -703,6 +814,10 @@ document.addEventListener('DOMContentLoaded', function() {
 
     // Mettre à jour l'état initial des options vides dans les dropdowns d'adresses
     updateAllAddressDropdownEmptyOptions();
+
+    // Configurer la sauvegarde automatique des contacts et adresses
+    setupAutoSaveContacts();
+    setupAutoSaveAddresses();
 
     // Ne PAS charger les contacts au démarrage - on utilise le rendu serveur existant
     // loadContacts(false);
@@ -745,6 +860,7 @@ function updateContactsDisplay(contacts) {
     // Ajouter chaque contact
     contacts.forEach((contact, index) => {
         const row = document.createElement('tr');
+        row.dataset.contactId = contact.id;
         if (!contact.actif) {
             row.classList.add('table-secondary', 'text-muted');
         }
@@ -782,27 +898,25 @@ function updateContactsDisplay(contacts) {
                 </select>
             </td>
             <td class="text-center">
-                <input type="checkbox" name="contacts[${contact.id}][facturation_default]" value="1"
-                       class="form-check-input facturation-default"
+                <input type="checkbox" name="contacts[${contact.id}][facturation_default]" value="${contact.id}"
+                       class="default-checkbox facturation-default"
                        ${contact.is_facturation_default ? 'checked' : ''}
                        ${!contact.actif ? 'disabled' : ''}>
             </td>
             <td class="text-center">
-                <input type="checkbox" name="contacts[${contact.id}][livraison_default]" value="1"
-                       class="form-check-input livraison-default"
+                <input type="checkbox" name="contacts[${contact.id}][livraison_default]" value="${contact.id}"
+                       class="default-checkbox livraison-default"
                        ${contact.is_livraison_default ? 'checked' : ''}
                        ${!contact.actif ? 'disabled' : ''}>
             </td>
             <td class="text-end">
-                ${!contact.actif ? '<span class="badge bg-secondary">Archivé</span> ' : ''}
-                <button type="button" class="btn btn-sm btn-primary" onclick="editContact(${contact.id})">
-                    <i class="fas fa-edit"></i>
-                </button>
-                ${contact.actif ?
-                    `<button type="button" class="btn btn-sm btn-danger" onclick="deleteContact(${contact.id})">
-                        <i class="fas fa-archive"></i>
+                ${!contact.actif ?
+                    `<button type="button" class="btn btn-sm btn-success" onclick="unarchiveContact(${contact.id})" title="Réactiver ce contact">
+                        <i class="fas fa-undo"></i> Désarchiver
                     </button>` :
-                    ''
+                    `<button type="button" class="btn btn-outline-danger btn-action" onclick="removeContact(${contact.id})" title="Archiver ce contact">
+                        <i class="fas fa-trash"></i>
+                    </button>`
                 }
             </td>
         `;
@@ -812,6 +926,7 @@ function updateContactsDisplay(contacts) {
     // Réinitialiser les event listeners après reconstruction
     setupDefaultCheckboxes();
     setupAddressChangeListeners();
+    setupAutoSaveContacts();
     updateDeleteButtonStates();
 }
 
@@ -823,12 +938,15 @@ function setupDefaultCheckboxes() {
                 document.querySelectorAll('.facturation-default').forEach(other => {
                     if (other !== this && !other.disabled) other.checked = false;
                 });
+
+                // Sauvegarder en base de données
+                saveContactDefault(this.value, 'facturation');
             }
             // Mettre à jour l'état des boutons de suppression
             updateDeleteButtonStates();
         });
     });
-    
+
     // Livraison par défaut - une seule checkbox active
     document.querySelectorAll('.livraison-default:not([disabled])').forEach(checkbox => {
         checkbox.addEventListener('change', function() {
@@ -836,10 +954,39 @@ function setupDefaultCheckboxes() {
                 document.querySelectorAll('.livraison-default').forEach(other => {
                     if (other !== this && !other.disabled) other.checked = false;
                 });
+
+                // Sauvegarder en base de données
+                saveContactDefault(this.value, 'livraison');
             }
             // Mettre à jour l'état des boutons de suppression
             updateDeleteButtonStates();
         });
+    });
+}
+
+function saveContactDefault(contactId, type) {
+    const clientId = getClientId();
+    fetch('/client/' + clientId + '/contact/update-defaults', {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json',
+            'X-Requested-With': 'XMLHttpRequest'
+        },
+        body: JSON.stringify({
+            contact_id: contactId,
+            type: type
+        })
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (!data.success) {
+            console.error('Erreur lors de la sauvegarde:', data.message);
+            alert('Erreur: ' + data.message);
+        }
+    })
+    .catch(error => {
+        console.error('Erreur:', error);
+        alert('Erreur lors de la sauvegarde du contact par défaut');
     });
 }
 
@@ -860,6 +1007,83 @@ function openContactModal() {
     const modal = new bootstrap.Modal(document.getElementById('contactModal'));
     // Reset form
     document.getElementById('contact-form').reset();
+
+    // Peupler le dropdown d'adresses
+    populateContactAddressDropdown();
+
+    modal.show();
+}
+
+function populateContactAddressDropdown() {
+    const select = document.getElementById('contact-adresse');
+    if (!select) return;
+
+    // Vider les options existantes sauf la première
+    select.innerHTML = '<option value="">Choisir une adresse...</option>';
+
+    // Ajouter les adresses disponibles
+    if (window.availableAddresses && window.availableAddresses.length > 0) {
+        window.availableAddresses.forEach(addr => {
+            const option = document.createElement('option');
+            option.value = addr.id;
+            option.textContent = addr.nom + ' - ' + addr.ville;
+            select.appendChild(option);
+        });
+    }
+}
+
+function openNestedAddressModal() {
+    // Sauvegarder les valeurs du formulaire de contact
+    window.savedContactForm = {
+        nom: document.getElementById('contact-nom').value,
+        prenom: document.getElementById('contact-prenom').value,
+        email: document.getElementById('contact-email').value,
+        telephone: document.getElementById('contact-telephone').value,
+        fonction: document.getElementById('contact-fonction').value,
+        adresse: document.getElementById('contact-adresse').value
+    };
+
+    // Fermer la modale de contact
+    const contactModal = bootstrap.Modal.getInstance(document.getElementById('contactModal'));
+    if (contactModal) {
+        contactModal.hide();
+    }
+
+    // Attendre que la modale soit complètement fermée avant d'ouvrir l'autre
+    document.getElementById('contactModal').addEventListener('hidden.bs.modal', function onContactHidden() {
+        // Supprimer cet event listener pour éviter qu'il se déclenche à nouveau
+        document.getElementById('contactModal').removeEventListener('hidden.bs.modal', onContactHidden);
+
+        // Ouvrir la modale d'adresse
+        openAddressModal();
+    }, { once: true });
+}
+
+function reopenContactModalAfterAddress() {
+    // Restaurer les valeurs du formulaire de contact
+    if (window.savedContactForm) {
+        document.getElementById('contact-nom').value = window.savedContactForm.nom;
+        document.getElementById('contact-prenom').value = window.savedContactForm.prenom;
+        document.getElementById('contact-email').value = window.savedContactForm.email;
+        document.getElementById('contact-telephone').value = window.savedContactForm.telephone;
+        document.getElementById('contact-fonction').value = window.savedContactForm.fonction;
+
+        // Repeupler le dropdown (pour inclure la nouvelle adresse)
+        populateContactAddressDropdown();
+
+        // Sélectionner la dernière adresse ajoutée (la plus récente)
+        const select = document.getElementById('contact-adresse');
+        if (select && window.availableAddresses && window.availableAddresses.length > 0) {
+            const lastAddress = window.availableAddresses[window.availableAddresses.length - 1];
+            select.value = lastAddress.id;
+        }
+
+        // Nettoyer
+        delete window.savedContactForm;
+    }
+
+    // Rouvrir la modale de contact
+    const modal = new bootstrap.Modal(document.getElementById('contactModal'));
     modal.show();
 }
 
@@ -868,12 +1092,30 @@ function openAddressModal() {
     // Reset form
     document.getElementById('address-form').reset();
     modal.show();
-    
+
     // Réinitialiser l'autocomplétion pour les champs du modal
     setTimeout(() => {
         setupCommuneAutocomplete();
     }, 100);
 }
+
+// Event listener pour le bouton d'ajout d'adresse avec protection double-clic
+document.addEventListener('DOMContentLoaded', function() {
+    const btnAddAddress = document.getElementById('btn-add-address');
+    if (btnAddAddress) {
+        // Supprimer tout event listener existant avant d'en ajouter un nouveau
+        btnAddAddress.removeEventListener('click', addAddress);
+        btnAddAddress.addEventListener('click', addAddress);
+    }
+
+    // Event listener pour le bouton de création d'adresse depuis la modale de contact
+    const btnCreateAddressFromContact = document.getElementById('btn-create-address-from-contact');
+    if (btnCreateAddressFromContact) {
+        btnCreateAddressFromContact.addEventListener('click', function() {
+            openNestedAddressModal();
+        });
+    }
+});
 
 function addContact() {
     const nom = document.getElementById('contact-nom').value;
@@ -881,59 +1123,105 @@ function addContact() {
     const email = document.getElementById('contact-email').value;
     const telephone = document.getElementById('contact-telephone').value;
     const fonction = document.getElementById('contact-fonction').value;
-    
+    const adresseId = document.getElementById('contact-adresse').value;
+
     if (!nom.trim()) {
         alert('Le nom est obligatoire');
         return;
     }
-    
-    // Générer un ID temporaire pour le nouveau contact
-    const tempId = 'new_' + contactIndex;
-    
+
+    // Sauvegarder le contact côté serveur via AJAX
+    const clientId = getClientId();
+    fetch('/client/' + clientId + '/contact/add', {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json',
+            'X-Requested-With': 'XMLHttpRequest'
+        },
+        body: JSON.stringify({
+            nom: nom,
+            prenom: prenom,
+            email: email,
+            telephone: telephone,
+            fonction: fonction,
+            adresse_id: adresseId || null
+        })
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.success) {
+            // Utiliser l'ID réel retourné par le serveur
+            const realId = data.contact.id;
+            addContactToDOM(realId, nom, prenom, email, telephone, fonction, adresseId);
+
+            // Fermer la modale
+            const modal = bootstrap.Modal.getInstance(document.getElementById('contactModal'));
+            if (modal) {
+                modal.hide();
+            }
+        } else {
+            alert('Erreur: ' + data.message);
+        }
+    })
+    .catch(error => {
+        console.error('Erreur:', error);
+        alert('Erreur lors de l\'ajout du contact');
+    });
+}
+
+function addContactToDOM(contactId, nom, prenom, email, telephone, fonction, adresseId) {
     // Créer la nouvelle ligne
     const tbody = document.getElementById('contacts-table-body');
-    
+
     // Supprimer la ligne vide s'il n'y a pas encore de contacts
     const emptyRow = tbody.querySelector('.empty-row');
     if (emptyRow) {
         emptyRow.remove();
     }
     const tr = document.createElement('tr');
-    tr.dataset.contactId = tempId;
+    tr.dataset.contactId = contactId;
     tr.innerHTML = `
         <td>
-            <input type="text" class="form-control" name="contacts[${tempId}][nom]" value="${nom}" placeholder="Nom">
+            <input type="text" class="form-control" name="contacts[${contactId}][nom]" value="${nom}" placeholder="Nom">
         </td>
         <td>
-            <input type="text" class="form-control" name="contacts[${tempId}][prenom]" value="${prenom}" placeholder="Prénom">
+            <input type="text" class="form-control" name="contacts[${contactId}][prenom]" value="${prenom}" placeholder="Prénom">
         </td>
         <td>
-            <input type="email" class="form-control" name="contacts[${tempId}][email]" value="${email}" placeholder="email@exemple.com">
+            <input type="email" class="form-control" name="contacts[${contactId}][email]" value="${email}" placeholder="email@exemple.com">
         </td>
         <td>
-            <input type="tel" class="form-control" name="contacts[${tempId}][telephone]" value="${telephone}" placeholder="01.23.45.67.89">
+            <input type="tel" class="form-control" name="contacts[${contactId}][telephone]" value="${telephone}" placeholder="01.23.45.67.89">
         </td>
         <td>
-            <select class="form-select" name="contacts[${tempId}][adresse_id]">
+            <select class="form-select" name="contacts[${contactId}][adresse_id]">
                 <option value="">-- Choisir une adresse --</option>
                 ${generateAddressOptions()}
             </select>
         </td>
         <td class="text-center">
-            <input type="checkbox" class="default-checkbox facturation-default" name="contact_facturation_default" value="${tempId}">
+            <input type="checkbox" class="default-checkbox facturation-default" name="contact_facturation_default" value="${contactId}">
         </td>
         <td class="text-center">
-            <input type="checkbox" class="default-checkbox livraison-default" name="contact_livraison_default" value="${tempId}">
+            <input type="checkbox" class="default-checkbox livraison-default" name="contact_livraison_default" value="${contactId}">
         </td>
         <td class="text-center">
-            <button type="button" class="btn btn-outline-danger btn-action" onclick="removeContact('${tempId}')">
+            <button type="button" class="btn btn-outline-danger btn-action" onclick="removeContact('${contactId}')">
                 <i class="fas fa-trash"></i>
             </button>
         </td>
     `;
-    
+
     // Ajouter la ligne au tableau
     tbody.appendChild(tr);
+
+    // Sélectionner l'adresse choisie dans la modale
+    if (adresseId) {
+        const select = tr.querySelector('select[name="contacts[' + contactId + '][adresse_id]"]');
+        if (select) {
+            select.value = adresseId;
+        }
+    }
     
     // Si c'est le premier contact, le définir automatiquement comme défaut facturation et livraison
     const existingContacts = tbody.querySelectorAll('tr:not(.empty-row)');
@@ -990,95 +1278,150 @@ function addContact() {
 }
 
 function addAddress() {
+    // Protection contre le double-clic
+    const button = document.getElementById('btn-add-address');
+    if (button.disabled) {
+        return; // Déjà en cours de traitement
+    }
+
     const nom = document.getElementById('address-nom').value;
     const ligne1 = document.getElementById('address-ligne1').value;
     const codePostal = document.getElementById('address-code-postal').value;
     const ville = document.getElementById('address-ville').value;
     const pays = document.getElementById('address-pays').value;
-    
+
     if (!nom.trim() || !ligne1.trim() || !codePostal.trim() || !ville.trim()) {
         alert('Tous les champs marqués * sont obligatoires');
         return;
     }
-    
-    // Générer un ID temporaire pour la nouvelle adresse
+
+    // Désactiver le bouton pour éviter les doublons
+    button.disabled = true;
+    button.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Ajout en cours...';
+
+    // Sauvegarder l'adresse côté serveur via AJAX
+    const clientId = getClientId();
+    fetch('/client/' + clientId + '/address/add', {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json',
+            'X-Requested-With': 'XMLHttpRequest'
+        },
+        body: JSON.stringify({
+            nom: nom,
+            ligne1: ligne1,
+            code_postal: codePostal,
+            ville: ville,
+            pays: pays
+        })
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.success) {
+            // Utiliser l'ID réel retourné par le serveur
+            const realId = data.adresse.id;
+            addAddressToDOM(realId, nom, ligne1, codePostal, ville, pays);
+
+            // Fermer la modale
+            const modal = bootstrap.Modal.getInstance(document.getElementById('addressModal'));
+            if (modal) {
+                modal.hide();
+            }
+
+            // Réactiver le bouton
+            button.disabled = false;
+            button.innerHTML = '<i class="fas fa-plus"></i> Ajouter';
+
+            // Si on vient de la modale de contact, la rouvrir
+            if (window.savedContactForm) {
+                // Attendre que la modale d'adresse soit complètement fermée
+                document.getElementById('addressModal').addEventListener('hidden.bs.modal', function onAddressHidden() {
+                    document.getElementById('addressModal').removeEventListener('hidden.bs.modal', onAddressHidden);
+                    reopenContactModalAfterAddress();
+                }, { once: true });
+            }
+        } else {
+            alert('Erreur: ' + data.message);
+            button.disabled = false;
+            button.innerHTML = '<i class="fas fa-plus"></i> Ajouter';
+        }
+    })
+    .catch(error => {
+        console.error('Erreur:', error);
+        alert('Erreur lors de l\'ajout de l\'adresse');
+        button.disabled = false;
+        button.innerHTML = '<i class="fas fa-plus"></i> Ajouter';
+    });
+}
+
+// Fonction helper pour ajouter une adresse dans le DOM
+function addAddressToDOM(addressId, nom, ligne1, codePostal, ville, pays) {
+    // Générer un ID pour le cas où on veut aussi gérer les IDs temporaires
     const tempId = 'new_' + addressIndex;
     
     // Créer la nouvelle ligne
     let tbody = document.getElementById('addresses-table');
     const tr = document.createElement('tr');
-    tr.dataset.addressId = tempId;
+    tr.dataset.addressId = addressId;
     tr.innerHTML = `
         <td>
-            <input type="text" class="form-control" name="adresses[${tempId}][nom]" value="${nom}" placeholder="Nom de l'adresse">
+            <input type="text" class="form-control" name="adresses[${addressId}][nom]" value="${nom}" placeholder="Nom de l'adresse">
         </td>
         <td>
-            <input type="text" class="form-control" name="adresses[${tempId}][ligne1]" value="${ligne1}" placeholder="Numéro et rue">
+            <input type="text" class="form-control" name="adresses[${addressId}][ligne1]" value="${ligne1}" placeholder="Numéro et rue">
         </td>
         <td>
-            <input type="text" class="form-control commune-autocomplete" name="adresses[${tempId}][code_postal]" value="${codePostal}" placeholder="75000" data-type="postal">
+            <input type="text" class="form-control commune-autocomplete" name="adresses[${addressId}][code_postal]" value="${codePostal}" placeholder="75000" data-type="postal">
         </td>
         <td>
-            <input type="text" class="form-control commune-autocomplete" name="adresses[${tempId}][ville]" value="${ville}" placeholder="Ville" data-type="city">
+            <input type="text" class="form-control commune-autocomplete" name="adresses[${addressId}][ville]" value="${ville}" placeholder="Ville" data-type="city">
         </td>
         <td>
-            <input type="text" class="form-control" name="adresses[${tempId}][pays]" value="${pays}" placeholder="France">
+            <input type="text" class="form-control" name="adresses[${addressId}][pays]" value="${pays}" placeholder="France">
         </td>
         <td class="text-center">
-            <button type="button" class="btn btn-outline-danger btn-action" onclick="removeAddress('${tempId}')">
+            <button type="button" class="btn btn-outline-danger btn-action" onclick="removeAddress('${addressId}')">
                 <i class="fas fa-trash"></i>
             </button>
         </td>
     `;
-    
+
     // Ajouter la ligne au tableau (gestion de l'état vide similaire)
     if (!tbody) {
         tbody = createAddressesTable();
     }
-    
+
     if (tbody) {
         tbody.appendChild(tr);
     } else {
         console.error('Impossible de créer le tableau des adresses');
         return;
     }
-    
+
     // Ajouter l'option à tous les sélecteurs d'adresses des contacts existants
-    const option = `<option value="${tempId}">${nom} - ${ville}</option>`;
+    const option = `<option value="${addressId}">${nom} - ${ville}</option>`;
     document.querySelectorAll('select[name*="[adresse_id]"]').forEach(select => {
         select.insertAdjacentHTML('beforeend', option);
     });
-    
+
     // Conserver la nouvelle adresse en mémoire pour les futurs contacts
     if (!window.availableAddresses) {
         window.availableAddresses = [];
     }
     window.availableAddresses.push({
-        id: tempId,
+        id: addressId,
         nom: nom,
         ville: ville
     });
-    
+
     // Réinitialiser l'autocomplétion pour les nouveaux champs
     reinitializeCommuneAutocomplete();
-    
+
     // Mettre à jour l'état des boutons de suppression d'adresses
     updateAddressDeleteButtonStates();
-    
-    // Incrémenter l'index et fermer le modal
+
+    // Incrémenter l'index pour les futures adresses temporaires éventuelles
     addressIndex++;
-    const modal = bootstrap.Modal.getInstance(document.getElementById('addressModal'));
-    if (modal) {
-        modal.hide();
-    } else {
-        // Fallback si l'instance n'existe pas
-        document.getElementById('addressModal').style.display = 'none';
-        document.body.classList.remove('modal-open');
-        const backdrop = document.querySelector('.modal-backdrop');
-        if (backdrop) {
-            backdrop.remove();
-        }
-    }
 }
 
 function createAddressesTable() {
@@ -1147,10 +1490,9 @@ function removeContact(contactId) {
         .then(response => response.json())
         .then(data => {
             if (data.success) {
-                document.querySelector(`tr[data-contact-id="${contactId}"]`).remove();
-                updateContactsAfterRemoval();
-                // Afficher un message de succès si souhaité
-                console.log(data.message);
+                // Recharger la liste des contacts en tenant compte de l'état de la checkbox
+                const includeArchived = document.getElementById('showArchivedContacts').checked;
+                loadContacts(includeArchived);
             } else {
                 alert('Erreur: ' + data.message);
             }
@@ -1162,11 +1504,36 @@ function removeContact(contactId) {
     }
 }
 
+function unarchiveContact(contactId) {
+    const clientId = getClientId();
+    fetch('/client/' + clientId + '/contact/' + contactId + '/unarchive', {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json',
+            'X-Requested-With': 'XMLHttpRequest'
+        }
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.success) {
+            // Recharger les contacts en incluant les archivés (si la checkbox est cochée)
+            const includeArchived = document.getElementById('showArchivedContacts').checked;
+            loadContacts(includeArchived);
+        } else {
+            alert('Erreur: ' + data.message);
+        }
+    })
+    .catch(error => {
+        console.error('Erreur:', error);
+        alert('Erreur lors de la réactivation du contact');
+    });
+}
+
 function updateContactsAfterRemoval() {
     // Vérifier l'état après suppression
     const tbody = document.getElementById('contacts-table-body');
     const remainingContacts = tbody.querySelectorAll('tr:not(.empty-row)');
-    
+
     if (remainingContacts.length === 0) {
         // Plus aucun contact : afficher la ligne vide
         tbody.innerHTML = `
@@ -1691,12 +2058,12 @@ function getClientId() {
 
 // Fonction d'archivage du client
 function archiverClient(clientId) {
-    if (confirm('Êtes-vous sûr de vouloir archiver ce client ?\n\nUn client archivé devient inactif mais conserve toutes ses données. Cette action peut être annulée ultérieurement.')) {
+    if (confirm('Êtes-vous sûr de vouloir archiver ce client ?\n\nUn client archivé n\'apparaîtra plus dans les listes actives mais conserve toutes ses données. Cette action peut être annulée ultérieurement.')) {
         // Créer un formulaire pour envoyer la requête POST
         const form = document.createElement('form');
         form.method = 'POST';
         form.action = `/client/${clientId}/archive`;
-        
+
         // Ajouter le token CSRF si nécessaire
         const csrfToken = document.querySelector('meta[name="_csrf_token"]');
         if (csrfToken) {
@@ -1706,7 +2073,30 @@ function archiverClient(clientId) {
             csrfInput.value = csrfToken.content;
             form.appendChild(csrfInput);
         }
-        
+
+        document.body.appendChild(form);
+        form.submit();
+    }
+}
+
+// Fonction de désarchivage du client
+function desarchiverClient(clientId) {
+    if (confirm('Êtes-vous sûr de vouloir désarchiver ce client ?\n\nLe client redeviendra actif et apparaîtra dans les listes.')) {
+        // Créer un formulaire pour envoyer la requête POST
+        const form = document.createElement('form');
+        form.method = 'POST';
+        form.action = `/client/${clientId}/unarchive`;
+
+        // Ajouter le token CSRF si nécessaire
+        const csrfToken = document.querySelector('meta[name="_csrf_token"]');
+        if (csrfToken) {
+            const csrfInput = document.createElement('input');
+            csrfInput.type = 'hidden';
+            csrfInput.name = '_csrf_token';
+            csrfInput.value = csrfToken.content;
+            form.appendChild(csrfInput);
+        }
+
         document.body.appendChild(form);
         form.submit();
     }

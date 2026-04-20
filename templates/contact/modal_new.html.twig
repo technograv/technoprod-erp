@@ -379,45 +379,54 @@ function initAddressButtons() {
 
     // 🔄 SYSTÈME DE NAVIGATION SIMPLIFIÉ : Écouter le retour depuis la modale adresse
     const handleAddressAction = function(event, action) {
-        console.log(`✅ Adresse ${action} détectée dans modale contact:`, event.detail);
+        console.log(`✅ Adresse ${action} détectée dans modale contact (NEW):`, event.detail);
 
-        // Vérifier si l'événement vient bien d'une navigation depuis cette modale
+        // VÉRIFICATION STRICTE: Ne traiter que si on vient vraiment de cette modale contact
         const lastEvent = window.lastContactEditEvent;
-        if (lastEvent && lastEvent.fromModal) {
-            console.log(`🔄 Navigation de retour validée après ${action} - rechargement adresses et présélection`);
+        const isFromThisModal = lastEvent &&
+                                lastEvent.fromModal &&
+                                lastEvent.mode === 'new' &&
+                                (Date.now() - lastEvent.timestamp) < 10000; // Max 10 secondes
 
-            // ⚠️ EMPÊCHER LE DevisContactService de traiter cet événement
-            event.stopImmediatePropagation();
-            console.log('🛡️ Propagation stoppée pour empêcher les conflits');
-
-            // Délai pour permettre à la modale adresse de se fermer complètement
-            setTimeout(() => {
-                console.log('⏰ Rechargement des adresses et présélection...');
-
-                // Vérifier que les éléments existent encore avant de recharger
-                const addressSelect = document.getElementById('contact-adresse');
-                if (!addressSelect) {
-                    console.log('❌ Modale contact fermée, annulation rechargement');
-                    return;
-                }
-
-                // ✅ SAUVEGARDER les données du formulaire contact avant rechargement
-                const formData = preserveContactFormData();
-
-                // Recharger les adresses avec l'adresse créée/modifiée
-                reloadAddresses(event.detail.adresse.id);
-
-                // ✅ RESTAURER les données du formulaire contact après rechargement
-                setTimeout(() => {
-                    restoreContactFormData(formData);
-                    console.log('📋 Données du formulaire contact restaurées après création adresse');
-                }, 200);
-
-                console.log('✅ Navigation simplifiée terminée');
-            }, 500);
-        } else {
-            console.log(`ℹ️ Événement address${action.charAt(0).toUpperCase() + action.slice(1)} ignoré - pas de navigation en cours`);
+        if (!isFromThisModal) {
+            console.log(`❌ Événement address${action.charAt(0).toUpperCase() + action.slice(1)} ignoré - pas de navigation depuis cette modale contact NEW`);
+            return;
         }
+
+        console.log(`✅ Navigation de retour validée après ${action} - rechargement adresses et présélection`);
+
+        // ⚠️ EMPÊCHER LE DevisContactService de traiter cet événement
+        event.stopImmediatePropagation();
+        console.log('🛡️ Propagation stoppée pour empêcher les conflits');
+
+        // Délai pour permettre à la modale adresse de se fermer complètement
+        setTimeout(() => {
+            console.log('⏰ Rechargement des adresses et présélection...');
+
+            // Vérifier que les éléments existent encore avant de recharger
+            const addressSelect = document.getElementById('contact-adresse');
+            if (!addressSelect) {
+                console.log('❌ Modale contact fermée, annulation rechargement');
+                window.lastContactEditEvent = null;
+                return;
+            }
+
+            // ✅ SAUVEGARDER les données du formulaire contact avant rechargement
+            const formData = preserveContactFormData();
+
+            // Recharger les adresses avec l'adresse créée/modifiée
+            reloadAddresses(event.detail.adresse.id);
+
+            // ✅ RESTAURER les données du formulaire contact après rechargement
+            setTimeout(() => {
+                restoreContactFormData(formData);
+                console.log('📋 Données du formulaire contact restaurées après création adresse');
+            }, 200);
+
+            // Nettoyer l'événement de navigation
+            window.lastContactEditEvent = null;
+            console.log('✅ Navigation simplifiée terminée et nettoyée');
+        }, 500);
     };
 
     const handleAddressCreated = (event) => handleAddressAction(event, 'created');

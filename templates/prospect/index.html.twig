@@ -63,6 +63,33 @@
         .stats-prospects { background: linear-gradient(135deg, #17a2b8, #20c997); }
         .stats-clients { background: linear-gradient(135deg, #28a745, #20c997); }
         .stats-conversions { background: linear-gradient(135deg, #ffc107, #fd7e14); }
+        #searchInput {
+            border-left: none;
+            padding-right: 40px;
+        }
+        #searchInput:focus {
+            box-shadow: 0 0 0 0.2rem rgba(40, 167, 69, 0.25);
+            border-color: #28a745;
+        }
+        .search-clear-btn {
+            position: absolute;
+            right: 10px;
+            top: 50%;
+            transform: translateY(-50%);
+            background: none;
+            border: none;
+            color: #6c757d;
+            cursor: pointer;
+            padding: 5px;
+            display: none;
+            z-index: 10;
+        }
+        .search-clear-btn:hover {
+            color: #dc3545;
+        }
+        .search-wrapper {
+            position: relative;
+        }
     </style>
 {% endblock %}
 
@@ -189,8 +216,35 @@
                     </a>
                 </div>
             {% else %}
+                <!-- Champ de recherche instantanée -->
+                <div class="p-3 border-bottom bg-light">
+                    <div class="row align-items-center">
+                        <div class="col-md-6">
+                            <div class="search-wrapper">
+                                <div class="input-group">
+                                    <span class="input-group-text bg-white">
+                                        <i class="fas fa-search text-muted"></i>
+                                    </span>
+                                    <input type="text"
+                                           id="searchInput"
+                                           class="form-control"
+                                           placeholder="Rechercher un client (nom, code, contact, ville, commercial...)">
+                                </div>
+                                <button type="button" class="search-clear-btn" id="clearSearch" title="Effacer la recherche">
+                                    <i class="fas fa-times-circle"></i>
+                                </button>
+                            </div>
+                        </div>
+                        <div class="col-md-6 text-end">
+                            <small class="text-muted">
+                                <span id="visibleCount">{{ prospects|length }}</span> / {{ prospects|length }} résultat(s)
+                            </small>
+                        </div>
+                    </div>
+                </div>
+
                 <div class="table-responsive">
-                    <table class="table table-hover mb-0">
+                    <table class="table table-hover mb-0" id="clientsTable">
                         <thead>
                             <tr>
                                 <th style="width: 80px;">Code</th>
@@ -347,6 +401,81 @@ function initiateCall(phoneNumber) {
     }
 }
 
+// Recherche instantanée dans le tableau
+document.addEventListener('DOMContentLoaded', function() {
+    const searchInput = document.getElementById('searchInput');
+    const clientsTable = document.getElementById('clientsTable');
+    const visibleCount = document.getElementById('visibleCount');
+    const clearButton = document.getElementById('clearSearch');
+
+    if (searchInput && clientsTable) {
+        const tbody = clientsTable.querySelector('tbody');
+        const rows = tbody ? Array.from(tbody.querySelectorAll('tr')) : [];
+        const totalCount = rows.length;
+
+        function performSearch() {
+            const searchTerm = searchInput.value.toLowerCase().trim();
+            let visibleRows = 0;
+
+            rows.forEach(function(row) {
+                // Récupérer le texte de toutes les cellules de la ligne
+                const rowText = row.textContent.toLowerCase();
+
+                // Vérifier si le terme de recherche est dans la ligne
+                if (rowText.includes(searchTerm)) {
+                    row.style.display = '';
+                    visibleRows++;
+                } else {
+                    row.style.display = 'none';
+                }
+            });
+
+            // Mettre à jour le compteur
+            if (visibleCount) {
+                visibleCount.textContent = visibleRows;
+            }
+
+            // Afficher/masquer le bouton d'effacement
+            if (clearButton) {
+                clearButton.style.display = searchTerm ? 'block' : 'none';
+            }
+
+            // Afficher un message si aucun résultat
+            const noResultsMsg = document.getElementById('noResultsMessage');
+            if (visibleRows === 0 && searchTerm !== '') {
+                if (!noResultsMsg) {
+                    const msg = document.createElement('tr');
+                    msg.id = 'noResultsMessage';
+                    msg.innerHTML = '<td colspan="9" class="text-center py-4 text-muted"><i class="fas fa-search me-2"></i>Aucun résultat pour "' + searchInput.value + '"</td>';
+                    tbody.appendChild(msg);
+                }
+            } else if (noResultsMsg) {
+                noResultsMsg.remove();
+            }
+        }
+
+        // Événement de saisie
+        searchInput.addEventListener('input', performSearch);
+
+        // Bouton d'effacement
+        if (clearButton) {
+            clearButton.addEventListener('click', function() {
+                searchInput.value = '';
+                performSearch();
+                searchInput.focus();
+            });
+        }
+
+        // Raccourci clavier : Échap pour effacer
+        searchInput.addEventListener('keydown', function(e) {
+            if (e.key === 'Escape') {
+                this.value = '';
+                performSearch();
+            }
+        });
+    }
+});
+
 // Auto-submit du formulaire de filtre sur changement
 document.addEventListener('DOMContentLoaded', function() {
     const selects = document.querySelectorAll('#statut, #secteur');
@@ -355,7 +484,7 @@ document.addEventListener('DOMContentLoaded', function() {
             this.form.submit();
         });
     });
-    
+
     // Gestion des clics sur les boutons d'appel
     document.querySelectorAll('.call-btn').forEach(function(btn) {
         btn.addEventListener('click', function(e) {

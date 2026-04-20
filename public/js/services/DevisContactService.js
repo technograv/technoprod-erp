@@ -1392,15 +1392,26 @@ class DevisContactService {
         // Stocker le contexte pour la synchronisation après modification
         this.currentContext = target;
         this.logger.info(`🎯 Context défini: ${target} pour ${mode} contact ${id}`);
-        
-        const url = mode === 'create' 
-            ? `/contact/modal/new/${id}?type=${target}`
-            : `/contact/modal/edit/${id}`;
-        
-        const title = mode === 'create' 
-            ? 'Ajouter un contact' 
+
+        let url;
+        if (mode === 'create') {
+            url = `/contact/modal/new/${id}?type=${target}`;
+        } else {
+            // En mode édition, passer aussi l'adresse actuellement sélectionnée dans le devis
+            const currentAddressId = this.getAddressId(target);
+            url = `/contact/modal/edit/${id}`;
+
+            // Ajouter l'adresse en paramètre si elle existe
+            if (currentAddressId) {
+                url += `?preselect_address=${currentAddressId}`;
+                this.logger.info(`📍 Présélection adresse demandée: ${currentAddressId} pour contact ${id}`);
+            }
+        }
+
+        const title = mode === 'create'
+            ? 'Ajouter un contact'
             : 'Modifier le contact';
-        
+
         this.openModal(url, title, 'contact-modal');
     }
     

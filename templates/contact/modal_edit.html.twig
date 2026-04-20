@@ -234,9 +234,18 @@
         
         // Gérer les boutons d'adresse
         initAddressButtons();
-        
+
         // Charger les adresses depuis l'API pour s'assurer qu'elles sont à jour
-        const currentAddressId = document.getElementById('contact-adresse').value;
+        // Priorité : adresse passée en paramètre (depuis devis) > adresse par défaut du contact
+        const preselectAddressId = '{{ preselect_address_id|default('') }}';
+        const currentAddressId = preselectAddressId || document.getElementById('contact-adresse').value;
+
+        console.log('🎯 Adresse à présélectionner:', {
+            preselectAddressId: preselectAddressId,
+            defaultAddressId: document.getElementById('contact-adresse').value,
+            finalAddressId: currentAddressId
+        });
+
         reloadAddresses(currentAddressId);
         
         // Fix spécifique Firefox : reconfigurer Select2 après un délai
@@ -329,37 +338,79 @@ function initAddressButtons() {
         }, 300);
     });
     
-    window.addEventListener('addressUpdated', function(event) {
-        console.log('🏠 Adresse modifiée - retour vers modale contact (EDIT):', event.detail);
-        
-        // Attendre que la modale adresse se ferme puis rouvrir la modale contact
-        setTimeout(() => {
-            console.log('🔄 Réouverture modale contact après modification adresse:', event.detail.adresse.id);
-            const contactId = '{{ contact.id }}'; // Récupérer l'ID du contact depuis Twig
-            const contactService = new ContactModalService({ debug: true });
-            contactService.editContact(contactId);
-            
-            // Programmer la sélection de l'adresse après ouverture de la modale
-            setTimeout(() => {
-                const addressSelect = document.getElementById('contact-adresse');
-                if (addressSelect) {
-                    addressSelect.value = event.detail.adresse.id;
-                    addressSelect.dispatchEvent(new Event('change'));
-                    console.log('🎯 Adresse présélectionnée après modification:', event.detail.adresse.id);
+    // IMPORTANT: Utiliser un listener UNIQUE global avec flag de traitement
+    // pour éviter la multiplication des listeners à chaque ouverture de modale
+    if (!window.contactModalEditAddressUpdatedHandlerRegistered) {
+        window.contactModalEditAddressUpdatedHandlerRegistered = true;
+
+        window.addEventListener('addressUpdated', function(event) {
+            console.log('🏠 Adresse modifiée (modal_edit GLOBAL) - vérification contexte:', event.detail);
+
+            // Protection contre traitement multiple du même événement
+            const eventId = event.detail?.adresse?.id + '_' + Date.now();
+            if (window.lastProcessedAddressUpdateEvent === eventId) {
+                console.log('⚠️ Événement déjà traité, ignoré');
+                return;
+            }
+
+            // VÉRIFICATION STRICTE: Ne rouvrir que si on vient VRAIMENT d'une modale contact
+            const lastEvent = window.lastContactEditEvent;
+
+            const isFromContactModal = lastEvent &&
+                                    lastEvent.fromModal === true &&
+                                    lastEvent.sourceModal === 'contact' &&
+                                    lastEvent.targetModal === 'address' &&
+                                    (Date.now() - lastEvent.timestamp) < 10000; // Max 10 secondes
+
+            if (!isFromContactModal) {
+                console.log('❌ Pas de réouverture - modification adresse hors contexte modale contact');
+                console.log('   lastEvent:', lastEvent);
+
+                // Nettoyer l'événement
+                if (window.lastContactEditEvent) {
+                    window.lastContactEditEvent = null;
                 }
-                
-                // Nettoyer les backdrops résiduels après un délai supplémentaire
+
+                // Nettoyer les backdrops
                 setTimeout(() => {
                     cleanupOrphanedBackdrops();
-                }, 1000);
-                
-                // Nettoyage supplémentaire après 2 secondes pour être sûr
+                }, 500);
+                return;
+            }
+
+            console.log('✅ Contexte validé - réouverture modale contact ID:', lastEvent.contactId);
+
+            // Marquer l'événement comme traité IMMÉDIATEMENT pour éviter doublons
+            window.lastProcessedAddressUpdateEvent = eventId;
+
+            // Attendre que la modale adresse se ferme puis rouvrir la modale contact
+            setTimeout(() => {
+                console.log('🔄 Réouverture modale contact après modification adresse:', event.detail.adresse.id);
+                const contactService = new ContactModalService({ debug: true });
+                contactService.editContact(lastEvent.contactId);
+
+                // Programmer la sélection de l'adresse après ouverture de la modale
                 setTimeout(() => {
-                    cleanupOrphanedBackdrops();
-                }, 2000);
-            }, 500);
-        }, 300);
-    });
+                    const addressSelect = document.getElementById('contact-adresse');
+                    if (addressSelect) {
+                        addressSelect.value = event.detail.adresse.id;
+                        addressSelect.dispatchEvent(new Event('change'));
+                        console.log('🎯 Adresse présélectionnée après modification:', event.detail.adresse.id);
+                    }
+
+                    // Nettoyer les backdrops résiduels
+                    setTimeout(() => {
+                        cleanupOrphanedBackdrops();
+                    }, 1000);
+                }, 500);
+
+                // Nettoyer l'événement de navigation
+                window.lastContactEditEvent = null;
+            }, 300);
+        });
+
+        console.log('✅ Listener global addressUpdated enregistré (une seule fois)');
+    }
     
     // Afficher/masquer le bouton modifier selon la sélection
     if (addressSelect) {
@@ -395,13 +446,13 @@ function initAddressButtons() {
             
             if (clientId && window.MultiModalNavigationService) {
                 console.log('🔗 Navigation Contact → Adresse via service centralisé');
-                
+
                 // Utiliser le service centralisé de navigation
                 MultiModalNavigationService.navigateToAddress({
                     mode: 'edit',
                     contactId: '{{ contact.id }}',
                     clientId: '{{ contact.client.id }}',
-                    noReturn: true // Flag pour indiquer de ne pas rouvrir après
+                    fromModal: true // Navigation depuis modale contact
                 }, 'create', clientId);
             } else {
                 console.log('❌ Conditions non remplies (EDIT):', {
@@ -656,15 +707,21 @@ function saveContactBeforeAddressModal(addressId) {
 
 function openAddressModalAfterSave(addressId) {
     console.log('🔗 Navigation Contact → Adresse (EDIT) via service centralisé pour:', addressId);
-    
+
     // Utiliser le service centralisé de navigation
     if (window.MultiModalNavigationService) {
         MultiModalNavigationService.navigateToAddress({
             mode: 'edit',
             contactId: '{{ contact.id }}',
             clientId: '{{ contact.client.id }}',
-            noReturn: true // Flag pour indiquer de ne pas rouvrir après
+            fromModal: true // Navigation depuis modale contact
         }, 'edit', addressId);
+
+        // Réinitialiser le flag après ouverture de la modale
+        setTimeout(() => {
+            window.editAddressInProgress = false;
+            console.log('✅ Flag editAddressInProgress réinitialisé');
+        }, 1000);
     } else {
         console.error('❌ MultiModalNavigationService non disponible');
         alert('Erreur: Service de navigation non disponible. Veuillez réessayer.');

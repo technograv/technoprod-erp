@@ -215,10 +215,14 @@ class ContactController extends AbstractController
         // Récupérer les adresses du client pour le menu déroulant
         $adresses = $client->getAdressesActives();
 
+        // Lire l'adresse à présélectionner (si venant du devis)
+        $preselectAddressId = $request->query->get('preselect_address');
+
         return $this->render('contact/modal_edit.html.twig', [
             'contact' => $contact,
             'client' => $client,
-            'adresses' => $adresses
+            'adresses' => $adresses,
+            'preselect_address_id' => $preselectAddressId
         ]);
     }
 

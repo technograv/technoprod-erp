@@ -20,8 +20,24 @@ class TenantExtension extends AbstractExtension implements GlobalsInterface
     public function getGlobals(): array
     {
         try {
+            // Récupérer le contexte actuel
+            $currentSociete = $this->tenantService->getCurrentSociete();
+
+            error_log("🎨 TenantExtension::getGlobals() - currentSociete = " . ($currentSociete ? $currentSociete->getId() . ' (' . $currentSociete->getNom() . ')' : 'NULL'));
+
+            // Si aucune société en session, initialiser avec la société par défaut
+            if (!$currentSociete) {
+                error_log("🎨 TenantExtension::getGlobals() - No current société, getting default...");
+                $defaultSociete = $this->tenantService->getDefaultSocieteForCurrentUser();
+                if ($defaultSociete) {
+                    error_log("🎨 TenantExtension::getGlobals() - Setting default société: {$defaultSociete->getId()} ({$defaultSociete->getNom()})");
+                    $this->tenantService->setCurrentSociete($defaultSociete);
+                }
+            }
+
+            // Récupérer le contexte mis à jour
             $context = $this->tenantService->getContextData();
-            
+
             return [
                 'tenant_context' => $context,
                 'current_societe' => $context['current_societe'],

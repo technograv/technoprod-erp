@@ -1,0 +1,570 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Devis {{ devis.numeroDevis }} - TechnoProd</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
+    <!-- Quill CSS pour affichage du contenu WYSIWYG -->
+    <link href="https://cdn.quilljs.com/1.3.6/quill.snow.css" rel="stylesheet">
+    <style>
+        {% set primaryColor = societe and societe.couleurPrimaire ? societe.couleurPrimaire : '#6f42c1' %}
+        {% set secondaryColor = societe and societe.couleurSecondaire ? societe.couleurSecondaire : '#e83e8c' %}
+        {% set tertiaryColor = societe and societe.couleurTertiaire ? societe.couleurTertiaire : '#667eea' %}
+
+        {# Fonction pour assombrir une couleur (hover states) #}
+        {% set primaryDark = primaryColor|replace({'#': ''}) %}
+        {% if primaryDark|length == 6 %}
+            {% set r = ('0x' ~ primaryDark[0:2])|number_format(0, '.', '') %}
+            {% set g = ('0x' ~ primaryDark[2:4])|number_format(0, '.', '') %}
+            {% set b = ('0x' ~ primaryDark[4:6])|number_format(0, '.', '') %}
+            {% set r = (r * 0.8)|round %}
+            {% set g = (g * 0.8)|round %}
+            {% set b = (b * 0.8)|round %}
+            {% set primaryDark = '#%02x%02x%02x'|format(r, g, b) %}
+        {% else %}
+            {% set primaryDark = '#5a359c' %}
+        {% endif %}
+
+        body {
+            background: linear-gradient(135deg, {{ tertiaryColor }} 0%, {{ primaryColor }} 100%);
+            min-height: 100vh;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+        }
+        .client-container {
+            background: white;
+            border-radius: 15px;
+            box-shadow: 0 20px 40px rgba(0, 0, 0, 0.1);
+            margin: 2rem auto;
+            max-width: 1000px;
+            overflow: hidden;
+        }
+        .header-section {
+            background: linear-gradient(135deg, {{ primaryColor }} 0%, {{ secondaryColor }} 100%);
+            color: white;
+            padding: 2rem;
+            text-align: center;
+        }
+        .content-section {
+            padding: 2rem;
+        }
+        .devis-info {
+            background: #f8f9fa;
+            border-radius: 10px;
+            padding: 1.5rem;
+            margin-bottom: 2rem;
+        }
+        .signature-pad {
+            border: 2px dashed {{ primaryColor }};
+            border-radius: 10px;
+            margin: 1rem 0;
+            cursor: crosshair;
+            background: #fafafa;
+        }
+        .signature-controls {
+            text-align: center;
+            margin: 1rem 0;
+        }
+        .btn-signature {
+            background: {{ primaryColor }};
+            border: none;
+            color: white;
+            padding: 0.75rem 2rem;
+            border-radius: 25px;
+            font-weight: 600;
+            transition: all 0.3s ease;
+        }
+        .btn-signature:hover {
+            background: {{ primaryDark }};
+            transform: translateY(-2px);
+            box-shadow: 0 5px 15px rgba(0, 0, 0, 0.2);
+        }
+        .btn-refuse {
+            background: #dc3545;
+            border: none;
+            color: white;
+            padding: 0.75rem 2rem;
+            border-radius: 25px;
+            font-weight: 600;
+            transition: all 0.3s ease;
+        }
+        .btn-refuse:hover {
+            background: #c82333;
+            transform: translateY(-2px);
+            box-shadow: 0 5px 15px rgba(0, 0, 0, 0.2);
+        }
+        .status-badge {
+            font-size: 1rem;
+            padding: 0.5rem 1rem;
+            border-radius: 20px;
+        }
+        .devis-table {
+            margin: 2rem 0;
+        }
+        .devis-table th {
+            background: {{ primaryColor }};
+            color: white;
+            border: none;
+            font-weight: 600;
+        }
+        .totals-section {
+            background: #f8f9fa;
+            border-radius: 10px;
+            padding: 1.5rem;
+            margin-top: 2rem;
+        }
+        .total-row {
+            display: flex;
+            justify-content: space-between;
+            padding: 0.5rem 0;
+            border-bottom: 1px solid #dee2e6;
+        }
+        .total-row:last-child {
+            border-bottom: none;
+            font-weight: bold;
+            font-size: 1.2rem;
+            color: {{ primaryColor }};
+        }
+        .signature-display {
+            border: 2px solid #28a745;
+            border-radius: 10px;
+            padding: 1rem;
+            background: #f8fff8;
+            text-align: center;
+        }
+        .footer-info {
+            background: #f8f9fa;
+            border-top: 1px solid #dee2e6;
+            padding: 1.5rem;
+            text-align: center;
+            color: #6c757d;
+            font-size: 0.9rem;
+        }
+
+        /* Styles Quill pour mise en forme du contenu WYSIWYG */
+        strong { font-weight: 700; }
+        em { font-style: italic; }
+        u { text-decoration: underline; }
+        s { text-decoration: line-through; }
+
+        /* Polices Quill */
+        .ql-font-arial { font-family: Arial, sans-serif; }
+        .ql-font-helvetica { font-family: Helvetica, sans-serif; }
+        .ql-font-times { font-family: 'Times New Roman', serif; }
+        .ql-font-georgia { font-family: Georgia, serif; }
+        .ql-font-verdana { font-family: Verdana, sans-serif; }
+        .ql-font-courier { font-family: 'Courier New', monospace; }
+
+        /* Tailles Quill */
+        .ql-size-10px { font-size: 10px; }
+        .ql-size-12px { font-size: 12px; }
+        .ql-size-14px { font-size: 14px; }
+        .ql-size-16px { font-size: 16px; }
+        .ql-size-18px { font-size: 18px; }
+        .ql-size-20px { font-size: 20px; }
+        .ql-size-22px { font-size: 22px; }
+        .ql-size-24px { font-size: 24px; }
+
+        /* Alignements Quill */
+        .ql-align-center { text-align: center; display: block; }
+        .ql-align-right { text-align: right; display: block; }
+        .ql-align-justify { text-align: justify; display: block; }
+
+        /* Couleurs de texte Quill */
+        .ql-color-red { color: #e74c3c; }
+        .ql-color-orange { color: #e67e22; }
+        .ql-color-yellow { color: #f1c40f; }
+        .ql-color-green { color: #27ae60; }
+        .ql-color-blue { color: #3498db; }
+        .ql-color-purple { color: #9b59b6; }
+
+        /* Couleurs de fond Quill */
+        .ql-bg-red { background-color: #e74c3c; color: white; padding: 2px 4px; }
+        .ql-bg-orange { background-color: #e67e22; color: white; padding: 2px 4px; }
+        .ql-bg-yellow { background-color: #f1c40f; padding: 2px 4px; }
+        .ql-bg-green { background-color: #27ae60; color: white; padding: 2px 4px; }
+        .ql-bg-blue { background-color: #3498db; color: white; padding: 2px 4px; }
+        .ql-bg-purple { background-color: #9b59b6; color: white; padding: 2px 4px; }
+
+        /* Styles Quill pour contenu WYSIWYG (avec préfixe pour CGV) */
+        .wysiwyg-content {
+            line-height: 1.6;
+        }
+        .wysiwyg-content strong { font-weight: 700; }
+        .wysiwyg-content em { font-style: italic; }
+        .wysiwyg-content u { text-decoration: underline; }
+        .wysiwyg-content s { text-decoration: line-through; }
+
+        /* Polices Quill dans wysiwyg-content */
+        .wysiwyg-content .ql-font-arial { font-family: Arial, sans-serif; }
+        .wysiwyg-content .ql-font-helvetica { font-family: Helvetica, sans-serif; }
+        .wysiwyg-content .ql-font-times { font-family: 'Times New Roman', serif; }
+        .wysiwyg-content .ql-font-georgia { font-family: Georgia, serif; }
+        .wysiwyg-content .ql-font-verdana { font-family: Verdana, sans-serif; }
+        .wysiwyg-content .ql-font-courier { font-family: 'Courier New', monospace; }
+
+        /* Tailles Quill dans wysiwyg-content */
+        .wysiwyg-content .ql-size-10px { font-size: 10px; }
+        .wysiwyg-content .ql-size-12px { font-size: 12px; }
+        .wysiwyg-content .ql-size-14px { font-size: 14px; }
+        .wysiwyg-content .ql-size-16px { font-size: 16px; }
+        .wysiwyg-content .ql-size-18px { font-size: 18px; }
+        .wysiwyg-content .ql-size-20px { font-size: 20px; }
+        .wysiwyg-content .ql-size-22px { font-size: 22px; }
+        .wysiwyg-content .ql-size-24px { font-size: 24px; }
+
+        /* Alignements Quill dans wysiwyg-content */
+        .wysiwyg-content .ql-align-center { text-align: center; display: block; }
+        .wysiwyg-content .ql-align-right { text-align: right; display: block; }
+        .wysiwyg-content .ql-align-justify { text-align: justify; display: block; }
+
+        /* Couleurs de texte Quill dans wysiwyg-content */
+        .wysiwyg-content .ql-color-red { color: #e74c3c; }
+        .wysiwyg-content .ql-color-orange { color: #e67e22; }
+        .wysiwyg-content .ql-color-yellow { color: #f1c40f; }
+        .wysiwyg-content .ql-color-green { color: #27ae60; }
+        .wysiwyg-content .ql-color-blue { color: #3498db; }
+        .wysiwyg-content .ql-color-purple { color: #9b59b6; }
+
+        /* Couleurs de fond Quill dans wysiwyg-content */
+        .wysiwyg-content .ql-bg-red { background-color: #e74c3c; color: white; padding: 2px 4px; }
+        .wysiwyg-content .ql-bg-orange { background-color: #e67e22; color: white; padding: 2px 4px; }
+        .wysiwyg-content .ql-bg-yellow { background-color: #f1c40f; padding: 2px 4px; }
+        .wysiwyg-content .ql-bg-green { background-color: #27ae60; color: white; padding: 2px 4px; }
+        .wysiwyg-content .ql-bg-blue { background-color: #3498db; color: white; padding: 2px 4px; }
+        .wysiwyg-content .ql-bg-purple { background-color: #9b59b6; color: white; padding: 2px 4px; }
+    </style>
+</head>
+<body>
+    <div class="container-fluid">
+        <!-- Messages Flash -->
+        {% for type, messages in app.flashes %}
+            {% for message in messages %}
+                <div class="alert alert-{{ type == 'error' ? 'danger' : (type == 'warning' ? 'warning' : (type == 'info' ? 'info' : 'success')) }} alert-dismissible fade show m-3" role="alert">
+                    {{ message }}
+                    <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+                </div>
+            {% endfor %}
+        {% endfor %}
+
+        <div class="client-container">
+            <!-- En-tête -->
+            <div class="header-section">
+                <div class="alert alert-info text-center mb-3" style="background: rgba(255,255,255,0.2); border: 2px solid white; color: white;">
+                    <i class="fas fa-archive me-2"></i><strong>Version archivée</strong> - Cette version du devis a été signée puis annulée. Elle est affichée à titre consultatif uniquement.
+                </div>
+                <div class="row align-items-center">
+                    <div class="col-md-3">
+                        <img src="data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iMTAwIiBoZWlnaHQ9IjQwIiB2aWV3Qm94PSIwIDAgMTAwIDQwIiBmaWxsPSJub25lIiB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciPgo8cmVjdCB3aWR0aD0iMTAwIiBoZWlnaHQ9IjQwIiBmaWxsPSIjNmY0MmMxIi8+Cjx0ZXh0IHg9IjUwIiB5PSIyNSIgZm9udC1mYW1pbHk9IkFyaWFsLCBzYW5zLXNlcmlmIiBmb250LXNpemU9IjE2IiBmb250LXdlaWdodD0iYm9sZCIgZmlsbD0id2hpdGUiIHRleHQtYW5jaG9yPSJtaWRkbGUiPlRlY2hub1Byb2Q8L3RleHQ+Cjwvc3ZnPgo=" alt="TechnoProd" class="img-fluid">
+                    </div>
+                    <div class="col-md-6">
+                        <h1 class="mb-1">Devis {{ devis.numeroDevis }}</h1>
+                        <p class="mb-0">{{ version.versionLabel }}</p>
+                    </div>
+                    <div class="col-md-3 text-end">
+                        <p class="mb-0" style="font-size: 0.9rem;"><strong>Version archivée le</strong></p>
+                        <p class="mb-0" style="font-size: 1.1rem; font-weight: 600;">{{ version.createdAt|date('d/m/Y à H:i') }}</p>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Contenu principal -->
+            <div class="content-section">
+                <!-- Métadonnées devis -->
+                <div class="row mb-3">
+                    <div class="col-md-6">
+                        <div style="background-color: #f8f9fa; border-radius: 10px; padding: 10px; text-align: center;">
+                            <small style="color: #6c757d; font-size: 0.8rem;">Date de création</small>
+                            <div style="font-weight: 600; color: #2c3e50;">{{ devis.dateCreation|date('d/m/Y') }}</div>
+                        </div>
+                    </div>
+                    {% if devis.commercial %}
+                    <div class="col-md-6">
+                        <div style="background-color: #f8f9fa; border-radius: 10px; padding: 10px; text-align: center;">
+                            <small style="color: #6c757d; font-size: 0.8rem;">Commercial</small>
+                            <div style="font-weight: 600; color: #2c3e50;">{{ devis.commercial.prenom }} {{ devis.commercial.nom }}</div>
+                        </div>
+                    </div>
+                    {% endif %}
+                </div>
+
+                <!-- Informations émetteur et client -->
+                <div class="row mb-4">
+                    {% if societe %}
+                    <div class="col-md-6">
+                        <div class="devis-info">
+                            <h5><i class="fas fa-building me-2"></i>Émetteur du devis</h5>
+                            <p><strong>{{ societe.nom }}</strong></p>
+                            {% if societe.adresse %}
+                                <p>{{ societe.adresse }}</p>
+                            {% endif %}
+                            {% if societe.codePostal and societe.ville %}
+                                <p>{{ societe.codePostal }} {{ societe.ville }}</p>
+                            {% endif %}
+                            {% if societe.siret %}
+                                <p style="font-size: 0.9rem; color: #6c757d;">SIRET: {{ societe.siret }}</p>
+                            {% endif %}
+                            {% if societe.numeroTva %}
+                                <p style="font-size: 0.9rem; color: #6c757d;">TVA: {{ societe.numeroTva }}</p>
+                            {% endif %}
+                        </div>
+                    </div>
+                    {% endif %}
+
+                    <!-- Informations client -->
+                    <div class="col-md-6">
+                        {% if devis.client %}
+                        <div class="devis-info">
+                            <h5><i class="fas fa-user me-2"></i>Client</h5>
+                            <p><strong>{{ devis.client.nomComplet }}</strong></p>
+                            {% if devis.contactFacturation %}
+                                <p>À l'attention de {{ devis.contactFacturation.nomComplet }}</p>
+                            {% endif %}
+                            {% if devis.adresseFacturation %}
+                                <p>{{ devis.adresseFacturation.ligne1 }}</p>
+                                {% if devis.adresseFacturation.ligne2 %}
+                                    <p>{{ devis.adresseFacturation.ligne2 }}</p>
+                                {% endif %}
+                                <p>{{ devis.adresseFacturation.codePostal }} {{ devis.adresseFacturation.ville }}</p>
+                            {% endif %}
+                        </div>
+                        {% endif %}
+                    </div>
+                </div>
+
+                <!-- Notes client / Proposition commerciale -->
+                {% if devis.notesClient and devis.notesClient|striptags|trim != '' %}
+                <div class="devis-info">
+                    <h5><i class="fas fa-file-alt me-2"></i>Proposition commerciale personnalisée</h5>
+                    <div>{{ devis.notesClient|raw }}</div>
+                </div>
+                {% endif %}
+
+                <!-- Détail des lignes -->
+                <div class="devis-table">
+                    <h5><i class="fas fa-list me-2"></i>Détail de votre devis</h5>
+                    <div class="table-responsive">
+                        <table class="table table-hover">
+                            <thead>
+                                <tr>
+                                    <th>Désignation</th>
+                                    <th class="text-center">Unité</th>
+                                    <th class="text-center">Qté</th>
+                                    <th class="text-end">Prix unit. HT</th>
+                                    <th class="text-center">Remise</th>
+                                    <th class="text-end">Total HT</th>
+                                    <th class="text-center">TVA</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% for element in devis.elementsOrdered %}
+                                    {% if element.type == 'section_title' %}
+                                        <tr class="table-primary">
+                                            <td colspan="7"><strong><i class="fas fa-bookmark me-2"></i>{{ element.titre }}</strong></td>
+                                        </tr>
+                                    {% elseif element.type == 'product' %}
+                                        <tr>
+                                            <td>
+                                                <strong>{{ element.designation }}</strong>
+                                                {% if element.description %}
+                                                    <br><small>{{ element.description|nl2br }}</small>
+                                                {% endif %}
+                                            </td>
+                                            <td class="text-center">
+                                                {% if element.produit and element.produit.uniteVente %}
+                                                    {{ element.produit.uniteVente.nom }}
+                                                {% elseif element.produit and element.produit.unite %}
+                                                    {{ element.produit.unite }}
+                                                {% else %}
+                                                    -
+                                                {% endif %}
+                                            </td>
+                                            <td class="text-center">{{ element.quantite }}</td>
+                                            <td class="text-end">{{ element.prixUnitaireHt|number_format(2, ',', ' ') }} €</td>
+                                            <td class="text-center">
+                                                {% if element.remisePercent > 0 %}
+                                                    {{ element.remisePercent }}%
+                                                {% else %}
+                                                    -
+                                                {% endif %}
+                                            </td>
+                                            <td class="text-end"><strong>{{ element.totalLigneHt|number_format(2, ',', ' ') }} €</strong></td>
+                                            <td class="text-center">{{ element.tvaPercent }}%</td>
+                                        </tr>
+                                    {% elseif element.type == 'subtotal' %}
+                                        <tr class="table-secondary">
+                                            <td colspan="6" class="text-end"><strong>{{ element.titre ?: 'Sous-total' }}</strong></td>
+                                            <td class="text-end"><strong>{{ devis.calculateSubtotalUpTo(element.position)|number_format(2, ',', ' ') }} €</strong></td>
+                                        </tr>
+                                    {% endif %}
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+
+                <!-- Totaux -->
+                <div class="totals-section">
+                    <h5><i class="fas fa-calculator me-2"></i>Récapitulatif</h5>
+
+                    {% if devis.remiseGlobalePercent or devis.remiseGlobaleMontant %}
+                        {% set sousTotal = 0 %}
+                        {% for element in devis.elementsOrdered %}
+                            {% if element.type == 'product' %}
+                                {% set sousTotal = sousTotal + element.totalLigneHt %}
+                            {% endif %}
+                        {% endfor %}
+                        <div class="total-row">
+                            <span>Sous-total HT :</span>
+                            <span>{{ sousTotal|number_format(2, ',', ' ') }} €</span>
+                        </div>
+                        {% if devis.remiseGlobalePercent and devis.remiseGlobalePercent > 0 %}
+                            <div class="total-row">
+                                <span>Remise globale ({{ devis.remiseGlobalePercent }}%) :</span>
+                                <span>-{{ (sousTotal * devis.remiseGlobalePercent / 100)|number_format(2, ',', ' ') }} €</span>
+                            </div>
+                        {% elseif devis.remiseGlobaleMontant and devis.remiseGlobaleMontant > 0 %}
+                            <div class="total-row">
+                                <span>Remise globale :</span>
+                                <span>-{{ devis.remiseGlobaleMontant|number_format(2, ',', ' ') }} €</span>
+                            </div>
+                        {% endif %}
+                    {% endif %}
+
+                    <div class="total-row">
+                        <span>Total HT :</span>
+                        <span>{{ devis.totalHt|number_format(2, ',', ' ') }} €</span>
+                    </div>
+
+                    <div class="total-row">
+                        <span>Total TVA :</span>
+                        <span>{{ devis.totalTva|number_format(2, ',', ' ') }} €</span>
+                    </div>
+
+                    {% if devis.acomptePercent or devis.acompteMontant %}
+                    <div class="total-row">
+                        <span>Acompte à la commande :</span>
+                        <span>{{ devis.calculateAcompte|number_format(2, ',', ' ') }} € TTC</span>
+                    </div>
+                    {% endif %}
+
+                    <div class="total-row">
+                        <span>TOTAL TTC :</span>
+                        <span>{{ devis.totalTtc|number_format(2, ',', ' ') }} €</span>
+                    </div>
+                </div>
+
+                <!-- Récapitulatif TVA par taux -->
+                {% set tvaDetailsByRate = devis.getTvaDetailsByRate() %}
+                {% set tvaRatesWithAmount = 0 %}
+                {% for taux, detail in tvaDetailsByRate %}
+                    {% if detail.totalTva > 0.001 %}
+                        {% set tvaRatesWithAmount = tvaRatesWithAmount + 1 %}
+                    {% endif %}
+                {% endfor %}
+
+                {% if tvaRatesWithAmount > 1 %}
+                <div class="devis-info mt-3">
+                    <h5><i class="fas fa-percentage me-2"></i>Récapitulatif TVA</h5>
+                    <table class="table table-sm">
+                        <thead>
+                            <tr>
+                                <th>Base HT</th>
+                                <th>Taux</th>
+                                <th>Montant TVA</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for taux, detail in tvaDetailsByRate %}
+                                {% if detail.totalTva > 0.001 %}
+                                <tr>
+                                    <td>{{ detail.totalHt|number_format(2, ',', ' ') }} €</td>
+                                    <td>{{ taux }}%</td>
+                                    <td>{{ detail.totalTva|number_format(2, ',', ' ') }} €</td>
+                                </tr>
+                                {% endif %}
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+                {% endif %}
+
+                <!-- Conditions et coordonnées bancaires -->
+                <div class="devis-info mt-3">
+                    <h5><i class="fas fa-info-circle me-2"></i>Conditions de règlement</h5>
+                    <p>
+                        {% if devis.modeReglement %}
+                            <strong>Mode de règlement :</strong> {{ devis.modeReglement.nom }}<br>
+                        {% endif %}
+                        {% if devis.delaiLivraison %}
+                            <strong>Délai de livraison :</strong> {{ devis.delaiLivraison }}<br>
+                        {% endif %}
+                        {% if devis.acomptePercent or devis.acompteMontant %}
+                            Un acompte de <strong>{{ devis.calculateAcompte|number_format(2, ',', ' ') }} € TTC</strong> sera demandé à la validation de ce devis.<br>
+                        {% endif %}
+                        En cas de retard de paiement, seront exigibles, conformément à l'article L 441-6 du code de commerce, une indemnité calculée sur la base de trois fois le taux de l'intérêt légal en vigueur ainsi qu'une indemnité forfaitaire pour frais de recouvrement de 40 euros.
+                    </p>
+
+                    {% if banquePrincipale %}
+                    <p class="mt-2">
+                        <strong>Coordonnées bancaires :</strong><br>
+                        <strong>IBAN :</strong> {{ banquePrincipale.iban }}<br>
+                        <strong>BIC :</strong> {{ banquePrincipale.bic }}
+                    </p>
+                    {% endif %}
+                </div>
+
+                <!-- Informations sur la signature archivée -->
+                {% set snapshotData = version.snapshotData %}
+                {% set devisData = snapshotData.devis_data|default({}) %}
+
+                {% if devisData.signatureNom %}
+                <!-- Signature de la version archivée -->
+                <div class="signature-display mt-4">
+                    <h5><i class="fas fa-check-circle text-success me-2"></i>Signature de cette version</h5>
+                    <p><strong>Signé par :</strong> {{ devisData.signatureNom }} ({{ devisData.signatureEmail }})</p>
+                    <p><strong>Date de signature :</strong> {{ devisData.dateSignature }}</p>
+                    {% if devisData.signatureData %}
+                        <div class="mt-3">
+                            <img src="{{ devisData.signatureData }}" alt="Signature" style="max-height: 100px; border: 1px solid #ddd;">
+                        </div>
+                    {% endif %}
+                    <div class="alert alert-warning mt-3">
+                        <i class="fas fa-exclamation-triangle me-2"></i>
+                        <strong>Cette signature a été annulée.</strong> Cette version est archivée à titre consultatif uniquement.
+                    </div>
+                </div>
+                {% endif %}
+            </div>
+
+            <!-- Pied de page -->
+            <div class="footer-info">
+                {% if societe %}
+                <p><strong>{{ societe.nom }}</strong></p>
+                <p>
+                    {% if societe.siret %}SIRET: {{ societe.siret }}{% endif %}
+                    {% if societe.numeroTva %}{% if societe.siret %} - {% endif %}TVA: {{ societe.numeroTva }}{% endif %}
+                </p>
+                <p>
+                    {% if societe.adresse %}{{ societe.adresse }}{% if societe.codePostal or societe.ville %}, {% endif %}{% endif %}
+                    {% if societe.codePostal %}{{ societe.codePostal }}{% endif %}
+                    {% if societe.ville %} {{ societe.ville }}{% endif %}
+                    {% if societe.telephone %} - Tél: {{ societe.telephone }}{% endif %}
+                    {% if societe.email %} - Email: {{ societe.email }}{% endif %}
+                </p>
+                {% else %}
+                <p><strong>TechnoProd</strong></p>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+
+    <!-- Pas de modales nécessaires pour une version archivée -->
+
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/js/bootstrap.bundle.min.js"></script>
+    <script>
+    // Version archivée - Lecture seule uniquement
+    </script>
+</body>
+</html>

@@ -158,7 +158,7 @@ class TenantController extends AbstractController
     public function selectSociete(): Response
     {
         $context = $this->tenantService->getContextData();
-        
+
         // Si une société est déjà sélectionnée, rediriger vers le dashboard
         if ($context['current_societe']) {
             return $this->redirectToRoute('app_dashboard');
@@ -172,6 +172,82 @@ class TenantController extends AbstractController
         return $this->render('tenant/select.html.twig', [
             'available_societes' => $context['available_societes'],
             'is_super_admin' => $context['is_super_admin'],
+        ]);
+    }
+
+    /**
+     * Page de debug session (dev only)
+     */
+    #[Route('/debug', name: 'app_tenant_debug', methods: ['GET'])]
+    public function debugSession(Request $request): JsonResponse
+    {
+        $session = $request->getSession();
+
+        // Test direct : que retourne getCurrentSociete() ?
+        $directSociete = $this->tenantService->getCurrentSociete();
+        error_log("🔍 DEBUG ENDPOINT - getCurrentSociete() returned: " . ($directSociete ? $directSociete->getId() . ' (' . $directSociete->getNom() . ')' : 'NULL'));
+
+        $context = $this->tenantService->getContextData();
+
+        return $this->json([
+            'session_id' => $session->getId(),
+            'session_started' => $session->isStarted(),
+            'session_data' => [
+                'current_societe_id' => $session->get('current_societe_id'),
+                'available_societes' => $session->get('available_societes'),
+                'all_keys' => array_keys($session->all()),
+            ],
+            'direct_getCurrentSociete' => $directSociete ? [
+                'id' => $directSociete->getId(),
+                'nom' => $directSociete->getNom(),
+            ] : null,
+            'current_societe' => $context['current_societe'] ? [
+                'id' => $context['current_societe']->getId(),
+                'nom' => $context['current_societe']->getNom(),
+            ] : null,
+            'available_societes_count' => count($context['available_societes']),
+            'cookie_params' => session_get_cookie_params(),
+        ]);
+    }
+
+    /**
+     * Force switch to société (dev only - for testing)
+     */
+    #[Route('/force-switch/{societeId}', name: 'app_tenant_force_switch', methods: ['GET'])]
+    public function forceSwitch(int $societeId, Request $request): JsonResponse
+    {
+        $session = $request->getSession();
+
+        // Log avant
+        $beforeId = $session->get('current_societe_id');
+
+        // Faire le switch
+        $success = $this->tenantService->switchToSociete($societeId);
+
+        // Log après
+        $afterId = $session->get('current_societe_id');
+        $context = $this->tenantService->getContextData();
+
+        // Tester hasAccessToSociete
+        $societe = $this->tenantService->getAvailableSocietes()[0] ?? null;
+        $hasAccessTest = $societe ? $this->tenantService->hasAccessToSociete($societe) : null;
+
+        return $this->json([
+            'success' => $success,
+            'before_switch' => [
+                'session_societe_id' => $beforeId,
+            ],
+            'after_switch' => [
+                'session_societe_id' => $afterId,
+                'service_societe' => $context['current_societe'] ? [
+                    'id' => $context['current_societe']->getId(),
+                    'nom' => $context['current_societe']->getNom(),
+                ] : null,
+            ],
+            'session_id' => $session->getId(),
+            'message' => $success ? "Switch réussi vers société ID {$societeId}" : "Switch échoué",
+            'debug_hasAccess' => $hasAccessTest,
+            'debug_availableCount' => count($this->tenantService->getAvailableSocietes()),
         ]);
     }
 }

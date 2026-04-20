@@ -102,7 +102,7 @@ class DashboardService
                 SELECT
                     (SELECT COUNT(*) FROM devis d
                      WHERE d.commercial_id = :userId
-                     AND d.statut = \'brouillon\') as devis_brouillons,
+                     AND d.statut IN (\'brouillon\', \'actualisation_demandee\')) as devis_brouillons,
 
                     (SELECT COUNT(*) FROM devis d
                      WHERE d.commercial_id = :userId

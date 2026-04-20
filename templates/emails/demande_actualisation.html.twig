@@ -1,0 +1,253 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Demande d'actualisation - {{ devis.numeroDevis }}</title>
+    <style>
+        body {
+            margin: 0;
+            padding: 0;
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+            background-color: #f4f6f9;
+            color: #333;
+        }
+        .email-wrapper {
+            max-width: 600px;
+            margin: 0 auto;
+            background-color: #ffffff;
+        }
+        .email-header {
+            background: linear-gradient(135deg, #f39c12 0%, #e67e22 100%);
+            padding: 30px 20px;
+            text-align: center;
+            color: white;
+        }
+        .email-header h1 {
+            margin: 0;
+            font-size: 24px;
+            font-weight: 600;
+        }
+        .email-header .icon {
+            font-size: 48px;
+            margin-bottom: 10px;
+        }
+        .email-body {
+            padding: 30px 20px;
+        }
+        .alert-box {
+            background-color: #fff3cd;
+            border-left: 4px solid #f39c12;
+            padding: 15px;
+            margin-bottom: 20px;
+            border-radius: 4px;
+        }
+        .alert-box strong {
+            display: block;
+            margin-bottom: 5px;
+            color: #856404;
+        }
+        .info-section {
+            background-color: #f8f9fa;
+            border-radius: 8px;
+            padding: 20px;
+            margin-bottom: 20px;
+        }
+        .info-section h2 {
+            margin-top: 0;
+            margin-bottom: 15px;
+            font-size: 18px;
+            color: #495057;
+            border-bottom: 2px solid #dee2e6;
+            padding-bottom: 10px;
+        }
+        .info-row {
+            display: flex;
+            margin-bottom: 10px;
+            padding: 8px 0;
+        }
+        .info-label {
+            font-weight: 600;
+            color: #6c757d;
+            min-width: 140px;
+        }
+        .info-value {
+            color: #212529;
+        }
+        .message-section {
+            background-color: #e7f3ff;
+            border-left: 4px solid #007bff;
+            padding: 15px;
+            margin-bottom: 20px;
+            border-radius: 4px;
+        }
+        .message-section h3 {
+            margin-top: 0;
+            margin-bottom: 10px;
+            font-size: 16px;
+            color: #004085;
+        }
+        .message-content {
+            color: #004085;
+            white-space: pre-wrap;
+            font-style: italic;
+        }
+        .cta-button {
+            display: inline-block;
+            background: linear-gradient(135deg, #007bff 0%, #0056b3 100%);
+            color: white !important;
+            padding: 15px 40px;
+            text-decoration: none;
+            border-radius: 6px;
+            font-weight: 600;
+            font-size: 16px;
+            text-align: center;
+            box-shadow: 0 4px 6px rgba(0, 123, 255, 0.3);
+            transition: all 0.3s ease;
+        }
+        .cta-button:hover {
+            background: linear-gradient(135deg, #0056b3 0%, #003d82 100%);
+            box-shadow: 0 6px 8px rgba(0, 123, 255, 0.4);
+            transform: translateY(-2px);
+        }
+        .cta-container {
+            text-align: center;
+            margin: 30px 0;
+        }
+        .email-footer {
+            background-color: #f8f9fa;
+            padding: 20px;
+            text-align: center;
+            font-size: 12px;
+            color: #6c757d;
+            border-top: 1px solid #dee2e6;
+        }
+        .divider {
+            height: 1px;
+            background-color: #dee2e6;
+            margin: 20px 0;
+        }
+        .badge {
+            display: inline-block;
+            padding: 4px 8px;
+            border-radius: 4px;
+            font-size: 12px;
+            font-weight: 600;
+        }
+        .badge-warning {
+            background-color: #fff3cd;
+            color: #856404;
+        }
+        .badge-info {
+            background-color: #d1ecf1;
+            color: #0c5460;
+        }
+    </style>
+</head>
+<body>
+    <div class="email-wrapper">
+        <!-- Header -->
+        <div class="email-header">
+            <div class="icon">🔔</div>
+            <h1>Demande d'actualisation de devis</h1>
+        </div>
+
+        <!-- Body -->
+        <div class="email-body">
+            <div class="alert-box">
+                <strong>⚠️ Action requise</strong>
+                Un client a demandé {% if isExpired %}une actualisation{% else %}une modification{% endif %} pour le devis <strong>{{ devis.numeroDevis }}</strong>
+            </div>
+
+            <!-- Informations du devis -->
+            <div class="info-section">
+                <h2>📄 Informations du devis</h2>
+                <div class="info-row">
+                    <div class="info-label">Numéro :</div>
+                    <div class="info-value"><strong>{{ devis.numeroDevis }}</strong></div>
+                </div>
+                <div class="info-row">
+                    <div class="info-label">Client :</div>
+                    <div class="info-value">{{ devis.client ? devis.client.nomComplet : 'Non défini' }}</div>
+                </div>
+                <div class="info-row">
+                    <div class="info-label">Montant TTC :</div>
+                    <div class="info-value"><strong>{{ devis.totalTtc|number_format(2, ',', ' ') }} €</strong></div>
+                </div>
+                {% if devis.dateValidite %}
+                <div class="info-row">
+                    <div class="info-label">Date de validité :</div>
+                    <div class="info-value">
+                        {{ devis.dateValidite|date('d/m/Y') }}
+                        {% if isExpired %}
+                        <span class="badge badge-warning">Expiré</span>
+                        {% endif %}
+                    </div>
+                </div>
+                {% endif %}
+                <div class="info-row">
+                    <div class="info-label">Statut actuel :</div>
+                    <div class="info-value">
+                        <span class="badge badge-info">{{ devis.statut|upper }}</span>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Informations du demandeur -->
+            <div class="info-section">
+                <h2>👤 Demandeur</h2>
+                <div class="info-row">
+                    <div class="info-label">Nom :</div>
+                    <div class="info-value">{{ clientNom }}</div>
+                </div>
+                <div class="info-row">
+                    <div class="info-label">Email :</div>
+                    <div class="info-value"><a href="mailto:{{ clientEmail }}" style="color: #007bff;">{{ clientEmail }}</a></div>
+                </div>
+                <div class="info-row">
+                    <div class="info-label">Date demande :</div>
+                    <div class="info-value">{{ dateDemande|date('d/m/Y à H:i') }}</div>
+                </div>
+            </div>
+
+            <!-- Message du client -->
+            {% if message %}
+            <div class="message-section">
+                <h3>💬 Message du client</h3>
+                <div class="message-content">{{ message }}</div>
+            </div>
+            {% else %}
+            <div class="message-section">
+                <h3>💬 Message du client</h3>
+                <div class="message-content" style="font-style: normal; color: #6c757d;">Aucun message spécifique fourni par le client.</div>
+            </div>
+            {% endif %}
+
+            <div class="divider"></div>
+
+            <!-- Call to action -->
+            <div class="cta-container">
+                <a href="{{ lienEdition }}" class="cta-button">
+                    📝 Modifier le devis maintenant
+                </a>
+            </div>
+
+            <p style="text-align: center; color: #6c757d; font-size: 14px; margin-top: 20px;">
+                Le statut du devis a été automatiquement changé en <strong>"Actualisation demandée"</strong>
+            </p>
+        </div>
+
+        <!-- Footer -->
+        <div class="email-footer">
+            <p style="margin: 0 0 10px 0;">
+                <strong>TechnoProd ERP</strong><br>
+                Système de gestion commerciale
+            </p>
+            <p style="margin: 0; font-size: 11px;">
+                Cet email a été généré automatiquement suite à une demande client.<br>
+                Pour toute question, contactez le support technique.
+            </p>
+        </div>
+    </div>
+</body>
+</html>

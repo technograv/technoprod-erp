@@ -41,15 +41,25 @@ class AlerteRepository extends ServiceEntityRepository
 
     /**
      * Récupère les alertes actives pour un utilisateur donné
-     * Exclut les alertes fermées par l'utilisateur - requête optimisée avec LEFT JOIN
+     * Exclut les alertes fermées par l'utilisateur via sous-requête NOT EXISTS
      */
     public function findActiveAlertsForUser(User $user): array
     {
-        return $this->createQueryBuilder('a')
-            ->leftJoin(AlerteUtilisateur::class, 'au', 'WITH', 'au.alerte = a.id AND au.user = :user')
+        $qb = $this->createQueryBuilder('a');
+
+        return $qb
             ->where('a.isActive = true')
             ->andWhere('a.dateExpiration IS NULL OR a.dateExpiration > :now')
-            ->andWhere('au.id IS NULL') // Exclure les alertes déjà fermées
+            ->andWhere($qb->expr()->not(
+                $qb->expr()->exists(
+                    $this->getEntityManager()->createQueryBuilder()
+                        ->select('1')
+                        ->from(AlerteUtilisateur::class, 'au')
+                        ->where('au.alerte = a')
+                        ->andWhere('au.user = :user')
+                        ->getDQL()
+                )
+            ))
             ->setParameter('user', $user)
             ->setParameter('now', new \DateTime())
             ->orderBy('a.ordre', 'ASC')

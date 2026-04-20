@@ -142,9 +142,17 @@ function loadJuridiqueComptableSubTabFixed(subTabId) {
             url = window.adminRoutes?.banques || '/admin/banques';
             targetContentId = '#banques-content';
             break;
+        case '#cgv-content':
+            url = window.adminRoutes?.cgv || '/admin/conditions-vente';
+            targetContentId = '#cgv-content';
+            break;
         case '#taux-tva-content':
             url = window.adminRoutes?.taux_tva || '/admin/taux-tva';
             targetContentId = '#taux-tva-content';
+            break;
+        case '#unites-content':
+            url = window.adminRoutes?.unites || '/admin/unites';
+            targetContentId = '#unites-content';
             break;
     }
     
@@ -257,3 +265,158 @@ function loadGestionSocietesSubTabFixed(subTabId) {
         console.error('❌ ERROR: Target element not found for:', targetContentId);
     }
 }
+
+// Setup Tiers sub-tabs (Transporteurs, Frais de port, Tags clients)
+function setupTiersSubTabsFixed() {
+    console.log('🔧 setupTiersSubTabsFixed: Starting setup');
+
+    const tiersSubTabs = document.querySelectorAll('#tiers-sub-tabs .nav-link');
+    console.log('🔧 Found', tiersSubTabs.length, 'tiers sub-tabs to configure');
+
+    tiersSubTabs.forEach(tab => {
+        tab.addEventListener('click', function(e) {
+            e.preventDefault();
+            const targetSubTab = e.target.getAttribute('href');
+            console.log('🔧 Tiers sub-tab clicked:', targetSubTab);
+            loadTiersSubTabFixed(targetSubTab);
+        });
+    });
+
+    console.log('🔧 Loading default sub-tab: #transporteurs-content');
+    loadTiersSubTabFixed('#transporteurs-content');
+}
+
+function loadTiersSubTabFixed(subTabId) {
+    console.log('🔍 Loading tiers sub-tab with CSS forcing:', subTabId);
+
+    // Désactiver tous les autres sous-onglets
+    document.querySelectorAll('#tiers .tab-content .tab-pane').forEach(pane => {
+        pane.classList.remove('show', 'active');
+        pane.style.display = 'none';
+    });
+
+    // Activer l'onglet de navigation
+    document.querySelectorAll('#tiers-sub-tabs .nav-link').forEach(link => {
+        link.classList.remove('active');
+    });
+
+    const navLink = document.querySelector('#tiers-sub-tabs .nav-link[href="' + subTabId + '"]');
+    if (navLink) {
+        navLink.classList.add('active');
+    }
+
+    let url = '';
+    let targetContentId = '';
+
+    switch(subTabId) {
+        case '#transporteurs-content':
+            url = window.adminRoutes?.transporteurs || '/admin/transporteurs';
+            targetContentId = '#transporteurs-content';
+            break;
+        case '#frais-port-content':
+            url = window.adminRoutes?.frais_port || '/admin/frais-port';
+            targetContentId = '#frais-port-content';
+            break;
+        case '#tags-clients-content':
+            url = window.adminRoutes?.tags || '/admin/tags';
+            targetContentId = '#tags-clients-content';
+            break;
+    }
+
+    const targetElement = document.querySelector(targetContentId);
+    if (targetElement) {
+        if (url) {
+            console.log('🔍 DEBUG: Loading content into', targetContentId, 'from URL:', url);
+            console.log('🔍 DEBUG: Element loaded flag:', targetElement.dataset.loaded);
+            window.adminAjaxLoader.loadContentIntoElementFixed(url, targetElement, subTabId);
+            targetElement.dataset.loaded = 'true';
+        } else {
+            console.log('🔍 DEBUG: No URL provided, activating display for', subTabId);
+            window.adminAjaxLoader.activateSubTabContent(targetElement, subTabId);
+        }
+    } else {
+        console.error('❌ ERROR: Target element not found for:', targetContentId);
+    }
+}
+
+// Setup Configuration Système sub-tabs (Alertes, Maintenance, Templates)
+function setupParametresSubTabsFixed() {
+    console.log('🔧 setupParametresSubTabsFixed: Starting setup');
+
+    const parametresSubTabs = document.querySelectorAll('#parametres-sub-tabs .nav-link');
+    console.log('🔧 Found', parametresSubTabs.length, 'parametres sub-tabs to configure');
+
+    parametresSubTabs.forEach(tab => {
+        tab.addEventListener('click', function(e) {
+            e.preventDefault();
+            const targetSubTab = e.target.getAttribute('href');
+            console.log('🔧 Parametres sub-tab clicked:', targetSubTab);
+            loadParametresSubTabFixed(targetSubTab);
+        });
+    });
+
+    console.log('🔧 Loading default sub-tab: #alertes-content');
+    loadParametresSubTabFixed('#alertes-content');
+}
+
+function loadParametresSubTabFixed(subTabId) {
+    console.log('🔍 Loading parametres sub-tab with CSS forcing:', subTabId);
+
+    // Désactiver tous les autres sous-onglets
+    document.querySelectorAll('#parametres .tab-content .tab-pane').forEach(pane => {
+        pane.classList.remove('show', 'active');
+        pane.style.display = 'none';
+    });
+
+    // Activer l'onglet de navigation
+    document.querySelectorAll('#parametres-sub-tabs .nav-link').forEach(link => {
+        link.classList.remove('active');
+    });
+
+    const navLink = document.querySelector('#parametres-sub-tabs .nav-link[href="' + subTabId + '"]');
+    if (navLink) {
+        navLink.classList.add('active');
+    }
+
+    let url = '';
+    let targetContentId = '';
+
+    switch(subTabId) {
+        case '#alertes-content':
+            url = '/admin/alertes/';
+            targetContentId = 'alertes-content';
+            break;
+        case '#maintenance-content':
+            url = '/admin/maintenance';
+            targetContentId = 'maintenance-content';
+            break;
+        case '#templates-content':
+            url = '/admin/templates';
+            targetContentId = 'templates-content';
+            break;
+    }
+
+    const targetElement = document.getElementById(targetContentId);
+    if (targetElement) {
+        // Vérifier si le contenu est déjà chargé
+        if (targetElement.dataset.loaded === 'true') {
+            console.log('✅ Content already loaded for', targetContentId, '- just activating display');
+            targetElement.classList.add('show', 'active');
+            targetElement.style.display = 'block';
+        } else if (url) {
+            console.log('🔍 DEBUG: Loading content into', targetContentId, 'from URL:', url);
+            window.adminAjaxLoader.loadContentIntoElementFixed(url, targetElement, subTabId);
+            targetElement.dataset.loaded = 'true';
+        } else {
+            console.log('🔍 DEBUG: No URL provided, activating display for', subTabId);
+            targetElement.classList.add('show', 'active');
+            targetElement.style.display = 'block';
+        }
+    } else {
+        console.error('❌ ERROR: Target element not found for:', targetContentId);
+    }
+}
+
+// Expose globally
+window.setupTiersSubTabsFixed = setupTiersSubTabsFixed;
+window.setupParametresSubTabsFixed = setupParametresSubTabsFixed;

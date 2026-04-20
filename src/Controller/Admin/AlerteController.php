@@ -9,6 +9,7 @@ use App\Service\Admin\AlerteAdminService;
 use Symfony\Bundle\FrameworkBundle\Controller\AbstractController;
 use Symfony\Component\HttpFoundation\JsonResponse;
 use Symfony\Component\HttpFoundation\Request;
+use Symfony\Component\HttpFoundation\Response;
 use Symfony\Component\HttpKernel\Attribute\MapRequestPayload;
 use Symfony\Component\Routing\Attribute\Route;
 use Symfony\Component\Security\Http\Attribute\IsGranted;
@@ -23,7 +24,13 @@ class AlerteController extends AbstractController
     }
 
     #[Route('/', name: 'app_admin_alertes', methods: ['GET'])]
-    public function alertes(): JsonResponse
+    public function alertes(): Response
+    {
+        return $this->render('admin/alertes.html.twig');
+    }
+
+    #[Route('/data', name: 'app_admin_alertes_data', methods: ['GET'])]
+    public function alertesData(): JsonResponse
     {
         return $this->alerteService->getAllAlertes();
     }

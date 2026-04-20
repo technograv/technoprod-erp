@@ -74,6 +74,9 @@ class Client
     #[ORM\Column(nullable: true)]
     private ?\DateTimeImmutable $dateConversionClient = null;
 
+    #[ORM\Column(type: Types::BOOLEAN, options: ['default' => false])]
+    private bool $archived = false;
+
     #[ORM\Column(type: Types::DATE_MUTABLE, nullable: true)]
     private ?\DateTimeInterface $derniereVisite = null;
 
@@ -83,11 +86,13 @@ class Client
     // Collections
     #[ORM\OneToMany(mappedBy: 'client', targetEntity: Devis::class)]
     private Collection $devis;
-    
+
     #[ORM\OneToMany(mappedBy: 'client', targetEntity: Contact::class, cascade: ['persist', 'remove'], orphanRemoval: true)]
+    #[ORM\OrderBy(['updatedAt' => 'DESC'])]
     private Collection $contacts;
-    
+
     #[ORM\OneToMany(mappedBy: 'client', targetEntity: Adresse::class, cascade: ['persist', 'remove'], orphanRemoval: true)]
+    #[ORM\OrderBy(['updatedAt' => 'DESC'])]
     private Collection $adresses;
     
     #[ORM\OneToMany(mappedBy: 'client', targetEntity: ClientLog::class, cascade: ['persist', 'remove'], orphanRemoval: true)]
@@ -414,8 +419,8 @@ class Client
 
     public function isActif(): bool
     {
-        // Un client est actif si il a au moins un contact actif
-        return $this->getContactsActifs()->count() > 0;
+        // Un client est actif s'il n'est pas archivé
+        return !$this->archived;
     }
 
     public function isActive(): bool
@@ -668,6 +673,17 @@ class Client
                 $log->setClient(null);
             }
         }
+        return $this;
+    }
+
+    public function isArchived(): bool
+    {
+        return $this->archived;
+    }
+
+    public function setArchived(bool $archived): static
+    {
+        $this->archived = $archived;
         return $this;
     }
 

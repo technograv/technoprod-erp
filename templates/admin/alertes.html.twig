@@ -528,7 +528,7 @@ function chargerAlertesAdmin() {
         headers['X-CSRF-Token'] = csrfToken;
     }
 
-    fetch('{{ path('app_admin_alertes') }}', {
+    fetch('{{ path('app_admin_alertes_data') }}', {
         method: 'GET',
         headers: headers
     })
@@ -552,7 +552,16 @@ function chargerAlertesAdmin() {
     })
     .then(data => {
         console.log('🔍 [DEBUG ALERTES] JSON data received:', data);
-        if (loading) loading.style.display = 'none';
+        console.log('🔍 [DEBUG ALERTES] About to hide loading spinner');
+        console.log('🔍 [DEBUG ALERTES] loading element exists?', loading !== null);
+        console.log('🔍 [DEBUG ALERTES] loading current display:', loading ? loading.style.display : 'N/A');
+
+        if (loading) {
+            loading.style.display = 'none';
+            console.log('✅ [DEBUG ALERTES] Loading spinner hidden, new display:', loading.style.display);
+        } else {
+            console.error('❌ [DEBUG ALERTES] Loading element not found!');
+        }
 
         if (data.alertes && data.alertes.length === 0) {
             console.log('🔍 [DEBUG ALERTES] No alertes found, showing empty');
@@ -560,8 +569,20 @@ function chargerAlertesAdmin() {
         } else if (data.alertes) {
             console.log('🔍 [DEBUG ALERTES] Alertes found:', data.alertes.length);
             allAlertes = data.alertes; // Stocker pour le filtrage
-            if (container) container.style.display = 'block';
+            console.log('🔍 [DEBUG ALERTES] About to show container');
+            console.log('🔍 [DEBUG ALERTES] container element exists?', container !== null);
+            console.log('🔍 [DEBUG ALERTES] container current display:', container ? container.style.display : 'N/A');
+
+            if (container) {
+                container.style.display = 'block';
+                console.log('✅ [DEBUG ALERTES] Container shown, new display:', container.style.display);
+            } else {
+                console.error('❌ [DEBUG ALERTES] Container element not found!');
+            }
+
+            console.log('🔍 [DEBUG ALERTES] Calling afficherTableauAlertes()');
             afficherTableauAlertes(data.alertes);
+            console.log('✅ [DEBUG ALERTES] afficherTableauAlertes() completed');
         } else {
             console.error('❌ [DEBUG ALERTES] Invalid data format:', data);
         }
@@ -591,7 +612,11 @@ function chargerAlertesAdmin() {
 
 // Afficher le tableau des alertes
 function afficherTableauAlertes(alertes) {
+    console.log('🔍 [DEBUG afficherTableauAlertes] Function called with', alertes.length, 'alertes');
     const tbody = document.getElementById('alertes-admin-tbody');
+    console.log('🔍 [DEBUG afficherTableauAlertes] tbody element:', tbody);
+    console.log('🔍 [DEBUG afficherTableauAlertes] tbody exists?', tbody !== null);
+
     let html = '';
 
     alertes.forEach(alerte => {
@@ -665,10 +690,19 @@ function afficherTableauAlertes(alertes) {
         `;
     });
 
-    tbody.innerHTML = html;
+    console.log('🔍 [DEBUG afficherTableauAlertes] About to set tbody.innerHTML with', html.length, 'characters');
+    if (tbody) {
+        tbody.innerHTML = html;
+        console.log('✅ [DEBUG afficherTableauAlertes] tbody.innerHTML set successfully');
+        console.log('🔍 [DEBUG afficherTableauAlertes] tbody.children.length:', tbody.children.length);
+    } else {
+        console.error('❌ [DEBUG afficherTableauAlertes] tbody is null, cannot set innerHTML!');
+    }
 
     // Initialiser le drag & drop après l'affichage
+    console.log('🔍 [DEBUG afficherTableauAlertes] Calling initAlertesDragDrop()');
     initAlertesDragDrop();
+    console.log('✅ [DEBUG afficherTableauAlertes] Function completed');
 }
 
 // Initialiser le drag & drop pour les alertes
@@ -1871,5 +1905,11 @@ function sauvegarderAlerteConfigurableEdit() {
 
 // Variable globale pour stocker l'ID en cours d'édition
 let currentEditingTypeId = null;
+
+// Charger les alertes au chargement du template
+setTimeout(() => {
+    console.log('🚀 Initialisation du module alertes');
+    chargerAlertesAdmin();
+}, 100);
 
 </script>

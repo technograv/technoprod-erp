@@ -1,0 +1,143 @@
+{# Template pour le chargement AJAX - pas d'extension de base #}
+<div class="admin-section">
+    <h3 class="section-title">
+        <i class="fas fa-tools me-2"></i>Actions de Maintenance
+    </h3>
+    <p class="text-muted mb-4">Outils de maintenance et d'administration système</p>
+
+    <div class="row">
+        <!-- Cache -->
+        <div class="col-md-6 mb-4">
+            <div class="card">
+                <div class="card-header bg-primary text-white">
+                    <i class="fas fa-broom me-2"></i>Gestion du Cache
+                </div>
+                <div class="card-body">
+                    <p class="card-text">Vider le cache Symfony pour appliquer les changements de configuration.</p>
+                    <button class="btn btn-outline-primary" onclick="clearCache()">
+                        <i class="fas fa-broom me-2"></i>Vider le cache
+                    </button>
+                </div>
+            </div>
+        </div>
+
+        <!-- Base de données -->
+        <div class="col-md-6 mb-4">
+            <div class="card">
+                <div class="card-header bg-info text-white">
+                    <i class="fas fa-database me-2"></i>Base de Données
+                </div>
+                <div class="card-body">
+                    <p class="card-text">Vérifier l'état et la synchronisation du schéma de base de données.</p>
+                    <button class="btn btn-outline-info" onclick="validateSchema()">
+                        <i class="fas fa-check me-2"></i>Vérifier le schéma
+                    </button>
+                </div>
+            </div>
+        </div>
+
+        <!-- Logs -->
+        <div class="col-md-6 mb-4">
+            <div class="card">
+                <div class="card-header bg-warning text-dark">
+                    <i class="fas fa-file-alt me-2"></i>Logs Système
+                </div>
+                <div class="card-body">
+                    <p class="card-text">Consulter les logs d'erreurs et d'activité de l'application.</p>
+                    <button class="btn btn-outline-warning" onclick="viewLogs()">
+                        <i class="fas fa-eye me-2"></i>Voir les logs
+                    </button>
+                </div>
+            </div>
+        </div>
+
+        <!-- Détection alertes -->
+        <div class="col-md-6 mb-4">
+            <div class="card">
+                <div class="card-header bg-danger text-white">
+                    <i class="fas fa-bell me-2"></i>Détection Alertes
+                </div>
+                <div class="card-body">
+                    <p class="card-text">Lancer manuellement la détection des alertes automatiques.</p>
+                    <button class="btn btn-outline-danger" onclick="detectAlertes()">
+                        <i class="fas fa-play me-2"></i>Détecter les alertes
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Zone de résultats -->
+    <div id="maintenance-results" class="mt-4" style="display: none;">
+        <div class="card">
+            <div class="card-header">
+                <i class="fas fa-terminal me-2"></i>Résultats
+            </div>
+            <div class="card-body">
+                <pre id="maintenance-output" class="mb-0" style="max-height: 400px; overflow-y: auto;"></pre>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+function showResult(message, type = 'info') {
+    const resultsDiv = document.getElementById('maintenance-results');
+    const output = document.getElementById('maintenance-output');
+    output.textContent = message;
+    resultsDiv.style.display = 'block';
+    
+    // Scroll vers les résultats
+    resultsDiv.scrollIntoView({ behavior: 'smooth' });
+}
+
+function clearCache() {
+    showResult('Demande de vidage du cache en cours...');
+    
+    // TODO: Implémenter l'appel API pour vider le cache
+    setTimeout(() => {
+        showResult('⚠️ Fonctionnalité à implémenter\nNécessite une route Symfony pour exécuter: php bin/console cache:clear');
+    }, 500);
+}
+
+function validateSchema() {
+    showResult('Vérification du schéma en cours...');
+    
+    // TODO: Implémenter l'appel API pour valider le schéma
+    setTimeout(() => {
+        showResult('⚠️ Fonctionnalité à implémenter\nNécessite une route Symfony pour exécuter: php bin/console doctrine:schema:validate');
+    }, 500);
+}
+
+function viewLogs() {
+    showResult('Chargement des logs...');
+    
+    // TODO: Implémenter l'affichage des logs
+    setTimeout(() => {
+        showResult('⚠️ Fonctionnalité à implémenter\nNécessite une route Symfony pour lire les fichiers de logs');
+    }, 500);
+}
+
+function detectAlertes() {
+    showResult('Détection des alertes en cours...');
+    
+    // TODO: Implémenter l'appel à la commande de détection
+    setTimeout(() => {
+        showResult('⚠️ Fonctionnalité à implémenter\nNécessite une route Symfony pour exécuter: php bin/console app:alerte:detect');
+    }, 500);
+}
+</script>
+
+<style>
+.card-header {
+    font-weight: 600;
+}
+
+#maintenance-output {
+    background-color: #f8f9fa;
+    padding: 1rem;
+    border-radius: 0.25rem;
+    font-family: 'Courier New', monospace;
+    font-size: 0.875rem;
+}
+</style>

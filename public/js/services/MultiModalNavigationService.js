@@ -46,26 +46,65 @@ class MultiModalNavigationService {
     setupEventListeners() {
         // Retour automatique après création d'adresse
         window.addEventListener('addressCreated', (event) => {
-            this.log('📍 Adresse créée - vérification retour automatique', event.detail);
-            this.handleAddressActionComplete(event.detail, 'created');
+            this.log('📍 Adresse créée - DÉSACTIVÉ retour automatique vers contact');
+            // DÉSACTIVÉ: Le retour automatique cause des problèmes de backdrops et modales figées
+            // this.handleAddressActionComplete(event.detail, 'created');
+
+            // Nettoyer immédiatement pour éviter les réouvertures intempestives
+            this.cleanupNavigation();
         });
-        
-        // Retour automatique après modification d'adresse  
+
+        // Retour automatique après modification d'adresse
         window.addEventListener('addressUpdated', (event) => {
-            this.log('📍 Adresse modifiée - vérification retour automatique', event.detail);
-            this.handleAddressActionComplete(event.detail, 'updated');
+            this.log('📍 Adresse modifiée - vérification si navigation depuis modale contact');
+
+            // IMPORTANT: Ne PAS nettoyer si la navigation vient d'une modale contact
+            // car le template modal_edit.html.twig a besoin de lire lastContactEditEvent
+            const lastEvent = window.lastContactEditEvent;
+
+            if (lastEvent && lastEvent.fromModal === true) {
+                this.log('✅ Navigation depuis modale contact détectée - NE PAS nettoyer (géré par template)');
+                // Le template modal_edit.html.twig va gérer le retour automatique
+                return;
+            }
+
+            // Sinon, nettoyer pour éviter les réouvertures parasites dans d'autres contextes
+            this.log('🧹 Navigation non-modale ou absente - nettoyage');
+            this.cleanupNavigation();
         });
-        
+
         // Retour automatique après création de contact
         window.addEventListener('contactCreated', (event) => {
             this.log('👤 Contact créé - vérification retour automatique', event.detail);
             this.handleContactActionComplete(event.detail, 'created');
         });
-        
+
         // Retour automatique après modification de contact
         window.addEventListener('contactUpdated', (event) => {
             this.log('👤 Contact modifié - vérification retour automatique', event.detail);
             this.handleContactActionComplete(event.detail, 'updated');
+        });
+
+        // Nettoyer la navigation quand une modale est fermée manuellement (annulation)
+        document.addEventListener('hidden.bs.modal', (event) => {
+            const modalElement = event.target;
+
+            // IMPORTANT: Ne PAS nettoyer si navigation en cours depuis modale contact
+            const lastEvent = window.lastContactEditEvent;
+            if (lastEvent && lastEvent.fromModal === true) {
+                this.log('✅ Navigation modale en cours - NE PAS nettoyer lors fermeture modale');
+                // Le retour automatique est géré par modal_edit.html.twig
+                return;
+            }
+
+            if (!window.addressEditSuccess && !window.contactEditSuccess) {
+                this.log('🧹 Modale fermée manuellement (annulation) - nettoyage navigation');
+                this.cleanupNavigation();
+                this.cleanupOrphanedBackdrops();
+            }
+            // Réinitialiser les flags
+            window.addressEditSuccess = false;
+            window.contactEditSuccess = false;
         });
     }
     
@@ -166,7 +205,7 @@ class MultiModalNavigationService {
      */
     handleAddressActionComplete(detail, action) {
         const lastEvent = window.lastContactEditEvent;
-        
+
         this.log('🔍 handleAddressActionComplete - État complet:', {
             action: action,
             lastEvent: lastEvent,
@@ -175,18 +214,20 @@ class MultiModalNavigationService {
             contactId: lastEvent?.contactId,
             clientId: lastEvent?.clientId
         });
-        
+
         // Vérifier si on doit retourner vers une modale contact
         if (!this.shouldReturnToContact(lastEvent)) {
             this.log('❌ Pas de retour vers contact nécessaire');
+            // Nettoyer immédiatement pour éviter les réouvertures parasites
+            this.cleanupNavigation();
             return;
         }
-        
+
         this.log(`🔄 Retour automatique vers contact après ${action} adresse`);
-        
+
         // Marquer que la fermeture de la modale adresse est due à une validation
         window.addressEditSuccess = true;
-        
+
         // Attendre fermeture complète de la modale adresse
         setTimeout(() => {
             this.returnToContactModal(lastEvent, detail, action);
@@ -209,27 +250,33 @@ class MultiModalNavigationService {
             this.log('❌ Aucun événement de navigation stocké');
             return false;
         }
-        
+
         if (!lastEvent.fromModal) {
             this.log('❌ Pas venu d\'une modale contact');
             return false;
         }
-        
-        // Vérifier le flag noReturn (ne pas rouvrir)
-        if (lastEvent.noReturn) {
-            this.log('❌ Flag noReturn activé - pas de retour automatique');
+
+        // Vérifier que sourceModal et targetModal sont corrects
+        if (lastEvent.sourceModal !== 'contact' || lastEvent.targetModal !== 'address') {
+            this.log('❌ Navigation invalide - sourceModal ou targetModal incorrect');
+            return false;
+        }
+
+        // Vérifier le flag noReturn (ne pas rouvrir) - SEULEMENT si explicitement true
+        if (lastEvent.noReturn === true) {
+            this.log('❌ Flag noReturn explicitement activé - pas de retour automatique');
             this.cleanupNavigation();
             return false;
         }
-        
-        // Vérifier l'âge de l'événement
+
+        // Vérifier l'âge de l'événement (réduit à 10 secondes pour plus de sécurité)
         const eventAge = Date.now() - lastEvent.timestamp;
-        if (eventAge > this.config.eventMaxAge) {
+        if (eventAge > 10000) {
             this.log('❌ Événement trop ancien:', eventAge + 'ms');
             this.cleanupNavigation();
             return false;
         }
-        
+
         this.log('✅ Retour vers contact validé');
         return true;
     }
@@ -241,18 +288,19 @@ class MultiModalNavigationService {
         try {
             if (!window.ContactModalService) {
                 this.error('ContactModalService non disponible');
+                this.cleanupOrphanedBackdrops();
                 return;
             }
-            
+
             this.log('🔄 Réouverture modale contact - DÉTAILS COMPLETS:', {
                 mode: lastEvent.mode,
                 contactId: lastEvent.contactId,
                 clientId: lastEvent.clientId,
                 noReturn: lastEvent.noReturn
             });
-            
+
             const contactService = new ContactModalService({ debug: this.config.debug });
-            
+
             if (lastEvent.mode === 'edit') {
                 this.log('📝 Mode EDIT - Appel editContact avec ID:', lastEvent.contactId);
                 contactService.editContact(lastEvent.contactId);
@@ -260,20 +308,21 @@ class MultiModalNavigationService {
                 this.log('➕ Mode NEW - Appel createContact avec clientId:', lastEvent.clientId);
                 contactService.createContact(lastEvent.clientId);
             }
-            
+
             // Stocker l'ID de l'adresse à présélectionner pour la modale contact
             if (detail && detail.adresse) {
                 window.lastContactEditEvent.preselectAddressId = detail.adresse.id;
                 this.log('💾 ID adresse stocké pour présélection:', detail.adresse.id);
-                
+
                 // Aussi lancer la présélection après un délai
                 setTimeout(() => {
                     this.preselectAddress(detail.adresse.id);
                 }, this.config.selectionDelay + 1000); // Délai plus long pour être sûr
             }
-            
+
         } catch (error) {
             this.error('Erreur retour vers modale contact:', error);
+            this.cleanupOrphanedBackdrops();
         } finally {
             // Nettoyer l'événement de navigation
             this.cleanupNavigation();
@@ -328,8 +377,11 @@ class MultiModalNavigationService {
     cleanupNavigation() {
         window.lastContactEditEvent = null;
         window.addressEditSuccess = false;
+        window.contactEditSuccess = false;
         this.navigationStack = [];
         this.log('🧹 Navigation nettoyée');
+        // Nettoyer aussi les backdrops orphelins
+        this.cleanupOrphanedBackdrops();
     }
     
     /**
@@ -339,12 +391,12 @@ class MultiModalNavigationService {
         setTimeout(() => {
             const openModals = document.querySelectorAll('.modal.show');
             const allBackdrops = document.querySelectorAll('.modal-backdrop');
-            
+
             this.log('🔍 Vérification backdrops:', {
                 openModals: openModals.length,
                 backdrops: allBackdrops.length
             });
-            
+
             // Nettoyage si aucune modale ouverte
             if (openModals.length === 0 && allBackdrops.length > 0) {
                 this.log('🧹 Nettoyage backdrops orphelins:', allBackdrops.length);
@@ -352,6 +404,16 @@ class MultiModalNavigationService {
                 document.body.classList.remove('modal-open');
                 document.body.style.removeProperty('padding-right');
                 document.body.style.removeProperty('overflow');
+            }
+            // Nettoyage si plus de backdrops que de modales ouvertes
+            else if (allBackdrops.length > openModals.length) {
+                const backdropsToRemove = allBackdrops.length - openModals.length;
+                this.log('🧹 Trop de backdrops, suppression de ' + backdropsToRemove);
+                for (let i = 0; i < backdropsToRemove; i++) {
+                    if (allBackdrops[i]) {
+                        allBackdrops[i].remove();
+                    }
+                }
             }
         }, this.config.cleanupDelay);
     }
@@ -382,7 +444,7 @@ class MultiModalNavigationService {
 window.MultiModalNavigationService = MultiModalNavigationService;
 
 // Initialiser automatiquement une instance globale
-window.multiModalNavigationService = new MultiModalNavigationService({ debug: false });
+window.multiModalNavigationService = new MultiModalNavigationService({ debug: true });
 
 // Nettoyer les backdrops orphelins à l'initialisation
 window.multiModalNavigationService.cleanupOrphanedBackdrops();

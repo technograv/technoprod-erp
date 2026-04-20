@@ -7,8 +7,11 @@ use Doctrine\Common\Collections\ArrayCollection;
 use Doctrine\Common\Collections\Collection;
 use Doctrine\DBAL\Types\Types;
 use Doctrine\ORM\Mapping as ORM;
+use Symfony\Component\Validator\Constraints as Assert;
+use Symfony\Component\Validator\Context\ExecutionContextInterface;
 
 #[ORM\Entity(repositoryClass: DevisRepository::class)]
+#[ORM\HasLifecycleCallbacks]
 class Devis
 {
     #[ORM\Id]
@@ -53,8 +56,11 @@ class Devis
     #[ORM\Column(type: Types::DATETIME_MUTABLE, nullable: true)]
     private ?\DateTimeInterface $dateEnvoi = null;
 
-    #[ORM\Column(length: 20)]
+    #[ORM\Column(length: 30)]
     private ?string $statut = 'brouillon';
+
+    #[ORM\Column(length: 64, nullable: true)]
+    private ?string $clientAccessToken = null;
 
     #[ORM\Column(type: Types::DECIMAL, precision: 10, scale: 2)]
     private ?string $totalHt = '0.00';
@@ -66,6 +72,11 @@ class Devis
     private ?string $totalTtc = '0.00';
 
     #[ORM\Column(type: Types::DECIMAL, precision: 5, scale: 2, nullable: true)]
+    #[Assert\Range(
+        min: 0,
+        max: 100,
+        notInRangeMessage: 'La remise globale doit être comprise entre {{ min }}% et {{ max }}%'
+    )]
     private ?string $remiseGlobalePercent = null;
 
     #[ORM\Column(type: Types::DECIMAL, precision: 10, scale: 2, nullable: true)]
@@ -160,15 +171,31 @@ class Devis
     #[ORM\Column(length: 50, nullable: true)]
     private ?string $modeleDocument = 'standard';
 
+    #[ORM\ManyToOne]
+    #[ORM\JoinColumn(nullable: true)]
+    private ?Template $template = null;
+
+    #[ORM\ManyToOne]
+    #[ORM\JoinColumn(nullable: true)]
+    private ?Societe $societe = null;
+
     #[ORM\Column]
     private ?\DateTimeImmutable $createdAt = null;
 
     #[ORM\Column]
     private ?\DateTimeImmutable $updatedAt = null;
 
+    #[ORM\Column(nullable: true)]
+    private ?\DateTimeImmutable $deletedAt = null;
+
     // LEGACY: Anciennes relations - conservées pour compatibilité temporaire
     #[ORM\OneToMany(mappedBy: 'devis', targetEntity: DevisItem::class, cascade: ['persist', 'remove'], orphanRemoval: true)]
     #[ORM\OrderBy(['ordreAffichage' => 'ASC'])]
+    #[Assert\Count(
+        min: 1,
+        minMessage: 'Un devis doit contenir au moins une ligne de produit ou service'
+    )]
+    #[Assert\Valid]
     private Collection $devisItems;
 
     #[ORM\OneToMany(mappedBy: 'devis', targetEntity: LayoutElement::class, cascade: ['persist', 'remove'], orphanRemoval: true)]
@@ -305,12 +332,34 @@ class Devis
     {
         $oldStatut = $this->statut;
         $this->statut = $statut;
-        
+
         // Si passage en statut "envoye", enregistrer la date d'envoi
         if ($oldStatut !== 'envoye' && $statut === 'envoye') {
             $this->dateEnvoi = new \DateTime();
         }
-        
+
+        return $this;
+    }
+
+    public function getClientAccessToken(): ?string
+    {
+        return $this->clientAccessToken;
+    }
+
+    public function setClientAccessToken(?string $clientAccessToken): static
+    {
+        $this->clientAccessToken = $clientAccessToken;
+        return $this;
+    }
+
+    /**
+     * Génère un token d'accès client sécurisé si non existant
+     */
+    public function generateClientAccessToken(): static
+    {
+        if ($this->clientAccessToken === null) {
+            $this->clientAccessToken = bin2hex(random_bytes(32));
+        }
         return $this;
     }
 
@@ -411,6 +460,22 @@ class Devis
     {
         $this->updatedAt = $updatedAt;
         return $this;
+    }
+
+    public function getDeletedAt(): ?\DateTimeImmutable
+    {
+        return $this->deletedAt;
+    }
+
+    public function setDeletedAt(?\DateTimeImmutable $deletedAt): static
+    {
+        $this->deletedAt = $deletedAt;
+        return $this;
+    }
+
+    public function isDeleted(): bool
+    {
+        return $this->deletedAt !== null;
     }
 
     /**
@@ -786,6 +851,7 @@ class Devis
     {
         return match($this->statut) {
             'brouillon' => 'Brouillon',
+            'actualisation_demandee' => 'Actualisation demandée',
             'envoye' => 'Envoyé',
             'relance' => 'Relancé',
             'signe' => 'Signé',
@@ -801,6 +867,7 @@ class Devis
     {
         return match($this->statut) {
             'brouillon' => 'secondary',
+            'actualisation_demandee' => 'danger',
             'envoye' => 'info',
             'relance' => 'warning',
             'signe' => 'primary',
@@ -1065,7 +1132,7 @@ class Devis
      */
     public function isEditable(): bool
     {
-        return $this->statut === 'brouillon';
+        return in_array($this->statut, ['brouillon', 'actualisation_demandee']);
     }
 
     /**
@@ -1161,5 +1228,38 @@ class Devis
             $counts[$type] = ($counts[$type] ?? 0) + 1;
         }
         return $counts;
+    }
+
+    public function getTemplate(): ?Template
+    {
+        return $this->template;
+    }
+
+    public function setTemplate(?Template $template): static
+    {
+        $this->template = $template;
+        return $this;
+    }
+
+    public function getSociete(): ?Societe
+    {
+        return $this->societe;
+    }
+
+    public function setSociete(?Societe $societe): static
+    {
+        $this->societe = $societe;
+        return $this;
+    }
+
+    /**
+     * Génère automatiquement le token d'accès client avant la première sauvegarde
+     */
+    #[ORM\PrePersist]
+    public function generateTokenOnCreate(): void
+    {
+        if ($this->clientAccessToken === null) {
+            $this->clientAccessToken = bin2hex(random_bytes(32));
+        }
     }
 }

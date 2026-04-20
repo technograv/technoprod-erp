@@ -147,14 +147,27 @@ class AlerteManager
         $userRoles = $user->getRoles();
         $userSociete = $user->getSocietePrincipale();
 
-        // Récupérer toutes les alertes non résolues et actives
-        $qb = $this->entityManager->createQueryBuilder()
+        // Récupérer toutes les alertes non résolues et actives, SAUF celles fermées par l'utilisateur
+        $qb = $this->entityManager->createQueryBuilder();
+
+        $alertes = $qb
             ->select('a')
             ->from(Alerte::class, 'a')
             ->where('a.resolved = false')
-            ->andWhere('a.isActive = true');
-
-        $alertes = $qb->getQuery()->getResult();
+            ->andWhere('a.isActive = true')
+            ->andWhere($qb->expr()->not(
+                $qb->expr()->exists(
+                    $this->entityManager->createQueryBuilder()
+                        ->select('1')
+                        ->from(\App\Entity\AlerteUtilisateur::class, 'au')
+                        ->where('au.alerte = a')
+                        ->andWhere('au.user = :user')
+                        ->getDQL()
+                )
+            ))
+            ->setParameter('user', $user)
+            ->getQuery()
+            ->getResult();
 
         // Créer un cache des AlerteType par classeDetection pour éviter N+1 queries
         $alerteTypesCache = [];

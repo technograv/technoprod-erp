@@ -55,17 +55,17 @@ class WysiwygNotesManager {
 
         // Initialisation de l'éditeur pour note publique
         const optionsNotePublique = { ...quillOptions };
-        optionsNotePublique.modules.toolbar.container = '#toolbar-note-publique';
+        optionsNotePublique.modules.toolbar.container = `#toolbar-note-publique-${this.prefix}`;
         optionsNotePublique.placeholder = '';
 
-        this.quillPublique = new Quill('#editor-note-publique', optionsNotePublique);
+        this.quillPublique = new Quill(`#editor-note-publique-${this.prefix}`, optionsNotePublique);
 
         // Initialisation de l'éditeur pour note privée
         const optionsNotePrivee = { ...quillOptions };
-        optionsNotePrivee.modules.toolbar.container = '#toolbar-note-privee';
+        optionsNotePrivee.modules.toolbar.container = `#toolbar-note-privee-${this.prefix}`;
         optionsNotePrivee.placeholder = '';
 
-        this.quillPrivee = new Quill('#editor-note-privee', optionsNotePrivee);
+        this.quillPrivee = new Quill(`#editor-note-privee-${this.prefix}`, optionsNotePrivee);
 
         // Charger le contenu initial si disponible
         this.loadInitialContent();
@@ -87,12 +87,18 @@ class WysiwygNotesManager {
         const publicField = document.getElementById(`note-publique-${this.prefix}`);
         const privateField = document.getElementById(`note-privee-${this.prefix}`);
 
-        if (publicField && publicField.value && this.quillPublique) {
-            this.quillPublique.root.innerHTML = publicField.value;
+        if (publicField && this.quillPublique) {
+            const initialContent = publicField.getAttribute('data-initial-value') || '';
+            if (initialContent) {
+                this.quillPublique.root.innerHTML = initialContent;
+            }
         }
 
-        if (privateField && privateField.value && this.quillPrivee) {
-            this.quillPrivee.root.innerHTML = privateField.value;
+        if (privateField && this.quillPrivee) {
+            const initialContent = privateField.getAttribute('data-initial-value') || '';
+            if (initialContent) {
+                this.quillPrivee.root.innerHTML = initialContent;
+            }
         }
     }
 
@@ -120,11 +126,31 @@ class WysiwygNotesManager {
         }
 
         // Synchronisation avant soumission du formulaire
-        const form = document.querySelector('form');
+        const form = document.getElementById('devis-form') || document.querySelector('form[name="devis"]') || document.querySelector('form');
+        console.log('🔍 Recherche formulaire:', { found: !!form, id: form?.id, name: form?.name });
+
         if (form) {
-            form.addEventListener('submit', () => {
+            // Attacher au submit event du formulaire
+            form.addEventListener('submit', (e) => {
+                console.log('📝 Event submit détecté !');
                 this.syncBeforeSubmit();
             });
+            console.log('✅ Event listener submit attaché au formulaire');
+
+            // AUSSI attacher aux boutons submit (car ils sont en dehors du form avec form="devis-form")
+            const submitButtons = document.querySelectorAll('button[type="submit"][form="devis-form"]');
+            console.log(`🔍 Trouvé ${submitButtons.length} boutons submit`);
+            submitButtons.forEach(btn => {
+                btn.addEventListener('click', (e) => {
+                    console.log('🖱️ Click sur bouton submit détecté !');
+                    this.syncBeforeSubmit();
+                });
+            });
+            if (submitButtons.length > 0) {
+                console.log('✅ Event listeners attachés aux boutons submit');
+            }
+        } else {
+            console.error('❌ Formulaire non trouvé pour synchronisation WYSIWYG');
         }
     }
 
@@ -132,17 +158,22 @@ class WysiwygNotesManager {
      * Force la synchronisation avant soumission
      */
     syncBeforeSubmit() {
+        console.log('🔄 syncBeforeSubmit appelé');
         const publicField = document.getElementById(`note-publique-${this.prefix}`);
         const privateField = document.getElementById(`note-privee-${this.prefix}`);
+
+        console.log('Champs trouvés:', { publicField: !!publicField, privateField: !!privateField });
 
         if (publicField && this.quillPublique) {
             const content = this.quillPublique.root.innerHTML;
             publicField.value = content === '<p><br></p>' ? '' : content;
+            console.log('📝 Note publique synchronisée:', publicField.value.substring(0, 50));
         }
 
         if (privateField && this.quillPrivee) {
             const content = this.quillPrivee.root.innerHTML;
             privateField.value = content === '<p><br></p>' ? '' : content;
+            console.log('🔒 Note privée synchronisée:', privateField.value.substring(0, 50));
         }
     }
 
@@ -152,35 +183,35 @@ class WysiwygNotesManager {
     fixPickerWidths() {
         setTimeout(() => {
             // Pour la note publique
-            const fontPickerPublique = document.querySelector('#toolbar-note-publique .ql-font .ql-picker');
-            const sizePickerPublique = document.querySelector('#toolbar-note-publique .ql-size .ql-picker');
+            const fontPickerPublique = document.querySelector(`#toolbar-note-publique-${this.prefix} .ql-font .ql-picker`);
+            const sizePickerPublique = document.querySelector(`#toolbar-note-publique-${this.prefix} .ql-size .ql-picker`);
 
             if (fontPickerPublique) {
-                fontPickerPublique.style.width = '180px';
-                fontPickerPublique.style.minWidth = '180px';
-                fontPickerPublique.style.maxWidth = '180px';
+                fontPickerPublique.style.width = '220px';
+                fontPickerPublique.style.minWidth = '220px';
+                fontPickerPublique.style.maxWidth = '220px';
             }
 
             if (sizePickerPublique) {
-                sizePickerPublique.style.width = '140px';
-                sizePickerPublique.style.minWidth = '140px';
-                sizePickerPublique.style.maxWidth = '140px';
+                sizePickerPublique.style.width = '180px';
+                sizePickerPublique.style.minWidth = '180px';
+                sizePickerPublique.style.maxWidth = '180px';
             }
 
             // Pour la note privée
-            const fontPickerPrivee = document.querySelector('#toolbar-note-privee .ql-font .ql-picker');
-            const sizePickerPrivee = document.querySelector('#toolbar-note-privee .ql-size .ql-picker');
+            const fontPickerPrivee = document.querySelector(`#toolbar-note-privee-${this.prefix} .ql-font .ql-picker`);
+            const sizePickerPrivee = document.querySelector(`#toolbar-note-privee-${this.prefix} .ql-size .ql-picker`);
 
             if (fontPickerPrivee) {
-                fontPickerPrivee.style.width = '180px';
-                fontPickerPrivee.style.minWidth = '180px';
-                fontPickerPrivee.style.maxWidth = '180px';
+                fontPickerPrivee.style.width = '220px';
+                fontPickerPrivee.style.minWidth = '220px';
+                fontPickerPrivee.style.maxWidth = '220px';
             }
 
             if (sizePickerPrivee) {
-                sizePickerPrivee.style.width = '140px';
-                sizePickerPrivee.style.minWidth = '140px';
-                sizePickerPrivee.style.maxWidth = '140px';
+                sizePickerPrivee.style.width = '180px';
+                sizePickerPrivee.style.minWidth = '180px';
+                sizePickerPrivee.style.maxWidth = '180px';
             }
         }, 500);
     }
