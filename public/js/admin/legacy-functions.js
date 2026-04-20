@@ -400,9 +400,11 @@ function loadParametresSubTabFixed(subTabId) {
     if (targetElement) {
         // Vérifier si le contenu est déjà chargé
         if (targetElement.dataset.loaded === 'true') {
-            console.log('✅ Content already loaded for', targetContentId, '- just activating display');
+            console.log('✅ Content already loaded for', targetContentId, '- reactivating with forced CSS');
             targetElement.classList.add('show', 'active');
             targetElement.style.display = 'block';
+            targetElement.style.visibility = 'visible';
+            targetElement.style.opacity = '1';
         } else if (url) {
             console.log('🔍 DEBUG: Loading content into', targetContentId, 'from URL:', url);
             window.adminAjaxLoader.loadContentIntoElementFixed(url, targetElement, subTabId);
@@ -411,6 +413,8 @@ function loadParametresSubTabFixed(subTabId) {
             console.log('🔍 DEBUG: No URL provided, activating display for', subTabId);
             targetElement.classList.add('show', 'active');
             targetElement.style.display = 'block';
+            targetElement.style.visibility = 'visible';
+            targetElement.style.opacity = '1';
         }
     } else {
         console.error('❌ ERROR: Target element not found for:', targetContentId);

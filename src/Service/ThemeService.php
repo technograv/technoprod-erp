@@ -38,30 +38,32 @@ class ThemeService
             return $this->getDefaultVariables();
         }
 
-        // Utiliser l'InheritanceService pour récupérer les couleurs avec héritage
-        $colors = $this->inheritanceService->getColors($societe);
-        $theme = $this->inheritanceService->getTheme($societe);
-        $logo = $this->inheritanceService->getLogo($societe);
+        // Récupérer les couleurs avec héritage depuis l'entité Societe
+        $primaryColor = $societe->getCouleurPrimaire() ?? '#dc3545';
+        $secondaryColor = $societe->getCouleurSecondaire() ?? '#6c757d';
+        $tertiaryColor = $societe->getCouleurTertiaire() ?? '#28a745';
+        $logo = $societe->getLogo();
+        $theme = $societe->getTheme() ?? 'default';
 
         $variables = [
             // Couleurs principales avec héritage automatique
-            'primary_color' => $colors['primary'] ?? '#dc3545',
-            'secondary_color' => $colors['secondary'] ?? '#6c757d',
-            'tertiary_color' => $colors['tertiary'] ?? '#28a745',
-            
+            'primary_color' => $primaryColor,
+            'secondary_color' => $secondaryColor,
+            'tertiary_color' => $tertiaryColor,
+
             // Couleurs dérivées
-            'primary_rgb' => $this->hexToRgb($colors['primary'] ?? '#dc3545'),
-            'secondary_rgb' => $this->hexToRgb($colors['secondary'] ?? '#6c757d'),
-            'tertiary_rgb' => $this->hexToRgb($colors['tertiary'] ?? '#28a745'),
-            
+            'primary_rgb' => $this->hexToRgb($primaryColor),
+            'secondary_rgb' => $this->hexToRgb($secondaryColor),
+            'tertiary_rgb' => $this->hexToRgb($tertiaryColor),
+
             // Variantes de couleurs
-            'primary_light' => $this->lightenColor($colors['primary'] ?? '#dc3545', 0.2),
-            'primary_dark' => $this->darkenColor($colors['primary'] ?? '#dc3545', 0.2),
-            'secondary_light' => $this->lightenColor($colors['secondary'] ?? '#6c757d', 0.2),
-            'secondary_dark' => $this->darkenColor($colors['secondary'] ?? '#6c757d', 0.2),
-            'tertiary_light' => $this->lightenColor($colors['tertiary'] ?? '#28a745', 0.2),
-            'tertiary_dark' => $this->darkenColor($colors['tertiary'] ?? '#28a745', 0.2),
-            
+            'primary_light' => $this->lightenColor($primaryColor, 0.2),
+            'primary_dark' => $this->darkenColor($primaryColor, 0.2),
+            'secondary_light' => $this->lightenColor($secondaryColor, 0.2),
+            'secondary_dark' => $this->darkenColor($secondaryColor, 0.2),
+            'tertiary_light' => $this->lightenColor($tertiaryColor, 0.2),
+            'tertiary_dark' => $this->darkenColor($tertiaryColor, 0.2),
+
             // Informations société avec héritage
             'societe_name' => $societe->getNom(),
             'logo_url' => $logo,
